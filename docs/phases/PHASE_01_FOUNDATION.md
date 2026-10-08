@@ -1,6 +1,6 @@
 # Phase 1 — Foundation
 
-**Status:** Planning (Phase 1A plan awaiting approval) · **Depends on:** Phase 0 (complete) · **Milestone:** M1
+**Status:** 1A implemented (awaiting review); 1B and 1C not started · **Depends on:** Phase 0 (complete) · **Milestone:** M1
 
 ## Goal
 A secure, multi-tenant platform skeleton on which every later phase builds. A user can sign up with email + password, verify their email, sign in with no platform connected, create an organization, invite members and see an empty Connections page. No external platform integrations.
@@ -10,7 +10,7 @@ Each sub-phase has its own detailed plan, approved before code is written.
 
 | Sub-phase | Scope | Plan |
 |---|---|---|
-| **1A — Platform core & identity** | Repository/tooling, backend core, PostgreSQL + RLS, identity (email + password, verification, sessions, CSRF), transactional email (outbox + worker), organizations, memberships, invitations, organization-level RBAC, audit log, security events, CI | `PHASE_01A_PLAN.md` |
+| **1A — Platform core & identity** | Repository/tooling, backend core, PostgreSQL + RLS, identity (email + password, verification, sessions, CSRF), transactional email (outbox + worker), organizations, memberships, invitations, organization-level RBAC, audit log, security events, CI | `PHASE_01A_PLAN.md` (approved) · `PHASE_01A_REPORT.md` (implemented) |
 | **1B — Integration foundation** | Connection → resource → organization-link model (A6), encrypted credential storage (envelope encryption interface), job framework (`job_runs`, retries, dead-letter, scheduler lock), provider interfaces, capability + availability model (A10), provider registry, fake provider, **SSRF-safe outbound HTTP client** (A11), rate-limiter primitive | Written after 1A is accepted |
 | **1C — Frontend shell** | Next.js + TypeScript strict; sign-up/verify/sign-in/reset pages, organization create/switch, members & invitations, empty Connections page; typed API client; CSRF handling; accessibility | Written after 1A is accepted (can overlap 1B planning) |
 

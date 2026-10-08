@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint-type:
+    runs-on: ubuntu-24.04
+    defaults: {run: {working-directory: backend}}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with: {python-version: "3.12"}
+      - run: uv sync --frozen
+      - run: uv run ruff check app alembic tests
+      - run: uv run ruff format --check app alembic tests
+      - run: uv run mypy
+
+  test:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:16
+        env: {POSTGRES_USER: postgres, POSTGRES_PASSWORD: postgres}
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-retries 10
+      redis:
+        image: redis:7
+        ports: ["6379:6379"]
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      TEST_PG_SUPERUSER: postgres
+      TEST_PG_SUPERUSER_PASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with: {python-version: "3.12"}
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Create roles and test databases
+        run: scripts/bootstrap_db.sh advegax_test advegax_migration_test
+      - name: Tests (incl. tenant isolation, security, migrations) with coverage gates
+        working-directory: backend
+        run: |
+          uv sync --frozen
+          uv run pytest --cov=app --cov-branch --cov-report=term-missing --cov-fail-under=85
+          uv run coverage report --fail-under=95 \
+            --include="app/core/security/*,app/domains/identity/*,app/domains/organizations/permissions.py,app/domains/organizations/tenancy.py"
+
+  security:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env: {GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"}
+      - uses: astral-sh/setup-uv@v6
+        with: {python-version: "3.12"}
+      - name: Dependency audit
+        working-directory: backend
+        run: |
+          uv export --frozen --no-dev --format requirements-txt > /tmp/requirements.txt
+          uvx pip-audit --strict --disable-pip -r /tmp/requirements.txt
+
+  docker:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -f infrastructure/docker/api.Dockerfile -t advegax-api:ci .

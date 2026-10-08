@@ -180,7 +180,7 @@ Browser → HTTPS → Secure HttpOnly session cookie → FastAPI → authenticat
 
 - Opaque, high-entropy session identifier in a `Secure` (production), `HttpOnly`, `SameSite=Lax` cookie; only its hash is stored.
 - Idle and absolute expiration; rotation on login and privilege change; revocation; logout.
-- CSRF protection for every state-changing request (token bound to the session, sent in a header, plus Origin check).
+- CSRF protection for every state-changing request: a signed token bound to the session, held by the web app in memory (returned in response bodies) and mirrored in an HttpOnly cookie on the API host; the `X-CSRF-Token` header must match the cookie and the signature must match the current session; plus an Origin/Referer allowlist check. Implemented in `app/core/security/csrf.py` and `middleware.py`.
 - No authentication secrets or long-lived sensitive tokens in browser storage.
 - Throttling per IP and per account on authentication endpoints; uniform responses that do not reveal whether an email is registered.
 

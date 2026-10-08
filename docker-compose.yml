@@ -1,0 +1,76 @@
+# Local development stack. Not a production deployment (hosting is not yet chosen, D9).
+name: advegax
+
+x-backend-env: &backend-env
+  ENVIRONMENT: local
+  SECRET_KEY: local-development-secret-key-not-for-production-use
+  DATABASE_URL_APP: postgresql+psycopg://advegax_app:advegax_app@postgres:5432/advegax
+  DATABASE_URL_SYSTEM: postgresql+psycopg://advegax_system:advegax_system@postgres:5432/advegax
+  DATABASE_URL_MIGRATOR: postgresql+psycopg://advegax_migrator:advegax_migrator@postgres:5432/advegax
+  REDIS_URL: redis://redis:6379/0
+  APP_BASE_URL: http://localhost:3000
+  CORS_ALLOWED_ORIGINS: http://localhost:3000
+  SMTP_HOST: mailpit
+  SMTP_PORT: "1025"
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports: ["5432:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 10
+
+  db-bootstrap:
+    image: postgres:16
+    depends_on:
+      postgres: {condition: service_healthy}
+    environment:
+      PGHOST: postgres
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    volumes:
+      - ./scripts:/scripts:ro
+      - ./infrastructure:/infrastructure:ro
+    entrypoint: ["bash", "/scripts/bootstrap_db.sh", "advegax"]
+
+  redis:
+    image: redis:7
+    ports: ["6379:6379"]
+
+  mailpit:
+    image: axllent/mailpit:v1.20
+    ports: ["8025:8025", "1025:1025"]
+
+  migrate:
+    build: {context: ., dockerfile: infrastructure/docker/api.Dockerfile}
+    environment: *backend-env
+    depends_on:
+      db-bootstrap: {condition: service_completed_successfully}
+    command: ["alembic", "upgrade", "head"]
+
+  api:
+    build: {context: ., dockerfile: infrastructure/docker/api.Dockerfile}
+    environment: *backend-env
+    ports: ["8000:8000"]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_started}
+
+  worker:
+    build: {context: ., dockerfile: infrastructure/docker/api.Dockerfile}
+    environment: *backend-env
+    command: ["celery", "-A", "app.workers.celery_app:celery_app", "worker", "--loglevel=INFO"]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_started}
+      mailpit: {condition: service_started}
+
+volumes:
+  pgdata:

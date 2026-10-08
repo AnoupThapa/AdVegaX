@@ -35,3 +35,6 @@ docker-data/
 Thumbs.db
 .idea/
 .vscode/
+
+# Redis local dumps
+*.rdb

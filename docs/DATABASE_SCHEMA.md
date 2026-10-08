@@ -34,100 +34,140 @@ Use UTC timestamps for stored event timestamps.
 
 Money should use fixed-precision numeric/Decimal semantics, never floating-point arithmetic.
 
-## 2. Core Identity and Organization Tables (Phase 1A)
+## 2. Core Identity and Organization Tables (Phase 1A — implemented)
 
-Global identity tables (`users`, `user_password_credentials`, `sessions`, `user_action_tokens`) are **not tenant-owned** (see §19).
+Implemented by migrations `0001_identity`, `0002_organizations`. All timestamps are `timestamptz` (UTC). Primary keys are application-generated UUIDs. Constraint and index names follow the naming convention in `backend/app/db/base.py`.
+
+Global identity tables (`users`, `user_password_credentials`, `sessions`, `user_action_tokens`) are **not tenant-owned** and have no RLS (§19); they are reachable only through the identity domain.
 
 ### users
-- id
-- email (stored normalized; unique, case-insensitive)
-- display_name
-- status (active, disabled)
-- email_verified_at
-- created_at, updated_at
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| email | varchar(254) NOT NULL | unique (`uq_users_email`); check `email = lower(email)` |
+| display_name | varchar(120) | |
+| status | varchar(16) NOT NULL default `active` | check: active, disabled |
+| email_verified_at | timestamptz | null until verified |
+| created_at, updated_at | timestamptz NOT NULL default now() | |
 
 ### user_password_credentials
-- user_id (PK/FK)
-- password_hash (Argon2id, parameters encoded in hash)
-- password_changed_at
-- created_at, updated_at
+| Column | Type | Notes |
+|---|---|---|
+| user_id | uuid PK, FK → users ON DELETE CASCADE | one password credential per user |
+| password_hash | text NOT NULL | Argon2id; parameters encoded in the hash; upgraded on login |
+| password_changed_at | timestamptz NOT NULL | |
+| created_at, updated_at | timestamptz NOT NULL | |
 
 Credentials are separate from `users` so external identities (`user_identities`) and MFA factors/passkeys (`user_mfa_factors`) can be added later without redesign (A8).
 
 ### user_action_tokens
-Single-use tokens for email verification, password reset and invitation acceptance.
-- id
-- purpose (email_verification, password_reset, invitation)
-- token_hash (unique)
-- user_id nullable
-- email nullable
-- invitation_id nullable
-- expires_at, consumed_at, created_at
+Single-use tokens for email verification, password reset and invitation acceptance. Only SHA-256 hashes are stored.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| purpose | varchar(32) NOT NULL | check: email_verification, password_reset, invitation |
+| token_hash | varchar(64) NOT NULL | unique |
+| user_id | uuid FK → users ON DELETE CASCADE | verification/reset tokens |
+| email | varchar(254) | address the token was issued for (must still match on use) |
+| organization_id | uuid FK → organizations ON DELETE CASCADE | invitation tokens (added in 0002) |
+| invitation_id | uuid FK → invitations ON DELETE CASCADE | invitation tokens (added in 0002) |
+| expires_at | timestamptz NOT NULL | from `EMAIL_VERIFICATION_TTL`, `PASSWORD_RESET_TTL`, `INVITATION_TTL` |
+| consumed_at | timestamptz | set atomically on use |
+| invalidated_at | timestamptz | set when a newer token of the same scope is issued |
+| created_at | timestamptz NOT NULL | |
+
+Indexes: `(user_id, purpose)`, `organization_id`, `invitation_id`.
 
 ### organizations
-- id
-- name
-- slug (unique)
-- default_currency
-- default_timezone (reporting time zone)
-- status
-- created_at, updated_at
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| name | varchar(120) NOT NULL | |
+| slug | varchar(63) NOT NULL | unique; check `^[a-z0-9]+(-[a-z0-9]+)*$` |
+| default_currency | varchar(3) NOT NULL | check ISO-4217 shape `^[A-Z]{3}$` |
+| default_timezone | varchar(64) NOT NULL | IANA name, validated by the API (reporting time zone) |
+| status | varchar(16) NOT NULL default `active` | check: active, suspended |
+| created_by_user_id | uuid FK → users ON DELETE SET NULL | indexed |
+| created_at, updated_at | timestamptz NOT NULL | |
 
 ### memberships
-- id
-- organization_id
-- user_id
-- role (owner, admin, manager, analyst, viewer)
-- status (active, suspended, removed)
-- created_at, updated_at
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| organization_id | uuid NOT NULL FK → organizations ON DELETE CASCADE | |
+| user_id | uuid NOT NULL FK → users ON DELETE CASCADE | |
+| role | varchar(16) NOT NULL | check: owner, admin, manager, analyst, viewer |
+| status | varchar(16) NOT NULL default `active` | check: active, suspended, removed (removal is soft) |
+| created_at, updated_at | timestamptz NOT NULL | |
 
-Unique: organization_id + user_id. Invariant: every organization has at least one active owner.
+Unique `(organization_id, user_id)`; index `(user_id, status)`. Invariant (service-enforced with row locks): every organization keeps at least one active owner.
 
 ### invitations
-- id
-- organization_id
-- email
-- role
-- invited_by_user_id
-- status (pending, accepted, revoked, expired)
-- expires_at, accepted_at, created_at
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| organization_id | uuid NOT NULL FK → organizations ON DELETE CASCADE | |
+| email | varchar(254) NOT NULL | lower-case check |
+| role | varchar(16) NOT NULL | role check as memberships |
+| invited_by_user_id | uuid FK → users ON DELETE SET NULL | indexed |
+| status | varchar(16) NOT NULL default `pending` | check: pending, accepted, revoked, expired |
+| expires_at | timestamptz NOT NULL | |
+| accepted_at | timestamptz | |
+| accepted_by_user_id | uuid FK → users ON DELETE SET NULL | indexed |
+| created_at, updated_at | timestamptz NOT NULL | |
 
-## 3. Sessions / Security (Phase 1A)
+Indexes: `(organization_id, status)`; partial unique `(organization_id, email) WHERE status = 'pending'`.
+
+## 3. Sessions / Security (Phase 1A — implemented)
 
 ### sessions
-- id
-- user_id
-- token_hash (unique)
-- auth_method (password; later oauth, sso)
-- assurance_level (later: mfa)
-- created_at, last_used_at
-- idle_expires_at, absolute_expires_at
-- revoked_at, revoked_reason
-- ip_hash, user_agent_summary
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| user_id | uuid NOT NULL FK → users ON DELETE CASCADE | indexed; partial index on active sessions |
+| token_hash | varchar(64) NOT NULL | unique; SHA-256 of the 256-bit cookie token |
+| auth_method | varchar(32) NOT NULL default `password` | later: oauth, sso |
+| assurance_level | varchar(32) NOT NULL default `single_factor` | later: mfa (step-up) |
+| created_at, last_used_at | timestamptz NOT NULL | `last_used_at` updated at most every `SESSION_TOUCH_INTERVAL` |
+| idle_expires_at | timestamptz NOT NULL | sliding, from `SESSION_IDLE_TIMEOUT`; never beyond absolute |
+| absolute_expires_at | timestamptz NOT NULL | from `SESSION_ABSOLUTE_TIMEOUT`; check idle ≤ absolute |
+| revoked_at, revoked_reason | timestamptz, varchar(64) | logout, logout_all, rotated, user_revoked, password_changed, password_reset |
+| ip_hash | varchar(64) | keyed hash; raw IPs are never stored |
+| user_agent_summary | varchar(200) | |
 
-### security_events
-- id
-- organization_id nullable
-- user_id nullable
-- event_type (login_succeeded, login_failed, logout, password_reset_requested, password_changed, session_revoked, email_verified, …)
-- ip_hash or safe network metadata
-- user agent summary where appropriate
-- correlation_id
-- created_at
-- metadata JSONB
+### security_events (migration 0003)
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| organization_id | uuid FK → organizations ON DELETE SET NULL | indexed |
+| user_id | uuid FK → users ON DELETE SET NULL | index `(user_id, created_at)` |
+| event_type | varchar(64) NOT NULL | user_registered, registration_existing_email, email_verified, email_verification_resent, login_succeeded, login_failed, logout, logout_all, session_revoked, password_reset_requested, password_reset_completed, password_changed |
+| ip_hash | varchar(64) | keyed hash |
+| user_agent_summary | varchar(200) | |
+| correlation_id | varchar(64) | |
+| metadata | jsonb NOT NULL default `{}` | scrubbed |
+| created_at | timestamptz NOT NULL | index `(event_type, created_at)` |
 
-Do not store unnecessary personal/security data.
+The API role may only insert; reading is a system operation.
 
-### email_outbox
-- id
-- organization_id nullable
-- template (email_verification, password_reset, invitation, security_notice, …)
-- recipient
-- payload JSONB (template variables; no secrets except the single-use link, which is never logged)
-- status (pending, sending, sent, failed)
-- attempts, last_error, next_attempt_at
-- provider_message_id
-- created_at, sent_at
+### email_outbox (migration 0004)
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| organization_id | uuid FK → organizations ON DELETE SET NULL | indexed |
+| template | varchar(64) NOT NULL | email_verification, account_exists, password_reset, password_changed, invitation, security_notice |
+| recipient | varchar(254) NOT NULL | |
+| payload | jsonb NOT NULL | template variables incl. single-use links; **cleared once sent or permanently failed** |
+| status | varchar(16) NOT NULL default `pending` | check: pending, sent, failed (rows are locked during delivery, so no separate "sending" state) |
+| attempts | integer NOT NULL default 0 | |
+| last_error | text | short error class only |
+| next_attempt_at | timestamptz NOT NULL default now() | exponential backoff from `EMAIL_RETRY_BASE_DELAY` |
+| provider_message_id | varchar(255) | |
+| sent_at | timestamptz | |
+| created_at, updated_at | timestamptz NOT NULL | index `(status, next_attempt_at)` |
+
+The API role may only insert; the worker (`advegax_system`) reads and updates.
 
 ## 4. External Connections and Resources (Phase 1B — approved model A6)
 
@@ -538,8 +578,8 @@ Financial aggregates are derived by deterministic application logic. They store 
 
 ## 16. Audit (Phase 1A)
 
-### audit_logs
-Append-only. The application role may insert and read (within its tenant) but never update or delete.
+### audit_logs (Phase 1A — migration 0003)
+Append-only. The application role may insert and read (within its tenant) but never update or delete; no runtime role holds UPDATE, DELETE or TRUNCATE. Indexes: `(organization_id, created_at)`, `actor_user_id`. `organization_id` uses ON DELETE RESTRICT. The `metadata` column is exposed as `metadata` in the API.
 - id
 - organization_id nullable
 - actor_type (user, system, worker, ai_recommendation)
@@ -621,7 +661,7 @@ Tables use `FORCE ROW LEVEL SECURITY`. No `SECURITY DEFINER` functions without d
 | Membership | memberships | RLS: rows of the current organization, or the current user's own rows (to list/switch organizations) |
 | Organization | organizations | RLS: current organization, or organizations where the current user has an active membership |
 | Global identity | users, user_password_credentials, sessions, user_action_tokens | Not tenant-owned; access only through the identity service; never exposed via organization endpoints except through membership joins |
-| Security/system | security_events, email_outbox, job_runs (system rows) | Insert by the application; read/process only by `advegax_system` or the owning tenant where `organization_id` is set |
+| Security/system | security_events, email_outbox (Phase 1A); job_runs (Phase 1B) | Insert-only for `advegax_app` (with `organization_id` NULL or the current organization); read/process only by `advegax_system` |
 
 **Verification.** CI fails if a table with `organization_id` lacks enabled + forced RLS and a policy. Cross-tenant tests cover every tenant-owned table and route.
 

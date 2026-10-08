@@ -126,6 +126,29 @@ AdVegaX uses server-side sessions in an HttpOnly cookie (Decision D10); there is
 
 Future login methods (Google, Microsoft, enterprise IdPs, MFA, passkeys) are added as new endpoints without changing these.
 
+### 3A. Phase 1A implementation reference
+
+Implemented in `backend/app/domains/identity/router.py`; the generated OpenAPI schema (`/api/v1/openapi.json`, non-deployed environments only) is the authoritative request/response contract.
+
+| Endpoint | Request body | Success | Notes |
+|---|---|---|---|
+| `GET /auth/csrf` | — | 200 `{csrf_token}` | Sets the HttpOnly CSRF cookie; the client keeps the token in memory and sends it as `X-CSRF-Token` |
+| `POST /auth/register` | `{email, password, display_name?}` | 202 `{status: "accepted"}` | Identical response for new and existing emails |
+| `POST /auth/verify-email` | `{token}` | 200 `{status: "verified"}` | 400 `INVALID_TOKEN` |
+| `POST /auth/resend-verification` | — | 202 | Session required; throttled |
+| `POST /auth/login` | `{email, password}` | 200 `{user, csrf_token}` | Sets a new session cookie; 401 `INVALID_CREDENTIALS` |
+| `POST /auth/logout`, `/auth/logout-all` | — | 200 `{status, csrf_token}` | Clears the session cookie; returns an anonymous CSRF token |
+| `GET /auth/me` | — | 200 `{id, email, display_name, email_verified, memberships[]}` | |
+| `GET /auth/sessions` | — | 200 list `{id, created_at, last_used_at, auth_method, user_agent_summary, current}` | |
+| `DELETE /auth/sessions/{session_id}` | — | 200 | 404 if not the caller's |
+| `POST /auth/forgot-password` | `{email}` | 202 | Uniform response |
+| `POST /auth/reset-password` | `{token, new_password}` | 200 `{status, csrf_token}` | Revokes all sessions; marks the email verified |
+| `POST /auth/change-password` | `{current_password, new_password}` | 200 `{status, csrf_token}` | Revokes other sessions; issues a new session |
+
+Health probes are served at `GET /api/v1/health/live` and `GET /api/v1/health/ready` (database + Redis).
+
+**Error codes (Phase 1A):** `VALIDATION_ERROR` 422 · `UNAUTHENTICATED` 401 · `INVALID_CREDENTIALS` 401 · `FORBIDDEN` 403 · `EMAIL_NOT_VERIFIED` 403 · `CSRF_FAILED` 403 · `INVITATION_EMAIL_MISMATCH` 403 · `NOT_FOUND` 404 · `METHOD_NOT_ALLOWED` 405 · `CONFLICT` 409 · `SLUG_TAKEN` 409 · `ALREADY_MEMBER` 409 · `LAST_OWNER` 409 · `INVITATION_NOT_PENDING` 409 · `INVALID_TOKEN` 400 · `PAYLOAD_TOO_LARGE` 413 · `UNSUPPORTED_MEDIA_TYPE` 415 · `RATE_LIMITED` 429 · `INTERNAL_ERROR` 500 · `SERVICE_UNAVAILABLE` 503. Validation details list location, message and type only — submitted values are never echoed.
+
 ## 4. Organizations (Phase 1A)
 
 ### GET /organizations
@@ -154,6 +177,8 @@ Accept with a single-use token; the authenticated user's verified email must mat
 See §18.
 
 All organization endpoints resolve membership and role server-side; a non-member receives 404.
+
+Phase 1A request bodies: organization create `{name, slug?, default_currency, default_timezone}` (currency ISO-4217, IANA time zone; slug derived from the name when omitted) · update `{name?, default_currency?, default_timezone?}` · member update `{role?, status?: active|suspended}` · invitation `{email, role}` · accept `{token}`. Unknown fields are rejected (422). Role rules: only Owners grant or remove the Owner role; nobody assigns a role above their own; the last active Owner cannot be removed, demoted or suspended (409 `LAST_OWNER`). Creating organizations and accepting invitations require a verified email (403 `EMAIL_NOT_VERIFIED`).
 
 ## 5. External Connections and Resources (Phase 1B framework; providers from Phase 2A)
 
@@ -401,12 +426,7 @@ Enabling autopilot requires appropriate role and explicit confirmation.
 
 ### GET /organizations/{organization_id}/audit-logs
 
-Filters:
-- actor
-- action
-- resource
-- date range
-- result
+Filters (Phase 1A query parameters): `actor_user_id`, `action`, `resource_type`, `created_from`, `created_to` (ISO 8601), `result` (success | denied | failed); pagination `page` (≥ 1) and `page_size` (1–100, default 50). Newest first. Owners and Admins only (A15).
 
 Never expose secret fields.
 
