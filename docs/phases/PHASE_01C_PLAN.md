@@ -1,6 +1,6 @@
 # Phase 1C — Frontend Shell: Implementation Plan
 
-**Status:** DRAFT — awaiting product-owner approval. No code before approval. · **Date:** 2026-10-08
+**Status:** ✅ Approved (2026-10-08, A17 — all §15 recommendations) — delivery task by task · **Date:** 2026-10-08
 **Depends on:** Phase 1A and 1B (implemented, pushed; awaiting review) · **Followed by:** Phase 2A (Shopify read-only + finance core)
 **Governing documents:** MASTER_SPECIFICATION §2 (stack), §20–§21 (D7, D10–D15, A7, A8, A10); ARCHITECTURE §3–§4, §7; API_SPECIFICATION §3–§5, §24; PROJECT_RULES §4 (frontend); SECURITY.md §2–§3
 

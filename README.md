@@ -2,7 +2,7 @@
 
 AI-powered E-commerce Advertising & Growth Operating System — an independent multi-tenant SaaS that connects commerce platforms (Shopify, WooCommerce), advertising platforms (Google Ads, Meta) and analytics (GA4) into one controlled, auditable growth system.
 
-**Status:** Phase 1A (platform core & identity) and Phase 1B (integration foundation, test platform only) implemented — awaiting product-owner review. Phase 1C (frontend shell) plan awaiting approval; real platform integrations not started. See `docs/PROJECT_STATUS.md`.
+**Status:** Phase 1A (platform core & identity) and Phase 1B (integration foundation, test platform only) implemented — awaiting product-owner review. Phase 1C (frontend shell) in progress — task 1C-01 done; real platform integrations not started. See `docs/PROJECT_STATUS.md`.
 
 ## Documentation (`docs/`)
 
@@ -19,7 +19,7 @@ AI-powered E-commerce Advertising & Growth Operating System — an independent m
 | `PROJECT_STATUS.md` | Current progress, decision log, open questions |
 | `SECURITY.md` | How security controls are implemented and tested |
 | `INTEGRATION_GUIDES.md` | How a platform connector is added; per-provider notes |
-| `phases/` | One plan per phase; `PHASE_01A_PLAN.md` (approved), `PHASE_01A_REPORT.md` (implemented), `PHASE_01B_PLAN.md` (approved), `PHASE_01B_REPORT.md` (implemented), `PHASE_01C_PLAN.md` (draft) |
+| `phases/` | One plan per phase; `PHASE_01A_PLAN.md` (approved), `PHASE_01A_REPORT.md` (implemented), `PHASE_01B_PLAN.md` (approved), `PHASE_01B_REPORT.md` (implemented), `PHASE_01C_PLAN.md` (approved), `PHASE_01C_PROGRESS.md` (task reports) |
 
 ## Local development (backend)
 
@@ -46,6 +46,19 @@ uv run celery -A app.workers.celery_app:celery_app beat --loglevel=INFO   # sche
 ```
 
 API docs (non-deployed environments): http://localhost:8000/api/v1/docs
+
+## Local development (frontend)
+
+Requirements: Node.js 24 LTS (`frontend/.nvmrc`).
+
+```bash
+cd frontend
+cp .env.example .env.local        # public values only (NEXT_PUBLIC_API_BASE_URL)
+npm ci
+npm run dev                       # http://localhost:3000
+```
+
+Checks: `make frontend-check` (ESLint, Prettier, strict TypeScript, Vitest with coverage, production dependency audit, build).
 
 **Checks**
 

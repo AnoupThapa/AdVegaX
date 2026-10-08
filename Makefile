@@ -1,5 +1,5 @@
 # AdVegaX developer commands. Backend commands run from backend/ with uv.
-.PHONY: up down bootstrap-test migrate test lint format typecheck check
+.PHONY: up down bootstrap-test migrate test lint format typecheck check frontend-install frontend-check frontend-dev
 
 BACKEND = cd backend &&
 
@@ -32,3 +32,16 @@ typecheck:
 	$(BACKEND) uv run mypy
 
 check: lint typecheck test
+
+# Frontend (Phase 1C) — Node.js 24 LTS, run from frontend/
+FRONTEND = cd frontend &&
+
+frontend-install:
+	$(FRONTEND) npm ci
+
+frontend-check: ## lint, format, strict type check, unit tests with coverage, production audit, build
+	$(FRONTEND) npm run check
+	$(FRONTEND) npm run build
+
+frontend-dev:
+	$(FRONTEND) npm run dev

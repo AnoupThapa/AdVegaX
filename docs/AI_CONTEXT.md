@@ -11,7 +11,7 @@ AdVegaX — independent, multi-tenant e-commerce advertising and growth SaaS.
 | 0 | Complete |
 | 1A — Platform core & identity | Implemented, pushed — awaiting review |
 | 1B — Integration foundation | Implemented, pushed — awaiting review |
-| 1C — Frontend shell | **Plan drafted — awaiting approval** (`phases/PHASE_01C_PLAN.md`); no code |
+| 1C — Frontend shell | **Approved (A17) — in progress**: 1C-01 done; next 1C-02 (`phases/PHASE_01C_PROGRESS.md`) |
 | 2A onward | Not started |
 
 Repository: https://github.com/AnoupThapa/AdVegaX · working branch `feature/phase-1a`.
@@ -61,4 +61,4 @@ Next task:     - …
 
 ## Commands
 - Backend checks: `make check` (ruff, mypy --strict, pytest with coverage gates; needs PostgreSQL 16 + Redis 7).
-- Frontend checks: defined in Phase 1C.
+- Frontend checks: `make frontend-check` (Node.js 24; ESLint, Prettier, strict TypeScript, Vitest with coverage, production audit, build).

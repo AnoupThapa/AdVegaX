@@ -1,0 +1,11 @@
+.page {
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  padding: var(--space-12) var(--space-4);
+}
+
+.lead {
+  max-width: 60ch;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-lg);
+}
