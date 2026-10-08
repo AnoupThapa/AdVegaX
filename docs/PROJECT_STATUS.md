@@ -1,7 +1,7 @@
 # AdVegaX — Project Status & Progress Log
 
 **Last updated:** 2026-10-08
-**Current phase:** Phase 1B — implemented 2026-10-08; awaiting product-owner review (1C not started)
+**Current phase:** Phase 1C — plan drafted, awaiting approval (1A and 1B implemented and pushed; awaiting review)
 **Code written:** Phase 1A + 1B backend · **Migrations:** 0001–0006 · **Integrations:** test (fake) platform only — no real platform
 
 Update this file at the end of every phase and every approved sub-phase (ROADMAP §5, step 13).
@@ -15,7 +15,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | 0 | Architecture approval & bootstrap | ✅ **Complete** | Report v3 approved; A1–A14 recorded; specs consistent |
 | 1A | Platform core & identity | ✅ **Implemented — awaiting review** | 141 tests, 98.5 % coverage; `phases/PHASE_01A_REPORT.md` |
 | 1B | Integration foundation | ✅ **Implemented — awaiting review** | 272 tests, 98.4 % coverage; `phases/PHASE_01B_REPORT.md` |
-| 1C | Frontend shell | Not started | Plan to be reviewed separately (not started) |
+| 1C | Frontend shell | **Plan drafted — awaiting approval** | `phases/PHASE_01C_PLAN.md`; no code |
 | 2A | Shopify (read-only) + finance core | Not started | Needs Q5–Q9 before its phase |
 | 2B | WooCommerce (read-only) | Not started | Needs Q10 |
 | 3 | Google Ads (read-only) | Not started | Start developer-token application early |
@@ -51,6 +51,8 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | 2026-10-08 | Phase 1B plan drafted | `phases/PHASE_01B_PLAN.md` |
 | 2026-10-08 | **Phase 1A implemented**: identity, sessions, CSRF, email outbox, organizations, invitations, RBAC, audit, RLS, CI | `backend/`, `phases/PHASE_01A_REPORT.md`, `SECURITY.md` |
 | 2026-10-08 | Phase 1B plan approved (A16) | `MASTER_SPECIFICATION.md §21` |
+| 2026-10-08 | Branches pushed to GitHub by the product owner | https://github.com/AnoupThapa/AdVegaX |
+| 2026-10-08 | Phase 1C plan drafted; `AI_CONTEXT.md` added | `phases/PHASE_01C_PLAN.md`, `AI_CONTEXT.md` |
 | 2026-10-08 | **Phase 1B implemented**: connections/resources/links, encrypted credentials, SSRF-safe client, rate limiter, provider framework + fake platform, jobs with retry/dead-letter, single scheduler, audited denials | `backend/`, `phases/PHASE_01B_REPORT.md`, `SECURITY.md`, `INTEGRATION_GUIDES.md` |
 
 ## 3. Decision log
@@ -79,7 +81,8 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 
 **Awaiting product owner now**
 - Review of Phase 1A (`phases/PHASE_01A_REPORT.md`) and Phase 1B (`phases/PHASE_01B_REPORT.md`, incl. deviations §10).
-- Push `main` and `feature/phase-1a` from the local folder to https://github.com/AnoupThapa/AdVegaX (pushing from the Claude session is refused with 403), so CI runs the Docker build and gitleaks.
+- Confirm the first CI run on GitHub (Docker build, gitleaks) after the push.
+- Approval of the Phase 1C plan (`phases/PHASE_01C_PLAN.md`) and its §15 decisions.
 
 **Future-phase decisions (not blockers until their phase)** — details in `DISCOVERY_REPORT.md §14`:
 Q5 Shopify public-app approach (2A production) · Q6 same store/account in two organizations (2A) · Q7 financial metric definitions (2A/6) · Q8 customer PII policy (2A) · Q9 backfill depth/refresh (2A–5) · Q10 WooCommerce versions/HTTPS (2B) · Q11 GA4 aggregated model + Admin API (5) · Q12 LLM provider and creative scope (8/9) · Q13 autopilot action classes (12) · Q14 plans/pricing (13) · Q15 agency model, retention, launch markets (14/staging) · Q16 hosting provider/region and email provider (before staging).
@@ -88,6 +91,6 @@ Q5 Shopify public-app approach (2A production) · Q6 same store/account in two o
 
 ## 5. Next actions
 
-1. Product owner pushes the branches from the local folder and confirms CI.
-2. Product owner reviews Phase 1A and 1B reports.
-3. Phase 1C (frontend shell) plan is reviewed separately — **not started**. No real platform integration (Shopify, WooCommerce, Google Ads, Meta, GA4) before its own approved phase.
+1. Product owner checks the CI run on GitHub and reviews the Phase 1A and 1B reports.
+2. Product owner reviews and approves `phases/PHASE_01C_PLAN.md` (§15 decisions). No 1C code before approval; delivery task by task (1C-01 … 1C-08).
+3. No real platform integration (Shopify, WooCommerce, Google Ads, Meta, GA4) before its own approved phase.

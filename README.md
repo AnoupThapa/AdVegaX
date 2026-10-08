@@ -2,12 +2,13 @@
 
 AI-powered E-commerce Advertising & Growth Operating System — an independent multi-tenant SaaS that connects commerce platforms (Shopify, WooCommerce), advertising platforms (Google Ads, Meta) and analytics (GA4) into one controlled, auditable growth system.
 
-**Status:** Phase 1A (platform core & identity) and Phase 1B (integration foundation, test platform only) implemented — awaiting product-owner review. Phase 1C and real platform integrations not started. See `docs/PROJECT_STATUS.md`.
+**Status:** Phase 1A (platform core & identity) and Phase 1B (integration foundation, test platform only) implemented — awaiting product-owner review. Phase 1C (frontend shell) plan awaiting approval; real platform integrations not started. See `docs/PROJECT_STATUS.md`.
 
 ## Documentation (`docs/`)
 
 | File | Purpose |
 |---|---|
+| `AI_CONTEXT.md` | Start here (AI agents): current state, rules, task and report templates |
 | `MASTER_SPECIFICATION.md` | Product, MVP, principles, AI safety, commercial requirements, approved decisions (§20) |
 | `PROJECT_RULES.md` | Permanent rules for AI coding agents and developers |
 | `ARCHITECTURE.md` | System, backend, frontend, integration, AI and deployment architecture |
@@ -18,7 +19,7 @@ AI-powered E-commerce Advertising & Growth Operating System — an independent m
 | `PROJECT_STATUS.md` | Current progress, decision log, open questions |
 | `SECURITY.md` | How security controls are implemented and tested |
 | `INTEGRATION_GUIDES.md` | How a platform connector is added; per-provider notes |
-| `phases/` | One plan per phase; `PHASE_01A_PLAN.md` (approved), `PHASE_01A_REPORT.md` (implemented), `PHASE_01B_PLAN.md` (approved), `PHASE_01B_REPORT.md` (implemented) |
+| `phases/` | One plan per phase; `PHASE_01A_PLAN.md` (approved), `PHASE_01A_REPORT.md` (implemented), `PHASE_01B_PLAN.md` (approved), `PHASE_01B_REPORT.md` (implemented), `PHASE_01C_PLAN.md` (draft) |
 
 ## Local development (backend)
 
