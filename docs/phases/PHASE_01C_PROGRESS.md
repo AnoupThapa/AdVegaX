@@ -8,7 +8,7 @@ Plan: `PHASE_01C_PLAN.md` (approved, A17). One report per task; the final `PHASE
 | 1C-02 API types + client | ✅ Done — awaiting review |
 | 1C-03 Backend: `GET /providers`, `organization_id` on callback redirect | ✅ Done — awaiting review |
 | 1C-04 Auth pages | ✅ Done — awaiting review |
-| 1C-05 Organizations, members, invitations | Not started |
+| 1C-05 Organizations, members, invitations | ✅ Done — awaiting review |
 | 1C-06 Account security | Not started |
 | 1C-07 Connections pages | Not started |
 | 1C-08 End-to-end + accessibility suite, CI, Docker, docs, report | Not started |
@@ -186,3 +186,52 @@ Plan: `PHASE_01C_PLAN.md` (approved, A17). One report per task; the final `PHASE
 
 **Next task:** 1C-05 — organizations: create, switch, settings, members, invitations, accept invitation.
 
+---
+
+## 1C-05 — Organizations, members and invitations (2026-10-08)
+
+**Completed**
+- **Pages:** `/orgs/new` (create), `/orgs/[organizationId]` (overview, empty state for future reports), `/orgs/[organizationId]/members` (members + invitations), `/orgs/[organizationId]/settings`, `/invitations/accept`.
+- **Create organization:** name, reporting currency (ISO 4217 list with names) and time zone (IANA list, defaults to the browser's). Unverified users see the verification notice instead of the form. The creator lands on the new organization; the session is refreshed so the switcher lists it.
+- **Organization switcher** in the header (from `GET /auth/me` memberships): disclosure button with plain links; Escape (focus returns) and click-outside close it. Home page lists the user's organizations with roles and a create link.
+- **Organization shell:** signed-in only (`RequireAuth`), loads `GET /organizations/{id}`, section navigation with `aria-current`. **404 from the API → the same "Page not found" as a missing page** (no hint whether the organization exists). Malformed IDs are never sent to the API.
+- **Settings:** owners/admins edit name, currency, time zone; only changed fields are sent (`PATCH`). Other roles see a read-only summary.
+- **Members:** list (name, email, role, status, joined). Owners/admins change roles (select + explicit "Save role", never on change) and remove members after a confirmation dialog (native modal `<dialog>`, focus starts on Cancel, Escape cancels). Role options mirror the API rules: only owners grant Owner, nobody assigns above their own role, admins cannot touch owners. Removing yourself is offered as "Leave" with its own warning and goes home afterwards; the API's last-owner rule (409 `LAST_OWNER`) is shown as a message.
+- **Invitations** (owners/admins only; other roles never request the list): invite by email + role (role description shown as the hint; default Viewer), list with status (waiting / accepted / revoked / expired) and expiry, revoke pending ones. `ALREADY_MEMBER` and validation errors explained.
+- **Accept invitation:** token read from the URL fragment and removed from the address bar at once (same helper as 1C-04). **Accepting needs an explicit click** (no automatic join on page load). Signed out → "Sign in to accept" with `next=/invitations/accept`; the token is kept **in memory only** during that same-tab detour (reload or new tab forgets it — the person reopens the email link). Unverified → verification notice. Email mismatch → explained, token kept, "Sign out and switch account". Used/expired/invalid → token dropped, "ask for a new invitation". Temporary failures keep the token so the person can retry. A second invitation link opened in the same tab (fragment-only change, no reload) is picked up and starts afresh.
+- **Role-based visibility** (`features/organizations/permissions.ts`) mirrors API §24 for usability only; every action is still authorized by the API.
+- Shared UI: `SelectField`, `ConfirmDialog`, `PageHeading` (focus to the heading on arrival); `Button` gained a `danger` variant and ref forwarding.
+
+**Files changed** (39 in `frontend/`)
+- New (30): 6 route files (`app/orgs/new`, `app/orgs/[organizationId]/{layout,page,members/page,settings/page}`, `app/invitations/accept/page`), 3 in `components/ui/`, 17 in `features/organizations/`, 4 test files (`tests/features/organizations.test.tsx`, `tests/features/members-and-invitations.test.tsx`, `tests/unit/organization-logic.test.ts`, `tests/support/organizations.ts`).
+- Modified (9): `app/globals.css` (danger contrast token), `components/ui/{Button.tsx,ui.module.css}`, `components/layout/SiteHeader.module.css` (wraps on phones), `features/auth/{AccountNav.tsx,AccountNav.module.css,HomeSession.tsx}` (switcher, organization list, email hidden on phones), `features/auth/fragment-token.ts` (opt-in `followHashChanges`, default off — 1C-04 pages unchanged), `tests/support/navigation.ts` (`useParams`).
+- Backend: none. Database: none. Deleted: none.
+
+**Tests**
+- Frontend: **184 passed** (+70) · coverage 98.7 % statements, 94.0 % branches, 100 % functions, 99.9 % lines (`features/organizations` 99.5 % statements). ESLint (0 warnings), Prettier, strict `tsc`, production build, `npm audit --omit=dev` (0 vulnerabilities): pass.
+- Component tests drive the real API client against a fake API: role-based visibility for owner/admin/manager, role change + refusal (value restored), remove/leave with dialog (Cancel, Escape, confirm), last-owner refusal, invitation send/validation/`ALREADY_MEMBER`/revoke, accept flows (explicit click sends the token once in Strict Mode, sign-in detour, mismatch, final vs temporary errors, same-tab second link), 404 → not found, malformed ID → no API call, settings sends only changed fields.
+- **Real browser, real backend** (production build on :3000, uvicorn API on :8000, PostgreSQL 16, Redis 7, Celery worker + beat, a local SMTP catcher; temporary Playwright script, not committed): **34/34 checks passed** — owner creates an organization, edits settings, switcher by keyboard, invites (link read from the real email), revokes, duplicate-member message; a new user opens the invitation signed out (token gone from the URL), signs up, verifies, signs in, reopens the link and accepts as Manager (read-only members and settings); a reused link is refused; an existing user goes through the sign-in detour and accepts (memory only); owner changes a role, removes a member via the dialog, is stopped from leaving as last owner; the removed member and a malformed ID get "Page not found"; an email-mismatch attempt does not consume the link (the right person accepts it afterwards); an unverified user sees the notice instead of the create form; a signed-out visitor to an organization page returns there after sign-in; no horizontal scroll at 375 px.
+  - **axe on 15 page states: 0 violations** (WCAG 2.0/2.1/2.2 A + AA and best-practice rules), including mobile, the open switcher and the dialog.
+  - **0 Content-Security-Policy violations**, no page errors; no localStorage/sessionStorage/readable cookies.
+- Backend unchanged; 281 passed in this environment before the work started.
+
+**Security**
+- Invitation tokens never stay in the URL or history and are never written to browser storage; held in a module variable only while needed.
+- Non-members cannot tell whether an organization exists (same not-found page; malformed IDs not sent).
+- Role checks in the UI are cosmetic; API authorization unchanged.
+
+**Migration:** none.
+
+**Deviations**
+1. **Explicit "Accept invitation" click** instead of accepting on page load (plan did not specify). Prevents joining by accident (e.g. a link preview or the wrong account).
+2. **New invitees** must reopen the invitation link after signing up and verifying (verification usually opens a new tab, which cannot see the in-memory token). Persisting the token anywhere would contradict §7.
+3. **Suspend/reactivate** members is supported by the API but not offered in the UI (plan lists change role and remove); suspended members are shown with their status.
+4. Organization **slug** is not shown or editable; the API derives it from the name.
+5. Currency and time-zone choices come from the browser's built-in lists; saved values stay selectable even if a browser lists them differently (e.g. `Asia/Katmandu` vs `Asia/Kathmandu`).
+6. "Leave organization" is only possible for owners/admins, because the API requires `members.manage` to remove any membership, including one's own. Other roles cannot leave by themselves — a product decision for later.
+7. On phones the header hides the signed-in email (switcher and sign-out stay); tables become stacked cards.
+8. Found and fixed during browser testing: a second invitation link in the same tab was ignored; tables widened the page on phones; the table scroll area was not keyboard-focusable.
+
+**Blocked:** none.
+
+**Next task:** 1C-06 — account security: sessions (list, revoke one, sign out everywhere), change password.

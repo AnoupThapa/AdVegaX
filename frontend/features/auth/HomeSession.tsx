@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 
+import { OrganizationList } from "@/features/organizations/OrganizationList";
+
 import { useSession } from "./session";
 import { UnverifiedNotice } from "./UnverifiedNotice";
 
@@ -23,6 +25,7 @@ export function HomeSession() {
         You are signed in as <strong>{user.display_name || user.email}</strong>.
       </p>
       <UnverifiedNotice user={user} />
+      <OrganizationList user={user} />
     </div>
   );
 }

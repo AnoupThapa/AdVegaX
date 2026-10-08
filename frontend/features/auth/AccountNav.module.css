@@ -16,3 +16,10 @@
 .primaryLink {
   font-weight: 600;
 }
+
+/* On phones the switcher and sign-out matter more than the address (still in the account menu). */
+@media (max-width: 40rem) {
+  .who {
+    display: none;
+  }
+}

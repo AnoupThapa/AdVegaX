@@ -78,6 +78,7 @@ Tests: `tests/security/test_tenant_isolation.py` (route sweep generated from Ope
 
 - Domains call the notifications service; it writes an outbox row in the same transaction and dispatches after commit (Celery). The worker renders the template and sends through a vendor-neutral sender port (SMTP adapter).
 - Single-use links use `APP_BASE_URL` and put the token in the URL **fragment** (`#token=`), so it is not sent to servers in request logs or `Referer` headers.
+- The web app reads the fragment token, removes it from the address bar immediately and never writes it to browser storage. An invitation token is held in memory only while a signed-out invitee signs in within the same tab; accepting requires an explicit click (1C-05).
 - The outbox payload is cleared once the email is sent or permanently fails; the API role cannot read the outbox.
 - Retries use exponential backoff (`EMAIL_RETRY_BASE_DELAY`) up to `EMAIL_MAX_ATTEMPTS`. The Phase 1B scheduler runs the delivery sweep every `SCHEDULE_EMAIL_SWEEP_INTERVAL`; `python -m app.workers.email_tasks` remains available for manual runs.
 

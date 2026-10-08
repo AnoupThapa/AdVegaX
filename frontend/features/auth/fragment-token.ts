@@ -24,7 +24,9 @@ export function readAndClearFragmentToken(): string | null {
   return token && TOKEN_PATTERN.test(token) ? token : null;
 }
 
-export function useFragmentToken(): string | null | undefined {
+export function useFragmentToken({
+  followHashChanges = false,
+}: { followHashChanges?: boolean } = {}): string | null | undefined {
   // The first read clears the fragment, so it is kept in a ref: React may run effects twice
   // in development (Strict Mode) and the second run must not see an empty fragment.
   const firstRead = useRef<string | null | undefined>(undefined);
@@ -35,5 +37,16 @@ export function useFragmentToken(): string | null | undefined {
     }
     setToken(firstRead.current);
   }, []);
+  useEffect(() => {
+    if (!followHashChanges) return;
+    // Opening another email link in a tab already on this page changes only the fragment:
+    // the browser does not reload, so pick the new token up here.
+    function onHashChange() {
+      const next = readAndClearFragmentToken();
+      if (next) setToken(next);
+    }
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, [followHashChanges]);
   return token;
 }

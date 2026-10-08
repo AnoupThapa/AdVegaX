@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/Button";
+import { OrganizationSwitcher } from "@/features/organizations/OrganizationSwitcher";
 
 import { useSignOut } from "./actions";
 import styles from "./AccountNav.module.css";
@@ -29,6 +30,7 @@ export function AccountNav() {
 
   return (
     <nav aria-label="Account" className={styles.nav}>
+      <OrganizationSwitcher user={user} />
       <span className={styles.who}>{user.display_name || user.email}</span>
       <Button
         variant="secondary"
