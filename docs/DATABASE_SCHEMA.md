@@ -1,0 +1,653 @@
+# AdVegaX — Database Schema Specification
+
+> **Amended 2026-10-08** for decisions D1–D22 (MASTER_SPECIFICATION.md §20) and Phase 0 approvals A1–A14 (§21).
+
+This document is the **target data model**. Tables are created only in the phase that implements their functionality (A4); the "Introduced" column in §0 is authoritative. Exact Phase 1 column definitions, constraints and indexes are fixed in the approved phase plan before migrations are written.
+
+## 0. Table introduction by phase
+
+| Phase | Tables |
+|---|---|
+| 1A | users, user_password_credentials, sessions, user_action_tokens, organizations, memberships, invitations, audit_logs, security_events, email_outbox |
+| 1B | external_connections, external_connection_credentials, external_resources, organization_resource_links, job_runs |
+| 2A | stores (resource extension), products, product_variants, inventory_levels, product_cost_history, orders, order_items, refunds, refund_lines, customer_refs, webhook_events, sync_runs |
+| 3–4 | ad_accounts (resource extension), campaigns, ad_groups, ads, budgets, ad_performance_daily, keywords, audience_targets |
+| 5 | analytics_properties (resource extension), analytics table per decision Q11 |
+| 6 | fx_rates, metric_definitions, financial_daily, store_cost_rules |
+| 7 | funnel_daily |
+| 8–9 | ai_models, prompt_versions, ai_runs, campaign_strategies, creatives |
+| 10A | actions, approvals, idempotency_keys |
+| 11 | recommendations |
+| 12 | automation_policies |
+| 13 | plans, entitlements, usage_records, billing_customers, subscriptions, invoices |
+| 14 | agency grants |
+| later | notifications (in-app), user_identities (external IdPs), user_mfa_factors (MFA/passkeys) |
+
+
+## 1. Database
+
+Primary database: PostgreSQL.
+
+Use UUIDs for internal primary identifiers unless there is a documented reason otherwise.
+
+Use UTC timestamps for stored event timestamps.
+
+Money should use fixed-precision numeric/Decimal semantics, never floating-point arithmetic.
+
+## 2. Core Identity and Organization Tables (Phase 1A)
+
+Global identity tables (`users`, `user_password_credentials`, `sessions`, `user_action_tokens`) are **not tenant-owned** (see §19).
+
+### users
+- id
+- email (stored normalized; unique, case-insensitive)
+- display_name
+- status (active, disabled)
+- email_verified_at
+- created_at, updated_at
+
+### user_password_credentials
+- user_id (PK/FK)
+- password_hash (Argon2id, parameters encoded in hash)
+- password_changed_at
+- created_at, updated_at
+
+Credentials are separate from `users` so external identities (`user_identities`) and MFA factors/passkeys (`user_mfa_factors`) can be added later without redesign (A8).
+
+### user_action_tokens
+Single-use tokens for email verification, password reset and invitation acceptance.
+- id
+- purpose (email_verification, password_reset, invitation)
+- token_hash (unique)
+- user_id nullable
+- email nullable
+- invitation_id nullable
+- expires_at, consumed_at, created_at
+
+### organizations
+- id
+- name
+- slug (unique)
+- default_currency
+- default_timezone (reporting time zone)
+- status
+- created_at, updated_at
+
+### memberships
+- id
+- organization_id
+- user_id
+- role (owner, admin, manager, analyst, viewer)
+- status (active, suspended, removed)
+- created_at, updated_at
+
+Unique: organization_id + user_id. Invariant: every organization has at least one active owner.
+
+### invitations
+- id
+- organization_id
+- email
+- role
+- invited_by_user_id
+- status (pending, accepted, revoked, expired)
+- expires_at, accepted_at, created_at
+
+## 3. Sessions / Security (Phase 1A)
+
+### sessions
+- id
+- user_id
+- token_hash (unique)
+- auth_method (password; later oauth, sso)
+- assurance_level (later: mfa)
+- created_at, last_used_at
+- idle_expires_at, absolute_expires_at
+- revoked_at, revoked_reason
+- ip_hash, user_agent_summary
+
+### security_events
+- id
+- organization_id nullable
+- user_id nullable
+- event_type (login_succeeded, login_failed, logout, password_reset_requested, password_changed, session_revoked, email_verified, …)
+- ip_hash or safe network metadata
+- user agent summary where appropriate
+- correlation_id
+- created_at
+- metadata JSONB
+
+Do not store unnecessary personal/security data.
+
+### email_outbox
+- id
+- organization_id nullable
+- template (email_verification, password_reset, invitation, security_notice, …)
+- recipient
+- payload JSONB (template variables; no secrets except the single-use link, which is never logged)
+- status (pending, sending, sent, failed)
+- attempts, last_error, next_attempt_at
+- provider_message_id
+- created_at, sent_at
+
+## 4. External Connections and Resources (Phase 1B — approved model A6)
+
+User → External Connection → External Resources → Organization Resource Links. Final columns are fixed in the Phase 1B plan.
+
+### external_connections
+- id
+- organization_id
+- provider
+- auth_scheme (oauth2, api_key, …)
+- authorized_by_user_id
+- status (active, expired, revoked, error)
+- granted_scopes
+- created_at, updated_at, revoked_at
+
+### external_connection_credentials
+- connection_id
+- organization_id
+- encrypted secrets (access/refresh token or key/secret)
+- token_expires_at, refresh_expires_at
+- encryption_key_version
+- last_refreshed_at
+- created_at, updated_at
+
+Credentials are never returned through API responses, logs or AI context.
+
+### external_resources
+Resources discovered through a connection (store, ad account, analytics property, business asset).
+- id
+- organization_id
+- connection_id
+- kind
+- provider
+- external_id (text)
+- display_name, currency, timezone
+- accessible (still reachable through the connection)
+- discovered_at, last_seen_at
+
+Unique: connection_id + kind + external_id.
+
+### organization_resource_links
+Explicit linking; history kept for relinking/reassignment.
+- id
+- organization_id
+- external_resource_id
+- linked_by_user_id, linked_at
+- unlinked_by_user_id, unlinked_at
+- status (active, unlinked)
+
+At most one active link per resource.
+
+### job_runs
+- id
+- organization_id nullable (system jobs)
+- job_type
+- status (queued, running, succeeded, failed, dead)
+- attempts, last_error
+- correlation_id
+- created_at, started_at, finished_at
+
+## 5. Stores
+
+### stores
+Commerce-specific extension of an external resource of kind `store`.
+- id
+- organization_id
+- external_resource_id
+- provider
+- external_store_id
+- domain
+- name
+- currency
+- timezone
+- status
+- created_at
+- updated_at
+
+Unique:
+- organization_id + provider + external_store_id
+
+## 6. Products
+
+### products
+- id
+- organization_id
+- store_id
+- external_product_id
+- title
+- description
+- handle
+- product_type
+- vendor
+- status
+- price
+- currency
+- cost
+- landing_url
+- image_url
+- created_at
+- updated_at
+
+### product_variants
+- id
+- organization_id
+- product_id
+- external_variant_id
+- sku
+- title
+- price
+- cost
+- inventory_quantity
+- currency
+- status
+- created_at
+- updated_at
+
+Indexes:
+- organization_id
+- product_id
+- external identifiers
+- sku where appropriate
+
+## 7. Orders
+
+### orders
+- id
+- organization_id
+- store_id
+- external_order_id
+- order_number
+- status
+- currency
+- gross_amount
+- discount_amount
+- tax_amount
+- shipping_amount
+- refund_amount
+- net_amount
+- ordered_at
+- updated_at
+- raw_reference/metadata
+
+### order_items
+- id
+- organization_id
+- order_id
+- product_id
+- variant_id
+- external_line_item_id
+- quantity
+- unit_price
+- discount_amount
+- product_cost
+- line_total
+
+## 8. Advertising Accounts
+
+### ad_accounts
+Advertising-specific extension of an external resource of kind `ad_account`.
+- id
+- organization_id
+- external_resource_id
+- provider
+- external_account_id
+- name
+- currency
+- timezone
+- status
+- created_at
+- updated_at
+
+Unique:
+- organization_id + provider + external_account_id
+
+## 9. Campaign Structure
+
+### campaigns
+- id
+- organization_id
+- ad_account_id
+- provider
+- external_campaign_id
+- name
+- objective
+- status
+- daily_budget
+- currency
+- start_at
+- end_at
+- created_at
+- updated_at
+
+### ad_groups
+- id
+- organization_id
+- campaign_id
+- external_ad_group_id
+- name
+- status
+- budget
+- created_at
+- updated_at
+
+### ads
+- id
+- organization_id
+- ad_group_id
+- external_ad_id
+- name
+- status
+- creative_id
+- created_at
+- updated_at
+
+### creatives
+- id
+- organization_id
+- product_id nullable
+- campaign_id nullable
+- angle
+- version
+- headline
+- description
+- primary_text
+- call_to_action
+- asset_reference
+- approval_status
+- created_at
+- updated_at
+
+## 10. Keywords / Targeting
+
+### keywords
+- id
+- organization_id
+- ad_group_id
+- external_keyword_id
+- keyword
+- match_type
+- status
+- created_at
+- updated_at
+
+### audience_targets
+- id
+- organization_id
+- ad_group_id/campaign_id
+- provider
+- external_target_id
+- target_type
+- target_value
+- status
+- metadata JSONB
+
+## 11. Performance Data
+
+### ad_performance_daily
+- id
+- organization_id
+- ad_account_id
+- campaign_id
+- ad_group_id nullable
+- ad_id nullable
+- date
+- impressions
+- clicks
+- spend
+- conversions
+- conversion_value
+- currency
+- raw_source_reference
+
+Unique key should prevent duplicate provider/date/entity records.
+
+## 12. Analytics
+
+### analytics_events
+> **Future-phase decision Q11 (Phase 5).** The GA4 Data API is expected to return aggregated reports, not events; the proposed replacement is an aggregated `analytics_daily` table plus GA4 Admin API discovery. Not created before Phase 5.
+
+- id
+- organization_id
+- store_id nullable
+- event_name
+- event_time
+- session_id nullable
+- user_reference nullable
+- product_id nullable
+- source
+- medium
+- campaign
+- metadata JSONB
+
+### funnel_daily
+- id
+- organization_id
+- store_id
+- date
+- impressions
+- clicks
+- landing_page_views
+- product_views
+- add_to_carts
+- checkouts
+- purchases
+
+## 13. Financial Aggregates
+
+### financial_daily
+- id
+- organization_id
+- store_id
+- date
+- currency
+- gross_revenue
+- discounts
+- refunds
+- net_revenue
+- ad_spend
+- product_cost
+- shipping_cost
+- payment_fees
+- gross_profit
+- contribution_profit
+- order_count
+
+Financial aggregates are derived by deterministic application logic. They store additive, measurable components only; ROAS, CPA, margins, profit margin and budget utilization are calculated on read (A5). Any cached derived value must be reproducible from these components.
+
+## 14. AI Tables
+
+### ai_models
+- id
+- provider
+- model_name
+- version
+- active
+- created_at
+
+### prompt_versions
+- id
+- name
+- version
+- template
+- status
+- created_at
+
+### ai_runs
+- id
+- organization_id
+- user_id nullable
+- model_id
+- prompt_version_id
+- task_type
+- input_reference
+- output_json
+- status
+- input_tokens
+- output_tokens
+- estimated_cost
+- latency_ms
+- created_at
+
+### recommendations
+- id
+- organization_id
+- ai_run_id
+- recommendation_type
+- title
+- explanation
+- confidence
+- proposed_action JSONB
+- status
+- expires_at
+- created_at
+- updated_at
+
+## 15. Action / Automation Tables
+
+### actions
+- id
+- organization_id
+- recommendation_id nullable
+- requested_by_user_id nullable
+- action_type
+- provider
+- resource_type
+- resource_id
+- payload JSONB
+- status
+- idempotency_key
+- validation_result JSONB
+- execution_result JSONB
+- created_at
+- executed_at
+
+### automation_policies
+- id
+- organization_id
+- mode
+- max_daily_spend
+- max_budget_increase_percent
+- max_budget_decrease_percent
+- min_campaign_age_hours
+- min_conversions
+- max_actions_per_day
+- enabled
+- created_at
+- updated_at
+
+## 16. Audit (Phase 1A)
+
+### audit_logs
+Append-only. The application role may insert and read (within its tenant) but never update or delete.
+- id
+- organization_id nullable
+- actor_type (user, system, worker, ai_recommendation)
+- actor_user_id nullable
+- action
+- resource_type, resource_id
+- result (success, denied, failed)
+- correlation_id
+- before_json, after_json (secrets scrubbed)
+- metadata JSONB (later: approver, recommendation/action references, provider and external resource)
+- created_at
+
+Never store secrets in audit payloads.
+
+## 17. Billing
+
+### billing_customers
+- id
+- organization_id
+- provider_customer_id
+- status
+- created_at
+
+### subscriptions
+- id
+- organization_id
+- provider_subscription_id
+- plan
+- status
+- current_period_start
+- current_period_end
+- cancel_at_period_end
+- created_at
+- updated_at
+
+### invoices
+- id
+- organization_id
+- provider_invoice_id
+- status
+- amount
+- currency
+- due_at
+- paid_at
+- created_at
+
+## 18. Notifications
+
+### notifications
+- id
+- organization_id
+- user_id
+- type
+- title
+- message
+- severity
+- read_at
+- created_at
+
+## 19. Database Security
+
+All tenant-owned tables have `organization_id` directly (denormalized where needed) and composite foreign keys `(organization_id, parent_id)` so cross-tenant references are impossible.
+
+Every service query enforces organization scope. PostgreSQL Row-Level Security is **required** on every tenant-owned table as defence in depth (Decision D12). It does not replace application authorization.
+
+**Roles**
+- `advegax_migrator`: owns the schema; used only by migrations.
+- `advegax_app`: runtime role; not superuser, not owner, no BYPASSRLS.
+- `advegax_system`: narrow, audited operations only (e.g. enumerating due jobs, email outbox delivery, retention).
+Tables use `FORCE ROW LEVEL SECURITY`. No `SECURITY DEFINER` functions without documented review.
+
+**Context.** Each transaction sets `app.current_org_id` and `app.current_user_id` with transaction-local scope. Policies read them with `current_setting(..., true)` and fail closed (no rows) when unset.
+
+**Table classes**
+
+| Class | Tables (Phase 1) | Protection |
+|---|---|---|
+| Tenant-owned | invitations, audit_logs (org rows), and every future business table | RLS: `organization_id = app.current_org_id` |
+| Membership | memberships | RLS: rows of the current organization, or the current user's own rows (to list/switch organizations) |
+| Organization | organizations | RLS: current organization, or organizations where the current user has an active membership |
+| Global identity | users, user_password_credentials, sessions, user_action_tokens | Not tenant-owned; access only through the identity service; never exposed via organization endpoints except through membership joins |
+| Security/system | security_events, email_outbox, job_runs (system rows) | Insert by the application; read/process only by `advegax_system` or the owning tenant where `organization_id` is set |
+
+**Verification.** CI fails if a table with `organization_id` lacks enabled + forced RLS and a policy. Cross-tenant tests cover every tenant-owned table and route.
+
+## 19A. Data Availability (A10)
+
+Values that a provider may not supply carry availability (`available`, `unavailable`, `unsupported`, `not_synchronized`) and source/provider metadata where needed. Nullable value + availability state, never 0, represent missing data.
+
+## 20. Index Strategy
+
+Index:
+- foreign keys,
+- tenant + frequently filtered fields,
+- external IDs,
+- timestamps used in synchronization,
+- status fields when selective,
+- reporting dimensions.
+
+Avoid unnecessary indexes on high-write tables.
+
+## 21. Retention
+
+Define retention policies separately for:
+- raw provider payloads,
+- analytics events,
+- audit logs,
+- AI run records,
+- security events.
+
+Do not delete records merely to simplify reporting.
