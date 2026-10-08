@@ -17,7 +17,7 @@ AI-powered E-commerce Advertising & Growth Operating System — an independent m
 | `ROADMAP.md` | Phases, dependencies, milestones, per-phase workflow |
 | `PROJECT_STATUS.md` | Current progress, decision log, open questions |
 | `SECURITY.md` | How security controls are implemented and tested |
-| `phases/` | One plan per phase; `PHASE_01A_PLAN.md` (approved plan) and `PHASE_01A_REPORT.md` (implementation report) |
+| `phases/` | One plan per phase; `PHASE_01A_PLAN.md` (approved), `PHASE_01A_REPORT.md` (implemented), `PHASE_01B_PLAN.md` (draft) |
 
 ## Local development (backend)
 
