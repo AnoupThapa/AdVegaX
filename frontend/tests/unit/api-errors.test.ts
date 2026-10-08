@@ -55,14 +55,27 @@ describe("friendlyMessage", () => {
         const full = path.join(dir, entry.name);
         if (entry.isDirectory()) walk(full);
         else if (entry.name.endsWith(".py")) {
-          for (const m of readFileSync(full, "utf8").matchAll(/\bcode = "([A-Z_]+)"/g)) {
-            codes.add(m[1] as string);
+          // Codes are declared three ways in the backend: `code = "X"` on error classes,
+          // `error_body("X", ...)` and `("X", "message")` tuples in core/errors.py.
+          const source = readFileSync(full, "utf8");
+          for (const pattern of [
+            /\bcode = "([A-Z][A-Z_]+)"/g,
+            /\berror_body\(\s*"([A-Z][A-Z_]+)"/g,
+            /\(\s*"([A-Z][A-Z_]+)",\s*"/g,
+          ]) {
+            for (const m of source.matchAll(pattern)) {
+              codes.add(m[1] as string);
+            }
           }
         }
       }
     };
     walk(backend);
     expect(codes.size).toBeGreaterThan(15);
+    // The patterns that the first version of this scan missed.
+    for (const code of ["HTTP_ERROR", "INTERNAL_ERROR", "METHOD_NOT_ALLOWED"]) {
+      expect(codes).toContain(code);
+    }
     const missing = [...codes].filter((c) => !KNOWN_ERROR_CODES.includes(c));
     expect(missing).toEqual([]);
   });

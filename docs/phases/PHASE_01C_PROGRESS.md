@@ -64,21 +64,21 @@ Plan: `PHASE_01C_PLAN.md` (approved, A17). One report per task; the final `PHASE
 **Completed**
 - **Generated API types.** The backend exports its OpenAPI schema (`uv run python -m app.api.openapi_export`) to `frontend/lib/api/openapi.json`; `npm run api:generate` turns it into `lib/api/schema.d.ts`. Every API call in the web app is type-checked against it.
 - **Two drift checks.** Backend test fails if the committed schema differs from the live API; frontend test fails if the committed types differ from the schema.
-- **API client** (`lib/api/client.ts`, openapi-fetch): browser → API directly with the session cookie; CSRF token kept **in memory only**, fetched once (shared between concurrent requests) and sent on POST/PUT/PATCH/DELETE; fresh tokens from sign-in/sign-out are picked up; on `CSRF_FAILED` the token is refreshed and the request retried **exactly once** (body resent); on 401 the token is cleared and the app is notified.
-- **Errors** (`lib/api/errors.ts`): `ApiError` with status, code, field details and request ID; every backend error code has our own user-facing wording (a test scans the backend so new codes cannot be missed); server text and non-JSON bodies are never shown; network failures become `NETWORK_ERROR`.
+- **API client** (`lib/api/client.ts`, openapi-fetch): browser → API directly with the session cookie; CSRF token kept **in memory only**, fetched once (shared between concurrent requests) and sent on POST/PUT/PATCH/DELETE; fresh tokens from sign-in/sign-out are picked up; on `CSRF_FAILED` the token is refreshed and the request retried **exactly once** (body resent); on 401 the token is cleared and the app is notified (the cache is cleared; the redirect to the sign-in page is added in 1C-04, when that page exists).
+- **Errors** (`lib/api/errors.ts`): `ApiError` with status, code, field details and request ID; every backend error code has our own user-facing wording (a test scans the backend for all three ways codes are declared, so new codes cannot be missed); server text and non-JSON bodies are never shown; network failures become `NETWORK_ERROR`.
 - **Query cache** (TanStack Query): reads retry at most twice and only for network/5xx errors; mutations never retry; the whole cache is cleared when the session ends.
 - **Safe redirects** (`lib/navigation/safe-next.ts`): only same-site relative paths are accepted for "return to" links.
 
 **Files changed**
-- New (frontend): `lib/api/{client,csrf,errors,index}.ts`, `lib/api/openapi.json`, `lib/api/schema.d.ts` (generated), `lib/navigation/safe-next.ts`, `lib/query/query-client.ts`, `app/providers.tsx`, 6 test files.
-- Modified (frontend): `app/layout.tsx` (providers), `package.json`/lockfile (`openapi-fetch` 0.17.0, `@tanstack/react-query` 5.104.1, `openapi-typescript` 7.13.0 dev; `api:generate` script), `.prettierignore`, `eslint.config.mjs` (skip generated file).
+- New (frontend, 15 files): `lib/api/{client,csrf,errors,index}.ts`, `lib/api/openapi.json`, `lib/api/schema.d.ts` (generated), `lib/navigation/safe-next.ts`, `lib/query/query-client.ts`, `app/providers.tsx`, 6 test files.
+- Modified (frontend, 5 files): `app/layout.tsx` (providers), `package.json`/lockfile (`openapi-fetch` 0.17.0, `@tanstack/react-query` 5.104.1, `openapi-typescript` 7.13.0 dev; `api:generate` script), `.prettierignore`, `eslint.config.mjs` (skip generated file).
 - New (backend): `app/api/openapi_export.py`, `tests/unit/test_openapi_export.py`. No API behaviour changed.
 - Deleted: none.
 
 **Tests**
 - Frontend: 71 passed · coverage 98.7 % statements, 99.1 % branches, 100 % functions. ESLint (0 warnings), Prettier, strict `tsc`, production build, `npm audit --omit=dev` (0 vulnerabilities): pass.
 - Backend: 279 passed (+2) · 98.41 % coverage · ruff + `mypy --strict` clean.
-- **Against the real API** (local uvicorn + PostgreSQL + Redis, temporary script not committed): register → sign in → forced bad CSRF token → `403 CSRF_FAILED` → new token → retry `202` → sign out → next call `401 UNAUTHENTICATED`. Sequence matched the design exactly.
+- **Against the real API** (local uvicorn + PostgreSQL + Redis), driven by a temporary Node script that imitates a browser (cookie jar + `Origin` header) — **not a real browser**, so browser cookie rules and CORS were not exercised here; that is covered by the browser tests in 1C-08. Flow: register → sign in → forced bad CSRF token → `403 CSRF_FAILED` → new token → retry `202` → sign out → next call `401 UNAUTHENTICATED`. Sequence matched the design exactly.
 
 **Security**
 - CSRF token never stored outside memory (lint + source rules still pass); no secrets in browser code; open redirects blocked.
@@ -96,4 +96,10 @@ Plan: `PHASE_01C_PLAN.md` (approved, A17). One report per task; the final `PHASE
 **Blocked:** none.
 
 **Next task:** 1C-03 — backend: `GET /providers` and `organization_id` on the platform-callback redirect.
+
+**Verification follow-up (2026-10-08)** — corrections after the final re-check:
+1. The error-code scan only found codes written as `code = "X"`; it missed `HTTP_ERROR` (the backend's catch-all for unusual HTTP failures), which had no message. Fixed: the scan now also reads `error_body("X")` and `("X", "...")` declarations, `HTTP_ERROR` has its own message, and the test asserts the previously missed codes are found.
+2. "Against the real API" was clarified: browser-like script, not a real browser.
+3. File counts added (15 new, 5 modified in `frontend/`; my chat summary had said 13 new).
+4. The 401 → sign-in redirect is marked as pending until 1C-04.
 

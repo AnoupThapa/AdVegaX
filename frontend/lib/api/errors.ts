@@ -91,6 +91,7 @@ const MESSAGES: Readonly<Record<string, string>> = {
   RATE_LIMITED: "Too many attempts. Please wait a few minutes and try again.",
   INTERNAL_ERROR: "Something went wrong on our side. Please try again.",
   SERVICE_UNAVAILABLE: "The service is temporarily unavailable. Please try again shortly.",
+  HTTP_ERROR: "This request could not be completed. Please try again.",
   UNKNOWN_PROVIDER: "This platform is not available.",
   CONNECTION_NOT_ACTIVE: "This connection is not active. Reconnect the platform first.",
   RESOURCE_NOT_LINKABLE: "This account is no longer accessible through its connection.",
