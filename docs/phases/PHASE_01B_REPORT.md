@@ -92,7 +92,7 @@ Organization ──owns──▶ External Connection (authorized_by_user_id, sta
 | **Tenant isolation** | 4 route-level + 3 new RLS tests | Route sweep over **every** organization route (now ≥ 19, generated from OpenAPI) → 404 for non-members; foreign connection/resource/job IDs → 404; raw RLS on all five tables; composite FKs reject cross-tenant references; runtime role cannot DELETE |
 | **Credentials** | 4 + 4 unit | At-rest encryption and no exposure; cross-tenant ciphertext fails; disconnect erases; key rotation |
 | **Audit** | 2 new + journey assertions | Every journey action present in the audit log; `connection.health_changed` checked for actor (worker), resource, result and code-only payload; refused actions recorded as `authorization.denied`; audit failure contained |
-| **Route guards** (follow-up) | 5 (`security/test_route_guards.py`) | Generated from OpenAPI for **every** route: signed-out callers get 401 on all 29 protected routes; every state-changing route refuses a missing or forged CSRF token (403) and changes nothing; every route with an ID in its path rejects a malformed ID (422) without echoing it; unknown providers refused |
+| **Route guards** (follow-up) | 5 (`security/test_route_guards.py`) | Generated from the OpenAPI schema for every **documented** route (the platform callback is hidden from the schema and has its own signed-out test): signed-out callers get 401 on all 29 protected routes; every state-changing route refuses a missing or forged CSRF token with 403 — the check runs in middleware before any handler, and the test confirms the connection data is unchanged afterwards; every route with an ID in its path rejects a malformed ID (422) without echoing it; unknown providers refused |
 
 ## 8. Audit-log verification
 

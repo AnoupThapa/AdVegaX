@@ -14,7 +14,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 |---|---|---|---|
 | 0 | Architecture approval & bootstrap | ✅ **Complete** | Report v3 approved; A1–A14 recorded; specs consistent |
 | 1A | Platform core & identity | ✅ **Implemented — awaiting review** | 141 tests, 98.5 % coverage; `phases/PHASE_01A_REPORT.md` |
-| 1B | Integration foundation | ✅ **Implemented — awaiting review** | 272 tests, 98.4 % coverage; `phases/PHASE_01B_REPORT.md` |
+| 1B | Integration foundation | ✅ **Implemented — awaiting review** | 277 tests, 98.4 % coverage; `phases/PHASE_01B_REPORT.md` |
 | 1C | Frontend shell | **In progress — 1C-01 done** | `phases/PHASE_01C_PLAN.md`, `phases/PHASE_01C_PROGRESS.md` |
 | 2A | Shopify (read-only) + finance core | Not started | Needs Q5–Q9 before its phase |
 | 2B | WooCommerce (read-only) | Not started | Needs Q10 |
