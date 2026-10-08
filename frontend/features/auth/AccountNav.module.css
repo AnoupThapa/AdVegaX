@@ -1,0 +1,18 @@
+.nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.who {
+  color: var(--color-text-muted);
+  max-width: 16rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.primaryLink {
+  font-weight: 600;
+}

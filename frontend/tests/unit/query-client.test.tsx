@@ -26,7 +26,7 @@ describe("query retry policy", () => {
 describe("Providers", () => {
   afterEach(() => vi.restoreAllMocks());
 
-  it("clears cached data when the session ends and unregisters on unmount", () => {
+  it("marks the session signed out and drops cached data on 401; unregisters on unmount", () => {
     const register = vi.spyOn(apiModule, "setUnauthenticatedHandler");
     let cache: ReturnType<typeof useQueryClient> | null = null;
     function Probe() {
@@ -39,12 +39,15 @@ describe("Providers", () => {
       </Providers>,
     );
     expect(screen.getByText("ready")).toBeInTheDocument();
-    cache!.setQueryData(["me"], { email: "a@example.com" });
+    cache!.setQueryData(["session"], { email: "a@example.com" });
+    cache!.setQueryData(["organizations"], [{ id: "org-1" }]);
 
     const handler = register.mock.calls.at(-1)?.[0];
     expect(typeof handler).toBe("function");
     handler?.();
-    expect(cache!.getQueryData(["me"])).toBeUndefined();
+    // Signed-in data is dropped and the session becomes "signed out".
+    expect(cache!.getQueryData(["organizations"])).toBeUndefined();
+    expect(cache!.getQueryData(["session"])).toBeNull();
 
     unmount();
     expect(register.mock.calls.at(-1)?.[0]).toBeNull();

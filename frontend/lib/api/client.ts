@@ -37,7 +37,8 @@ async function readJson(response: Response): Promise<unknown> {
 
 /** The fetch function used by the client: CSRF, retry and session handling live here. */
 export function createApiFetch(options: ApiClientOptions): (input: Request) => Promise<Response> {
-  const baseFetch = options.fetch ?? globalThis.fetch.bind(globalThis);
+  // Resolved per call so the page's current fetch is used (and tests can replace it).
+  const baseFetch: typeof fetch = options.fetch ?? ((input, init) => globalThis.fetch(input, init));
 
   async function send(request: Request, retried: boolean): Promise<Response> {
     const unsafe = UNSAFE.has(request.method);

@@ -7,7 +7,7 @@ Plan: `PHASE_01C_PLAN.md` (approved, A17). One report per task; the final `PHASE
 | 1C-01 Scaffold, tooling, security headers + CSP, layout, design tokens | ✅ Done — awaiting review |
 | 1C-02 API types + client | ✅ Done — awaiting review |
 | 1C-03 Backend: `GET /providers`, `organization_id` on callback redirect | ✅ Done — awaiting review |
-| 1C-04 Auth pages | Not started |
+| 1C-04 Auth pages | ✅ Done — awaiting review |
 | 1C-05 Organizations, members, invitations | Not started |
 | 1C-06 Account security | Not started |
 | 1C-07 Connections pages | Not started |
@@ -138,4 +138,51 @@ Plan: `PHASE_01C_PLAN.md` (approved, A17). One report per task; the final `PHASE
 **Blocked:** none.
 
 **Next task:** 1C-04 — auth pages (sign up, verify email, resend, sign in/out, forgot/reset password), including the 401 → sign-in redirect.
+
+**1C-03 verification follow-up (2026-10-08):** test count corrected (3 extended tests, not 4); `SECURITY.md §10` now documents the callback organization rule and the provider list.
+
+---
+
+## 1C-04 — Sign-up, sign-in and password pages (2026-10-08)
+
+**Completed**
+- **Pages:** `/sign-up`, `/check-email`, `/verify-email`, `/sign-in`, `/forgot-password`, `/reset-password`; sign-out from the header; signed-in/signed-out area on the home page.
+- **Session state:** `GET /auth/me` cached as the session (`null` = signed out). Sign-in, sign-out and password reset replace the cached session and drop every other cached response, so one user's data never shows for the next.
+- **Session ends → sign-in:** `RequireAuth` (for the signed-in pages built from 1C-05) sends signed-out visitors to `/sign-in?next=<current page>` and back afterwards; a 401 while on such a page does the same (the 1C-02 pending item). `next` is validated (same-site paths only).
+- **Email links:** the single-use token is read from the URL fragment, removed from the address bar immediately, and sent **once** (guarded against React running effects twice).
+- **Feedback:** client checks for quick feedback (email shape, password 12–128 characters and not the email); the API stays authoritative and its password-policy messages appear on the right field (also when the API calls it `password` on the reset form). Other server text never shown. Errors are announced (`role="alert"`) with a support reference.
+- **No account enumeration in the UI:** sign-up and forgot-password show the same result whether or not the address exists; sign-in failures share one message.
+- **Unverified accounts:** can sign in; the home page explains they must verify before creating or joining an organization and offers to resend the link.
+- **Accessibility:** labelled fields with linked hints/errors (`aria-describedby`, `aria-invalid`), focus moves to the page heading on arrival and to the first problem on a failed submit, 44 px touch targets, busy state on buttons.
+- Shared UI: `Button`, `TextField`, `Alert`, `PageCard`.
+
+**Files changed** (45)
+- New (37): 6 page routes under `app/`, 5 files in `components/ui/`, 17 in `features/auth/`, 9 test files (`tests/features/` ×4, `tests/support/` ×4 helpers, `tests/unit/auth-logic.test.ts`).
+- Modified (8): `app/page.tsx`, `app/providers.tsx` (401 → session ended), `components/layout/SiteHeader.tsx` (account links), `lib/api/client.ts` (fetch looked up per call), `lib/api/errors.ts` (`messageFor`), 3 existing tests updated for the new providers.
+- Backend: none. Deleted: none.
+
+**Tests**
+- Frontend: 114 passed · coverage 98.6 % statements, 95.8 % branches, 100 % functions. ESLint (0 warnings), Prettier, strict `tsc`, production build, `npm audit --omit=dev` (0 vulnerabilities): pass.
+- Component tests drive the real API client against a fake API (CSRF bootstrap, error envelope, 401 handling all exercised).
+- **Real browser, real backend** (production build of the web app on :3000, uvicorn API on :8000, PostgreSQL, Redis, a local mail catcher; temporary script, not committed): sign up → wrong password refused → sign in (unverified notice) → open the emailed verification link → verified, token gone from the URL → sign out (API confirms 401) → forgot password → open the emailed reset link → new password saved → same link refused when reused → sign in with the new password, a malicious `next=//evil.example` ignored.
+  - **axe accessibility scan on all 9 page states: 0 violations** (WCAG 2.0/2.1/2.2 A + AA and best-practice rules).
+  - **0 Content-Security-Policy violations**, no page errors.
+  - **No browser storage used** (localStorage, sessionStorage, readable cookies all empty).
+  - Cookies set by the API: `HttpOnly`, `SameSite=Lax`. Cross-origin calls from `:3000` to `:8000` with credentials worked under the API's CORS allowlist (first real-browser proof of §4.1).
+- Backend unchanged since the last full run (281 passed).
+
+**Security**
+- Tokens from email links never stay in the URL or history; CSRF token in memory only; no secrets in browser code; open redirects blocked; signed-in data cleared on sign-out, reset and session end.
+
+**Migration:** none.
+
+**Deviations**
+1. Checking the session on public pages calls `GET /auth/me`; when signed out the API answers 401 and the browser console logs a "failed to load resource (401)" line. Harmless (it is how "signed out" is detected) but visible to anyone opening developer tools. A dedicated session-status endpoint returning 200 could remove it — a backend change I have not made.
+2. Client-side password rules copy the API defaults (12–128). If the API's configured limits change, the API's own message still appears.
+3. The home page gained a small signed-in/signed-out area (not listed in the plan's page list); organization pages arrive in 1C-05.
+4. Component tests use Testing Library's built-in `fireEvent`; no new test dependency was added.
+
+**Blocked:** none.
+
+**Next task:** 1C-05 — organizations: create, switch, settings, members, invitations, accept invitation.
 

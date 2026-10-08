@@ -109,5 +109,10 @@ export function friendlyMessage(error: ApiError | string): string {
   return MESSAGES[code] ?? FALLBACK;
 }
 
+/** The text to show for anything thrown by an API call (non-API errors get the generic text). */
+export function messageFor(error: unknown): string {
+  return error instanceof ApiError ? friendlyMessage(error) : friendlyMessage(UNEXPECTED_RESPONSE);
+}
+
 /** Every code with a dedicated message (used by tests to stay in sync with the API). */
 export const KNOWN_ERROR_CODES: readonly string[] = Object.keys(MESSAGES);

@@ -10,6 +10,7 @@ import {
   UNEXPECTED_RESPONSE,
   apiErrorFrom,
   friendlyMessage,
+  messageFor,
 } from "@/lib/api/errors";
 
 describe("apiErrorFrom", () => {
@@ -44,6 +45,12 @@ describe("friendlyMessage", () => {
     expect(friendlyMessage(error)).not.toContain("server text");
     expect(friendlyMessage("SOMETHING_NEW")).toBe("Something went wrong. Please try again.");
     expect(friendlyMessage(NETWORK_ERROR)).toMatch(/could not reach/);
+  });
+
+  it("messageFor covers anything thrown", () => {
+    expect(messageFor(new ApiError(429, "RATE_LIMITED"))).toMatch(/Too many attempts/);
+    expect(messageFor(new Error("boom"))).toBe("Something went wrong. Please try again.");
+    expect(messageFor("text")).toBe("Something went wrong. Please try again.");
   });
 
   it("has a message for every error code the backend can return", () => {

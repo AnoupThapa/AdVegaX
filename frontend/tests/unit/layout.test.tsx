@@ -1,10 +1,14 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import HomePage from "@/app/page";
 import NotFound from "@/app/not-found";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { SkipLink } from "@/components/layout/SkipLink";
+
+import { renderWithProviders } from "../support/render";
+
+vi.mock("next/navigation", () => import("../support/navigation"));
 
 describe("layout components", () => {
   it("skip link targets the main landmark", () => {
@@ -16,13 +20,13 @@ describe("layout components", () => {
   });
 
   it("header is a banner landmark with a home link", () => {
-    render(<SiteHeader />);
+    renderWithProviders(<SiteHeader />, { session: null });
     expect(screen.getByRole("banner")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "AdVegaX" })).toHaveAttribute("href", "/");
   });
 
   it("home page has a single level-one heading", () => {
-    render(<HomePage />);
+    renderWithProviders(<HomePage />, { session: null });
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     expect(screen.getByRole("region", { name: "AdVegaX" })).toBeInTheDocument();
   });
