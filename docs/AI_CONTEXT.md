@@ -11,7 +11,7 @@ AdVegaX — independent, multi-tenant e-commerce advertising and growth SaaS.
 | 0 | Complete |
 | 1A — Platform core & identity | Implemented, pushed — awaiting review |
 | 1B — Integration foundation | Implemented, pushed — awaiting review |
-| 1C — Frontend shell | **Approved (A17) — in progress**: 1C-01 and 1C-02 done; next 1C-03 (`phases/PHASE_01C_PROGRESS.md`) |
+| 1C — Frontend shell | **Approved (A17) — in progress**: 1C-01 to 1C-03 done; next 1C-04 (`phases/PHASE_01C_PROGRESS.md`) |
 | 2A onward | Not started |
 
 Repository: https://github.com/AnoupThapa/AdVegaX · working branch `feature/phase-1a`.

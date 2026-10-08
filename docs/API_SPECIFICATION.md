@@ -188,9 +188,10 @@ Permissions: `connections.view` (all roles) for reads; `connections.manage` (Own
 
 | Endpoint | Success | Notes |
 |---|---|---|
+| `GET /providers` | 200 list `ProviderOut` `{code, display_name, category, auth_scheme, capabilities, test_only}` | Any signed-in user. Platforms available in this environment — the fake test platform locally, **empty in staging/production** until Phase 2A. Public metadata only (1C-03) |
 | `GET /organizations/{organization_id}/connections` | 200 list `ConnectionOut` | Status, scopes, account label, last error code — never secrets |
 | `POST /organizations/{organization_id}/connections/{provider}/start` | 200 `{authorize_url, expires_in_seconds}` | Creates single-use state (Redis, `CONNECT_STATE_TTL`) bound to user + organization + provider + PKCE verifier |
-| `GET /connections/{provider}/callback` | 303 → `APP_BASE_URL/connections?status=…` | Organization comes **only** from the validated state. `status=connected&connection_id=…`, `status=cancelled`, or `status=error&code=` `invalid_state` / `session_mismatch` / `not_permitted` / provider error code. Hidden from OpenAPI |
+| `GET /connections/{provider}/callback` | 303 → `APP_BASE_URL/connections?status=…` | Organization comes **only** from the validated state. `status=connected&organization_id=…&connection_id=…`, `status=cancelled&organization_id=…`, or `status=error&code=` `invalid_state` / `session_mismatch` / `not_permitted` / provider error code. `organization_id` is included only after the state is validated and the signed-in user is confirmed as a manager of that organization (cancelled, provider error, connected) — never for `invalid_state`, `session_mismatch` or `not_permitted` (1C-03). Hidden from OpenAPI |
 | `GET /organizations/{organization_id}/connections/{connection_id}` | 200 `ConnectionOut` | |
 | `POST /organizations/{organization_id}/connections/{connection_id}/disconnect` | 200 `ConnectionOut` | Revokes at the provider where supported (failure tolerated and recorded), erases ciphertext, ends active links (`connection_revoked`), status `revoked` |
 | `POST /organizations/{organization_id}/connections/{connection_id}/rediscover` | 202 `JobOut` | Queues a discovery job |

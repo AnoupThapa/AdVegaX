@@ -25,6 +25,7 @@ Secrets = Mapping[str, Any]
 @runtime_checkable
 class PlatformProvider(Protocol):
     code: str
+    display_name: str  # human-readable label shown in the web app (PHASE_01C_PLAN §6)
     category: ProviderCategory
     auth_scheme: AuthScheme
     capabilities: ProviderCapabilities

@@ -33,6 +33,10 @@ class ProviderRegistry:
     def codes(self) -> list[str]:
         return sorted(self._providers)
 
+    def all(self) -> list[PlatformProvider]:
+        """Registered providers, ordered by code."""
+        return [self._providers[code] for code in self.codes()]
+
 
 def build_registry(settings: Settings) -> ProviderRegistry:
     registry = ProviderRegistry(settings)

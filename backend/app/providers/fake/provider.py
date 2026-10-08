@@ -75,6 +75,7 @@ def reset() -> None:
 
 class FakeProvider:
     code = "fake"
+    display_name = "Test platform (local only)"
     category = ProviderCategory.ADVERTISING
     auth_scheme = AuthScheme.OAUTH2
     capabilities = ProviderCapabilities(frozenset({Capability.PKCE, Capability.TOKEN_REVOCATION}))

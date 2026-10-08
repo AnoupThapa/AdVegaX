@@ -6,7 +6,7 @@ Plan: `PHASE_01C_PLAN.md` (approved, A17). One report per task; the final `PHASE
 |---|---|
 | 1C-01 Scaffold, tooling, security headers + CSP, layout, design tokens | ✅ Done — awaiting review |
 | 1C-02 API types + client | ✅ Done — awaiting review |
-| 1C-03 Backend: `GET /providers`, `organization_id` on callback redirect | Not started |
+| 1C-03 Backend: `GET /providers`, `organization_id` on callback redirect | ✅ Done — awaiting review |
 | 1C-04 Auth pages | Not started |
 | 1C-05 Organizations, members, invitations | Not started |
 | 1C-06 Account security | Not started |
@@ -102,4 +102,40 @@ Plan: `PHASE_01C_PLAN.md` (approved, A17). One report per task; the final `PHASE
 2. "Against the real API" was clarified: browser-like script, not a real browser.
 3. File counts added (15 new, 5 modified in `frontend/`; my chat summary had said 13 new).
 4. The 401 → sign-in redirect is marked as pending until 1C-04.
+
+---
+
+## 1C-03 — Backend: providers list and organization on the callback redirect (2026-10-08)
+
+**Completed**
+- **`GET /api/v1/providers`** — any signed-in user; returns the platforms this environment can connect to with public metadata only: `code`, `display_name`, `category`, `auth_scheme`, `capabilities`, `test_only`. Locally: the fake test platform. Staging/production: an empty list until Phase 2A, so the web app can show "No platforms available yet" without hard-coding platform names.
+- **`organization_id` on the platform-callback redirect** — added for `connected`, `cancelled` and provider errors, i.e. only after the single-use state is validated **and** the signed-in user is re-confirmed as a manager of that organization. Never added for `invalid_state`, `session_mismatch` (another user, or signed out) or `not_permitted` (role lost), so no one learns an organization they cannot manage.
+- `display_name` added to the provider contract; `ProviderRegistry.all()`.
+- OpenAPI schema and the web app's generated types regenerated (both drift tests pass).
+
+**Files changed**
+- Backend: `app/providers/base/{interfaces,registry}.py`, `app/providers/fake/provider.py`, `app/domains/integrations/{schemas,service,router}.py`; tests `tests/api/test_connections.py`, `tests/providers/test_base.py`.
+- Frontend: `lib/api/openapi.json`, `lib/api/schema.d.ts` (regenerated).
+- Docs: `API_SPECIFICATION.md §5`, this file, status files.
+- No database changes. Deleted: none.
+
+**Tests**
+- Backend: 281 passed (+2 new; 4 existing callback tests extended) · 98.42 % coverage · ruff + `mypy --strict` clean. The route-guard sweep picked up the new endpoint automatically (signed-out → 401; now 30 protected routes).
+- Callback: organization present for connected / cancelled / provider error; absent for invalid state, other user, signed out, role lost; connected redirect contains only `status`, `organization_id`, `connection_id` — no tokens, codes or state.
+- Providers: exact field set; unverified, organization-less users can read it; deployed registry returns an empty list.
+- Frontend: 71 passed, build and audit (0 production vulnerabilities) pass.
+
+**Security**
+- Provider list exposes no configuration or secrets (exact-fields test).
+- Organization IDs appear in a redirect only for a user already confirmed as that organization's manager.
+
+**Migration:** none.
+
+**Deviations**
+1. Plan §6 said `GET /providers` is "authenticated"; implemented as **any signed-in user** (email verification and organization membership not required), because the list is public, non-tenant metadata. Tell me if it should require a verified email.
+2. The response also includes `auth_scheme` and `test_only` (not listed in the plan) so the UI can label test-only platforms; both are non-sensitive.
+
+**Blocked:** none.
+
+**Next task:** 1C-04 — auth pages (sign up, verify email, resend, sign in/out, forgot/reset password), including the 401 → sign-in redirect.
 

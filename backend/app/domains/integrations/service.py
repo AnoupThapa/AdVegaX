@@ -31,6 +31,7 @@ from app.domains.integrations.schemas import (
     ConnectionOut,
     JobOut,
     LinkOut,
+    ProviderOut,
     ResourceOut,
 )
 from app.domains.jobs.service import create_job
@@ -114,6 +115,20 @@ class IntegrationService:
     def _redirect_uri(self, provider: str) -> str:
         return f"{self.rt.settings.API_BASE_URL.rstrip('/')}/api/v1/connections/{provider}/callback"
 
+    def list_providers(self) -> list[ProviderOut]:
+        """Platforms available in this environment (empty in staging/production until 2A)."""
+        return [
+            ProviderOut(
+                code=p.code,
+                display_name=p.display_name,
+                category=p.category.value,
+                auth_scheme=p.auth_scheme.value,
+                capabilities=p.capabilities.as_dict(),
+                test_only=p.test_only,
+            )
+            for p in self.rt.providers.all()
+        ]
+
     def _app_redirect(self, **params: str) -> str:
         return f"{self.rt.settings.APP_BASE_URL.rstrip('/')}/connections?{urlencode(params)}"
 
@@ -161,8 +176,11 @@ class IntegrationService:
             authorize(ctx, Permission.CONNECTIONS_MANAGE)
         except (NotFound, Forbidden):  # membership or role changed since the flow started
             return self._app_redirect(status="error", code="not_permitted")
+        # From here the signed-in user is confirmed as a manager of this organization, so the
+        # web app may be told which organization to open (PHASE_01C_PLAN §6).
+        org_param = str(ctx.organization_id)
         if "error" in params:
-            return self._app_redirect(status="cancelled")
+            return self._app_redirect(status="cancelled", organization_id=org_param)
         provider = self.rt.providers.get(provider_code)
         try:
             result = provider.complete_authorization(
@@ -174,7 +192,7 @@ class IntegrationService:
             logger.warning(
                 "connect_failed", extra={"provider": provider.code, "error_code": exc.code}
             )
-            return self._app_redirect(status="error", code=exc.code)
+            return self._app_redirect(status="error", code=exc.code, organization_id=org_param)
         now = self.rt.clock.now()
         with self.rt.db.transaction(org_id=ctx.organization_id, user_id=ctx.user_id) as session:
             connection = ExternalConnection(
@@ -214,7 +232,9 @@ class IntegrationService:
                 requested_by=ctx.user_id,
             )
             connection_id = connection.id
-        return self._app_redirect(status="connected", connection_id=str(connection_id))
+        return self._app_redirect(
+            status="connected", organization_id=org_param, connection_id=str(connection_id)
+        )
 
     # ----------------------------------------------------------- connections
     def _get_connection(

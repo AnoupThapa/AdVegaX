@@ -57,8 +57,10 @@ def test_registry_rules():
         registry.get("shopify")
     with pytest.raises(ValueError, match="already registered"):
         registry.register(FakeProvider())
+    assert [p.code for p in registry.all()] == ["fake"]
     deployed = Settings(**SECURE)
     assert build_registry(deployed).codes() == []
+    assert build_registry(deployed).all() == []
     with pytest.raises(RuntimeError, match="test-only"):
         ProviderRegistry(deployed).register(FakeProvider())
 

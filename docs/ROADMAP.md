@@ -26,7 +26,7 @@ This roadmap splits AdVegaX into phases. Each phase has its own plan in `docs/ph
 | Phase | Name | Goal | Depends on | Status |
 |---|---|---|---|---|
 | 0 | Architecture approval & bootstrap decisions | Approved architecture (DISCOVERY_REPORT v3) | — | ✅ **Complete** |
-| 1 | Foundation — 1A platform core & identity · 1B integration foundation · 1C frontend shell | Secure multi-tenant platform skeleton: identity, sessions, email, orgs, RBAC, RLS, audit, CI (1A); connections/resources, encryption, jobs, provider framework, SSRF client (1B); UI shell (1C) | 0 | **1A and 1B implemented — awaiting review; 1C in progress (1C-01, 1C-02 done)** |
+| 1 | Foundation — 1A platform core & identity · 1B integration foundation · 1C frontend shell | Secure multi-tenant platform skeleton: identity, sessions, email, orgs, RBAC, RLS, audit, CI (1A); connections/resources, encryption, jobs, provider framework, SSRF client (1B); UI shell (1C) | 0 | **1A and 1B implemented — awaiting review; 1C in progress (1C-01 to 1C-03 done)** |
 | 2A | Commerce — Shopify (read-only) | Connect Shopify stores; import catalogue, inventory, orders, refunds; finance core | 1 | Not started |
 | 2B | Commerce — WooCommerce (read-only) | Connect WooCommerce stores safely; same normalized models; proves abstraction | 2A | Not started |
 | 3 | Advertising — Google Ads (read-only) | Accounts, structure, daily performance | 1 | Not started |

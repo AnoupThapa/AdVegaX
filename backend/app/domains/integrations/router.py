@@ -8,7 +8,13 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Request, status
 from fastapi.responses import RedirectResponse
 
-from app.api.deps import IntegrationsDep, RuntimeDep, TenantDep, optional_principal
+from app.api.deps import (
+    IntegrationsDep,
+    PrincipalDep,
+    RuntimeDep,
+    TenantDep,
+    optional_principal,
+)
 from app.api.responses import Envelope, ok
 from app.domains.identity.principal import Principal
 from app.domains.integrations.schemas import (
@@ -16,6 +22,7 @@ from app.domains.integrations.schemas import (
     ConnectionOut,
     JobOut,
     LinkOut,
+    ProviderOut,
     ResourceOut,
 )
 from app.domains.jobs.service import get_job
@@ -23,6 +30,12 @@ from app.domains.jobs.service import get_job
 router = APIRouter(tags=["connections"])
 ORG = "/organizations/{organization_id}"
 _MAX_PARAM = 2048
+
+
+@router.get("/providers", response_model=Envelope[list[ProviderOut]])
+def list_providers(_: PrincipalDep, svc: IntegrationsDep) -> Envelope[list[ProviderOut]]:
+    """Platforms this environment can connect to. Any signed-in user may read the list."""
+    return ok(svc.list_providers())
 
 
 @router.get(f"{ORG}/connections", response_model=Envelope[list[ConnectionOut]])

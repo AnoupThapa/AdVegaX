@@ -8,6 +8,17 @@ from datetime import datetime
 from pydantic import BaseModel
 
 
+class ProviderOut(BaseModel):
+    """A platform the web app may offer for connection. Public metadata only — never secrets."""
+
+    code: str
+    display_name: str
+    category: str
+    auth_scheme: str
+    capabilities: dict[str, bool]
+    test_only: bool
+
+
 class AuthorizationStartOut(BaseModel):
     authorize_url: str
     expires_in_seconds: int

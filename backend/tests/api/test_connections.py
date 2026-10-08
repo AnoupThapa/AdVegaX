@@ -140,6 +140,7 @@ def test_rediscovery_marks_missing_resources_and_ends_links(owner):
     ],
 )
 def test_callback_rejections(owner, mutate, code):
+    """The organization is named in the redirect only once the state proved who started it."""
     started = owner.post(f"/organizations/{owner.org}/connections/fake/start").json()["data"]
     query = {k: v[0] for k, v in parse_qs(urlsplit(started["authorize_url"]).query).items()}
     params = mutate({"state": query["state"], "code": "approved." + query["code_challenge"]})
@@ -147,7 +148,12 @@ def test_callback_rejections(owner, mutate, code):
         "/api/v1/connections/fake/callback", params=params, follow_redirects=False
     )
     assert response.status_code == 303
-    assert _query(response)["code"] == [code]
+    query = _query(response)
+    assert query["code"] == [code]
+    if code == "invalid_state":
+        assert "organization_id" not in query
+    else:
+        assert query["organization_id"] == [owner.org]
     assert owner.get(f"/organizations/{owner.org}/connections").json()["data"] == []
 
 
@@ -163,6 +169,7 @@ def test_state_is_single_use_and_bound_to_user_and_provider(owner, make_client, 
         "/api/v1/connections/fake/callback", params=params, follow_redirects=False
     )
     assert _query(stolen)["code"] == ["session_mismatch"]
+    assert "organization_id" not in _query(stolen)  # never reveal another user's organization
     # the state was consumed by the failed attempt: it cannot be replayed by anyone
     replay = owner.http.get(
         "/api/v1/connections/fake/callback", params=params, follow_redirects=False
@@ -178,6 +185,7 @@ def test_state_is_single_use_and_bound_to_user_and_provider(owner, make_client, 
         follow_redirects=False,
     )
     assert _query(no_session)["code"] == ["session_mismatch"]
+    assert "organization_id" not in _query(no_session)
 
     runtime.providers._providers["other"] = runtime.providers.get("fake")  # second provider code
     started = owner.post(f"/organizations/{owner.org}/connections/fake/start").json()["data"]
@@ -206,6 +214,7 @@ def test_expired_state(owner, runtime):
 def test_user_cancelled_and_permission_lost_mid_flow(owner, make_client):
     cancelled = connect_fake(owner, owner.org, approve=False)
     assert _query(cancelled)["status"] == ["cancelled"]
+    assert _query(cancelled)["organization_id"] == [owner.org]
 
     manager = make_client()
     manager.signup("mgr@example.com")
@@ -219,6 +228,7 @@ def test_user_cancelled_and_permission_lost_mid_flow(owner, make_client):
         follow_redirects=False,
     )
     assert _query(response)["code"] == ["not_permitted"]
+    assert "organization_id" not in _query(response)  # no longer a manager there
 
 
 def test_roles_view_versus_manage_and_denials_are_audited(owner, make_client):
@@ -318,3 +328,40 @@ def test_connections_are_isolated_per_organization(owner, make_client):
     assert [
         c["id"] for c in other.get(f"/organizations/{other.org}/connections").json()["data"]
     ] == [b]
+
+
+def test_connected_redirect_names_organization_and_connection(owner):
+    response = connect_fake(owner, owner.org)
+    location = response.headers["location"]
+    assert location.startswith("http://localhost:3000/connections?")
+    query = _query(response)
+    assert set(query) == {"status", "organization_id", "connection_id"}
+    assert query["status"] == ["connected"]
+    assert query["organization_id"] == [owner.org]
+    listed = owner.get(f"/organizations/{owner.org}/connections").json()["data"]
+    assert [c["id"] for c in listed] == query["connection_id"]
+    for secret_marker in ("fake-at-", "fake-rt-", "approved.", "state="):
+        assert secret_marker not in location
+
+
+def test_providers_list_public_metadata_only(owner, make_client):
+    response = owner.get("/providers")
+    assert response.status_code == 200
+    providers = response.json()["data"]
+    assert providers == [
+        {
+            "code": "fake",
+            "display_name": "Test platform (local only)",
+            "category": "advertising",
+            "auth_scheme": "oauth2",
+            "capabilities": providers[0]["capabilities"],
+            "test_only": True,
+        }
+    ]
+    capabilities = providers[0]["capabilities"]
+    assert capabilities["pkce"] is True and capabilities["token_revocation"] is True
+    assert capabilities["webhooks"] is False
+    # Any signed-in user may read it — even before verifying their email or joining an org.
+    newcomer = make_client()
+    newcomer.signup("newcomer@example.com", verified=False)
+    assert newcomer.get("/providers").json()["data"] == providers

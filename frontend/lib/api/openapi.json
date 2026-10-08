@@ -567,6 +567,26 @@
         "title": "Envelope[list[OrganizationOut]]",
         "type": "object"
       },
+      "Envelope_list_ProviderOut__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/ProviderOut"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[list[ProviderOut]]",
+        "type": "object"
+      },
       "Envelope_list_ResourceOut__": {
         "properties": {
           "data": {
@@ -1197,6 +1217,48 @@
           }
         },
         "title": "OrganizationUpdate",
+        "type": "object"
+      },
+      "ProviderOut": {
+        "description": "A platform the web app may offer for connection. Public metadata only — never secrets.",
+        "properties": {
+          "auth_scheme": {
+            "title": "Auth Scheme",
+            "type": "string"
+          },
+          "capabilities": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "title": "Capabilities",
+            "type": "object"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "test_only": {
+            "title": "Test Only",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "display_name",
+          "category",
+          "auth_scheme",
+          "capabilities",
+          "test_only"
+        ],
+        "title": "ProviderOut",
         "type": "object"
       },
       "RegisterRequest": {
@@ -3246,6 +3308,28 @@
           }
         },
         "summary": "Unlink Resource",
+        "tags": [
+          "connections"
+        ]
+      }
+    },
+    "/api/v1/providers": {
+      "get": {
+        "description": "Platforms this environment can connect to. Any signed-in user may read the list.",
+        "operationId": "list_providers_api_v1_providers_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_ProviderOut__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Providers",
         "tags": [
           "connections"
         ]

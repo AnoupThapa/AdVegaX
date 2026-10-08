@@ -2,7 +2,7 @@
 
 AI-powered E-commerce Advertising & Growth Operating System — an independent multi-tenant SaaS that connects commerce platforms (Shopify, WooCommerce), advertising platforms (Google Ads, Meta) and analytics (GA4) into one controlled, auditable growth system.
 
-**Status:** Phase 1A (platform core & identity) and Phase 1B (integration foundation, test platform only) implemented — awaiting product-owner review. Phase 1C (frontend shell) in progress — tasks 1C-01 and 1C-02 done; real platform integrations not started. See `docs/PROJECT_STATUS.md`.
+**Status:** Phase 1A (platform core & identity) and Phase 1B (integration foundation, test platform only) implemented — awaiting product-owner review. Phase 1C (frontend shell) in progress — tasks 1C-01 to 1C-03 done; real platform integrations not started. See `docs/PROJECT_STATUS.md`.
 
 ## Documentation (`docs/`)
 
