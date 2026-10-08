@@ -1,7 +1,7 @@
 # AdVegaX — Project Status & Progress Log
 
 **Last updated:** 2026-10-08
-**Current phase:** Phase 1A — implementation plan awaiting product-owner approval
+**Current phase:** Phase 1A — approved 2026-10-08; implementation in progress
 **Code written:** None · **Migrations:** None · **Integrations:** None
 
 Update this file at the end of every phase and every approved sub-phase (ROADMAP §5, step 13).
@@ -13,7 +13,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | Phase | Name | Status | Notes |
 |---|---|---|---|
 | 0 | Architecture approval & bootstrap | ✅ **Complete** | Report v3 approved; A1–A14 recorded; specs consistent |
-| 1A | Platform core & identity | **Plan awaiting approval** | `phases/PHASE_01A_PLAN.md` |
+| 1A | Platform core & identity | **Approved — in progress** | `phases/PHASE_01A_PLAN.md` (A15) |
 | 1B | Integration foundation | Not started | Plan after 1A acceptance |
 | 1C | Frontend shell | Not started | Plan after 1A acceptance |
 | 2A | Shopify (read-only) + finance core | Not started | Needs Q5–Q9 before its phase |
