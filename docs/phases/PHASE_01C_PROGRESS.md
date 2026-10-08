@@ -52,3 +52,7 @@ Plan: `PHASE_01C_PLAN.md` (approved, A17). One report per task; the final `PHASE
 **Blocked:** none.
 
 **Next task:** 1C-02 — API types generation + drift check, typed API client (CSRF, 401, error mapping), query setup.
+
+**Verification follow-up (2026-10-08)**
+- The browser check above ran on the build just before `app/icon.svg` and the `vitest.config.mts` rename. Re-run on the **final** build: 10/10 scripts carry the nonce, **0 CSP violations**, client-side navigation works, the icon is served; the only failed request is the intentional `/missing-page` 404.
+- Correction: during the first run I described three 404s as "the missing test page and a missing favicon". That was not verified. The final run shows no favicon request failing; the earlier 404s came from the test visiting the missing page (the third was not identified and does not recur).

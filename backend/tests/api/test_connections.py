@@ -266,6 +266,7 @@ def test_auth_failure_during_sync_marks_connection_expired(owner):
     connection = owner.get(f"/organizations/{org}/connections/{conn}").json()["data"]
     assert (connection["status"], connection["last_error_code"]) == ("expired", "auth_expired")
     assert owner.post(f"/organizations/{org}/resources/{rid}/sync").status_code == 409
+    _assert_health_audit(owner, conn, status="expired", error="auth_expired")
 
 
 def test_permission_denied_marks_connection_error(owner):
@@ -274,6 +275,22 @@ def test_permission_denied_marks_connection_error(owner):
     connection = owner.get(f"/organizations/{owner.org}/connections/{conn}").json()["data"]
     assert connection["status"] == "error"
     assert _resources(owner, conn) == []
+    _assert_health_audit(owner, conn, status="error", error="permission_denied")
+
+
+def _assert_health_audit(owner, conn, *, status, error):
+    """Health changes are audited by the worker with codes only (no provider messages)."""
+    logs = owner.get(
+        f"/organizations/{owner.org}/audit-logs",
+        params={"action": "connection.health_changed", "page_size": 100},
+    ).json()["data"]
+    entries = [e for e in logs if e["resource_id"] == conn]
+    assert len(entries) == 1
+    entry = entries[0]
+    assert (entry["actor_type"], entry["actor_user_id"]) == ("worker", None)
+    assert (entry["resource_type"], entry["result"]) == ("connection", "success")
+    assert entry["after"] == {"status": status, "error": error}
+    assert "fake-at-" not in str(entry) and "fake-rt-" not in str(entry)
 
 
 def test_disconnect_survives_provider_revoke_failure(owner):

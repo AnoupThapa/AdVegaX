@@ -91,11 +91,12 @@ Organization ──owns──▶ External Connection (authorized_by_user_id, sta
 | **Background jobs** | 10 (`workers/test_jobs.py`) | Rate-limited → backoff → success; retryable → **dead-letter**; subject gone / unknown type → failed without retry; unexpected error → retried, code only; job cannot cross tenants; stuck-job recovery; **scheduler singleton lock**; scheduled tasks once per window; automatic email sweep; backoff cap + `Retry-After` |
 | **Tenant isolation** | 4 route-level + 3 new RLS tests | Route sweep over **every** organization route (now ≥ 19, generated from OpenAPI) → 404 for non-members; foreign connection/resource/job IDs → 404; raw RLS on all five tables; composite FKs reject cross-tenant references; runtime role cannot DELETE |
 | **Credentials** | 4 + 4 unit | At-rest encryption and no exposure; cross-tenant ciphertext fails; disconnect erases; key rotation |
-| **Audit** | 2 new + journey assertions | Every 1B action recorded with actor, organization, resource and result; refused actions recorded as `authorization.denied`; audit failure contained |
+| **Audit** | 2 new + journey assertions | Every journey action present in the audit log; `connection.health_changed` checked for actor (worker), resource, result and code-only payload; refused actions recorded as `authorization.denied`; audit failure contained |
+| **Route guards** (follow-up) | 5 (`security/test_route_guards.py`) | Generated from OpenAPI for **every** route: signed-out callers get 401 on all 29 protected routes; every state-changing route refuses a missing or forged CSRF token (403) and changes nothing; every route with an ID in its path rejects a malformed ID (422) without echoing it; unknown providers refused |
 
 ## 8. Audit-log verification
 
-Recorded actions: `connection.authorization_started`, `connection.created`, `connection.discovered`, `connection.health_changed`, `connection.revoked` (with `revoked_at_provider`, `links_ended`), `resource.linked`, `resource.unlinked`, `resource.sync_requested`, `resource.synced`, `authorization.denied`. Tests assert the full sequence for the journey, and that the access and refresh tokens appear in no audit, security-event, job, connection or resource row, no API response and no log output.
+Recorded actions: `connection.authorization_started`, `connection.created`, `connection.discovered`, `connection.health_changed`, `connection.revoked` (with `revoked_at_provider`, `links_ended`), `resource.linked`, `resource.unlinked`, `resource.sync_requested`, `resource.synced`, `authorization.denied`. Tests assert that every journey action is present (presence, not order), that `connection.health_changed` carries only status and error codes, and that the access and refresh tokens appear in no audit, security-event, job, connection or resource row, no API response and no log output.
 
 ## 9. Coverage, lint and type-check results
 
@@ -105,7 +106,7 @@ PostgreSQL 16, Redis 7, Python 3.12.
 |---|---|
 | `ruff check` + `ruff format --check` | ✅ pass |
 | `mypy --strict` (90 source files) | ✅ no issues |
-| Tests | ✅ **272 passed**, 0 failed (unit 67 · API 59 · security 120 · providers 7 · migrations 4 · workers 15) |
+| Tests | ✅ **277 passed**, 0 failed (unit 67 · API 59 · security 125 · providers 7 · migrations 4 · workers 15) — 272 at first delivery; +5 in the verification follow-up (§13) |
 | Coverage — overall | ✅ **98.40 %** (gate 85 %) |
 | Coverage — security-critical (now incl. encryption, `providers/http`, credentials, connect state) | ✅ **99 %** (gate 95 %) |
 | Migrations | ✅ up/down/up, no drift, RLS catalog, role checks |
@@ -128,10 +129,12 @@ PostgreSQL 16, Redis 7, Python 3.12.
 | 11 | No separate maximum-header-size setting | httpx/h11 built-in header limits apply |
 | 12 | No "slow response" fake mode | Timeouts tested directly on the SSRF client |
 | 13 | `TenantTask` base class implemented as `run_job` + handler registry | Same guarantees (tenant context, subject re-check, `job_runs` record, correlation ID) |
+| 14 | Normalized type `ExternalRef` (plan §2, §9) not created | Resources carry `provider`, `kind` and `external_id` fields directly; a dedicated type is added with the first real provider if it is needed. *Missed in the first report; found in verification.* |
+| 15 | Decryption boundary is the **integrations domain** (`app/domains/integrations/`), not "provider code only" (plan §6.2) | The domain decrypts just before calling a provider and passes secrets in memory; providers never touch the database. Enforced by `test_credential_boundary`. *Missed in the first report; found in verification.* |
 
 ## 11. Not verified in this environment
 
-Docker image build, gitleaks and GitHub Actions — they run in CI after the branch is pushed.
+Docker image build, gitleaks and GitHub Actions — they run in CI after the branch is pushed. Specifically never executed here: the new `beat` service in `docker-compose.yml` and the `.gitleaks.toml` allowlist (check the first CI run).
 
 ## 12. Remaining risks
 
@@ -143,3 +146,18 @@ Docker image build, gitleaks and GitHub Actions — they run in CI after the bra
 | Same account in two organizations (Q6) | LOW | Allowed as separate connections; product decision still open for 2A |
 | Redis outage blocks connect flow and rate limiting | LOW | Fails closed (503 / retryable); documented |
 | Docker/CI not yet run | LOW | Runs on first push |
+
+## 13. Verification follow-up (2026-10-08)
+
+A final re-check before product-owner review found claims that were stronger than the evidence. Corrected:
+
+| Finding | Correction |
+|---|---|
+| Plan §14 required unauthenticated, CSRF and invalid-input tests for every new endpoint; only wrong-tenant, wrong-role and not-found were tested | Added `tests/security/test_route_guards.py` (OpenAPI-generated, covers all current and future routes) |
+| `connection.health_changed` audit listed as verified but not asserted | Added assertions to the auth-expired and permission-denied tests |
+| "Full sequence" wording for the audit journey test | Reworded: the test checks presence, not order |
+| `ExternalRef` and the decryption-boundary difference were not reported | Added as deviations 14 and 15 |
+| Docker `beat` service and gitleaks allowlist not individually flagged as unverified | Added to §11 |
+
+No application code changed in the follow-up; only tests and this report.
+

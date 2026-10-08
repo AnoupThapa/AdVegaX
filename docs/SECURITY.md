@@ -61,7 +61,7 @@ Layers (D12): authentication → organization membership → organization role �
 - Grants: identity tables SELECT/INSERT/UPDATE for the app role (no DELETE); audit_logs SELECT/INSERT only; security_events and email_outbox INSERT only for the app role and SELECT (+UPDATE for the outbox) for the system role; 1B tables SELECT/INSERT/UPDATE (no DELETE) for the app role; the system role has SELECT/UPDATE on job_runs (claim/retry/recover) and on credentials (key rotation only).
 - No `SECURITY DEFINER` functions (source test).
 
-Tests: `tests/security/test_tenant_isolation.py` (route sweep generated from OpenAPI), `tests/security/test_rls.py`, `tests/migrations/test_migrations.py` (RLS catalog and role checks).
+Tests: `tests/security/test_tenant_isolation.py` (route sweep generated from OpenAPI), `tests/security/test_route_guards.py` (every route: 401 when signed out, 403 without CSRF, 422 for malformed IDs), `tests/security/test_rls.py`, `tests/migrations/test_migrations.py` (RLS catalog and role checks).
 
 ### Accepted design decision: global identity tables without RLS
 
