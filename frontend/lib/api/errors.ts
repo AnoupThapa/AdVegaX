@@ -1,0 +1,112 @@
+/**
+ * API error envelope (API_SPECIFICATION §2) and user-facing messages.
+ * Raw server text is never shown: every code maps to our own wording (PHASE_01C_PLAN §7).
+ */
+
+export type ApiErrorDetail = {
+  readonly location?: readonly string[];
+  readonly message?: string;
+  readonly type?: string;
+};
+
+export type ApiErrorBody = {
+  readonly error: {
+    readonly code: string;
+    readonly message?: string;
+    readonly details?: readonly ApiErrorDetail[];
+  };
+  readonly meta?: { readonly request_id?: string | null };
+};
+
+/** Client-side codes for failures that never reached or never came back from the API. */
+export const NETWORK_ERROR = "NETWORK_ERROR";
+export const UNEXPECTED_RESPONSE = "UNEXPECTED_RESPONSE";
+
+export class ApiError extends Error {
+  override readonly name = "ApiError";
+
+  constructor(
+    /** HTTP status; 0 when the request never completed. */
+    readonly status: number,
+    readonly code: string,
+    readonly details: readonly ApiErrorDetail[] = [],
+    /** Correlation ID to quote to support; never contains secrets. */
+    readonly requestId: string | null = null,
+  ) {
+    super(code);
+  }
+
+  /** Validation messages for one form field, e.g. fieldErrors("email"). */
+  fieldErrors(field: string): string[] {
+    return this.details
+      .filter((d) => d.location?.at(-1) === field && d.message)
+      .map((d) => d.message as string);
+  }
+}
+
+function isErrorBody(value: unknown): value is ApiErrorBody {
+  if (typeof value !== "object" || value === null || !("error" in value)) return false;
+  const error = (value as { error: unknown }).error;
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    typeof (error as { code?: unknown }).code === "string"
+  );
+}
+
+/** Builds an ApiError from a failed response's status, parsed body and headers. */
+export function apiErrorFrom(status: number, body: unknown, headers?: Headers): ApiError {
+  const headerId = headers?.get("x-request-id") ?? null;
+  if (isErrorBody(body)) {
+    return new ApiError(
+      status,
+      body.error.code,
+      body.error.details ?? [],
+      body.meta?.request_id ?? headerId,
+    );
+  }
+  const code = status >= 500 ? "INTERNAL_ERROR" : UNEXPECTED_RESPONSE;
+  return new ApiError(status, code, [], headerId);
+}
+
+const MESSAGES: Readonly<Record<string, string>> = {
+  VALIDATION_ERROR: "Some details are missing or invalid. Please check the form.",
+  BAD_REQUEST: "This request could not be processed.",
+  UNAUTHENTICATED: "Please sign in to continue.",
+  INVALID_CREDENTIALS: "The email or password is incorrect.",
+  FORBIDDEN: "You do not have permission to do this.",
+  EMAIL_NOT_VERIFIED: "Please verify your email address first.",
+  CSRF_FAILED: "Your session security check failed. Please reload the page and try again.",
+  INVITATION_EMAIL_MISMATCH: "This invitation was sent to a different email address.",
+  NOT_FOUND: "This page does not exist, or you do not have access to it.",
+  METHOD_NOT_ALLOWED: "This action is not available.",
+  CONFLICT: "This change conflicts with the current state. Please refresh and try again.",
+  SLUG_TAKEN: "That address is already taken. Please choose another.",
+  ALREADY_MEMBER: "This person is already a member of the organization.",
+  LAST_OWNER: "An organization must keep at least one owner.",
+  INVITATION_NOT_PENDING: "This invitation is no longer valid.",
+  INVALID_TOKEN: "This link is invalid or has expired. Please request a new one.",
+  PAYLOAD_TOO_LARGE: "The request is too large.",
+  UNSUPPORTED_MEDIA_TYPE: "This request format is not supported.",
+  RATE_LIMITED: "Too many attempts. Please wait a few minutes and try again.",
+  INTERNAL_ERROR: "Something went wrong on our side. Please try again.",
+  SERVICE_UNAVAILABLE: "The service is temporarily unavailable. Please try again shortly.",
+  UNKNOWN_PROVIDER: "This platform is not available.",
+  CONNECTION_NOT_ACTIVE: "This connection is not active. Reconnect the platform first.",
+  RESOURCE_NOT_LINKABLE: "This account is no longer accessible through its connection.",
+  ALREADY_LINKED: "This account is already linked to the organization.",
+  NOT_LINKED: "This account is not linked to the organization.",
+  [NETWORK_ERROR]: "We could not reach AdVegaX. Check your connection and try again.",
+  [UNEXPECTED_RESPONSE]: "Something went wrong. Please try again.",
+};
+
+const FALLBACK = "Something went wrong. Please try again.";
+
+/** The text to show a person for an error code. Unknown codes get a generic message. */
+export function friendlyMessage(error: ApiError | string): string {
+  const code = typeof error === "string" ? error : error.code;
+  return MESSAGES[code] ?? FALLBACK;
+}
+
+/** Every code with a dedicated message (used by tests to stay in sync with the API). */
+export const KNOWN_ERROR_CODES: readonly string[] = Object.keys(MESSAGES);

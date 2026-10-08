@@ -5,7 +5,7 @@ Plan: `PHASE_01C_PLAN.md` (approved, A17). One report per task; the final `PHASE
 | Task | Status |
 |---|---|
 | 1C-01 Scaffold, tooling, security headers + CSP, layout, design tokens | ✅ Done — awaiting review |
-| 1C-02 API types + client | Not started |
+| 1C-02 API types + client | ✅ Done — awaiting review |
 | 1C-03 Backend: `GET /providers`, `organization_id` on callback redirect | Not started |
 | 1C-04 Auth pages | Not started |
 | 1C-05 Organizations, members, invitations | Not started |
@@ -56,3 +56,44 @@ Plan: `PHASE_01C_PLAN.md` (approved, A17). One report per task; the final `PHASE
 **Verification follow-up (2026-10-08)**
 - The browser check above ran on the build just before `app/icon.svg` and the `vitest.config.mts` rename. Re-run on the **final** build: 10/10 scripts carry the nonce, **0 CSP violations**, client-side navigation works, the icon is served; the only failed request is the intentional `/missing-page` 404.
 - Correction: during the first run I described three 404s as "the missing test page and a missing favicon". That was not verified. The final run shows no favicon request failing; the earlier 404s came from the test visiting the missing page (the third was not identified and does not recur).
+
+---
+
+## 1C-02 — API types and client (2026-10-08)
+
+**Completed**
+- **Generated API types.** The backend exports its OpenAPI schema (`uv run python -m app.api.openapi_export`) to `frontend/lib/api/openapi.json`; `npm run api:generate` turns it into `lib/api/schema.d.ts`. Every API call in the web app is type-checked against it.
+- **Two drift checks.** Backend test fails if the committed schema differs from the live API; frontend test fails if the committed types differ from the schema.
+- **API client** (`lib/api/client.ts`, openapi-fetch): browser → API directly with the session cookie; CSRF token kept **in memory only**, fetched once (shared between concurrent requests) and sent on POST/PUT/PATCH/DELETE; fresh tokens from sign-in/sign-out are picked up; on `CSRF_FAILED` the token is refreshed and the request retried **exactly once** (body resent); on 401 the token is cleared and the app is notified.
+- **Errors** (`lib/api/errors.ts`): `ApiError` with status, code, field details and request ID; every backend error code has our own user-facing wording (a test scans the backend so new codes cannot be missed); server text and non-JSON bodies are never shown; network failures become `NETWORK_ERROR`.
+- **Query cache** (TanStack Query): reads retry at most twice and only for network/5xx errors; mutations never retry; the whole cache is cleared when the session ends.
+- **Safe redirects** (`lib/navigation/safe-next.ts`): only same-site relative paths are accepted for "return to" links.
+
+**Files changed**
+- New (frontend): `lib/api/{client,csrf,errors,index}.ts`, `lib/api/openapi.json`, `lib/api/schema.d.ts` (generated), `lib/navigation/safe-next.ts`, `lib/query/query-client.ts`, `app/providers.tsx`, 6 test files.
+- Modified (frontend): `app/layout.tsx` (providers), `package.json`/lockfile (`openapi-fetch` 0.17.0, `@tanstack/react-query` 5.104.1, `openapi-typescript` 7.13.0 dev; `api:generate` script), `.prettierignore`, `eslint.config.mjs` (skip generated file).
+- New (backend): `app/api/openapi_export.py`, `tests/unit/test_openapi_export.py`. No API behaviour changed.
+- Deleted: none.
+
+**Tests**
+- Frontend: 71 passed · coverage 98.7 % statements, 99.1 % branches, 100 % functions. ESLint (0 warnings), Prettier, strict `tsc`, production build, `npm audit --omit=dev` (0 vulnerabilities): pass.
+- Backend: 279 passed (+2) · 98.41 % coverage · ruff + `mypy --strict` clean.
+- **Against the real API** (local uvicorn + PostgreSQL + Redis, temporary script not committed): register → sign in → forced bad CSRF token → `403 CSRF_FAILED` → new token → retry `202` → sign out → next call `401 UNAUTHENTICATED`. Sequence matched the design exactly.
+
+**Security**
+- CSRF token never stored outside memory (lint + source rules still pass); no secrets in browser code; open redirects blocked.
+
+**Migration:** none.
+
+**Deviations**
+1. `openapi-typescript` declares support only for TypeScript 5; an npm `overrides` entry lets it use the project's TypeScript 6.0. Verified: generated types are identical through the command line and the programmatic API, and compile under strict `tsc`.
+2. Error responses are not described in the OpenAPI schema, so the error envelope type (`ApiErrorBody`) is written by hand from API_SPECIFICATION §2.
+3. A frontend test reads backend source files to make sure every backend error code has a message (deliberate cross-check; it needs the full repository checked out).
+4. One defensive line in `safe-next.ts` (a fallback that valid input cannot reach) is not covered by tests.
+
+**Not yet done (planned):** the shared `formatMetric` helper from plan §4.8 is not in the 1C-01…1C-08 task list; it will be added with the Connections pages (1C-07).
+
+**Blocked:** none.
+
+**Next task:** 1C-03 — backend: `GET /providers` and `organization_id` on the platform-callback redirect.
+

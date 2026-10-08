@@ -1,6 +1,6 @@
 # Phase 1 — Foundation
 
-**Status:** 1A and 1B implemented (awaiting review); 1C approved and in progress (1C-01 done) · **Depends on:** Phase 0 (complete) · **Milestone:** M1
+**Status:** 1A and 1B implemented (awaiting review); 1C approved and in progress (1C-01, 1C-02 done) · **Depends on:** Phase 0 (complete) · **Milestone:** M1
 
 ## Goal
 A secure, multi-tenant platform skeleton on which every later phase builds. A user can sign up with email + password, verify their email, sign in with no platform connected, create an organization, invite members and see an empty Connections page. No external platform integrations.

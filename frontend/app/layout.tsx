@@ -5,6 +5,8 @@ import type { ReactNode } from "react";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { SkipLink } from "@/components/layout/SkipLink";
 
+import { Providers } from "./providers";
+
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -24,11 +26,13 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   return (
     <html lang="en">
       <body>
-        <SkipLink />
-        <SiteHeader />
-        <main id="main" tabIndex={-1}>
-          {children}
-        </main>
+        <Providers>
+          <SkipLink />
+          <SiteHeader />
+          <main id="main" tabIndex={-1}>
+            {children}
+          </main>
+        </Providers>
       </body>
     </html>
   );
