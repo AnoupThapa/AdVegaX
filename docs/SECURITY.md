@@ -118,7 +118,8 @@ Tests: `tests/security/test_ssrf.py` (81 cases).
 
 ## 10. Connect flow, provider calls and jobs (Phase 1B)
 
-- **Connect state:** single-use, random, stored hashed in Redis with `CONNECT_STATE_TTL` (10 min) and consumed atomically (`GETDEL`); bound to the user, organization, provider and PKCE verifier. The callback takes the organization **only** from the state, re-checks that the signed-in user is the same and still has `connections.manage`, and redirects (303) to the app with a status code — never tokens. Redis errors fail closed (503).
+- **Connect state:** single-use, random, stored hashed in Redis with `CONNECT_STATE_TTL` (10 min) and consumed atomically (`GETDEL`); bound to the user, organization, provider and PKCE verifier. The callback takes the organization **only** from the state, re-checks that the signed-in user is the same and still has `connections.manage`, and redirects (303) to the app with a status code — never tokens. The redirect names the organization (`organization_id`) only after the state is validated and the user is re-confirmed as that organization's manager; it is omitted for an invalid state, a different or signed-out user, or a lost role (1C-03).
+- **Provider list** (`GET /providers`): signed-in users only; public metadata (code, name, category, sign-in scheme, capabilities, test-only flag) — no configuration or secrets; empty in staging/production until Phase 2A. Redis errors fail closed (503).
 - **PKCE (S256)** on every OAuth start.
 - **Rate limiting:** Redis token bucket per provider (and key) before each provider call; an unavailable limiter is a retryable error.
 - **Health:** auth failures mark the connection `expired`, permission failures `error`; both audited (`connection.health_changed`) with codes only.

@@ -120,7 +120,7 @@ Plan: `PHASE_01C_PLAN.md` (approved, A17). One report per task; the final `PHASE
 - No database changes. Deleted: none.
 
 **Tests**
-- Backend: 281 passed (+2 new; 4 existing callback tests extended) · 98.42 % coverage · ruff + `mypy --strict` clean. The route-guard sweep picked up the new endpoint automatically (signed-out → 401; now 30 protected routes).
+- Backend: 281 passed (+2 new; 3 existing callback tests extended — corrected from "4" in verification) · 98.42 % coverage · ruff + `mypy --strict` clean. The route-guard sweep picked up the new endpoint automatically (signed-out → 401; now 30 protected routes).
 - Callback: organization present for connected / cancelled / provider error; absent for invalid state, other user, signed out, role lost; connected redirect contains only `status`, `organization_id`, `connection_id` — no tokens, codes or state.
 - Providers: exact field set; unverified, organization-less users can read it; deployed registry returns an empty list.
 - Frontend: 71 passed, build and audit (0 production vulnerabilities) pass.
