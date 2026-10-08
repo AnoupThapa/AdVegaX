@@ -79,3 +79,48 @@ def test_audit_payloads_never_contain_secrets(make_client, admin_engine):
     assert "token" not in dump.lower()
     assert "password" not in dump.lower()
     assert "testclient" not in events  # raw IPs are never stored
+
+
+def test_refused_actions_are_audited(make_client):
+    owner, admin, viewer = make_client(), make_client(), make_client()
+    owner.signup("deny-owner@example.com")
+    oid = owner.create_org("Denials")["id"]
+    admin.signup("deny-admin@example.com")
+    viewer.signup("deny-viewer@example.com")
+    owner.invite_and_join(oid, admin, "deny-admin@example.com", "admin")
+    viewer_id = owner.invite_and_join(oid, viewer, "deny-viewer@example.com", "viewer")
+    assert (
+        admin.patch(f"/organizations/{oid}/members/{viewer_id}", {"role": "owner"}).status_code
+        == 403
+    )
+    assert (
+        admin.post(
+            f"/organizations/{oid}/invitations", {"email": "x@example.com", "role": "owner"}
+        ).status_code
+        == 403
+    )
+    assert viewer.get(f"/organizations/{oid}/audit-logs").status_code == 403
+    denials = owner.get(f"/organizations/{oid}/audit-logs", params={"result": "denied"}).json()[
+        "data"
+    ]
+    assert {d["metadata"]["permission"] for d in denials} == {"members.assign_role", "audit.view"}
+    assert len(denials) == 3
+    member_denial = next(d for d in denials if d["resource_type"] == "membership")
+    assert member_denial["resource_id"] == viewer_id
+    assert member_denial["action"] == "authorization.denied"
+
+
+def test_denial_audit_failure_is_contained(runtime, monkeypatch, caplog):
+    import uuid
+
+    from app.domains.audit.denials import audit_denial
+    from app.domains.organizations.permissions import AuthorizationDenied, Permission
+    from app.domains.organizations.tenancy import TenantContext
+
+    def broken(**_kwargs):
+        raise RuntimeError("db down")
+
+    monkeypatch.setattr(runtime.db, "transaction", broken)
+    ctx = TenantContext(uuid.uuid4(), uuid.uuid4(), "viewer")
+    audit_denial(runtime, AuthorizationDenied(ctx, Permission.AUDIT_VIEW))  # must not raise
+    assert "denial_audit_failed" in caplog.text

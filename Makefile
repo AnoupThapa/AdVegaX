@@ -18,7 +18,7 @@ migrate:
 test:
 	$(BACKEND) uv run pytest --cov=app --cov-branch --cov-report=term-missing --cov-fail-under=85
 	$(BACKEND) uv run coverage report --fail-under=95 \
-		--include="app/core/security/*,app/domains/identity/*,app/domains/organizations/permissions.py,app/domains/organizations/tenancy.py"
+		--include="app/core/security/*,app/domains/identity/*,app/domains/organizations/permissions.py,app/domains/organizations/tenancy.py,app/providers/http/*,app/domains/integrations/credentials.py,app/domains/integrations/connect_state.py"
 
 lint:
 	$(BACKEND) uv run ruff check app alembic tests

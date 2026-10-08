@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 import uuid
 from enum import StrEnum
-from typing import Protocol
+from typing import NoReturn, Protocol
 
 from app.core.errors import Forbidden, NotFound
 from app.domains.organizations.tenancy import TenantContext
@@ -41,10 +41,15 @@ class Permission(StrEnum):
     MEMBERS_VIEW = "members.view"
     MEMBERS_MANAGE = "members.manage"
     AUDIT_VIEW = "audit.view"
+    MEMBERS_ASSIGN_ROLE = "members.assign_role"
+    CONNECTIONS_VIEW = "connections.view"
+    CONNECTIONS_MANAGE = "connections.manage"
+    JOBS_VIEW = "jobs.view"
 
 
 _ALL = frozenset(Role)
 _OWNER_ADMIN = frozenset({Role.OWNER, Role.ADMIN})
+_OWNER_ADMIN_MANAGER = frozenset({Role.OWNER, Role.ADMIN, Role.MANAGER})
 
 PERMISSION_MATRIX: dict[Permission, frozenset[Role]] = {
     Permission.ORG_VIEW: _ALL,
@@ -52,7 +57,28 @@ PERMISSION_MATRIX: dict[Permission, frozenset[Role]] = {
     Permission.MEMBERS_VIEW: _ALL,
     Permission.MEMBERS_MANAGE: _OWNER_ADMIN,
     Permission.AUDIT_VIEW: _OWNER_ADMIN,
+    Permission.MEMBERS_ASSIGN_ROLE: _OWNER_ADMIN,
+    Permission.CONNECTIONS_VIEW: _ALL,
+    Permission.CONNECTIONS_MANAGE: _OWNER_ADMIN_MANAGER,
+    Permission.JOBS_VIEW: _ALL,
 }
+
+
+class AuthorizationDenied(Forbidden):
+    """A refused action. The API records it in the audit log in its own transaction (A16)."""
+
+    def __init__(
+        self,
+        ctx: TenantContext,
+        permission: Permission,
+        resource_type: str | None = None,
+        resource_id: str | None = None,
+    ) -> None:
+        super().__init__()
+        self.ctx = ctx
+        self.permission = permission
+        self.resource_type = resource_type
+        self.resource_id = resource_id
 
 
 class TenantResource(Protocol):
@@ -72,16 +98,28 @@ def authorize(
         # Defence in depth: a resource from another tenant is never acknowledged.
         raise NotFound()
     if not has_permission(ctx.role, permission):
-        logger.warning(
-            "authorization_denied",
-            extra={
-                "organization_id": str(ctx.organization_id),
-                "user_id": str(ctx.user_id),
-                "permission": permission.value,
-                "role": ctx.role,
-            },
-        )
-        raise Forbidden()
+        deny(ctx, permission)
+
+
+def deny(
+    ctx: TenantContext,
+    permission: Permission,
+    resource_type: str | None = None,
+    resource_id: object = None,
+) -> NoReturn:
+    """Refuse the action; the API audits the refusal in a separate transaction."""
+    logger.warning(
+        "authorization_denied",
+        extra={
+            "organization_id": str(ctx.organization_id),
+            "user_id": str(ctx.user_id),
+            "permission": permission.value,
+            "role": ctx.role,
+        },
+    )
+    raise AuthorizationDenied(
+        ctx, permission, resource_type, str(resource_id) if resource_id is not None else None
+    )
 
 
 def can_assign(actor_role: str, target_role: str) -> bool:

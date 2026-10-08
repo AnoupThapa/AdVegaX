@@ -1,7 +1,7 @@
 # AdVegaX — Security Implementation Notes
 
-**Status:** Phase 1A (platform core & identity) · **Last updated:** 2026-10-08
-**Governing decisions:** MASTER_SPECIFICATION §20 (D7, D10–D15) and §21 (A8–A12, A15); PROJECT_RULES §7, §13, §16A.
+**Status:** Phase 1A (platform core & identity) + Phase 1B (integration foundation) · **Last updated:** 2026-10-08
+**Governing decisions:** MASTER_SPECIFICATION §20 (D7, D10–D15) and §21 (A8–A12, A15, A16); PROJECT_RULES §7, §13, §16A.
 
 This document describes how the security requirements are implemented and tested. Specifications remain the source of requirements.
 
@@ -53,11 +53,12 @@ Layers (D12): authentication → organization membership → organization role �
 |---|---|---|
 | `advegax_migrator` | Owns the schema; Alembic only | NOSUPERUSER, NOBYPASSRLS, never used at runtime |
 | `advegax_app` | API runtime | NOSUPERUSER, NOBYPASSRLS, not owner |
-| `advegax_system` | Worker/system tasks (email outbox) | NOSUPERUSER, NOBYPASSRLS, narrow grants |
+| `advegax_system` | Worker/system tasks (email outbox, job claiming/recovery, key rotation) | NOSUPERUSER, NOBYPASSRLS, narrow grants |
 
-- RLS is enabled **and forced** on organizations, memberships, invitations, audit_logs, security_events and email_outbox.
+- RLS is enabled **and forced** on organizations, memberships, invitations, audit_logs, security_events, email_outbox (1A) and external_connections, external_connection_credentials, external_resources, organization_resource_links, job_runs (1B).
+- 1B child tables use composite foreign keys on `(organization_id, id)`, so a row cannot reference another tenant's parent even through a bug.
 - Context is set per transaction with `set_config(..., true)` (`app.current_org_id`, `app.current_user_id`); policies fail closed when it is unset. Session-level `SET` is forbidden (source test).
-- Grants: identity tables SELECT/INSERT/UPDATE for the app role (no DELETE); audit_logs SELECT/INSERT only; security_events and email_outbox INSERT only for the app role and SELECT (+UPDATE for the outbox) for the system role.
+- Grants: identity tables SELECT/INSERT/UPDATE for the app role (no DELETE); audit_logs SELECT/INSERT only; security_events and email_outbox INSERT only for the app role and SELECT (+UPDATE for the outbox) for the system role; 1B tables SELECT/INSERT/UPDATE (no DELETE) for the app role; the system role has SELECT/UPDATE on job_runs (claim/retry/recover) and on credentials (key rotation only).
 - No `SECURITY DEFINER` functions (source test).
 
 Tests: `tests/security/test_tenant_isolation.py` (route sweep generated from OpenAPI), `tests/security/test_rls.py`, `tests/migrations/test_migrations.py` (RLS catalog and role checks).
@@ -70,14 +71,15 @@ Tests: `tests/security/test_tenant_isolation.py` (route sweep generated from Ope
 
 - `audit_logs` is append-only (no UPDATE/DELETE/TRUNCATE for runtime roles). Records actor, organization, action, resource, result, correlation ID and scrubbed before/after values for organization, membership and invitation changes.
 - `security_events` records authentication events with a keyed hash of the IP address (raw IPs are never stored) and a truncated user agent.
-- Known limitation: an authorization **denial** raises inside the business transaction, so it is written to structured logs (`authorization_denied`) rather than `audit_logs`. A separate-transaction audit for denials can be added in a later phase.
+- **Refused actions (1B):** an authorization denial raises `AuthorizationDenied`; an exception handler writes an `authorization.denied` audit record (result `denied`, actor, organization, permission, resource) in a **separate transaction** after the business transaction rolls back. If that write fails, the failure is logged (`denial_audit_failed`) and the client still receives the normal 403.
+- 1B audit actions: `connection.authorization_started`, `connection.created`, `connection.discovered`, `connection.health_changed`, `connection.revoked`, `resource.linked`, `resource.unlinked`, `resource.sync_requested`, `resource.synced`. Audit metadata never contains credentials, tokens, codes or provider error messages.
 
 ## 6. Transactional email
 
 - Domains call the notifications service; it writes an outbox row in the same transaction and dispatches after commit (Celery). The worker renders the template and sends through a vendor-neutral sender port (SMTP adapter).
 - Single-use links use `APP_BASE_URL` and put the token in the URL **fragment** (`#token=`), so it is not sent to servers in request logs or `Referer` headers.
 - The outbox payload is cleared once the email is sent or permanently fails; the API role cannot read the outbox.
-- Retries use exponential backoff (`EMAIL_RETRY_BASE_DELAY`) up to `EMAIL_MAX_ATTEMPTS`. Until the Phase 1B scheduler exists, `python -m app.workers.email_tasks` delivers any due emails.
+- Retries use exponential backoff (`EMAIL_RETRY_BASE_DELAY`) up to `EMAIL_MAX_ATTEMPTS`. The Phase 1B scheduler runs the delivery sweep every `SCHEDULE_EMAIL_SWEEP_INTERVAL`; `python -m app.workers.email_tasks` remains available for manual runs.
 
 ## 7. Secrets, configuration and logging
 
@@ -85,9 +87,45 @@ Tests: `tests/security/test_tenant_isolation.py` (route sweep generated from Ope
 - Staging/production startup refuses: default or short `SECRET_KEY`, insecure cookies, non-`__Host-` cookie names, wildcard or non-https CORS origins, non-https `APP_BASE_URL`, in-memory email, eager task execution.
 - Logs are JSON with a correlation ID; keys resembling passwords, tokens, secrets, cookies, sessions, CSRF values or authorization headers are redacted. Errors return a generic envelope without stack traces or submitted values.
 - Response headers: `Cache-Control: no-store`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, restrictive CSP; HSTS when deployed.
-- Outbound HTTP libraries are banned outside `providers/` (ruff rule + source test) until the SSRF-safe client arrives in Phase 1B.
+- Outbound HTTP libraries are banned outside `app/providers/http/` (ruff rule + source test); all outbound calls go through the SSRF-safe client (§9).
+- Staging/production also refuse a non-https `API_BASE_URL` and the development `ENCRYPTION_KEYS`.
 
-## 8. Verification commands
+## 8. Credential encryption (Phase 1B, A16)
+
+- **Envelope encryption.** Each credential set gets a fresh 256-bit data key; the secrets (JSON) are encrypted with **AES-256-GCM** and a random 96-bit nonce. The data key is wrapped (AES-256-GCM) by a versioned **key-encryption key** from the key ring.
+- **Associated data** `advegax:credential:v1|<organization>|<connection>|<provider>` binds the ciphertext to its tenant and connection: ciphertext copied into another organization's row cannot be decrypted (`test_ciphertext_copied_to_another_tenant_cannot_be_decrypted`).
+- **Key ring:** `ENCRYPTION_KEYS` (`"<version>:<base64 32 bytes>,…"`) and `ENCRYPTION_ACTIVE_KEY_VERSION`, behind a `KeyProvider` interface so a cloud KMS can replace the local ring when hosting is chosen (Q16). Deployed environments refuse the development key.
+- **Rotation:** add a new key version, make it active, then run `python -m app.domains.integrations.rotation` (system role) — data keys are re-wrapped; ciphertext is unchanged; old versions can then be removed.
+- **Stored:** ciphertext, wrapped data key, key version, provider, status, authorizing user, timestamps, granted scopes, external identifiers. **Never returned** through API responses, logs, audit records, errors or UI; decrypted only inside `app/domains/integrations/` (source test `test_credential_boundary`).
+- **Disconnect** revokes at the provider where supported and erases ciphertext, wrapped key and key version (all three nulled together; check constraint). Unreadable or missing credentials surface as an expired connection, never as an error containing secret material.
+
+## 9. Outbound requests — SSRF protection (Phase 1B, A11)
+
+`app/providers/http/` is the only place allowed to make outbound HTTP requests.
+
+| Control | Implementation |
+|---|---|
+| Scheme / URL | `https` only; credentials in URLs rejected; ports restricted to an allowlist (default 443) |
+| Hostname | IDNA-normalized; IP literals in any form (decimal, octal, hex, short forms, IPv6) rejected; internal names (`localhost`, single-label, `.local`, `.internal`, `.localhost`, metadata names) rejected |
+| DNS | Resolved by the client; **every** returned address must be public — loopback, private, link-local (incl. 169.254.169.254 metadata), CGNAT, multicast, reserved, unspecified, IPv6 ULA/link-local, and IPv4 embedded in IPv6 (mapped, NAT64, 6to4, Teredo) are blocked |
+| DNS rebinding | Connection pinned to the validated IP; TLS SNI and `Host` keep the original name, so certificate validation still applies |
+| Redirects | Not followed automatically; each `Location` re-validated (including DNS); cross-host redirects refused; maximum `OUTBOUND_MAX_REDIRECTS` (3); `Authorization`, `Cookie` and API-key headers stripped on redirect |
+| Limits | `OUTBOUND_CONNECT_TIMEOUT`, `OUTBOUND_READ_TIMEOUT`, streamed `OUTBOUND_MAX_RESPONSE_BYTES` cap (also checks `Content-Length`) |
+| Environment | `trust_env=False` — ambient proxy variables cannot redirect traffic |
+| Errors | Blocked destinations raise `BlockedDestinationError` with a reason code only; timeouts/transport errors map to retryable provider errors |
+
+Tests: `tests/security/test_ssrf.py` (81 cases).
+
+## 10. Connect flow, provider calls and jobs (Phase 1B)
+
+- **Connect state:** single-use, random, stored hashed in Redis with `CONNECT_STATE_TTL` (10 min) and consumed atomically (`GETDEL`); bound to the user, organization, provider and PKCE verifier. The callback takes the organization **only** from the state, re-checks that the signed-in user is the same and still has `connections.manage`, and redirects (303) to the app with a status code — never tokens. Redis errors fail closed (503).
+- **PKCE (S256)** on every OAuth start.
+- **Rate limiting:** Redis token bucket per provider (and key) before each provider call; an unavailable limiter is a retryable error.
+- **Health:** auth failures mark the connection `expired`, permission failures `error`; both audited (`connection.health_changed`) with codes only.
+- **Jobs:** handlers run under the job's tenant context, so a job cannot touch another tenant's rows (`test_job_cannot_cross_tenants`); errors stored as codes only; dead-letter after `JOB_MAX_ATTEMPTS`.
+- **Fake provider:** registered only outside staging/production; the registry refuses test-only providers when deployed.
+
+## 11. Verification commands
 
 ```bash
 make lint typecheck test   # ruff, mypy --strict, pytest with coverage gates (85 % overall, 95 % security-critical)

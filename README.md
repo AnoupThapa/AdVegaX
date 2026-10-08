@@ -2,7 +2,7 @@
 
 AI-powered E-commerce Advertising & Growth Operating System — an independent multi-tenant SaaS that connects commerce platforms (Shopify, WooCommerce), advertising platforms (Google Ads, Meta) and analytics (GA4) into one controlled, auditable growth system.
 
-**Status:** Phase 1A (platform core & identity) implemented — awaiting product-owner review. Phase 1B and 1C not started. See `docs/PROJECT_STATUS.md`.
+**Status:** Phase 1A (platform core & identity) and Phase 1B (integration foundation, test platform only) implemented — awaiting product-owner review. Phase 1C and real platform integrations not started. See `docs/PROJECT_STATUS.md`.
 
 ## Documentation (`docs/`)
 
@@ -17,7 +17,8 @@ AI-powered E-commerce Advertising & Growth Operating System — an independent m
 | `ROADMAP.md` | Phases, dependencies, milestones, per-phase workflow |
 | `PROJECT_STATUS.md` | Current progress, decision log, open questions |
 | `SECURITY.md` | How security controls are implemented and tested |
-| `phases/` | One plan per phase; `PHASE_01A_PLAN.md` (approved), `PHASE_01A_REPORT.md` (implemented), `PHASE_01B_PLAN.md` (draft) |
+| `INTEGRATION_GUIDES.md` | How a platform connector is added; per-provider notes |
+| `phases/` | One plan per phase; `PHASE_01A_PLAN.md` (approved), `PHASE_01A_REPORT.md` (implemented), `PHASE_01B_PLAN.md` (approved), `PHASE_01B_REPORT.md` (implemented) |
 
 ## Local development (backend)
 
@@ -26,7 +27,7 @@ Requirements: Python 3.12, [uv](https://docs.astral.sh/uv/), PostgreSQL 16, Redi
 **With Docker**
 
 ```bash
-docker compose up --build        # postgres, redis, mailpit (http://localhost:8025), migrations, api (:8000), worker
+docker compose up --build        # postgres, redis, mailpit (http://localhost:8025), migrations, api (:8000), worker, beat (scheduler)
 ```
 
 **Without Docker** (PostgreSQL and Redis running locally)
@@ -40,6 +41,7 @@ set -a; . ../.env; set +a
 uv run alembic upgrade head
 uv run uvicorn app.main:create_app --factory --port 8000
 uv run celery -A app.workers.celery_app:celery_app worker --loglevel=INFO
+uv run celery -A app.workers.celery_app:celery_app beat --loglevel=INFO   # scheduler (email sweep, job recovery)
 ```
 
 API docs (non-deployed environments): http://localhost:8000/api/v1/docs

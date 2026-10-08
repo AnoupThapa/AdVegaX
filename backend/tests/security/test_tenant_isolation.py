@@ -10,7 +10,7 @@ import re
 
 import pytest
 
-from tests.helpers import last_email
+from tests.helpers import connected, last_email
 
 BODIES = {
     ("patch", "/organizations/{organization_id}"): {"name": "Hijacked"},
@@ -33,7 +33,23 @@ def tenants(make_client):
         f"/organizations/{org_b}/invitations", {"email": "pending@tenant-b.com", "role": "viewer"}
     ).json()["data"]["id"]
     member_b = b.get(f"/organizations/{org_b}/members").json()["data"][0]["id"]
-    return {"a": a, "b": b, "org_a": org_a, "org_b": org_b, "inv_b": inv_b, "member_b": member_b}
+    conn_b = connected(b, org_b)
+    resource_b = b.get(f"/organizations/{org_b}/connections/{conn_b}/resources").json()["data"][0][
+        "id"
+    ]
+    b.post(f"/organizations/{org_b}/resources/{resource_b}/link")
+    job_b = b.post(f"/organizations/{org_b}/resources/{resource_b}/sync").json()["data"]["id"]
+    return {
+        "a": a,
+        "b": b,
+        "org_a": org_a,
+        "org_b": org_b,
+        "inv_b": inv_b,
+        "member_b": member_b,
+        "conn_b": conn_b,
+        "resource_b": resource_b,
+        "job_b": job_b,
+    }
 
 
 def _org_routes(app):
@@ -53,12 +69,16 @@ def _call(client, method, path, body):
 
 def test_every_org_route_returns_404_for_non_members(app, tenants):
     routes = list(_org_routes(app))
-    assert len(routes) >= 9  # all Phase 1A organization-scoped operations
+    assert len(routes) >= 19  # all Phase 1A + 1B organization-scoped operations
     for method, template in routes:
         path = (
             template.replace("{organization_id}", tenants["org_b"])
             .replace("{member_id}", tenants["member_b"])
             .replace("{invitation_id}", tenants["inv_b"])
+            .replace("{provider}", "fake")
+            .replace("{connection_id}", tenants["conn_b"])
+            .replace("{resource_id}", tenants["resource_b"])
+            .replace("{job_id}", tenants["job_b"])
         )
         assert not re.search(r"\{\w+\}", path), f"unhandled path parameter in {template}"
         response = _call(tenants["a"], method, path, BODIES.get((method, template), {}))
@@ -76,6 +96,22 @@ def test_foreign_child_ids_under_own_org_return_404(tenants):
     )
     assert a.delete(f"/organizations/{org_a}/members/{tenants['member_b']}").status_code == 404
     assert a.delete(f"/organizations/{org_a}/invitations/{tenants['inv_b']}").status_code == 404
+    # Phase 1B: another tenant's connection, resource and job under the caller's own org.
+    for method, path in (
+        ("get", f"/organizations/{org_a}/connections/{tenants['conn_b']}"),
+        ("get", f"/organizations/{org_a}/connections/{tenants['conn_b']}/resources"),
+        ("post", f"/organizations/{org_a}/connections/{tenants['conn_b']}/disconnect"),
+        ("post", f"/organizations/{org_a}/connections/{tenants['conn_b']}/rediscover"),
+        ("post", f"/organizations/{org_a}/resources/{tenants['resource_b']}/link"),
+        ("post", f"/organizations/{org_a}/resources/{tenants['resource_b']}/unlink"),
+        ("post", f"/organizations/{org_a}/resources/{tenants['resource_b']}/sync"),
+        ("get", f"/organizations/{org_a}/resources/{tenants['resource_b']}/links"),
+        ("get", f"/organizations/{org_a}/jobs/{tenants['job_b']}"),
+    ):
+        response = getattr(a, method)(path)
+        assert response.status_code == 404, f"{method} {path} -> {response.status_code}"
+    conn = tenants["b"].get(f"/organizations/{tenants['org_b']}/connections/{tenants['conn_b']}")
+    assert conn.json()["data"]["status"] == "active"
 
 
 def test_tenant_b_data_unchanged_and_invisible(tenants):

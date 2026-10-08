@@ -243,7 +243,7 @@ User (authorizes) → External Connection (tenant-owned; credentials encrypted)
 - Discovery lists what the connection can reach; nothing is used until the organization **explicitly links** a resource.
 - Unlinking and relinking create new link records rather than overwriting history, so reassignment stays auditable and isolated.
 - Shopify and WooCommerce typically yield one store per connection; Google Ads and Meta can yield many ad accounts; GA4 many properties.
-- The exact schema is finalized in the Phase 1B plan before implementation.
+- **As built (Phase 1B, A16):** the organization owns the connection and a user authorizes it; the same platform account used by two organizations means two connections. Tables, composite tenant keys and RLS are in `DATABASE_SCHEMA.md §4`; endpoints in `API_SPECIFICATION.md §5`.
 
 ### 9.2 Capabilities and data availability (A10)
 
@@ -269,7 +269,16 @@ All outbound calls to externally supplied hosts use one SSRF-safe client:
 - credentials attached only after validation, never sent to a redirect target, never logged;
 - egress through a dedicated network path where hosting allows (documented in DEPLOYMENT once hosting is chosen).
 
-The client is built and tested in Phase 1B, before any provider exists.
+The client is built and tested in Phase 1B, before any provider exists (`backend/app/providers/http/`; `SECURITY.md §9`). It connects directly and ignores proxy environment variables; any egress proxy is designed with hosting (Q16).
+
+### 9.4 Provider framework and background jobs (as built, Phase 1B)
+
+- `app/providers/base/`: `PlatformProvider` protocol (authorization URL, complete authorization with PKCE, discover resources, sync resource, revoke), category protocols (`CommerceProvider`, `AdvertisingProvider`, `AnalyticsProvider` — filled in from Phase 2A), capability and availability types, `Money` (Decimal + ISO currency), normalized provider errors (retryable vs not), and the provider registry. Test-only providers are refused in deployed environments.
+- `app/providers/fake/`: deterministic test provider with configurable failures (auth expired, permission denied, rate limited, transient failures, revoke failure). The only provider in Phase 1B.
+- `app/providers/http/`: SSRF-safe client and a Redis token-bucket rate limiter per provider.
+- Core domains never import provider-specific code (source test); credentials are only decrypted inside the integrations domain (source test).
+- **Jobs:** `job_runs` is the source of truth. A job row is written in the business transaction and dispatched to Celery after commit; the worker claims it with `FOR UPDATE SKIP LOCKED` as the system role, then runs the handler under the job's tenant context. Retryable errors back off exponentially with jitter (respecting provider `Retry-After`) up to `JOB_MAX_ATTEMPTS`, then the job is **dead**-lettered; non-retryable errors fail immediately with a code. A periodic recovery task re-queues jobs stuck in `running` longer than `JOB_STUCK_AFTER`.
+- **Scheduler:** Celery beat defines the schedule (email sweep, job recovery); each scheduled run takes a Redis `SET NX EX` lock so only one instance executes per window even if several beat processes run.
 
 ## 10. Sync Architecture
 

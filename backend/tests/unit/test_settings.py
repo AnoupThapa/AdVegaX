@@ -16,6 +16,8 @@ SECURE = {
     "CSRF_COOKIE_NAME": "__Host-advegax_csrf",
     "CORS_ALLOWED_ORIGINS": "https://app.example.com",
     "APP_BASE_URL": "https://app.example.com",
+    "API_BASE_URL": "https://api.example.com",
+    "ENCRYPTION_KEYS": "1:" + "QUJD" * 10 + "QUI=",
     "EMAIL_BACKEND": "smtp",
     "CELERY_TASK_ALWAYS_EAGER": False,
 }

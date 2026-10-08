@@ -13,7 +13,17 @@ from app.workers.celery_app import celery_app
 
 @lru_cache
 def worker_runtime() -> Runtime:
-    return build_runtime(get_settings())
+    """Process-wide runtime for workers (tests may replace it via ``set_worker_runtime``)."""
+    return _override or build_runtime(get_settings())
+
+
+_override: Runtime | None = None
+
+
+def set_worker_runtime(runtime: Runtime | None) -> None:
+    global _override
+    _override = runtime
+    worker_runtime.cache_clear()
 
 
 def deliver_now(outbox_id: uuid.UUID) -> DeliveryOutcome:

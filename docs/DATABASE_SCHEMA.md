@@ -169,64 +169,57 @@ The API role may only insert; reading is a system operation.
 
 The API role may only insert; the worker (`advegax_system`) reads and updates.
 
-## 4. External Connections and Resources (Phase 1B — approved model A6)
+## 4. External Connections and Resources (Phase 1B — implemented, migrations 0005–0006)
 
-User → External Connection → External Resources → Organization Resource Links. Final columns are fixed in the Phase 1B plan.
+Approved model A6/A16: **Organization owns the connection; a User authorizes it.** Connection → discovered resources → explicit organization links. If the same platform account must serve two organizations, each organization creates its own connection (credentials are never shared across organizations).
 
-### external_connections
-- id
+All five tables have RLS **enabled and forced** with tenant policies for `advegax_app` (SELECT/INSERT/UPDATE; **no DELETE**). Child tables reference their parent with a **composite foreign key on `(organization_id, id)`**, so a row can never point at another tenant's parent.
+
+### external_connections (0005)
+- id (uuid PK), organization_id (FK organizations, cascade)
+- provider (varchar 32), auth_scheme (`oauth2` | `api_key` | `app_key`)
+- authorized_by_user_id (FK users, set null)
+- status (`active` | `expired` | `revoked` | `error`, default active)
+- granted_scopes (text[]), external_account_label
+- last_error_code, last_error_at (code only — never provider messages)
+- revoked_at, created_at, updated_at
+- Unique (organization_id, id); index (organization_id, provider)
+
+### external_connection_credentials (0005)
+- connection_id (PK; composite FK → external_connections(organization_id, id), cascade)
 - organization_id
-- provider
-- auth_scheme (oauth2, api_key, …)
-- authorized_by_user_id
-- status (active, expired, revoked, error)
-- granted_scopes
-- created_at, updated_at, revoked_at
+- ciphertext (bytea), wrapped_data_key (bytea), key_version (int) — **all three null together** (check constraint); nulled on disconnect
+- token_expires_at, refresh_expires_at, last_refreshed_at, created_at, updated_at
 
-### external_connection_credentials
-- connection_id
-- organization_id
-- encrypted secrets (access/refresh token or key/secret)
-- token_expires_at, refresh_expires_at
-- encryption_key_version
-- last_refreshed_at
-- created_at, updated_at
+Envelope encryption (AES-256-GCM, associated data binds organization + connection + provider) — see `SECURITY.md §8`. Credentials are never returned through API responses, logs, audit records, errors, the UI or AI context. `advegax_system` has SELECT/UPDATE only for key rotation (re-wrapping data keys).
 
-Credentials are never returned through API responses, logs or AI context.
-
-### external_resources
+### external_resources (0005)
 Resources discovered through a connection (store, ad account, analytics property, business asset).
-- id
-- organization_id
-- connection_id
-- kind
-- provider
-- external_id (text)
+- id, organization_id, connection_id (composite FK → external_connections, cascade)
+- kind (`store` | `ad_account` | `analytics_property` | `business_asset`), provider, external_id (text)
 - display_name, currency, timezone
-- accessible (still reachable through the connection)
-- discovered_at, last_seen_at
+- accessible (still reachable through the connection), capabilities (jsonb, capability → bool)
+- discovered_at, last_seen_at, last_synced_at
+- Unique (organization_id, id); unique (connection_id, kind, external_id); index (organization_id, kind)
 
-Unique: connection_id + kind + external_id.
-
-### organization_resource_links
+### organization_resource_links (0005)
 Explicit linking; history kept for relinking/reassignment.
-- id
-- organization_id
-- external_resource_id
-- linked_by_user_id, linked_at
-- unlinked_by_user_id, unlinked_at
-- status (active, unlinked)
+- id, organization_id, external_resource_id (composite FK → external_resources, cascade)
+- status (`active` | `unlinked`)
+- linked_by_user_id, linked_at, unlinked_by_user_id, unlinked_at
+- unlink_reason (`user` | `connection_revoked` | `resource_inaccessible`)
+- Partial unique index: at most one `active` link per resource
 
-At most one active link per resource.
-
-### job_runs
-- id
-- organization_id nullable (system jobs)
-- job_type
-- status (queued, running, succeeded, failed, dead)
-- attempts, last_error
-- correlation_id
-- created_at, started_at, finished_at
+### job_runs (0006)
+Durable record and source of truth for background work.
+- id, organization_id (nullable for system jobs; FK organizations, cascade)
+- job_type, subject_type, subject_id
+- status (`queued` | `running` | `succeeded` | `failed` | `dead`)
+- attempts, max_attempts, next_attempt_at, last_error_code (code only)
+- correlation_id, requested_by_user_id
+- started_at, finished_at, created_at, updated_at
+- Indexes (status, next_attempt_at), (organization_id, created_at)
+- RLS: tenant policies for `advegax_app`; `advegax_system` SELECT/UPDATE across tenants to claim, retry and recover jobs (handlers then run under the job's tenant context).
 
 ## 5. Stores
 
@@ -661,7 +654,8 @@ Tables use `FORCE ROW LEVEL SECURITY`. No `SECURITY DEFINER` functions without d
 | Membership | memberships | RLS: rows of the current organization, or the current user's own rows (to list/switch organizations) |
 | Organization | organizations | RLS: current organization, or organizations where the current user has an active membership |
 | Global identity | users, user_password_credentials, sessions, user_action_tokens | Not tenant-owned; access only through the identity service; never exposed via organization endpoints except through membership joins |
-| Security/system | security_events, email_outbox (Phase 1A); job_runs (Phase 1B) | Insert-only for `advegax_app` (with `organization_id` NULL or the current organization); read/process only by `advegax_system` |
+| Security/system | security_events, email_outbox (Phase 1A) | Insert-only for `advegax_app` (with `organization_id` NULL or the current organization); read/process only by `advegax_system` |
+| Jobs | job_runs (Phase 1B) | Tenant-scoped SELECT/INSERT/UPDATE for `advegax_app`; `advegax_system` SELECT/UPDATE to claim, retry and recover; no DELETE |
 
 **Verification.** CI fails if a table with `organization_id` lacks enabled + forced RLS and a policy. Cross-tenant tests cover every tenant-owned table and route.
 

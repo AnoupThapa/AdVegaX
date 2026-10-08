@@ -180,32 +180,28 @@ All organization endpoints resolve membership and role server-side; a non-member
 
 Phase 1A request bodies: organization create `{name, slug?, default_currency, default_timezone}` (currency ISO-4217, IANA time zone; slug derived from the name when omitted) · update `{name?, default_currency?, default_timezone?}` · member update `{role?, status?: active|suspended}` · invitation `{email, role}` · accept `{token}`. Unknown fields are rejected (422). Role rules: only Owners grant or remove the Owner role; nobody assigns a role above their own; the last active Owner cannot be removed, demoted or suspended (409 `LAST_OWNER`). Creating organizations and accepting invitations require a verified email (403 `EMAIL_NOT_VERIFIED`).
 
-## 5. External Connections and Resources (Phase 1B framework; providers from Phase 2A)
+## 5. External Connections and Resources (Phase 1B — implemented; real providers from Phase 2A)
 
-Approved model A6: connection (authorization) → discovered resources → explicit organization links.
+Approved model A6/A16: organization-owned connection (authorized by a user) → discovered resources → explicit organization links. Implemented in `backend/app/domains/integrations/router.py`; the generated OpenAPI schema is the authoritative contract. In non-deployed environments only the test provider `fake` is registered; deployed environments register no provider until Phase 2A.
 
-### GET /organizations/{organization_id}/connections
-List connections with status and health; never secrets.
+Permissions: `connections.view` (all roles) for reads; `connections.manage` (Owner, Admin, Manager) for changes; `jobs.view` (all roles). Non-members get 404. Refused actions are recorded in the audit log (`authorization.denied`).
 
-### POST /organizations/{organization_id}/connections/{provider}/start
-Start the provider's authorization flow; returns the redirect URL. State is single-use and bound to user + organization + provider.
+| Endpoint | Success | Notes |
+|---|---|---|
+| `GET /organizations/{organization_id}/connections` | 200 list `ConnectionOut` | Status, scopes, account label, last error code — never secrets |
+| `POST /organizations/{organization_id}/connections/{provider}/start` | 200 `{authorize_url, expires_in_seconds}` | Creates single-use state (Redis, `CONNECT_STATE_TTL`) bound to user + organization + provider + PKCE verifier |
+| `GET /connections/{provider}/callback` | 303 → `APP_BASE_URL/connections?status=…` | Organization comes **only** from the validated state. `status=connected&connection_id=…`, `status=cancelled`, or `status=error&code=` `invalid_state` / `session_mismatch` / `not_permitted` / provider error code. Hidden from OpenAPI |
+| `GET /organizations/{organization_id}/connections/{connection_id}` | 200 `ConnectionOut` | |
+| `POST /organizations/{organization_id}/connections/{connection_id}/disconnect` | 200 `ConnectionOut` | Revokes at the provider where supported (failure tolerated and recorded), erases ciphertext, ends active links (`connection_revoked`), status `revoked` |
+| `POST /organizations/{organization_id}/connections/{connection_id}/rediscover` | 202 `JobOut` | Queues a discovery job |
+| `GET /organizations/{organization_id}/connections/{connection_id}/resources` | 200 list `ResourceOut` | Includes capabilities, `linked`, `link_id`, `last_synced_at` |
+| `POST /organizations/{organization_id}/resources/{resource_id}/link` | 201 `LinkOut` | Explicit; audited |
+| `POST /organizations/{organization_id}/resources/{resource_id}/unlink` | 200 `LinkOut` | History kept (`unlink_reason=user`) |
+| `GET /organizations/{organization_id}/resources/{resource_id}/links` | 200 list `LinkOut` | Link history |
+| `POST /organizations/{organization_id}/resources/{resource_id}/sync` | 202 `JobOut` | Resource must be actively linked |
+| `GET /organizations/{organization_id}/jobs/{job_id}` | 200 `JobOut` | Status, attempts, last error code |
 
-### GET /connections/{provider}/callback
-Provider callback. Organization comes only from validated state. Environment-specific URL.
-
-### GET /organizations/{organization_id}/connections/{connection_id}
-### POST /organizations/{organization_id}/connections/{connection_id}/disconnect
-Revokes credentials where the provider supports it; links are ended with history kept.
-
-### GET /organizations/{organization_id}/connections/{connection_id}/resources
-Resources discovered through the connection (not yet linked unless shown).
-
-### POST /organizations/{organization_id}/resources/{resource_id}/link
-### POST /organizations/{organization_id}/resources/{resource_id}/unlink
-Explicit linking/unlinking; audited; history kept.
-
-### POST /organizations/{organization_id}/resources/{resource_id}/sync
-Queue synchronization of a linked resource.
+**Error codes (Phase 1B):** `UNKNOWN_PROVIDER` 404 · `CONNECTION_NOT_ACTIVE` 409 · `RESOURCE_NOT_LINKABLE` 409 · `ALREADY_LINKED` 409 · `NOT_LINKED` 409 (plus the Phase 1A codes, e.g. `FORBIDDEN`, `NOT_FOUND`, `SERVICE_UNAVAILABLE` when Redis is unavailable for connect state).
 
 Third-party platform authorization is a separate security domain from AdVegaX login (Decisions D7, D10).
 

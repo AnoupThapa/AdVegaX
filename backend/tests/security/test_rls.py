@@ -6,9 +6,28 @@ import uuid
 
 import pytest
 from sqlalchemy import create_engine, text
-from sqlalchemy.exc import DBAPIError
+from sqlalchemy.exc import DBAPIError, IntegrityError
 
-RLS_TABLES = ("organizations", "memberships", "invitations", "audit_logs")
+from tests.helpers import connected
+
+RLS_TABLES = (
+    "organizations",
+    "memberships",
+    "invitations",
+    "audit_logs",
+    "external_connections",
+    "external_connection_credentials",
+    "external_resources",
+    "organization_resource_links",
+    "job_runs",
+)
+TENANT_TABLES_1B = (
+    "external_connections",
+    "external_connection_credentials",
+    "external_resources",
+    "organization_resource_links",
+    "job_runs",
+)
 
 
 @pytest.fixture
@@ -21,7 +40,13 @@ def seeded(make_client):
     a.post(f"/organizations/{org_a}/invitations", {"email": "x@example.com", "role": "viewer"})
     b.post(f"/organizations/{org_b}/invitations", {"email": "y@example.com", "role": "viewer"})
     user_a = a.get("/auth/me").json()["data"]["id"]
-    return {"org_a": org_a, "org_b": org_b, "user_a": user_a}
+    conn_a, conn_b = connected(a, org_a), connected(b, org_b)
+    for client, org, conn in ((a, org_a, conn_a), (b, org_b, conn_b)):
+        rid = client.get(f"/organizations/{org}/connections/{conn}/resources").json()["data"][0][
+            "id"
+        ]
+        client.post(f"/organizations/{org}/resources/{rid}/link")
+    return {"org_a": org_a, "org_b": org_b, "user_a": user_a, "conn_a": conn_a, "conn_b": conn_b}
 
 
 @pytest.fixture
@@ -150,3 +175,39 @@ def test_context_does_not_leak_across_pooled_connections(seeded, settings):
             assert conn.execute(text("SELECT count(*) FROM organizations")).scalar_one() == 0
     finally:
         engine.dispose()
+
+
+def test_phase_1b_tables_are_tenant_scoped(seeded, app_engine):
+    with app_engine.begin() as conn:
+        _ctx(conn, org=seeded["org_a"], user=seeded["user_a"])
+        for table in TENANT_TABLES_1B:
+            orgs = {str(r[0]) for r in conn.execute(text(f"SELECT organization_id FROM {table}"))}
+            assert orgs == {seeded["org_a"]}, table
+
+
+def test_composite_keys_block_cross_tenant_references(seeded, admin_engine):
+    """Even a superuser bypassing RLS cannot attach org A data to org B's connection."""
+    with pytest.raises(IntegrityError), admin_engine.begin() as conn:
+        conn.execute(
+            text(
+                "INSERT INTO external_resources (id, organization_id, connection_id, kind, "
+                "provider, external_id, discovered_at, last_seen_at) "
+                "VALUES (:id, :a, :conn_b, 'store', 'fake', 'x', now(), now())"
+            ),
+            {"id": str(uuid.uuid4()), "a": seeded["org_a"], "conn_b": seeded["conn_b"]},
+        )
+    with pytest.raises(IntegrityError), admin_engine.begin() as conn:
+        conn.execute(
+            text(
+                "UPDATE external_connection_credentials SET organization_id = :a "
+                "WHERE connection_id = :conn_b"
+            ),
+            {"a": seeded["org_a"], "conn_b": seeded["conn_b"]},
+        )
+
+
+def test_runtime_role_cannot_delete_integration_rows(seeded, app_engine):
+    for table in TENANT_TABLES_1B:
+        with pytest.raises(DBAPIError, match="permission denied"), app_engine.begin() as conn:
+            _ctx(conn, org=seeded["org_a"], user=seeded["user_a"])
+            conn.execute(text(f"DELETE FROM {table}"))

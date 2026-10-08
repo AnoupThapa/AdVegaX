@@ -72,5 +72,13 @@ services:
       redis: {condition: service_started}
       mailpit: {condition: service_started}
 
+  beat:
+    build: {context: ., dockerfile: infrastructure/docker/api.Dockerfile}
+    environment: *backend-env
+    command: ["celery", "-A", "app.workers.celery_app:celery_app", "beat", "--loglevel=INFO", "--schedule", "/tmp/celerybeat-schedule"]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_started}
+
 volumes:
   pgdata:

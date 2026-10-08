@@ -19,7 +19,7 @@ from app.domains.identity.principal import Principal
 from app.domains.identity.service import IdentityService
 from app.domains.notifications.service import humanize
 from app.domains.organizations.models import Invitation, Membership, Organization
-from app.domains.organizations.permissions import Permission, Role, authorize, can_assign
+from app.domains.organizations.permissions import Permission, Role, authorize, can_assign, deny
 from app.domains.organizations.schemas import (
     InvitationOut,
     MemberOut,
@@ -285,10 +285,10 @@ class OrganizationService:
         authorize(ctx, Permission.MEMBERS_MANAGE)
         with self.rt.db.transaction(org_id=ctx.organization_id, user_id=ctx.user_id) as session:
             member = self._lock_target(session, ctx, member_id)
-            if not can_assign(ctx.role, member.role):
-                raise Forbidden()
-            if role is not None and not can_assign(ctx.role, role):
-                raise Forbidden()
+            if not can_assign(ctx.role, member.role) or (
+                role is not None and not can_assign(ctx.role, role)
+            ):
+                deny(ctx, Permission.MEMBERS_ASSIGN_ROLE, "membership", member.id)
             before = {"role": member.role, "status": member.status}
             loses_owner = (
                 member.role == Role.OWNER
@@ -328,7 +328,7 @@ class OrganizationService:
         with self.rt.db.transaction(org_id=ctx.organization_id, user_id=ctx.user_id) as session:
             member = self._lock_target(session, ctx, member_id)
             if not can_assign(ctx.role, member.role):
-                raise Forbidden()
+                deny(ctx, Permission.MEMBERS_ASSIGN_ROLE, "membership", member.id)
             if (
                 member.role == Role.OWNER
                 and member.status == "active"
@@ -399,7 +399,7 @@ class OrganizationService:
     ) -> InvitationOut:
         authorize(ctx, Permission.MEMBERS_MANAGE)
         if not can_assign(ctx.role, role):
-            raise Forbidden()
+            deny(ctx, Permission.MEMBERS_ASSIGN_ROLE, "invitation")
         settings = self.rt.settings
         with self.rt.db.transaction(org_id=ctx.organization_id, user_id=ctx.user_id) as session:
             existing = session.execute(

@@ -48,6 +48,11 @@ from sqlalchemy import Engine, create_engine, text  # noqa: E402
 from tests.helpers import ApiClient  # noqa: E402
 
 TABLES = (
+    "job_runs",
+    "organization_resource_links",
+    "external_resources",
+    "external_connection_credentials",
+    "external_connections",
     "email_outbox",
     "security_events",
     "audit_logs",
@@ -129,8 +134,14 @@ def clock() -> FrozenClock:
 
 @pytest.fixture
 def runtime(settings: Settings, clock: FrozenClock) -> Iterator[Runtime]:
+    from app.providers.fake import provider as fake_provider
+    from app.workers.email_tasks import set_worker_runtime
+
+    fake_provider.reset()
     rt = build_runtime(settings, clock=clock)
+    set_worker_runtime(rt)  # eager Celery tasks run with the same runtime and clock
     yield rt
+    set_worker_runtime(None)
     rt.close()
 
 

@@ -1,10 +1,10 @@
 # Phase 1B — Integration Foundation: Implementation Plan
 
-**Status:** Draft — awaiting product-owner approval · **Date:** 2026-10-08
+**Status:** ✅ Approved by the product owner (2026-10-08, A16) — implementation authorized for Phase 1B only · **Implemented:** 2026-10-08 (`PHASE_01B_REPORT.md`) · **Date:** 2026-10-08
 **Depends on:** Phase 1A (implemented; awaiting review) · **Followed by:** Phase 1C (frontend shell), then Phase 2A (Shopify)
 **Governing documents:** MASTER_SPECIFICATION §20–§21 (D4, D12, D15, D19, A4, A6, A7, A10, A11), ARCHITECTURE §6, §9, §10, DATABASE_SCHEMA §4, §19, API_SPECIFICATION §5, SECURITY.md
 
-> This is a plan only. No Phase 1B code is written until the product owner explicitly approves it. Items marked **[Decision]** need a product-owner choice; each has a recommended default (§20).
+> Approved 2026-10-08 with all §20 defaults (A16). Connection ownership = organization; authorization actor = user. Real providers remain out of scope.
 
 ---
 

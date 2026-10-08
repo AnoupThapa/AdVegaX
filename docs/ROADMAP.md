@@ -26,7 +26,7 @@ This roadmap splits AdVegaX into phases. Each phase has its own plan in `docs/ph
 | Phase | Name | Goal | Depends on | Status |
 |---|---|---|---|---|
 | 0 | Architecture approval & bootstrap decisions | Approved architecture (DISCOVERY_REPORT v3) | — | ✅ **Complete** |
-| 1 | Foundation — 1A platform core & identity · 1B integration foundation · 1C frontend shell | Secure multi-tenant platform skeleton: identity, sessions, email, orgs, RBAC, RLS, audit, CI (1A); connections/resources, encryption, jobs, provider framework, SSRF client (1B); UI shell (1C) | 0 | **1A implemented — awaiting review** |
+| 1 | Foundation — 1A platform core & identity · 1B integration foundation · 1C frontend shell | Secure multi-tenant platform skeleton: identity, sessions, email, orgs, RBAC, RLS, audit, CI (1A); connections/resources, encryption, jobs, provider framework, SSRF client (1B); UI shell (1C) | 0 | **1A and 1B implemented — awaiting review; 1C not started** |
 | 2A | Commerce — Shopify (read-only) | Connect Shopify stores; import catalogue, inventory, orders, refunds; finance core | 1 | Not started |
 | 2B | Commerce — WooCommerce (read-only) | Connect WooCommerce stores safely; same normalized models; proves abstraction | 2A | Not started |
 | 3 | Advertising — Google Ads (read-only) | Accounts, structure, daily performance | 1 | Not started |
@@ -99,6 +99,9 @@ A phase is complete only when its exit criteria are met and `PROJECT_STATUS.md` 
 | `phases/PHASE_00_ARCHITECTURE_APPROVAL.md` | 0 |
 | `phases/PHASE_01_FOUNDATION.md` | 1 (overview of 1A/1B/1C) |
 | `phases/PHASE_01A_PLAN.md` | 1A detailed implementation plan |
+| `phases/PHASE_01A_REPORT.md` | 1A implementation report |
+| `phases/PHASE_01B_PLAN.md` | 1B detailed implementation plan (approved, A16) |
+| `phases/PHASE_01B_REPORT.md` | 1B implementation report |
 | `phases/PHASE_02A_SHOPIFY.md` | 2A |
 | `phases/PHASE_02B_WOOCOMMERCE.md` | 2B |
 | `phases/PHASE_03_GOOGLE_ADS.md` | 3 |

@@ -15,6 +15,8 @@ from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 _INSECURE_DEFAULT_SECRET = "insecure-local-development-secret-change-me-0000"  # noqa: S105
+# Development/test key ring only (version 1). Deployed environments must supply their own keys.
+_DEV_ENCRYPTION_KEYS = "1:YWR2ZWdheC1sb2NhbC1kZXYtb25seS1rZXktMzJieSE="
 
 
 class Environment(StrEnum):
@@ -54,6 +56,7 @@ class Settings(BaseSettings):
 
     # --- Public URLs and CORS (D13) -------------------------------------------------
     APP_BASE_URL: str = "http://localhost:3000"
+    API_BASE_URL: str = "http://localhost:8000"
     CORS_ALLOWED_ORIGINS: Annotated[list[str], NoDecode] = Field(
         default_factory=lambda: ["http://localhost:3000"]
     )
@@ -98,8 +101,25 @@ class Settings(BaseSettings):
     EMAIL_MAX_ATTEMPTS: int = Field(default=5, ge=1)
     EMAIL_RETRY_BASE_DELAY: timedelta = timedelta(seconds=30)
 
-    # --- Background jobs ------------------------------------------------------------
+    # --- Background jobs (Phase 1B) -----------------------------------------------
     CELERY_TASK_ALWAYS_EAGER: bool = False
+    JOB_MAX_ATTEMPTS: int = Field(default=5, ge=1)
+    JOB_RETRY_BASE_DELAY: timedelta = timedelta(seconds=30)
+    JOB_RETRY_MAX_DELAY: timedelta = timedelta(hours=1)
+    JOB_STUCK_AFTER: timedelta = timedelta(minutes=15)
+    SCHEDULE_EMAIL_SWEEP_INTERVAL: timedelta = timedelta(minutes=1)
+    SCHEDULE_JOB_RECOVERY_INTERVAL: timedelta = timedelta(minutes=5)
+
+    # --- External connections and credential encryption (Phase 1B, A6/D15) -----------
+    CONNECT_STATE_TTL: timedelta = timedelta(minutes=10)
+    ENCRYPTION_KEYS: SecretStr = SecretStr(_DEV_ENCRYPTION_KEYS)
+    ENCRYPTION_ACTIVE_KEY_VERSION: int = Field(default=1, ge=1)
+
+    # --- Outbound HTTP to externally supplied hosts (A11) ------------------------------
+    OUTBOUND_CONNECT_TIMEOUT: timedelta = timedelta(seconds=5)
+    OUTBOUND_READ_TIMEOUT: timedelta = timedelta(seconds=20)
+    OUTBOUND_MAX_RESPONSE_BYTES: int = Field(default=10_485_760, ge=1024)
+    OUTBOUND_MAX_REDIRECTS: int = Field(default=3, ge=0, le=10)
 
     @field_validator("CORS_ALLOWED_ORIGINS", mode="before")
     @classmethod
@@ -118,12 +138,27 @@ class Settings(BaseSettings):
             "PASSWORD_RESET_TTL": self.PASSWORD_RESET_TTL,
             "INVITATION_TTL": self.INVITATION_TTL,
             "EMAIL_RETRY_BASE_DELAY": self.EMAIL_RETRY_BASE_DELAY,
+            "JOB_RETRY_BASE_DELAY": self.JOB_RETRY_BASE_DELAY,
+            "JOB_RETRY_MAX_DELAY": self.JOB_RETRY_MAX_DELAY,
+            "JOB_STUCK_AFTER": self.JOB_STUCK_AFTER,
+            "SCHEDULE_EMAIL_SWEEP_INTERVAL": self.SCHEDULE_EMAIL_SWEEP_INTERVAL,
+            "SCHEDULE_JOB_RECOVERY_INTERVAL": self.SCHEDULE_JOB_RECOVERY_INTERVAL,
+            "CONNECT_STATE_TTL": self.CONNECT_STATE_TTL,
+            "OUTBOUND_CONNECT_TIMEOUT": self.OUTBOUND_CONNECT_TIMEOUT,
+            "OUTBOUND_READ_TIMEOUT": self.OUTBOUND_READ_TIMEOUT,
         }
         for name, value in durations.items():
             if value <= timedelta(0):
                 raise ValueError(f"{name} must be a positive duration")
         if self.SESSION_IDLE_TIMEOUT > self.SESSION_ABSOLUTE_TIMEOUT:
             raise ValueError("SESSION_IDLE_TIMEOUT must not exceed SESSION_ABSOLUTE_TIMEOUT")
+        if self.JOB_RETRY_BASE_DELAY > self.JOB_RETRY_MAX_DELAY:
+            raise ValueError("JOB_RETRY_BASE_DELAY must not exceed JOB_RETRY_MAX_DELAY")
+        from app.core.security.encryption import parse_key_ring  # local import: avoids a cycle
+
+        ring = parse_key_ring(self.ENCRYPTION_KEYS.get_secret_value())
+        if self.ENCRYPTION_ACTIVE_KEY_VERSION not in ring:
+            raise ValueError("ENCRYPTION_ACTIVE_KEY_VERSION must be present in ENCRYPTION_KEYS")
         if self.PASSWORD_MIN_LENGTH > self.PASSWORD_MAX_LENGTH:
             raise ValueError("PASSWORD_MIN_LENGTH must not exceed PASSWORD_MAX_LENGTH")
         if self.is_deployed:
@@ -147,6 +182,10 @@ class Settings(BaseSettings):
             problems.append("CORS_ALLOWED_ORIGINS must list explicit https:// origins (no '*')")
         if not self.APP_BASE_URL.startswith("https://"):
             problems.append("APP_BASE_URL must use https://")
+        if not self.API_BASE_URL.startswith("https://"):
+            problems.append("API_BASE_URL must use https://")
+        if self.ENCRYPTION_KEYS.get_secret_value() == _DEV_ENCRYPTION_KEYS:
+            problems.append("ENCRYPTION_KEYS must be set from the secret store (not the dev key)")
         if self.EMAIL_BACKEND is not EmailBackend.SMTP:
             problems.append("EMAIL_BACKEND must be smtp")
         if self.CELERY_TASK_ALWAYS_EAGER:

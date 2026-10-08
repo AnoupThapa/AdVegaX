@@ -15,7 +15,7 @@ _settings = get_settings()
 celery_app = Celery(
     "advegax",
     broker=_settings.REDIS_URL.get_secret_value(),
-    include=["app.workers.email_tasks"],
+    include=["app.workers.email_tasks", "app.workers.job_tasks"],
 )
 celery_app.conf.update(
     task_acks_late=True,
@@ -25,6 +25,16 @@ celery_app.conf.update(
     task_eager_propagates=True,
     task_ignore_result=True,
     broker_connection_retry_on_startup=True,
+    beat_schedule={
+        "email-sweep": {
+            "task": "advegax.schedule.email_sweep",
+            "schedule": _settings.SCHEDULE_EMAIL_SWEEP_INTERVAL.total_seconds(),
+        },
+        "job-recovery": {
+            "task": "advegax.schedule.job_recovery",
+            "schedule": _settings.SCHEDULE_JOB_RECOVERY_INTERVAL.total_seconds(),
+        },
+    },
 )
 
 

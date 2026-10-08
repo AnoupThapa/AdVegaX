@@ -115,5 +115,33 @@ class ApiClient:
         return str(next(m["id"] for m in members if m["email"] == email))
 
 
+def connect_fake(client: ApiClient, org_id: str, *, approve: bool = True) -> Any:
+    """Run the fake platform's authorization flow; returns the callback response (303)."""
+    from urllib.parse import parse_qs, urlsplit
+
+    started = client.post(f"/organizations/{org_id}/connections/fake/start")
+    assert started.status_code == 200, started.text
+    query = parse_qs(urlsplit(started.json()["data"]["authorize_url"]).query)
+    params = {"state": query["state"][0]}
+    if approve:
+        params["code"] = "approved." + query["code_challenge"][0]
+    else:
+        params["error"] = "access_denied"
+    return client.http.get(
+        "/api/v1/connections/fake/callback", params=params, follow_redirects=False
+    )
+
+
+def connected(client: ApiClient, org_id: str) -> str:
+    """Connect the fake platform and return the new connection ID."""
+    from urllib.parse import parse_qs, urlsplit
+
+    response = connect_fake(client, org_id)
+    assert response.status_code == 303, response.text
+    query = parse_qs(urlsplit(response.headers["location"]).query)
+    assert query["status"] == ["connected"], response.headers["location"]
+    return query["connection_id"][0]
+
+
 def new_uuid() -> str:
     return str(uuid.uuid4())

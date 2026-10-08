@@ -5,16 +5,20 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api.router import api_router
 from app.core.correlation import CorrelationIdMiddleware
-from app.core.errors import install_error_handlers
+from app.core.errors import error_response, install_error_handlers
 from app.core.logging import configure_logging
 from app.core.security.csrf import CSRF_HEADER
 from app.core.security.middleware import RequestGuardMiddleware, SecurityHeadersMiddleware
 from app.core.settings import Settings, get_settings
+from app.domains.audit.denials import audit_denial
+from app.domains.organizations.permissions import AuthorizationDenied
 from app.runtime import Runtime, build_runtime
 
 
@@ -39,6 +43,12 @@ def create_app(settings: Settings | None = None, runtime: Runtime | None = None)
     )
     app.state.runtime = runtime
     install_error_handlers(app)
+
+    @app.exception_handler(AuthorizationDenied)
+    async def _denied(_: Request, exc: AuthorizationDenied) -> JSONResponse:
+        await run_in_threadpool(audit_denial, runtime, exc)
+        return error_response(exc)
+
     app.include_router(api_router)
 
     # Added innermost first: RequestGuard → CORS → SecurityHeaders → CorrelationId (outermost).

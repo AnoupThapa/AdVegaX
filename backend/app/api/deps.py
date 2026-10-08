@@ -11,6 +11,7 @@ from app.core.errors import EmailNotVerified, Unauthenticated
 from app.core.request_meta import RequestMeta, request_meta
 from app.domains.identity.principal import Principal
 from app.domains.identity.service import IdentityService
+from app.domains.integrations.service import IntegrationService
 from app.domains.organizations.service import OrganizationService
 from app.domains.organizations.tenancy import TenantContext
 from app.runtime import Runtime
@@ -36,6 +37,13 @@ def get_organizations(rt: RuntimeDep, identity: IdentityDep) -> OrganizationServ
 
 
 OrganizationsDep = Annotated[OrganizationService, Depends(get_organizations)]
+
+
+def get_integrations(rt: RuntimeDep, organizations: OrganizationsDep) -> IntegrationService:
+    return IntegrationService(rt, organizations)
+
+
+IntegrationsDep = Annotated[IntegrationService, Depends(get_integrations)]
 
 
 def get_meta(request: Request, rt: RuntimeDep) -> RequestMeta:
