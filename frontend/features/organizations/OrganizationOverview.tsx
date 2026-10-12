@@ -19,8 +19,11 @@ export function OrganizationOverview() {
       <div className={styles.panel}>
         <h2>Nothing to show yet</h2>
         <p>
-          Sales, advertising and profit reports will appear here once you connect your store and ad
-          accounts. Connecting platforms becomes available in a later release.
+          Sales, advertising and profit reports will appear here in a later release, once your store
+          and ad accounts are connected.
+        </p>
+        <p>
+          <Link href={`/orgs/${org.id}/connections`}>See connections</Link>
         </p>
       </div>
       <div className={styles.panel}>

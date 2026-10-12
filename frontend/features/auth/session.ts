@@ -26,6 +26,22 @@ export function useSession() {
   return { user: query.data, isLoading: query.isPending, error: query.error };
 }
 
+// Set when the person presses "Sign out" (kept in memory only). A protected page that is still
+// open then sends them to a plain sign-in page instead of offering to come back to it, so the
+// next person to sign in on this browser is not sent to the previous person's page.
+let deliberateSignOut = false;
+
+export function noteDeliberateSignOut(): void {
+  deliberateSignOut = true;
+}
+
+/** True once after a deliberate sign-out; reading it clears it. */
+export function takeDeliberateSignOut(): boolean {
+  const value = deliberateSignOut;
+  deliberateSignOut = false;
+  return value;
+}
+
 /**
  * Called when the API answers 401: a previously signed-in session has ended.
  * Drops every cached response except the session itself, which becomes `null`, so protected

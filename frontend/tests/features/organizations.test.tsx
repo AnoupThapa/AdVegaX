@@ -124,6 +124,11 @@ describe("Organization shell", () => {
       "href",
       `/orgs/${ORG_ID}/members`,
     );
+    expect(screen.getByRole("link", { name: "See connections" })).toHaveAttribute(
+      "href",
+      `/orgs/${ORG_ID}/connections`,
+    );
+    expect(screen.queryByText(/Connecting platforms becomes available/)).not.toBeInTheDocument();
   });
 
   it("shows 'not found' for organizations the API does not reveal (404)", async () => {

@@ -80,5 +80,16 @@ services:
       migrate: {condition: service_completed_successfully}
       redis: {condition: service_started}
 
+  web:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/web.Dockerfile
+      args:
+        # Address the *browser* uses to reach the API (public; compiled into the app).
+        NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+    ports: ["3000:3000"]
+    depends_on:
+      api: {condition: service_started}
+
 volumes:
   pgdata:

@@ -36,6 +36,16 @@ const config = [
       "@typescript-eslint/no-explicit-any": "error",
     },
   },
+  {
+    // End-to-end tests read browser storage and cookies to prove the app never uses them.
+    files: ["e2e/**/*.ts"],
+    // Playwright fixtures call `use()`, which is not a React hook.
+    rules: {
+      "no-restricted-globals": "off",
+      "no-restricted-properties": "off",
+      "react-hooks/rules-of-hooks": "off",
+    },
+  },
 ];
 
 export default config;

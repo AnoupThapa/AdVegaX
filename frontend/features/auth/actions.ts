@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { api, unwrap } from "@/lib/api";
 
-import { SESSION_KEY, fetchSession } from "./session";
+import { SESSION_KEY, fetchSession, noteDeliberateSignOut, takeDeliberateSignOut } from "./session";
 
 export function useSignUp() {
   return useMutation({
@@ -19,6 +19,7 @@ export function useSignIn() {
     mutationFn: (body: { email: string; password: string }) =>
       unwrap(api.POST("/api/v1/auth/login", { body })),
     onSuccess: async () => {
+      takeDeliberateSignOut();
       // A new session: forget anything cached for a previous user, then load this one.
       queryClient.removeQueries({ predicate: (q) => q.queryKey[0] !== SESSION_KEY[0] });
       queryClient.setQueryData(SESSION_KEY, await fetchSession());
@@ -31,6 +32,7 @@ export function useSignOut() {
   return useMutation({
     mutationFn: () => unwrap(api.POST("/api/v1/auth/logout")),
     onSettled: () => {
+      noteDeliberateSignOut();
       // Even if the request failed, clear local data: never keep signed-in data on screen.
       queryClient.removeQueries({ predicate: (q) => q.queryKey[0] !== SESSION_KEY[0] });
       queryClient.setQueryData(SESSION_KEY, null);

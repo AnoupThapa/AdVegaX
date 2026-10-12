@@ -127,10 +127,23 @@ Tests: `tests/security/test_ssrf.py` (81 cases).
 - **Jobs:** handlers run under the job's tenant context, so a job cannot touch another tenant's rows (`test_job_cannot_cross_tenants`); errors stored as codes only; dead-letter after `JOB_MAX_ATTEMPTS`.
 - **Fake provider:** registered only outside staging/production; the registry refuses test-only providers when deployed.
 
-## 11. Verification commands
+## 11. Web application (Phase 1C)
+
+- **No secrets in the browser or the Next.js server.** The only configuration is the public API address; the build refuses a plain-`http` address that is not localhost.
+- **Security headers:** a per-request nonce Content-Security-Policy (`default-src 'self'`, `script-src 'self' 'nonce-…' 'strict-dynamic'`, `frame-ancestors 'none'`, `base-uri 'none'`, `object-src 'none'`, `form-action 'self'`), `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy: no-referrer`, a minimal `Permissions-Policy`. Inline `style` attributes, raw HTML, `eval`, browser storage and `document.cookie` are rejected by lint and a source-rules test.
+- **CSRF token in memory only**; session and CSRF cookies are `HttpOnly` and not readable by scripts. A 401 ends the local session except `INVALID_CREDENTIALS` (a wrong password).
+- **Email-link tokens** are read from the URL fragment, removed from the address bar at once and sent once.
+- **Return addresses** (`next`) are relative paths only. A deliberate "Sign out" goes to a plain sign-in page (no return address), so the next person on that browser is not sent to the previous person's page (1C-08).
+- **Platform sign-in** is only followed to `https` addresses; values from the platform's return address are validated before use and removed from the address bar (1C-07).
+- **Permissions in the UI are cosmetic**; the API decides. Another organization's pages show "not found", like the API's 404.
+- **End-to-end checks (1C-08):** every run verifies the security-policy headers and script nonces, no security-policy violations or script errors on any page, nothing in browser storage or readable cookies, tokens removed from addresses, platform tokens never in the page, the tenant boundary, and an unsafe return address being ignored.
+
+## 12. Verification commands
 
 ```bash
 make lint typecheck test   # ruff, mypy --strict, pytest with coverage gates (85 % overall, 95 % security-critical)
+make frontend-check        # ESLint, Prettier, strict TypeScript, Vitest with coverage, npm audit, build
+make e2e                   # Playwright + axe against a running stack (see README)
 ```
 
-CI (`.github/workflows/ci.yml`) additionally runs gitleaks secret scanning, `pip-audit` and a Docker image build.
+CI (`.github/workflows/ci.yml`) additionally runs gitleaks secret scanning, `pip-audit`, the frontend checks, the end-to-end and accessibility suite against a real stack (PostgreSQL, Redis, Mailpit, API, worker, web), and Docker image builds for the API and the web app.

@@ -1,5 +1,5 @@
 # AdVegaX developer commands. Backend commands run from backend/ with uv.
-.PHONY: up down bootstrap-test migrate test lint format typecheck check frontend-install frontend-check frontend-dev
+.PHONY: up down bootstrap-test migrate test lint format typecheck check frontend-install frontend-check frontend-dev e2e
 
 BACKEND = cd backend &&
 
@@ -45,3 +45,6 @@ frontend-check: ## lint, format, strict type check, unit tests with coverage, pr
 
 frontend-dev:
 	$(FRONTEND) npm run dev
+
+e2e: ## end-to-end + accessibility tests (needs the running stack — see README)
+	$(FRONTEND) npm run e2e

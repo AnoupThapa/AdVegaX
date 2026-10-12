@@ -71,8 +71,94 @@ jobs:
           uv export --frozen --no-dev --format requirements-txt > /tmp/requirements.txt
           uvx pip-audit --strict --disable-pip -r /tmp/requirements.txt
 
+  frontend:
+    runs-on: ubuntu-24.04
+    defaults: {run: {working-directory: frontend}}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: "24", cache: npm, cache-dependency-path: frontend/package-lock.json}
+      - run: npm ci
+      # ESLint, Prettier, strict TypeScript, API-type drift + unit tests with coverage gate, npm audit
+      - run: npm run check
+      - run: npm run build
+
+  e2e:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:16
+        env: {POSTGRES_USER: postgres, POSTGRES_PASSWORD: postgres}
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-retries 10
+      redis:
+        image: redis:7
+        ports: ["6379:6379"]
+      mailpit:
+        image: axllent/mailpit:v1.20
+        ports: ["1025:1025", "8025:8025"]
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      # The suite creates several accounts from one address within minutes; raise the rate
+      # limits for this throwaway CI stack only (defaults stay as approved everywhere else).
+      THROTTLE_REGISTER_PER_IP_PER_HOUR: "100"
+      THROTTLE_LOGIN_PER_IP_PER_MINUTE: "100"
+      THROTTLE_LOGIN_PER_ACCOUNT_IP_PER_MINUTE: "30"
+      THROTTLE_EMAIL_ACTION_PER_IP_PER_HOUR: "100"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with: {python-version: "3.12"}
+      - uses: actions/setup-node@v4
+        with: {node-version: "24", cache: npm, cache-dependency-path: frontend/package-lock.json}
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Create roles and database
+        run: scripts/bootstrap_db.sh advegax
+      - name: Migrate; start the API and the worker
+        working-directory: backend
+        run: |
+          uv sync --frozen
+          uv run alembic upgrade head
+          nohup uv run uvicorn app.main:create_app --factory --port 8000 > "$RUNNER_TEMP/api.log" 2>&1 &
+          nohup uv run celery -A app.workers.celery_app:celery_app worker --loglevel=INFO > "$RUNNER_TEMP/worker.log" 2>&1 &
+      - name: Build and start the web app
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+          nohup npm start > "$RUNNER_TEMP/web.log" 2>&1 &
+      - name: Wait for the stack
+        run: |
+          for url in http://localhost:8000/api/v1/health/ready http://localhost:3000/sign-in http://localhost:8025/api/v1/messages; do
+            for _ in $(seq 1 60); do curl -fsS -o /dev/null "$url" && break; sleep 1; done
+            curl -fsS -o /dev/null "$url"
+          done
+      - name: Install Chromium for Playwright
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+      - name: End-to-end and accessibility tests
+        working-directory: frontend
+        run: npm run e2e
+      - name: Collect logs
+        if: failure()
+        run: mkdir -p frontend/test-results && cp "$RUNNER_TEMP"/*.log frontend/test-results/
+      - name: Upload report and logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: |
+            frontend/playwright-report
+            frontend/test-results
+          retention-days: 7
+
   docker:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - run: docker build -f infrastructure/docker/api.Dockerfile -t advegax-api:ci .
+      - run: docker build -f infrastructure/docker/web.Dockerfile -t advegax-web:ci .

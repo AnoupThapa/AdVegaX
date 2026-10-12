@@ -11,7 +11,7 @@ Plan: `PHASE_01C_PLAN.md` (approved, A17). One report per task; the final `PHASE
 | 1C-05 Organizations, members, invitations | ✅ Done — awaiting review |
 | 1C-06 Account security | ✅ Done — awaiting review |
 | 1C-07 Connections pages | ✅ Done — awaiting review |
-| 1C-08 End-to-end + accessibility suite, CI, Docker, docs, report | Not started |
+| 1C-08 End-to-end + accessibility suite, CI, Docker, docs, report | ✅ Done — awaiting review |
 
 ---
 
@@ -327,4 +327,50 @@ Two Claude sessions each built 1C-05 from the same starting point (1C-04). The p
 **Blocked:** none.
 
 **Next task:** 1C-08 — end-to-end and accessibility suite, CI jobs, Docker, docs and the Phase 1C report.
+
+---
+
+## 1C-08 — End-to-end and accessibility suite, CI, Docker, docs (2026-10-12)
+
+**Completed**
+- **End-to-end suite** (`frontend/e2e/`, Playwright 1.64 + axe 4.13) against the real stack — 9 tests:
+  - *Full journey:* sign up → verify from the email (read from Mailpit) → wrong password refused → sign in → create organization → settings → invite as Manager → second person signs up, opens the invitation signed out, signs in, accepts → owner changes them to Viewer (viewer sees no change controls) → connect the test platform → 3 accounts found → link → sync → history → unlink → viewer sees the connection read-only → disconnect with confirmation → sign out (API confirms 401).
+  - *Password reset* (link works once; old password refused, new accepted), *sessions* (sign out another device, then everywhere), *tenant boundary* (an outsider gets "Page not found" on all 5 pages of another organization; API answers 404), *signed-out redirect*, *security* (CSP + nonce on every script, headers, CSRF token only in memory, cookies HttpOnly + SameSite, unsafe return address ignored), *keyboard* (focus on heading, skip link, sign in and create an organization without a mouse, error focus, dialog closes with Escape and returns focus).
+  - Every person's browser is watched for security-policy violations, script errors and unexpected console errors; any one fails the test.
+  - **axe on 25 page states: 0 violations of any severity** (gate: 0 serious/critical).
+- **CI** (`.github/workflows/ci.yml`): new `frontend` job (npm ci, `npm run check`, build) and `e2e` job (PostgreSQL, Redis, Mailpit, migrations, API, worker, built web app, Playwright with axe; report and logs uploaded on failure); `docker` job now also builds the web image. Workflow checked with `actionlint`.
+- **Docker:** `infrastructure/docker/web.Dockerfile` (Node 24, three stages, Next.js standalone output, runs as the non-root `node` user, API address as a build argument); `web` service in `docker-compose.yml`; new root `.dockerignore` (keeps dependencies, builds, caches and `.env` files out of both images).
+- **Docs:** README (e2e instructions, `make e2e`, compose `web`), `SECURITY.md §11` (web application controls and how they are tested), `PHASE_01C_REPORT.md`.
+- **Two defects found by the new suite and fixed:**
+  1. Signing out from inside an organization page went to `sign-in?next=<that page>`; the next person signing in on that browser would be sent to the previous person's organization (they would see "not found"). A deliberate sign-out now goes to a plain sign-in page. A session that ends on its own still offers to come back. Unit-tested both ways.
+  2. The organization Overview still said "Connecting platforms becomes available in a later release" (out of date since 1C-07). It now says reports arrive in a later release and links to Connections.
+
+**Files changed** (28, plus the status documents)
+- New (13): `frontend/playwright.config.ts`; `frontend/e2e/` — `journey`, `password-reset`, `sessions`, `tenant-boundary`, `security`, `keyboard` specs and `support/` (`env`, `mail`, `fixtures`, `actions`); `infrastructure/docker/web.Dockerfile`; `.dockerignore`.
+- Modified (15): `.github/workflows/ci.yml`, `docker-compose.yml`, `Makefile`, `README.md`, `docs/SECURITY.md`; `frontend/package.json` + lockfile (2 dev dependencies, `e2e` script), `eslint.config.mjs` (e2e override), `.prettierignore`; `features/auth/session.ts`, `actions.ts`, `RequireAuth.tsx` (sign-out fix); `features/organizations/OrganizationOverview.tsx`; tests `session-ui.test.tsx`, `organizations.test.tsx`.
+- Backend: none. Deleted: none.
+
+**Tests**
+- End-to-end: **9 passed**, three consecutive runs — two with jobs run in-process, one exactly as CI runs them (separate worker process, CI rate limits; 15 background jobs processed).
+- Frontend unit/component: **247 passed** (+2) · 98.1 % statements, 91.5 % branches, 98.4 % functions, 99.2 % lines. ESLint, Prettier, strict `tsc`, build, `npm audit --omit=dev` (0 vulnerabilities): pass.
+- Backend `make check`: ruff, mypy --strict, **281 passed**, 98.42 % coverage (unchanged).
+- Web image: the Dockerfile's steps were rehearsed in a clean folder (clean install → build → standalone server started → pages, nonce CSP and static files served; build refuses `http://api.example.com`). The image itself could not be built here because Docker Hub is blocked in this environment — the CI `docker` job builds it.
+
+**Security**
+- No change to what the API accepts. The e2e suite now proves on every run: nonce CSP on every page, no browser storage, HttpOnly cookies, tokens removed from addresses, platform tokens never in the page, tenant boundary, and unsafe return addresses ignored.
+- The CI stack raises the sign-up and sign-in rate limits **for the throwaway CI stack only** (the suite creates 8 accounts from one address). Defaults are unchanged everywhere else.
+
+**Migration:** none.
+
+**Deviations**
+1. Plan §9 says "manual keyboard pass recorded in the report". The keyboard pass is **automated** (`keyboard.spec.ts`) and recorded; a by-hand pass with a screen reader has not been done — suggested as part of your review.
+2. End-to-end tests run in **Chromium only** (no Firefox/Safari engines) to keep CI time short.
+3. The CI `e2e` job runs the worker but not the scheduler (`beat`); nothing in the journey needs it.
+4. A root `.dockerignore` was added (not in the plan). It also shrinks the existing API image build context, which until now could include a local `.venv`.
+
+**Blocked:** none.
+
+**Not verified here:** the CI jobs on GitHub. The workflow runs on pull requests and on pushes to `main`. A push to `feature/phase-1a` alone does not start it; opening a pull request to `main` does.
+
+**Next:** Phase 1C is complete — see `PHASE_01C_REPORT.md`. Waiting for product-owner review of Phase 1 (1A, 1B, 1C).
 

@@ -26,7 +26,7 @@ This roadmap splits AdVegaX into phases. Each phase has its own plan in `docs/ph
 | Phase | Name | Goal | Depends on | Status |
 |---|---|---|---|---|
 | 0 | Architecture approval & bootstrap decisions | Approved architecture (DISCOVERY_REPORT v3) | — | ✅ **Complete** |
-| 1 | Foundation — 1A platform core & identity · 1B integration foundation · 1C frontend shell | Secure multi-tenant platform skeleton: identity, sessions, email, orgs, RBAC, RLS, audit, CI (1A); connections/resources, encryption, jobs, provider framework, SSRF client (1B); UI shell (1C) | 0 | **1A and 1B implemented — awaiting review; 1C in progress (1C-01 to 1C-07 done)** |
+| 1 | Foundation — 1A platform core & identity · 1B integration foundation · 1C frontend shell | Secure multi-tenant platform skeleton: identity, sessions, email, orgs, RBAC, RLS, audit, CI (1A); connections/resources, encryption, jobs, provider framework, SSRF client (1B); UI shell (1C) | 0 | **Implemented (1A, 1B, 1C) — awaiting review** |
 | 2A | Commerce — Shopify (read-only) | Connect Shopify stores; import catalogue, inventory, orders, refunds; finance core | 1 | Not started |
 | 2B | Commerce — WooCommerce (read-only) | Connect WooCommerce stores safely; same normalized models; proves abstraction | 2A | Not started |
 | 3 | Advertising — Google Ads (read-only) | Accounts, structure, daily performance | 1 | Not started |
@@ -104,6 +104,7 @@ A phase is complete only when its exit criteria are met and `PROJECT_STATUS.md` 
 | `phases/PHASE_01B_REPORT.md` | 1B implementation report |
 | `phases/PHASE_01C_PLAN.md` | 1C detailed implementation plan (approved, A17) |
 | `phases/PHASE_01C_PROGRESS.md` | 1C task reports |
+| `phases/PHASE_01C_REPORT.md` | 1C implementation report |
 | `phases/PHASE_02A_SHOPIFY.md` | 2A |
 | `phases/PHASE_02B_WOOCOMMERCE.md` | 2B |
 | `phases/PHASE_03_GOOGLE_ADS.md` | 3 |
@@ -128,8 +129,7 @@ A phase is complete only when its exit criteria are met and `PROJECT_STATUS.md` 
 
 | Phase | Build effort (calendar, with prompt reviews) | Outside dependencies (start early) |
 |---|---|---|
-| 1C remaining (1C-08) | a few days | — |
-| **M1 Platform foundation** | **a few days from now (after 1C-08)** | — |
+| **M1 Platform foundation** | **Built — reached when you approve Phase 1** | — |
 | 2A Shopify (read-only) + finance core | 3–4 weeks | Shopify Partner account + development store; Q5–Q9 |
 | 2B WooCommerce (read-only) | 1–2 weeks | A test WordPress/WooCommerce site; Q10 |
 | 3 Google Ads (read-only) | 2–3 weeks | **Developer token (Basic access) — Google review, days to weeks**; test account for development |

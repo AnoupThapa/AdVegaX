@@ -1,6 +1,7 @@
 import { act, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { useSignIn } from "@/features/auth/actions";
 import { AccountNav } from "@/features/auth/AccountNav";
 import { HomeSession } from "@/features/auth/HomeSession";
 import { RequireAuth } from "@/features/auth/RequireAuth";
@@ -110,6 +111,63 @@ describe("Account navigation", () => {
     expect(api.calls.some((c) => c.path === "/api/v1/auth/logout" && c.csrf)).toBe(true);
     expect(queryClient.getQueryData(SESSION_KEY)).toBeNull();
     expect(queryClient.getQueryData(["organizations"])).toBeUndefined();
+  });
+
+  it("after a deliberate sign-out, an open protected page goes to a plain sign-in page", async () => {
+    navigation.pathname = "/orgs/42/connections";
+    mockApi({
+      "GET /api/v1/auth/me": ok(testUser()),
+      "POST /api/v1/auth/logout": ok({ status: "signed_out", csrf_token: "anon" }),
+    });
+    renderWithProviders(
+      <>
+        <AccountNav />
+        <RequireAuth>
+          <p>secret page</p>
+        </RequireAuth>
+      </>,
+      { session: testUser() },
+    );
+    click(screen.getByRole("button", { name: "Sign out" }));
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/sign-in"));
+    expect(router.replace).not.toHaveBeenCalledWith(expect.stringContaining("next="));
+    expect(screen.queryByText("secret page")).not.toBeInTheDocument();
+  });
+
+  it("a later session loss (not a sign-out) still offers to come back", async () => {
+    navigation.pathname = "/orgs/42/members";
+    mockApi({
+      "GET /api/v1/auth/me": ok(testUser()),
+      "POST /api/v1/auth/logout": ok({ status: "signed_out", csrf_token: "anon" }),
+      "POST /api/v1/auth/login": ok({ status: "signed_in", csrf_token: "t" }),
+    });
+    // Sign out on a public page (no protected page consumes the flag) …
+    const first = renderWithProviders(<AccountNav />, { session: testUser() });
+    click(screen.getByRole("button", { name: "Sign out" }));
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith("/sign-in"));
+    first.unmount();
+    // … then sign in again: the flag is cleared, so a later 401 keeps the return address.
+    function SignInProbe() {
+      const signIn = useSignIn();
+      return (
+        <button onClick={() => signIn.mutate({ email: "ada@example.com", password: "x" })}>
+          go
+        </button>
+      );
+    }
+    const probe = renderWithProviders(<SignInProbe />);
+    click(screen.getByRole("button", { name: "go" }));
+    await waitFor(() => expect(probe.queryClient.getQueryData(SESSION_KEY)).toEqual(testUser()));
+    probe.unmount();
+    mockApi({ "GET /api/v1/auth/me": fail(401, "UNAUTHENTICATED") });
+    renderWithProviders(
+      <RequireAuth>
+        <p>secret page</p>
+      </RequireAuth>,
+    );
+    await waitFor(() =>
+      expect(router.replace).toHaveBeenCalledWith("/sign-in?next=%2Forgs%2F42%2Fmembers"),
+    );
   });
 
   it("still clears local data if the sign-out request fails", async () => {

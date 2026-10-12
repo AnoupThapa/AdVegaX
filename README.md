@@ -2,7 +2,7 @@
 
 AI-powered E-commerce Advertising & Growth Operating System — an independent multi-tenant SaaS that connects commerce platforms (Shopify, WooCommerce), advertising platforms (Google Ads, Meta) and analytics (GA4) into one controlled, auditable growth system.
 
-**Status:** Phase 1A (platform core & identity) and Phase 1B (integration foundation, test platform only) implemented — awaiting product-owner review. Phase 1C (frontend shell) in progress — tasks 1C-01 to 1C-07 done; real platform integrations not started. See `docs/PROJECT_STATUS.md`.
+**Status:** Phase 1 (foundation) implemented — 1A platform core & identity, 1B integration foundation (test platform only), 1C web application — awaiting product-owner review. Real platform integrations not started. See `docs/PROJECT_STATUS.md`.
 
 ## Documentation (`docs/`)
 
@@ -19,7 +19,7 @@ AI-powered E-commerce Advertising & Growth Operating System — an independent m
 | `PROJECT_STATUS.md` | Current progress, decision log, open questions |
 | `SECURITY.md` | How security controls are implemented and tested |
 | `INTEGRATION_GUIDES.md` | How a platform connector is added; per-provider notes |
-| `phases/` | One plan per phase; `PHASE_01A_PLAN.md` (approved), `PHASE_01A_REPORT.md` (implemented), `PHASE_01B_PLAN.md` (approved), `PHASE_01B_REPORT.md` (implemented), `PHASE_01C_PLAN.md` (approved), `PHASE_01C_PROGRESS.md` (task reports) |
+| `phases/` | One plan per phase; `PHASE_01A_PLAN.md` (approved), `PHASE_01A_REPORT.md` (implemented), `PHASE_01B_PLAN.md` (approved), `PHASE_01B_REPORT.md` (implemented), `PHASE_01C_PLAN.md` (approved), `PHASE_01C_PROGRESS.md` (task reports), `PHASE_01C_REPORT.md` (implemented) |
 
 ## Local development (backend)
 
@@ -28,7 +28,7 @@ Requirements: Python 3.12, [uv](https://docs.astral.sh/uv/), PostgreSQL 16, Redi
 **With Docker**
 
 ```bash
-docker compose up --build        # postgres, redis, mailpit (http://localhost:8025), migrations, api (:8000), worker, beat (scheduler)
+docker compose up --build        # postgres, redis, mailpit (http://localhost:8025), migrations, api (:8000), worker, beat (scheduler), web (:3000)
 ```
 
 **Without Docker** (PostgreSQL and Redis running locally)
@@ -59,6 +59,18 @@ npm run dev                       # http://localhost:3000
 ```
 
 Checks: `make frontend-check` (ESLint, Prettier, strict TypeScript, Vitest with coverage, production dependency audit, build).
+
+**End-to-end and accessibility tests** (Playwright + axe) run against a real stack. Start PostgreSQL, Redis, Mailpit, the API and a worker (as above, or `docker compose up`), build and start the web app (`npm run build && npm start`), then:
+
+```bash
+cd frontend
+npx playwright install chromium   # once
+npm run e2e                       # or: make e2e
+```
+
+The suite creates several accounts from one address, so give the local API higher sign-up/sign-in limits (e.g. `THROTTLE_REGISTER_PER_IP_PER_HOUR=100`, `THROTTLE_LOGIN_PER_IP_PER_MINUTE=100`, `THROTTLE_LOGIN_PER_ACCOUNT_IP_PER_MINUTE=30`, `THROTTLE_EMAIL_ACTION_PER_IP_PER_HOUR=100`) — CI does the same. Addresses can be changed with `E2E_WEB_URL`, `E2E_API_URL`, `E2E_MAILPIT_URL`; a pre-installed Chromium with `PLAYWRIGHT_CHROMIUM_EXECUTABLE`.
+
+The local test platform's sign-in page (`fake-platform.invalid`) does not exist; the suite answers it the way an approving user would. Real platforms are not connected in Phase 1.
 
 API types: after changing the backend API, run `uv run python -m app.api.openapi_export` (in `backend/`) and `npm run api:generate` (in `frontend/`). Tests on both sides fail while the committed schema or types are out of date.
 
