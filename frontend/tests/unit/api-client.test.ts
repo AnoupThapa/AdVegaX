@@ -146,6 +146,29 @@ describe("API client", () => {
     expect(onUnauthenticated).toHaveBeenCalledOnce();
   });
 
+  it("a wrong password (401 INVALID_CREDENTIALS) does not end the session", async () => {
+    setCsrfToken("session-token");
+    const { client, onUnauthenticated } = harness([
+      json(401, { error: { code: "INVALID_CREDENTIALS" }, meta: {} }),
+    ]);
+    const error = (await unwrap(
+      client.POST("/api/v1/auth/change-password", {
+        body: { current_password: "wrong", new_password: "correct horse battery staple" },
+      }),
+    ).catch((e: unknown) => e)) as ApiError;
+    expect([error.status, error.code]).toEqual([401, "INVALID_CREDENTIALS"]);
+    expect(onUnauthenticated).not.toHaveBeenCalled();
+    expect(getCsrfToken()).toBe("session-token");
+  });
+
+  it("a 401 without a readable body still ends the session", async () => {
+    setCsrfToken("t");
+    const { client, onUnauthenticated } = harness([new Response("", { status: 401 })]);
+    await unwrap(client.GET("/api/v1/auth/me")).catch(() => null);
+    expect(onUnauthenticated).toHaveBeenCalledOnce();
+    expect(getCsrfToken()).toBeNull();
+  });
+
   it("maps network failures to NETWORK_ERROR", async () => {
     const offline = harness([new TypeError("Failed to fetch")]);
     const error = (await unwrap(offline.client.GET("/api/v1/auth/me")).catch(

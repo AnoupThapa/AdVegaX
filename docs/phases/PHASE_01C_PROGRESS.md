@@ -9,7 +9,7 @@ Plan: `PHASE_01C_PLAN.md` (approved, A17). One report per task; the final `PHASE
 | 1C-03 Backend: `GET /providers`, `organization_id` on callback redirect | ✅ Done — awaiting review |
 | 1C-04 Auth pages | ✅ Done — awaiting review |
 | 1C-05 Organizations, members, invitations | ✅ Done — awaiting review |
-| 1C-06 Account security | Not started |
+| 1C-06 Account security | ✅ Done — awaiting review |
 | 1C-07 Connections pages | Not started |
 | 1C-08 End-to-end + accessibility suite, CI, Docker, docs, report | Not started |
 
@@ -245,4 +245,40 @@ Two Claude sessions each built 1C-05 from the same starting point (1C-04). The p
 - **axe: 0 violations on 13 page states** (including the confirmation dialog and the open organization menu); **0 security-policy violations**; no browser storage.
 - **Defects found: none.**
 - Added one safety rule: inline `style` attributes are now rejected by the source-rules test (they are blocked by the security policy when a page first loads); the current code already complies.
+
+---
+
+## 1C-06 — Account security (2026-10-12)
+
+**Completed**
+- **`/account/security`** (signed-in only; reached from your name in the header):
+  - **Where you are signed in:** every active session with a readable device name ("Chrome on macOS", "Safari on iPhone"), when it signed in and when it was last active; this device listed first and marked. **Sign out** any other device after a confirmation dialog.
+  - **Sign out everywhere** (this device included) after a confirmation that says how many other sessions it ends; you are then taken to sign in and brought back to this page.
+  - **Change password:** current password, new password, confirmation; checks locally (length, not your email, different from the current one, confirmation matches) before calling the API; the API's own policy messages appear on the right field. On success this browser stays signed in (the API issues a new session and token) and every other device is signed out.
+- **Bug fixed in the shared API client (from 1C-02):** every 401 answer was treated as "session ended". A **wrong current password** also answers 401 (`INVALID_CREDENTIALS`), so it would have signed the person out of the app. Now only a real session loss ends the session; a wrong password leaves it intact. Unit-tested both ways.
+
+**Files changed** (12)
+- New (9): `app/account/security/page.tsx`; `features/account/` — `AccountSecurityPage.tsx`, `SessionsSection.tsx`, `ChangePasswordForm.tsx`, `queries.ts`, `device-name.ts`, `account.module.css`; tests `tests/features/account-security.test.tsx`, `tests/unit/device-name.test.ts`.
+- Modified (3): `lib/api/client.ts` (401 rule), `features/auth/AccountNav.tsx` (link to account security), `tests/unit/api-client.test.ts`.
+- Backend: none. Deleted: none.
+
+**Tests**
+- Frontend: 209 passed (+25) · coverage 98.5 % statements, 93.8 % branches, 99.7 % functions. ESLint (0 warnings), Prettier, strict `tsc`, build, `npm audit --omit=dev` (0 vulnerabilities): pass.
+- **Real browser, real backend, three browsers on one account** (laptop, phone, tablet; temporary script, not committed): sessions listed with readable names and this device first → laptop signs out the phone → the phone's next page sends it to sign in (API confirms 401) → wrong current password: error on the field, **still signed in** → correct change: laptop stays signed in, tablet signed out, one session left → sign out everywhere → sign-in page (API confirms 401) → sign in with the new password → back on Account security.
+  - **axe: 0 violations** (page, confirmation dialog, error state); **0 security-policy violations**.
+  - The earlier sign-up / verify / reset browser test was re-run after the client change: all steps pass.
+  - The backend's rate limit was confirmed working along the way: 5 password attempts per account per minute (sign-ins **and** password changes count) — the page showed "Too many attempts". The final run used a higher limit on the local test server only.
+
+**Security**
+- Password fields use the right autocomplete hints (password managers update the correct entry); nothing stored in the browser; destructive actions need confirmation; device names are display-only.
+
+**Migration:** none.
+
+**Deviations**
+1. Device names are worked out in the browser from the stored browser string, because the API stores the raw (truncated) text rather than a summary. A tidy summary on the backend would be cleaner later.
+2. After "Sign out everywhere" you return to Account security after signing in again (the plan did not specify where to land).
+
+**Blocked:** none.
+
+**Next task:** 1C-07 — Connections pages (list, connect result, resources, link/unlink, sync status, disconnect).
 

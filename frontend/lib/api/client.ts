@@ -6,7 +6,8 @@
  *   (`credentials: "include"`). The Next.js server is never involved.
  * - Unsafe requests carry the in-memory CSRF token; a `CSRF_FAILED` answer refreshes the token
  *   and retries exactly once.
- * - A 401 clears the CSRF token and calls `onUnauthenticated` (the app sends the person to sign in).
+ * - A 401 clears the CSRF token and calls `onUnauthenticated` (the app sends the person to sign in),
+ *   except `INVALID_CREDENTIALS` (a wrong password), which leaves the session alone.
  */
 
 import createClient, { type Client } from "openapi-fetch";
@@ -60,13 +61,19 @@ export function createApiFetch(options: ApiClientOptions): (input: Request) => P
       throw new ApiError(0, NETWORK_ERROR);
     }
 
+    const body = await readJson(response);
+
+    // A 401 means the session is gone — except INVALID_CREDENTIALS, which only says a password
+    // was wrong (sign-in, or the current password when changing it) and leaves the session intact.
     if (response.status === 401) {
-      clearCsrfToken();
-      options.onUnauthenticated?.();
+      const code = (body as { error?: { code?: unknown } } | null)?.error?.code;
+      if (code !== "INVALID_CREDENTIALS") {
+        clearCsrfToken();
+        options.onUnauthenticated?.();
+      }
       return response;
     }
 
-    const body = await readJson(response);
     if (unsafe && response.status === 403 && spare) {
       const code = (body as { error?: { code?: unknown } } | null)?.error?.code;
       if (code === "CSRF_FAILED") {

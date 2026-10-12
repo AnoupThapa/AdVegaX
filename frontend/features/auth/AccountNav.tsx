@@ -31,7 +31,13 @@ export function AccountNav() {
   return (
     <nav aria-label="Account" className={styles.nav}>
       <OrganizationSwitcher user={user} />
-      <span className={styles.who}>{user.display_name || user.email}</span>
+      <Link
+        href="/account/security"
+        className={styles.who}
+        aria-label={`Account security for ${user.display_name || user.email}`}
+      >
+        {user.display_name || user.email}
+      </Link>
       <Button
         variant="secondary"
         busy={signOut.isPending}
