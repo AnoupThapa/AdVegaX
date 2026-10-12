@@ -10,7 +10,7 @@ Plan: `PHASE_01C_PLAN.md` (approved, A17). One report per task; the final `PHASE
 | 1C-04 Auth pages | ✅ Done — awaiting review |
 | 1C-05 Organizations, members, invitations | ✅ Done — awaiting review |
 | 1C-06 Account security | ✅ Done — awaiting review |
-| 1C-07 Connections pages | Not started |
+| 1C-07 Connections pages | ✅ Done — awaiting review |
 | 1C-08 End-to-end + accessibility suite, CI, Docker, docs, report | Not started |
 
 ---
@@ -281,4 +281,50 @@ Two Claude sessions each built 1C-05 from the same starting point (1C-04). The p
 **Blocked:** none.
 
 **Next task:** 1C-07 — Connections pages (list, connect result, resources, link/unlink, sync status, disconnect).
+
+---
+
+## 1C-07 — Connections pages (2026-10-12)
+
+**Completed**
+- **Connections tab** in every organization (`/orgs/{id}/connections`):
+  - Your connections: platform name and account, when connected, status in words (Connected / Needs reconnecting / Problem / Disconnected) and, when not active, the reason in plain language.
+  - **Connect a platform** (owners, admins, managers): lists what the API offers (`GET /providers`; locally only the test platform, marked "for testing only"). Connect starts the sign-in and sends you to the platform's page — **only an `https` address is ever followed**; anything else shows an error instead.
+  - Empty states: "Nothing is connected yet." / "No platforms are available to connect yet" (what deployed environments show until Phase 2A).
+  - Analysts and viewers see the list read-only with a short explanation.
+- **Return from the platform:** the API sends the browser to `/connections?status=…&organization_id=…`. A small landing page forwards to the right organization (only a valid organization ID is accepted; other values are dropped). The result is shown once ("Connected. We are now looking for the accounts…", or the reason it failed, e.g. access refused, link expired, different user) and the query is removed from the address bar.
+- **Connection detail** (`/orgs/{id}/connections/{connectionId}`): status, access granted, dates; **Accounts found** table (name, type, ID, currency · time zone, linked, last synced). While discovery is still running the page says "Looking for accounts…" and checks again every 3 s for up to a minute.
+  - **Link / Unlink** each account; **Sync now** with live job status (Queued → In progress → Finished / Failed); "Last synced" refreshes when it finishes.
+  - **Link history** per account (linked/unlinked, by whom, why).
+  - **Check for new accounts** (rediscover) with job status.
+  - **Disconnect** after a confirmation dialog, then back to the list showing "Disconnected".
+  - Unknown, malformed or other-organization connection IDs show "Connection not found" (same as the API's 404).
+- **Shared helpers** (planned since 1C-01, plan §4.8): `formatMetric` shows "Not available" / "Not supported by this platform" / "Not synced yet" instead of 0 for missing data; `formatSyncedAt` for timestamps. `formatMetric` has no metrics to show yet — it is ready for Phase 2.
+
+**Files changed** (16)
+- New (14): routes `app/orgs/[organizationId]/connections/page.tsx`, `…/connections/[connectionId]/page.tsx`, `app/connections/page.tsx`; `features/connections/` — `ConnectionsPage.tsx`, `ConnectionDetailPage.tsx`, `ResourceRow.tsx`, `CallbackLanding.tsx`, `api.ts`, `labels.ts`, `connections.module.css`; `lib/format/availability.ts`; `lib/navigation/external.ts`; tests `tests/features/connections.test.tsx`, `tests/unit/connections-logic.test.ts`.
+- Modified (2): `features/organizations/OrganizationShell.tsx` (Connections tab; tab stays highlighted on sub-pages), `features/organizations/permissions.ts` (`canManageConnections`).
+- Backend: none (uses the 1B and 1C-03 endpoints as specified). Deleted: none.
+
+**Tests**
+- Frontend: **245 passed** (+36) · coverage 98.1 % statements, 91.5 % branches, 98.4 % functions, 99.2 % lines. ESLint (0 warnings), Prettier, strict `tsc`, build, `npm audit --omit=dev` (0 vulnerabilities): pass.
+- **Real browser, real backend** (temporary script, not committed; the test platform's sign-in page was answered by the script with an approval): empty page → connect → returned with "Connected" notice and a clean address → detail finds 3 accounts → link → sync → Finished and "Last synced" filled → history → unlink → check for new accounts → a **viewer** sees list and detail read-only with no change buttons → unknown and malformed IDs show "Connection not found" → disconnect with confirmation → list shows Disconnected → landing page without an organization explains the connection was not completed.
+  - **axe: 0 violations on 8 page states** (including the dialog); **0 security-policy violations**; no browser storage; the page never contains a platform token.
+
+**Security**
+- Platform tokens never reach the browser (the API never sends them; checked in the page source).
+- Only `https` sign-in addresses are followed (no `javascript:`, `data:`, plain `http` or addresses with embedded credentials).
+- Values from the return address are validated before use (organization must be a UUID; status/code/connection limited to short plain identifiers) and the query is removed after it is read.
+- Change buttons are hidden for roles the API refuses; the API remains the authority.
+
+**Migration:** none.
+
+**Deviations**
+1. Added a small `/connections` landing page: the API's return address has no organization in its path (1C-03 design), so the page forwards to the organization's Connections page.
+2. Discovery is checked for about a minute after connecting; if accounts still are not found, the page says so and offers "Check for new accounts" instead of polling forever.
+3. Test-only fix during the task: `goToExternal` accepts an optional navigation function so tests do not need to replace `window.location` (which jsdom does not allow).
+
+**Blocked:** none.
+
+**Next task:** 1C-08 — end-to-end and accessibility suite, CI jobs, Docker, docs and the Phase 1C report.
 

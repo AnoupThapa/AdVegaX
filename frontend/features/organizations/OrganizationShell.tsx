@@ -89,6 +89,7 @@ export function OrganizationNotFound() {
 
 const SECTIONS = [
   { href: "", label: "Overview" },
+  { href: "/connections", label: "Connections" },
   { href: "/members", label: "Members" },
   { href: "/settings", label: "Settings" },
 ] as const;
@@ -102,7 +103,9 @@ function OrganizationNav({ org }: { org: Organization }) {
       <ul className={styles.navList}>
         {SECTIONS.map((section) => {
           const href = `${base}${section.href}`;
-          const current = pathname === href;
+          // Sub-pages (e.g. one connection) keep their section highlighted.
+          const current =
+            pathname === href || (section.href !== "" && pathname.startsWith(`${href}/`));
           return (
             <li key={section.label}>
               <Link

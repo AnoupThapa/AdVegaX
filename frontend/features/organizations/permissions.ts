@@ -68,3 +68,8 @@ export function assignableRoles(actorRole: string): Role[] {
 export function canManageMember(actorRole: string, memberRole: string): boolean {
   return canManageMembers(actorRole) && canAssign(actorRole, memberRole);
 }
+
+/** Owners, admins and managers connect platforms and link accounts (`connections.manage`). */
+export function canManageConnections(role: string): boolean {
+  return role === "owner" || role === "admin" || role === "manager";
+}

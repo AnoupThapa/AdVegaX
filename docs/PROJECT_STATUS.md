@@ -1,7 +1,7 @@
 # AdVegaX — Project Status & Progress Log
 
 **Last updated:** 2026-10-12
-**Current phase:** Phase 1C — approved (A17); tasks 1C-01 to 1C-06 done, awaiting review (1A and 1B implemented; awaiting review)
+**Current phase:** Phase 1C — approved (A17); tasks 1C-01 to 1C-07 done, awaiting review (1A and 1B implemented; awaiting review)
 **Code written:** Phase 1A + 1B backend · **Migrations:** 0001–0006 · **Integrations:** test (fake) platform only — no real platform
 
 Update this file at the end of every phase and every approved sub-phase (ROADMAP §5, step 13).
@@ -15,7 +15,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | 0 | Architecture approval & bootstrap | ✅ **Complete** | Report v3 approved; A1–A14 recorded; specs consistent |
 | 1A | Platform core & identity | ✅ **Implemented — awaiting review** | 141 tests, 98.5 % coverage; `phases/PHASE_01A_REPORT.md` |
 | 1B | Integration foundation | ✅ **Implemented — awaiting review** | 277 tests, 98.4 % coverage; `phases/PHASE_01B_REPORT.md` |
-| 1C | Frontend shell | **In progress — 1C-01 to 1C-06 done (6 of 8)** | `phases/PHASE_01C_PLAN.md`, `phases/PHASE_01C_PROGRESS.md` |
+| 1C | Frontend shell | **In progress — 1C-01 to 1C-07 done (7 of 8)** | `phases/PHASE_01C_PLAN.md`, `phases/PHASE_01C_PROGRESS.md` |
 | 2A | Shopify (read-only) + finance core | Not started | Needs Q5–Q9 before its phase |
 | 2B | WooCommerce (read-only) | Not started | Needs Q10 |
 | 3 | Google Ads (read-only) | Not started | Start developer-token application early |
@@ -65,6 +65,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | 2026-10-12 | Independent two-person real-browser verification of 1C-05: all steps pass, axe 0 violations on 13 states, 0 CSP violations | `phases/PHASE_01C_PROGRESS.md` |
 | 2026-10-12 | Delivery estimate added | `ROADMAP.md §7` |
 | 2026-10-12 | **1C-06** account security: sessions, sign out a device / everywhere, change password; fix: wrong password no longer ends the session; three-browser check | `frontend/features/account/`, `phases/PHASE_01C_PROGRESS.md` |
+| 2026-10-12 | **1C-07** Connections pages: list, connect (https only), return notice, accounts found, link/unlink, sync status, history, rediscover, disconnect; real-browser + axe check | `frontend/features/connections/`, `phases/PHASE_01C_PROGRESS.md` |
 | 2026-10-08 | **Phase 1B implemented**: connections/resources/links, encrypted credentials, SSRF-safe client, rate limiter, provider framework + fake platform, jobs with retry/dead-letter, single scheduler, audited denials | `backend/`, `phases/PHASE_01B_REPORT.md`, `SECURITY.md`, `INTEGRATION_GUIDES.md` |
 
 ## 3. Decision log
@@ -106,5 +107,5 @@ Q5 Shopify public-app approach (2A production) · Q6 same store/account in two o
 ## 5. Next actions
 
 1. Product owner checks the CI run on GitHub and reviews the Phase 1A and 1B reports.
-2. Product owner reviews 1C-01 to 1C-05; then 1C-06 (account security: sessions, sign out everywhere, change password). One task at a time, report after each.
+2. Product owner reviews 1C-01 to 1C-07; then 1C-08 (end-to-end + accessibility suite, CI, Docker, docs, Phase 1C report). One task at a time, report after each.
 3. No real platform integration (Shopify, WooCommerce, Google Ads, Meta, GA4) before its own approved phase.
