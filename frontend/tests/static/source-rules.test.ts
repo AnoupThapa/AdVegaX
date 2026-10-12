@@ -33,6 +33,8 @@ const FORBIDDEN: Array<[RegExp, string]> = [
   [/dangerouslySetInnerHTML/, "raw HTML rendering"],
   [/document\.cookie/, "cookie access"],
   [/\beval\s*\(/, "eval"],
+  // Inline style attributes are blocked by the Content-Security-Policy on first load.
+  [/style=\{\{/, "inline style attribute"],
   [/new\s+Function\s*\(/, "Function constructor"],
 ];
 

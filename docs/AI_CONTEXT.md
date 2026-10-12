@@ -5,7 +5,7 @@ Read this first. Then `PROJECT_STATUS.md`, then the current phase plan, then onl
 ## Project
 AdVegaX — independent, multi-tenant e-commerce advertising and growth SaaS.
 
-## Current state (2026-10-08)
+## Current state (2026-10-12)
 | Phase | Status |
 |---|---|
 | 0 | Complete |
@@ -17,6 +17,7 @@ AdVegaX — independent, multi-tenant e-commerce advertising and growth SaaS.
 Repository: https://github.com/AnoupThapa/AdVegaX · working branch `feature/phase-1a`.
 
 ## Rules
+- **Only one Claude session works on the repository at a time** (product-owner decision 2026-10-12, after two sessions built 1C-05 in parallel). Before starting, check that your branch matches GitHub (`git fetch` + compare); never force-push.
 - Do not implement outside the current, approved phase or task.
 - Do not change architecture without product-owner approval.
 - Do not invent APIs; the generated OpenAPI schema and `API_SPECIFICATION.md` are the contract.

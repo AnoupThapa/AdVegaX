@@ -26,7 +26,7 @@ This roadmap splits AdVegaX into phases. Each phase has its own plan in `docs/ph
 | Phase | Name | Goal | Depends on | Status |
 |---|---|---|---|---|
 | 0 | Architecture approval & bootstrap decisions | Approved architecture (DISCOVERY_REPORT v3) | — | ✅ **Complete** |
-| 1 | Foundation — 1A platform core & identity · 1B integration foundation · 1C frontend shell | Secure multi-tenant platform skeleton: identity, sessions, email, orgs, RBAC, RLS, audit, CI (1A); connections/resources, encryption, jobs, provider framework, SSRF client (1B); UI shell (1C) | 0 | **1A and 1B implemented — awaiting review; 1C in progress (1C-01 to 1C-04 done)** |
+| 1 | Foundation — 1A platform core & identity · 1B integration foundation · 1C frontend shell | Secure multi-tenant platform skeleton: identity, sessions, email, orgs, RBAC, RLS, audit, CI (1A); connections/resources, encryption, jobs, provider framework, SSRF client (1B); UI shell (1C) | 0 | **1A and 1B implemented — awaiting review; 1C in progress (1C-01 to 1C-05 done)** |
 | 2A | Commerce — Shopify (read-only) | Connect Shopify stores; import catalogue, inventory, orders, refunds; finance core | 1 | Not started |
 | 2B | Commerce — WooCommerce (read-only) | Connect WooCommerce stores safely; same normalized models; proves abstraction | 2A | Not started |
 | 3 | Advertising — Google Ads (read-only) | Accounts, structure, daily performance | 1 | Not started |
@@ -119,3 +119,32 @@ A phase is complete only when its exit criteria are met and `PROJECT_STATUS.md` 
 | `phases/PHASE_12_AUTOPILOT.md` | 12 |
 | `phases/PHASE_13_BILLING.md` | 13 |
 | `phases/PHASE_14_AGENCY.md` | 14 |
+
+---
+
+## 7. Delivery estimate (2026-10-12)
+
+**Rough ranges, not commitments.** They assume one AI agent building task by task, each task reviewed and approved by the product owner before the next, and that open decisions (DISCOVERY_REPORT §14, Q5–Q16) are answered when their phase starts. Review turnaround and external approvals usually decide the calendar more than build effort.
+
+| Phase | Build effort (calendar, with prompt reviews) | Outside dependencies (start early) |
+|---|---|---|
+| 1C remaining (1C-06 … 1C-08) | ~1 week | — |
+| **M1 Platform foundation** | **~1 week from now** | — |
+| 2A Shopify (read-only) + finance core | 3–4 weeks | Shopify Partner account + development store; Q5–Q9 |
+| 2B WooCommerce (read-only) | 1–2 weeks | A test WordPress/WooCommerce site; Q10 |
+| 3 Google Ads (read-only) | 2–3 weeks | **Developer token (Basic access) — Google review, days to weeks**; test account for development |
+| 4 Meta (read-only) | 2–3 weeks | **Meta App Review + Business Verification — often 2–6 weeks** |
+| 5 GA4 (read-only) | 1–2 weeks | Google Cloud project, OAuth consent screen; Q11 |
+| 6 Unified analytics & finance | 3–4 weeks | Signed-off metric definitions (Q7) |
+| **M2 Connected data (read-only)** | **~3–4 months from now** | |
+| 7 Funnel | 1–2 weeks | |
+| 8 AI planner · 9 Creative engine | 4–6 weeks | LLM provider and creative scope (Q12) |
+| **M3 Insight** | **~5–6 months from now** | |
+| 10A Action Engine · 10B Campaign builder | 5–7 weeks | Write-access scopes approved by Google and Meta |
+| 11 Optimization · 12 Autopilot | 4–6 weeks | Autopilot action classes (Q13) |
+| 13 Billing | 2–3 weeks | Stripe account; plans/pricing (Q14) |
+| Production-readiness gate | 3–4 weeks | Hosting choice (Q16); independent security review / penetration test by a human firm |
+| **M6 Commercial launch (full MVP)** | **~9–12 months from now** | |
+| 14 Agency mode | 2–3 weeks | Q15 |
+
+Ways to reach paying customers sooner: sell an insights-only plan after M2 or M3 (moves Phase 13 earlier — a commercial decision), and start the Google, Meta and Shopify approvals now so they run in parallel with the build.

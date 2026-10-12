@@ -235,3 +235,14 @@ Plan: `PHASE_01C_PLAN.md` (approved, A17). One report per task; the final `PHASE
 **Blocked:** none.
 
 **Next task:** 1C-06 — account security: sessions (list, revoke one, sign out everywhere), change password.
+
+### 1C-05 — independent verification (2026-10-12)
+
+Two Claude sessions each built 1C-05 from the same starting point (1C-04). The product owner chose the version already on GitHub (`0b9d938`, above); the other session's version is not used (kept only on a local backup branch, never pushed). The other session then verified this version independently, without changing it:
+
+- Lint, format, strict types, 184 tests (98.7 % statements), build, production audit (0 vulnerabilities): **pass**, matching the report above.
+- **Real browser, real backend, two separate people, real emails:** A signs up and verifies → creates an organization → invites B as Manager → renames the organization. B (signed out) opens the invitation email → "Sign in to accept" → signs in → returned to the invitation → accepts → lands in the organization; as Manager sees no member controls and read-only settings. Organization menu opens and closes with Escape. A changes B to Viewer (explicit save) → removes B through the confirmation dialog → B leaves the members table (the accepted invitation stays in the invitation history, as intended) → B gets "Page not found". A signed-out visitor to a members page is sent to sign in with the right return address.
+- **axe: 0 violations on 13 page states** (including the confirmation dialog and the open organization menu); **0 security-policy violations**; no browser storage.
+- **Defects found: none.**
+- Added one safety rule: inline `style` attributes are now rejected by the source-rules test (they are blocked by the security policy when a page first loads); the current code already complies.
+
