@@ -6,20 +6,20 @@ AI-powered E-commerce Advertising & Growth Operating System — an independent m
 
 ## Documentation (`docs/`)
 
-| File | Purpose |
-|---|---|
-| `AI_CONTEXT.md` | Start here (AI agents): current state, rules, task and report templates |
-| `MASTER_SPECIFICATION.md` | Product, MVP, principles, AI safety, commercial requirements, approved decisions (§20) |
-| `PROJECT_RULES.md` | Permanent rules for AI coding agents and developers |
-| `ARCHITECTURE.md` | System, backend, frontend, integration, AI and deployment architecture |
-| `DATABASE_SCHEMA.md` | PostgreSQL entities, indexes, RLS and security rules |
-| `API_SPECIFICATION.md` | Versioned REST API, validation, authorization, idempotency |
-| `DISCOVERY_REPORT.md` | Architecture assessment, risks, contradictions, open decisions |
-| `ROADMAP.md` | Phases, dependencies, milestones, per-phase workflow |
-| `PROJECT_STATUS.md` | Current progress, decision log, open questions |
-| `SECURITY.md` | How security controls are implemented and tested |
-| `INTEGRATION_GUIDES.md` | How a platform connector is added; per-provider notes |
-| `phases/` | One plan per phase; `PHASE_01A_PLAN.md` (approved), `PHASE_01A_REPORT.md` (implemented), `PHASE_01B_PLAN.md` (approved), `PHASE_01B_REPORT.md` (implemented), `PHASE_01C_PLAN.md` (approved), `PHASE_01C_PROGRESS.md` (task reports), `PHASE_01C_REPORT.md` (implemented) |
+| File                      | Purpose                                                                                                                                                                                                                                                                   |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AI_CONTEXT.md`           | Start here (AI agents): current state, rules, task and report templates                                                                                                                                                                                                   |
+| `MASTER_SPECIFICATION.md` | Product, MVP, principles, AI safety, commercial requirements, approved decisions (§20)                                                                                                                                                                                    |
+| `PROJECT_RULES.md`        | Permanent rules for AI coding agents and developers                                                                                                                                                                                                                       |
+| `ARCHITECTURE.md`         | System, backend, frontend, integration, AI and deployment architecture                                                                                                                                                                                                    |
+| `DATABASE_SCHEMA.md`      | PostgreSQL entities, indexes, RLS and security rules                                                                                                                                                                                                                      |
+| `API_SPECIFICATION.md`    | Versioned REST API, validation, authorization, idempotency                                                                                                                                                                                                                |
+| `DISCOVERY_REPORT.md`     | Architecture assessment, risks, contradictions, open decisions                                                                                                                                                                                                            |
+| `ROADMAP.md`              | Phases, dependencies, milestones, per-phase workflow                                                                                                                                                                                                                      |
+| `PROJECT_STATUS.md`       | Current progress, decision log, open questions                                                                                                                                                                                                                            |
+| `SECURITY.md`             | How security controls are implemented and tested                                                                                                                                                                                                                          |
+| `INTEGRATION_GUIDES.md`   | How a platform connector is added; per-provider notes                                                                                                                                                                                                                     |
+| `phases/`                 | One plan per phase; `PHASE_01A_PLAN.md` (approved), `PHASE_01A_REPORT.md` (implemented), `PHASE_01B_PLAN.md` (approved), `PHASE_01B_REPORT.md` (implemented), `PHASE_01C_PLAN.md` (approved), `PHASE_01C_PROGRESS.md` (task reports), `PHASE_01C_REPORT.md` (implemented) |
 
 ## Local development (backend)
 
@@ -60,15 +60,27 @@ npm run dev                       # http://localhost:3000
 
 Checks: `make frontend-check` (ESLint, Prettier, strict TypeScript, Vitest with coverage, production dependency audit, build).
 
-**End-to-end and accessibility tests** (Playwright + axe) run against a real stack. Start PostgreSQL, Redis, Mailpit, the API and a worker (as above, or `docker compose up`), build and start the web app (`npm run build && npm start`), then:
+**End-to-end and accessibility tests** (Playwright + axe) run against a real stack. The suite creates several accounts from one address, so the stack needs higher sign-up/sign-in limits than the approved defaults — for local test runs only (CI does the same).
+
+_With Docker_ (everything, including the web app on :3000):
+
+```bash
+THROTTLE_REGISTER_PER_IP_PER_HOUR=100 THROTTLE_LOGIN_PER_IP_PER_MINUTE=100 \
+THROTTLE_LOGIN_PER_ACCOUNT_IP_PER_MINUTE=30 THROTTLE_EMAIL_ACTION_PER_IP_PER_HOUR=100 \
+  docker compose up --build
+cd frontend && npx playwright install chromium && npm run e2e
+```
+
+_Without Docker:_ start PostgreSQL, Redis, Mailpit, the API and a worker with the same four `THROTTLE_*` values in their environment (see "Local development (backend)"), then:
 
 ```bash
 cd frontend
-npx playwright install chromium   # once
-npm run e2e                       # or: make e2e
+npm run build && npm run start:standalone   # the same server the Docker image runs
+npx playwright install chromium             # once
+npm run e2e                                 # or: make e2e
 ```
 
-The suite creates several accounts from one address, so give the local API higher sign-up/sign-in limits (e.g. `THROTTLE_REGISTER_PER_IP_PER_HOUR=100`, `THROTTLE_LOGIN_PER_IP_PER_MINUTE=100`, `THROTTLE_LOGIN_PER_ACCOUNT_IP_PER_MINUTE=30`, `THROTTLE_EMAIL_ACTION_PER_IP_PER_HOUR=100`) — CI does the same. Addresses can be changed with `E2E_WEB_URL`, `E2E_API_URL`, `E2E_MAILPIT_URL`; a pre-installed Chromium with `PLAYWRIGHT_CHROMIUM_EXECUTABLE`.
+Addresses can be changed with `E2E_WEB_URL`, `E2E_API_URL`, `E2E_MAILPIT_URL`; a pre-installed Chromium with `PLAYWRIGHT_CHROMIUM_EXECUTABLE`.
 
 The local test platform's sign-in page (`fake-platform.invalid`) does not exist; the suite answers it the way an approving user would. Real platforms are not connected in Phase 1.
 

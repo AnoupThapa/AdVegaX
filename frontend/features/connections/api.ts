@@ -63,7 +63,8 @@ const DISCOVERY_POLLS = 20;
  * background, so an empty list is re-checked every few seconds for a short while.
  */
 export function useResources(orgId: string, connectionId: string, connectionActive: boolean) {
-  return useQuery({
+  const queryClient = useQueryClient();
+  const query = useQuery({
     queryKey: keys.resources(orgId, connectionId),
     queryFn: () =>
       unwrap(
@@ -73,11 +74,19 @@ export function useResources(orgId: string, connectionId: string, connectionActi
       ),
     refetchInterval: (query) =>
       connectionActive &&
+      query.state.status !== "error" &&
       query.state.data?.length === 0 &&
       query.state.dataUpdateCount < DISCOVERY_POLLS
         ? 3000
         : false,
   });
+  // After about a minute of re-checking, stop saying "looking": discovery may have failed or the
+  // platform may really have no accounts. The page then offers "Check for new accounts".
+  const updates =
+    queryClient.getQueryState(keys.resources(orgId, connectionId))?.dataUpdateCount ?? 0;
+  const stillLooking =
+    connectionActive && !query.isError && query.data?.length === 0 && updates < DISCOVERY_POLLS;
+  return { ...query, stillLooking };
 }
 
 export function useLinkHistory(orgId: string, resourceId: string, enabled: boolean) {
@@ -96,7 +105,10 @@ export function useLinkHistory(orgId: string, resourceId: string, enabled: boole
 const FINISHED = new Set(["succeeded", "failed", "dead"]);
 export const jobFinished = (job: Job | undefined) => Boolean(job && FINISHED.has(job.status));
 
-/** Follows a background job until it finishes. */
+/**
+ * Follows a background job until it finishes. Stops (and reports the error) if the job can no
+ * longer be read — for example after the person's role changed — instead of polling forever.
+ */
 export function useJob(orgId: string, jobId: string | null) {
   return useQuery({
     queryKey: keys.job(orgId, jobId ?? "none"),
@@ -107,7 +119,8 @@ export function useJob(orgId: string, jobId: string | null) {
         }),
       ),
     enabled: jobId !== null,
-    refetchInterval: (query) => (jobFinished(query.state.data) ? false : 2000),
+    refetchInterval: (query) =>
+      query.state.status === "error" || jobFinished(query.state.data) ? false : 2000,
   });
 }
 

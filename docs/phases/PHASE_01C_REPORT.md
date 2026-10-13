@@ -1,6 +1,6 @@
 # Phase 1C — Implementation Report (Web application shell)
 
-**Date:** 2026-10-12 · **Branch:** `feature/phase-1a` · **Status:** Implemented — awaiting product-owner review
+**Date:** 2026-10-12 (review follow-up 2026-10-13, §13) · **Branch:** `feature/phase-1a` · **Status:** Implemented — awaiting product-owner review
 **Plan:** `PHASE_01C_PLAN.md` (approved, A17) · Task-by-task reports: `PHASE_01C_PROGRESS.md` (1C-01 … 1C-08).
 No real platform integration (Shopify, WooCommerce, Google Ads, Meta, GA4) was started.
 
@@ -24,7 +24,7 @@ Everything runs against the real API. The signed-in pages are client-rendered an
 | 1C-04 | Sign up, verify email, resend, sign in/out, forgot/reset password; session handling and redirect back after sign-in |
 | 1C-05 | Create/switch organization, settings, members (change role, remove), invitations (send, revoke, accept) |
 | 1C-06 | Account security: sessions (sign out a device / everywhere), change password; fix: a wrong password no longer ends the session |
-| 1C-07 | Connections pages; `formatMetric` ("never show unavailable data as 0") |
+| 1C-07 | Connections pages; `formatMetric` helper ("never show unavailable data as 0") — tested and ready, but no page shows metrics until Phase 2 |
 | 1C-08 | End-to-end + accessibility suite, CI jobs, web Docker image, docs; two defects found and fixed (§7) |
 
 Frontend size: 94 source files, 23 unit/component test files, 6 end-to-end spec files. Backend changes in Phase 1C: only 1C-03.
@@ -34,7 +34,7 @@ Frontend size: 94 source files, 23 unit/component test files, 6 end-to-end spec 
 | # | Criterion | Result | Evidence |
 |---|---|---|---|
 | 1 | The journey works in a browser against the real API, locally and in CI | ✅ locally · CI job ready, not yet run on GitHub | `e2e/journey.spec.ts` passes (3 consecutive runs, one exactly as CI runs it). CI runs on a pull request (see §9) |
-| 2 | No token, CSRF value or secret in browser storage, URLs (after load), logs or the Next.js server | ✅ | e2e: storage + readable cookies checked on every audited page; CSRF header value never stored; email tokens removed from the address; platform tokens never in the page; source-rules test + lint forbid storage/cookie access; no server-side secrets (only the public API address) |
+| 2 | No token, CSRF value or secret in browser storage, URLs (after load), logs or the Next.js server | ✅ | e2e: storage + readable cookies checked on every audited page; CSRF header value never stored; email tokens removed from the address; platform tokens never in the page; source-rules test + lint forbid storage/cookie access. **Logs:** backend tests (1A/1B) prove platform tokens never reach the API/worker logs and that log scrubbing works; the Next.js server never receives tokens or secrets (only the public API address) — the e2e suite itself does not read logs |
 | 3 | Every page passes axe with zero serious/critical violations and works with keyboard only | ✅ (automated) | axe on 25 page states: **0 violations of any severity**; `keyboard.spec.ts`. A by-hand screen-reader pass is suggested (§8) |
 | 4 | A user never sees another organization's data | ✅ | `tenant-boundary.spec.ts`: outsider gets "Page not found" on overview, members, settings, connections and a connection; API answers 404. Backend tenant-isolation suite unchanged and passing |
 | 5 | Lint, format, strict types, unit coverage ≥ 85 %, e2e suite, backend `make check` | ✅ | §5 |
@@ -59,7 +59,7 @@ Frontend size: 94 source files, 23 unit/component test files, 6 end-to-end spec 
 
 | Suite | Result |
 |---|---|
-| Frontend unit/component (Vitest) | **247 passed** · 98.1 % statements, 91.5 % branches, 98.4 % functions, 99.2 % lines (gate 85 %) |
+| Frontend unit/component (Vitest) | **251 passed** · 98.1 % statements, 91.5 % branches, 98.4 % functions, 99.2 % lines (gate 85 %) |
 | End-to-end + accessibility (Playwright + axe) | **9 passed** · axe 0 violations on 25 page states · 0 CSP violations · 0 script errors |
 | Static | ESLint (0 warnings), Prettier, strict `tsc`, API-type drift tests: pass |
 | Production dependency audit | 0 vulnerabilities |
@@ -67,7 +67,7 @@ Frontend size: 94 source files, 23 unit/component test files, 6 end-to-end spec 
 
 ## 6. CI and Docker (plan §10)
 
-- CI jobs: `lint-type`, `test`, `security` (existing) + **`frontend`** (install, lint, format, types, drift + unit tests with coverage, audit, build) + **`e2e`** (PostgreSQL, Redis, Mailpit, migrations, API, worker, built web app, Playwright with axe; report and logs uploaded on failure) + **`docker`** (API and web images). Checked with `actionlint`.
+- CI jobs: `lint-type`, `test`, `security` (existing) + **`frontend`** (install, lint, format, types, drift + unit tests with coverage, audit, build) + **`e2e`** (PostgreSQL, Redis, Mailpit, migrations, API, worker, the web app run as the same standalone server the Docker image uses, Playwright with axe; report and logs uploaded on failure) + **`docker`** (API and web images). Checked with `actionlint`.
 - `infrastructure/docker/web.Dockerfile`: Node 24, multi-stage, standalone output, non-root user, API address as a build argument. `docker compose up --build` now also starts `web` on port 3000.
 
 ## 7. Defects found during Phase 1C (all fixed)
@@ -77,6 +77,7 @@ Found by browser testing and the new suite; each now has a test.
 - 1C-05: a second invitation link in the same tab was ignored; tables widened the page on phones; the table scroll area was not keyboard-focusable.
 - 1C-06: a wrong current password signed the person out (every 401 was treated as "session ended").
 - 1C-08: signing out inside an organization page kept a return address to it, so the next person on that browser was sent there; the Overview page's text was out of date after 1C-07.
+- Review follow-up (2026-10-13): a sync whose progress could no longer be read kept polling and left "Sync now" stuck; an empty account list kept saying "Looking for accounts…" forever (§13).
 
 ## 8. Deviations from the plan
 
@@ -87,7 +88,7 @@ Each task's deviations are listed in `PHASE_01C_PROGRESS.md`. The ones that matt
 4. **`GET /providers`** is available to any signed-in user (plan said "authenticated") and includes `auth_scheme` and `test_only` (1C-03).
 5. **Keyboard pass is automated**; a by-hand screen-reader pass has not been done (1C-08).
 6. **End-to-end tests run in Chromium only** (1C-08).
-7. **CI raises sign-up/sign-in rate limits for its throwaway stack only**, because the suite creates 8 accounts from one address (1C-08).
+7. **CI raises sign-up/sign-in rate limits for its throwaway stack only**, because the suite creates 9 accounts from one address (1C-08). Local Docker runs can raise them the same way from the shell; defaults are unchanged.
 8. **Root `.dockerignore`** added (1C-08).
 
 ## 9. Not verified in this environment
@@ -118,3 +119,20 @@ The web app is a separate application. Removing the `web` service, `web.Dockerfi
 2. Open a pull request `feature/phase-1a → main` so GitHub CI runs every job, including end-to-end and Docker.
 3. Start external approvals now (they set the calendar for Phases 2A–4): Shopify Partner account + development store, Google Ads developer token, Meta app review.
 4. Phase 2A (Shopify, read-only) starts only after its plan is approved.
+
+## 13. Review follow-up (2026-10-13)
+
+An independent re-check of Phase 1C (a separate reviewer reading all code, CI, Docker and docs, plus a full re-run of every suite) found no high-severity issues and these problems, all fixed:
+
+| # | Problem | Fix |
+|---|---|---|
+| 1 | If a job's progress could not be read (role changed mid-sync, short API outage), the page polled every 2 s forever and "Sync now" / "Check for new accounts" stayed disabled | Polling stops on an error; the reason is shown and the button works again. A failed or abandoned "check for new accounts" job is now reported |
+| 2 | An empty account list kept saying "Looking for accounts…" indefinitely. The 1C-07 report said the page explains this after a minute — **that statement was wrong** | After about a minute the page says "No accounts found yet" and points to "Check for new accounts" (viewers see "No accounts were found") |
+| 3 | README's Docker route for the e2e suite could not work (port 3000 clash; Docker's sign-up limit of 5/hour) | Docker rate limits can be raised from the shell for local test runs (defaults unchanged); README rewritten with two working routes |
+| 4 | The keyboard test set focus by script in places, so it could pass even if a control was unreachable by Tab | Every control is now reached with Tab / Shift+Tab only |
+| 5 | CI ran `next start`, not the standalone server the Docker image ships | New `npm run start:standalone` (same server as the image); CI and README use it |
+| 6 | This report: "8 accounts" (it is 9); the "logs" evidence was not stated; `formatMetric` read as if in use | Corrected in §2, §3, §8 |
+| 7 | PROJECT_STATUS: out-of-date review item, wrong statement that CI runs "after the push", entries out of order | Corrected |
+
+Results after the fixes: frontend **251 passed** (+4), e2e **9 passed** (standalone server, CI rate limits, separate worker), backend unchanged (281 passed). No backend or database changes.
+

@@ -125,12 +125,12 @@ jobs:
           uv run alembic upgrade head
           nohup uv run uvicorn app.main:create_app --factory --port 8000 > "$RUNNER_TEMP/api.log" 2>&1 &
           nohup uv run celery -A app.workers.celery_app:celery_app worker --loglevel=INFO > "$RUNNER_TEMP/worker.log" 2>&1 &
-      - name: Build and start the web app
+      - name: Build and start the web app (standalone server, as in the Docker image)
         working-directory: frontend
         run: |
           npm ci
           npm run build
-          nohup npm start > "$RUNNER_TEMP/web.log" 2>&1 &
+          nohup npm run start:standalone > "$RUNNER_TEMP/web.log" 2>&1 &
       - name: Wait for the stack
         run: |
           for url in http://localhost:8000/api/v1/health/ready http://localhost:3000/sign-in http://localhost:8025/api/v1/messages; do

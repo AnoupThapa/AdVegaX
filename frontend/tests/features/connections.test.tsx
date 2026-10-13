@@ -410,6 +410,111 @@ describe("Connection detail", () => {
     expect(await screen.findByText(/Looking for accounts/)).toBeInTheDocument();
   });
 
+  it("stops saying 'looking' after about a minute and offers to check again", async () => {
+    let polls = 0;
+    detail("owner", {
+      [`GET ${ORG_PATH}/connections/${CONN}/resources`]: () => {
+        polls += 1;
+        return ok([]);
+      },
+    });
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      expect(await screen.findByText(/Looking for accounts/)).toBeInTheDocument();
+      for (let i = 0; i < 25; i++) {
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(3100);
+        });
+      }
+      expect(await screen.findByText(/No accounts found yet/)).toBeInTheDocument();
+      expect(screen.queryByText(/Looking for accounts/)).toBeNull();
+      expect(screen.getByRole("button", { name: "Check for new accounts" })).toBeEnabled();
+      const settledPolls = polls;
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(10_000);
+      });
+      expect(polls, "no more re-checks once it has given up").toBe(settledPolls);
+      expect(polls).toBeLessThanOrEqual(21);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("a sync whose progress cannot be read stops polling and frees the button", async () => {
+    let jobPolls = 0;
+    detail("owner", {
+      [`GET ${ORG_PATH}/connections/${CONN}/resources`]: ok([resource("r1", { linked: true })]),
+      [`POST ${ORG_PATH}/resources/r1/sync`]: ok(
+        {
+          id: "j1",
+          job_type: "resource.sync",
+          status: "queued",
+          attempts: 0,
+          max_attempts: 5,
+          last_error_code: null,
+        },
+        202,
+      ),
+      [`GET ${ORG_PATH}/jobs/j1`]: () => {
+        jobPolls += 1;
+        return fail(404, "NOT_FOUND");
+      },
+    });
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      click(await screen.findByRole("button", { name: "Sync Account r1 now" }));
+      expect(await screen.findByText(/Sync status unavailable/)).toBeInTheDocument();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(10_000);
+      });
+      expect(jobPolls).toBe(1);
+      expect(screen.getByRole("button", { name: "Sync Account r1 now" })).not.toHaveAttribute(
+        "aria-busy",
+        "true",
+      );
+      expect(screen.getByRole("button", { name: "Sync Account r1 now" })).toBeEnabled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("a failed check for new accounts says so", async () => {
+    detail("owner", {
+      [`GET ${ORG_PATH}/connections/${CONN}/resources`]: ok([resource("r1")]),
+      [`POST ${ORG_PATH}/connections/${CONN}/rediscover`]: ok(
+        {
+          id: "j3",
+          job_type: "connection.discover",
+          status: "queued",
+          attempts: 0,
+          max_attempts: 5,
+          last_error_code: null,
+        },
+        202,
+      ),
+      [`GET ${ORG_PATH}/jobs/j3`]: ok({
+        id: "j3",
+        job_type: "connection.discover",
+        status: "dead",
+        attempts: 5,
+        max_attempts: 5,
+        last_error_code: "auth_expired",
+      }),
+    });
+    await screen.findByRole("table", { name: "1 account" });
+    click(screen.getByRole("button", { name: "Check for new accounts" }));
+    expect(await screen.findByText(/The check for new accounts did not finish/)).toHaveTextContent(
+      /reconnect/,
+    );
+    expect(screen.getByRole("button", { name: "Check for new accounts" })).toBeEnabled();
+  });
+
+  it("viewers are told plainly when no accounts were found", async () => {
+    detail("viewer", { [`GET ${ORG_PATH}/connections/${CONN}/resources`]: ok([]) });
+    expect(await screen.findByText(/Looking for accounts/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Check for new accounts" })).toBeNull();
+  });
+
   it("checks for new accounts and refreshes when the job ends", async () => {
     let done = false;
     detail("owner", {

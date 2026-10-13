@@ -321,7 +321,7 @@ Two Claude sessions each built 1C-05 from the same starting point (1C-04). The p
 
 **Deviations**
 1. Added a small `/connections` landing page: the API's return address has no organization in its path (1C-03 design), so the page forwards to the organization's Connections page.
-2. Discovery is checked for about a minute after connecting; if accounts still are not found, the page says so and offers "Check for new accounts" instead of polling forever.
+2. Discovery is checked for about a minute after connecting. *(Corrected 2026-10-13: this report originally said the page then explains that no accounts were found — it did not; it kept saying "Looking for accounts…". Fixed in the review follow-up below.)*
 3. Test-only fix during the task: `goToExternal` accepts an optional navigation function so tests do not need to replace `window.location` (which jsdom does not allow).
 
 **Blocked:** none.
@@ -358,7 +358,7 @@ Two Claude sessions each built 1C-05 from the same starting point (1C-04). The p
 
 **Security**
 - No change to what the API accepts. The e2e suite now proves on every run: nonce CSP on every page, no browser storage, HttpOnly cookies, tokens removed from addresses, platform tokens never in the page, tenant boundary, and unsafe return addresses ignored.
-- The CI stack raises the sign-up and sign-in rate limits **for the throwaway CI stack only** (the suite creates 8 accounts from one address). Defaults are unchanged everywhere else.
+- The CI stack raises the sign-up and sign-in rate limits **for the throwaway CI stack only** (the suite creates 9 accounts from one address). Defaults are unchanged everywhere else.
 
 **Migration:** none.
 
@@ -373,4 +373,23 @@ Two Claude sessions each built 1C-05 from the same starting point (1C-04). The p
 **Not verified here:** the CI jobs on GitHub. The workflow runs on pull requests and on pushes to `main`. A push to `feature/phase-1a` alone does not start it; opening a pull request to `main` does.
 
 **Next:** Phase 1C is complete — see `PHASE_01C_REPORT.md`. Waiting for product-owner review of Phase 1 (1A, 1B, 1C).
+
+---
+
+## Review follow-up — Phase 1C re-check (2026-10-13)
+
+Independent re-check requested by the product owner (separate reviewer + full re-run of all suites). No high-severity issues. Fixed:
+1. **Stuck "Sync now":** a job whose progress cannot be read (e.g. role changed mid-sync, API briefly unavailable) is no longer polled forever; the reason is shown and the button works again. A failed or abandoned "check for new accounts" job is reported (`features/connections/api.ts`, `ResourceRow.tsx`, `ConnectionDetailPage.tsx`).
+2. **"Looking for accounts…" forever:** after about a minute the page says "No accounts found yet" and points to "Check for new accounts" (viewers: "No accounts were found"). Corrects the wrong statement in the 1C-07 report.
+3. **Docker route for e2e:** compose rate limits can be raised from the shell for local test runs (defaults unchanged); README rewritten with two working routes.
+4. **Keyboard test** reaches every control with Tab / Shift+Tab only (no focus set by script).
+5. **Standalone server:** `npm run start:standalone` runs the same server as the Docker image; CI's e2e job and the README use it.
+6. **Report corrections:** 9 (not 8) accounts; how "no tokens in logs" is evidenced; `formatMetric` is ready but not yet shown on any page.
+7. **PROJECT_STATUS** corrections (stale review item, CI trigger statement, entry order).
+
+**Files changed (13):** new `frontend/scripts/start-standalone.mjs`; modified `frontend/features/connections/{api.ts,ResourceRow.tsx,ConnectionDetailPage.tsx}`, `frontend/tests/features/connections.test.tsx`, `frontend/e2e/keyboard.spec.ts`, `frontend/package.json`, `.github/workflows/ci.yml`, `docker-compose.yml`, `README.md`, `docs/phases/PHASE_01C_REPORT.md`, this file, `docs/PROJECT_STATUS.md`. Backend: none. Deleted: none.
+
+**Tests:** frontend 251 passed (+4: discovery gives up after a minute; unreadable job stops polling and frees the button; failed discovery job reported; viewer wording) · coverage 98.1 % statements · e2e 9 passed against the standalone server with CI settings · ESLint, Prettier, strict `tsc`, build, audit (0), `actionlint`: pass.
+
+**Next:** Phase 1 review by the product owner; then the Phase 2A plan.
 

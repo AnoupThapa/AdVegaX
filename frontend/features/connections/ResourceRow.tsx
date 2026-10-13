@@ -88,15 +88,20 @@ export function ResourceRow({
     sync.mutate(resource.id, { onSuccess: (queued) => setJobId(queued.id), onError: fail });
   }
 
-  const jobText = job.data
-    ? `Sync: ${JOB_STATUS[job.data.status] ?? job.data.status}${
-        job.data.last_error_code && job.data.status !== "succeeded"
-          ? ` — ${connectError(job.data.last_error_code)}`
-          : ""
-      }`
-    : jobId
-      ? "Sync: Waiting to start"
-      : null;
+  // A job that can no longer be read (role changed, API unavailable) stops being followed, so
+  // the button becomes usable again and the reason is shown.
+  const settled = finished || Boolean(job.error);
+  const jobText = job.error
+    ? `Sync status unavailable — ${messageFor(job.error)}`
+    : job.data
+      ? `Sync: ${JOB_STATUS[job.data.status] ?? job.data.status}${
+          job.data.last_error_code && job.data.status !== "succeeded"
+            ? ` — ${connectError(job.data.last_error_code)}`
+            : ""
+        }`
+      : jobId
+        ? "Sync: Waiting to start"
+        : null;
 
   return (
     <tr>
@@ -148,7 +153,7 @@ export function ResourceRow({
           {canManage && connectionActive && resource.linked ? (
             <Button
               variant="secondary"
-              busy={sync.isPending || (jobId !== null && !finished)}
+              busy={sync.isPending || (jobId !== null && !settled)}
               aria-label={`Sync ${name} now`}
               onClick={requestSync}
             >

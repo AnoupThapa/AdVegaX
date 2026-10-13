@@ -12,6 +12,12 @@ x-backend-env: &backend-env
   CORS_ALLOWED_ORIGINS: http://localhost:3000
   SMTP_HOST: mailpit
   SMTP_PORT: "1025"
+  # Rate limits: approved defaults; override from the shell only for local test runs
+  # (the end-to-end suite creates several accounts from one address — see README).
+  THROTTLE_REGISTER_PER_IP_PER_HOUR: ${THROTTLE_REGISTER_PER_IP_PER_HOUR:-5}
+  THROTTLE_LOGIN_PER_IP_PER_MINUTE: ${THROTTLE_LOGIN_PER_IP_PER_MINUTE:-20}
+  THROTTLE_LOGIN_PER_ACCOUNT_IP_PER_MINUTE: ${THROTTLE_LOGIN_PER_ACCOUNT_IP_PER_MINUTE:-5}
+  THROTTLE_EMAIL_ACTION_PER_IP_PER_HOUR: ${THROTTLE_EMAIL_ACTION_PER_IP_PER_HOUR:-10}
 
 services:
   postgres:

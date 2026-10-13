@@ -140,8 +140,23 @@ function Detail({ connectionId }: { connectionId: string }) {
         {resources.isPending ? <p role="status">Loading accounts…</p> : null}
         {resources.data?.length === 0 ? (
           <p role="status">
-            {active ? "Looking for accounts… this can take a moment." : "No accounts were found."}
+            {resources.stillLooking
+              ? "Looking for accounts… this can take a moment."
+              : active && manage
+                ? "No accounts found yet. If you expected some, use “Check for new accounts”, or check what access was granted on the platform."
+                : "No accounts were found."}
           </p>
+        ) : null}
+        {discovery.data?.status === "failed" || discovery.data?.status === "dead" ? (
+          <Alert tone="error">
+            The check for new accounts did not finish —{" "}
+            {connectError(discovery.data.last_error_code)}
+          </Alert>
+        ) : null}
+        {discovery.error ? (
+          <Alert tone="error">
+            Could not follow the check for new accounts — {messageFor(discovery.error)}
+          </Alert>
         ) : null}
         {resources.data?.length ? (
           <div className={styles.tableWrap}>
@@ -180,7 +195,10 @@ function Detail({ connectionId }: { connectionId: string }) {
           <p>
             <Button
               variant="secondary"
-              busy={rediscover.isPending || (discoveryJob !== null && !discoveryDone)}
+              busy={
+                rediscover.isPending ||
+                (discoveryJob !== null && !discoveryDone && !discovery.error)
+              }
               onClick={() =>
                 rediscover.mutate(undefined, {
                   onSuccess: (job) => {
