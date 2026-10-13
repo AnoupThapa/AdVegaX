@@ -126,6 +126,7 @@ Tests: `tests/security/test_ssrf.py` (81 cases).
 - **Health:** auth failures mark the connection `expired`, permission failures `error`; both audited (`connection.health_changed`) with codes only.
 - **Jobs:** handlers run under the job's tenant context, so a job cannot touch another tenant's rows (`test_job_cannot_cross_tenants`); errors stored as codes only; dead-letter after `JOB_MAX_ATTEMPTS`.
 - **Fake provider:** registered only outside staging/production; the registry refuses test-only providers when deployed.
+- **Shopify connect (2A-03):** read-only scopes; callback and install requests HMAC-verified (constant time) with the serving app's client secret; store address validated against Shopify's anchored pattern; the callback's `shop` must equal the shop held in the server-side state; installs older than 5 minutes refused (replay); client secrets only from settings (hidden from reprs and logs) and sent in the request body, never a URL; tokens encrypted at rest; response bodies never logged. **One live connection per platform account across organizations**, checked with a narrow system-role lookup *before* the token exchange (a second exchange would retire the first organization's token).
 
 ## 11. Web application (Phase 1C)
 

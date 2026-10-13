@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from decimal import Decimal
 from enum import StrEnum
@@ -49,10 +50,24 @@ class ResourceDescriptor:
 
 
 @dataclass(frozen=True)
+class PreparedConnect:
+    """Validated, normalized connect parameters (e.g. a Shopify shop domain).
+
+    ``account_id`` identifies the single platform account the connection will reach, when the
+    platform has that notion; the core uses it to enforce one live connection per account
+    across organizations *before* any token exchange (Q6, PHASE_02A_PLAN §6.4).
+    """
+
+    params: dict[str, str] = field(default_factory=dict)
+    account_id: str | None = None
+
+
+@dataclass(frozen=True)
 class AuthorizationRequest:
     state: str
     redirect_uri: str
     code_challenge: str | None = None
+    provider_params: Mapping[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -63,6 +78,9 @@ class ConnectResult:
     granted_scopes: tuple[str, ...] = ()
     account_label: str | None = None
     token_expires_in_seconds: int | None = None
+    refresh_expires_in_seconds: int | None = None
+    # Stable platform account identifier (e.g. shop domain); see ``PreparedConnect``.
+    external_account_id: str | None = None
 
 
 @dataclass(frozen=True)

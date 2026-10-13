@@ -93,6 +93,10 @@ const MESSAGES: Readonly<Record<string, string>> = {
   SERVICE_UNAVAILABLE: "The service is temporarily unavailable. Please try again shortly.",
   HTTP_ERROR: "This request could not be completed. Please try again.",
   UNKNOWN_PROVIDER: "This platform is not available.",
+  ACCOUNT_IN_USE:
+    "This account is already connected to another AdVegaX organization. Ask its owner to disconnect it first.",
+  INVALID_CONNECT_PARAMS:
+    "Check the details you entered for this platform (for example the store address).",
   CONNECTION_NOT_ACTIVE: "This connection is not active. Reconnect the platform first.",
   RESOURCE_NOT_LINKABLE: "This account is no longer accessible through its connection.",
   ALREADY_LINKED: "This account is already linked to the organization.",

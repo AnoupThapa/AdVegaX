@@ -18,6 +18,7 @@ from app.api.deps import (
 from app.api.responses import Envelope, ok
 from app.domains.identity.principal import Principal
 from app.domains.integrations.schemas import (
+    AuthorizationStartIn,
     AuthorizationStartOut,
     ConnectionOut,
     JobOut,
@@ -47,9 +48,12 @@ def list_connections(ctx: TenantDep, svc: IntegrationsDep) -> Envelope[list[Conn
     f"{ORG}/connections/{{provider}}/start", response_model=Envelope[AuthorizationStartOut]
 )
 def start_connection(
-    provider: str, ctx: TenantDep, svc: IntegrationsDep
+    provider: str,
+    ctx: TenantDep,
+    svc: IntegrationsDep,
+    body: AuthorizationStartIn | None = None,
 ) -> Envelope[AuthorizationStartOut]:
-    return ok(svc.start(ctx, provider))
+    return ok(svc.start(ctx, provider, body.params if body else None))
 
 
 @router.get("/connections/{provider}/callback", include_in_schema=False)
@@ -63,6 +67,15 @@ def connection_callback(
     return RedirectResponse(
         svc.complete(principal, provider, params), status_code=status.HTTP_303_SEE_OTHER
     )
+
+
+@router.get("/connections/{provider}/install", include_in_schema=False)
+def connection_install(provider: str, request: Request, svc: IntegrationsDep) -> RedirectResponse:
+    """Platform-initiated install (e.g. a Shopify install link). Public, signature-verified,
+    stores nothing: it only sends the browser to the web app to sign in and pick the
+    organization (PHASE_02A_PLAN §6.2)."""
+    params = {k: v[:_MAX_PARAM] for k, v in request.query_params.items()}
+    return RedirectResponse(svc.install(provider, params), status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.get(f"{ORG}/connections/{{connection_id}}", response_model=Envelope[ConnectionOut])

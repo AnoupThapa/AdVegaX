@@ -67,6 +67,19 @@ Add one section per provider when its phase is implemented.
 - **Revocation:**
 - **Known limitations:**
 
+### Shopify (`shopify`) — Phase 2A, in progress
+- **Category / auth scheme:** commerce / OAuth 2 authorization-code grant (standalone app), **expiring offline tokens** (`expiring=1`: access 1 h, refresh 90 days, rotated on refresh). No PKCE (Shopify does not use it).
+- **API version and docs verified on:** GraphQL Admin API `2026-10`; facts verified against shopify.dev on **2026-10-13** (`PHASE_02A_PLAN.md §4.1`). Live development-store checks deferred (option C, A18) — see "To confirm live".
+- **Scopes:** `read_products`, `read_inventory`, `read_orders` (read-only); `read_all_orders` to be requested for 13-month history (Q9). A granted `write_x` satisfies `read_x`. Fewer scopes than required → `missing_scopes`.
+- **Configuration:** `SHOPIFY_APPS` JSON list of `{client_id, client_secret, shops}` — several apps because custom distribution serves one merchant per app; `shops: ["*"]` for a development/public app. Shopify is offered only when at least one app is configured.
+- **Connect:** start with the store address (`shop_domain`) or from a Shopify install link (`GET /connections/shopify/install`, HMAC + 5-minute freshness). Callback: HMAC with the serving app's secret, `shop` must equal the shop in the server-side state, then the token exchange. **One live connection per store across organizations**, checked before the exchange. Reconnect reuses the connection.
+- **Resources discovered:** exactly one `store` (`shop.id` GID, name, currency, IANA time zone); the token must answer for the same `myshopifyDomain`.
+- **Capabilities:** app install, webhooks, product cost, inventory, refund lines, presentment currency. **No token revocation** declared (no documented app-initiated revoke for this flow).
+- **Rate limits:** cost-based (100/200/1,000 points per second by plan); `THROTTLED` and 429 → `rate_limited`. Cost-aware limiting in 2A-07.
+- **Errors:** 401 → `auth_expired`; 402/403/423/`ACCESS_DENIED` → `permission_denied`; 404 → `not_found`; 429/`THROTTLED` → `rate_limited`; 5xx/invalid JSON → retryable. Response bodies and Shopify messages never enter errors or logs.
+- **Data synchronized:** none yet (2A-06/2A-07).
+- **To confirm live (development store):** exact scope behaviour incl. whether `Order.customer.id` needs `read_customers`; bulk query shapes; app-initiated revocation; bulk-download host; `read_all_orders` and expiring tokens for custom-distribution apps; Sales-report reproduction (Step 0, plan §4.2).
+
 ### Fake provider (`fake`) — test/local only
 - **Category / auth scheme:** advertising / OAuth 2 with PKCE.
 - **Resources:** two ad accounts (AUD, USD) and one store (NPR) by default; configurable.

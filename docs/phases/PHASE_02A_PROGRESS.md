@@ -6,7 +6,7 @@ Plan: `PHASE_02A_PLAN.md` (approved 2026-10-13, A18, option C: live Shopify chec
 |---|---|
 | 2A-01 Step 0 on a development store (live) | ⏸ Deferred — needs network access to Shopify or a staging server (plan §2A) |
 | 2A-02 Data model and migrations | ✅ Done — awaiting review |
-| 2A-03 Shopify connect | Not started |
+| 2A-03 Shopify connect | ✅ Done — awaiting review |
 | 2A-04 Token lifecycle | Not started |
 | 2A-05 Webhook intake | Not started |
 | 2A-06 HTTP client extensions, GraphQL client, initial import | Not started |
@@ -93,3 +93,86 @@ Plan: `PHASE_02A_PLAN.md` (approved 2026-10-13, A18, option C: live Shopify chec
 - reconnecting without duplicating data.
 
 All of it is built against Shopify's documented formats and tested with recorded responses.
+
+---
+
+## 2A-03 — Shopify connect (2026-10-13)
+
+**Completed**
+- **Shopify provider** (`app/providers/shopify/`): read-only, GraphQL Admin API `2026-10`.
+  - **Connect from AdVegaX:** the person enters the store address. A bare name, `name.myshopify.com` or a pasted store URL all work. The app then goes to Shopify's approval page with read-only permissions: products, inventory and orders.
+  - **Shopify's reply is checked before anything happens:**
+    - its **signature** (HMAC, compared in constant time) using that store's app secret;
+    - that it is about **the same store** the person started with (the store is kept on the server, never trusted from the browser);
+    - that **all needed permissions were approved**.
+  - **Expiring tokens** (`expiring=1`, required for new Shopify apps): access token valid 1 hour, refresh token 90 days. Both are stored encrypted with their expiry times. Refreshing them is the next task (2A-04).
+  - **Store discovery:** finds exactly one store, with name, currency and time zone. It refuses a token that answers for a different store.
+  - **Connect from Shopify (install link):** Shopify's signature and a 5-minute freshness limit are checked. Nothing is stored at this point: the browser is sent to the web app, where the person signs in and chooses the organization. That screen comes in 2A-10.
+  - **Several Shopify apps:** one per merchant, as custom distribution requires. Each app lists which stores it serves.
+  - Shopify is only offered when an app is configured. Secrets come from settings only, are hidden from logs and never go in a URL.
+- **One store, one organization (Q6):**
+  - Checked when connecting starts and again **before the token exchange**. Exchanging would retire the other organization's token at Shopify.
+  - The database rule from 2A-02 catches a simultaneous attempt by two organizations.
+  - The person sees: "This account is already connected to another AdVegaX organization…"
+- **Reconnecting keeps everything:** the same organization reconnecting the same store reuses its connection, store and links. This also works after a disconnect. It is audited as `connection.reconnected`.
+- **Framework (additive; the test platform is unchanged):**
+  - The start request takes optional connect details.
+  - The connect state carries those details on the server only.
+  - Providers get two new steps: validating connect details and verifying an install.
+  - Stored credentials are now updated on reconnect, and the refresh-token expiry is recorded.
+- **Web app:** messages for the new error codes. The Shopify connect form and the "Choose organization" page come in 2A-10.
+- **Shopify simulator for tests** (`tests/shopify_sim.py`): speaks Shopify's documented token and GraphQL formats behind the real safe HTTP client and records every request. No network is used.
+
+**Files changed** (30, plus status documents)
+- New (6):
+  - `app/providers/shopify/` — `__init__.py`, `config.py`, `shops.py`, `signatures.py`, `admin_api.py`, `provider.py`.
+  - Tests are listed separately below.
+- Modified (21):
+  - `app/core/settings.py` (Shopify settings), `app/runtime.py`.
+  - `app/providers/base/` — `types.py`, `interfaces.py`, `capabilities.py`, `errors.py`, `registry.py`; `app/providers/fake/provider.py`.
+  - `app/domains/integrations/` — `service.py`, `router.py`, `schemas.py`, `connect_state.py`, `credentials.py`.
+  - `.env.example`; docs: `API_SPECIFICATION.md`, `INTEGRATION_GUIDES.md`, `SECURITY.md`.
+  - Frontend: `lib/api/openapi.json` and `schema.d.ts` (regenerated), `lib/api/errors.ts`, `features/connections/labels.ts`.
+- Tests (3 new): `tests/shopify_sim.py`, `tests/providers/test_shopify.py` (49), `tests/api/test_shopify_connect.py` (25).
+- Deleted: none. No migration.
+
+**Tests**
+- **74 new tests**, including:
+  - store-address rules, including `shop.myshopify.com.attacker.example`;
+  - the signature algorithm;
+  - configuration parsing that never echoes secrets;
+  - the authorization address (read-only permissions, secret never in the URL);
+  - token exchange (form body, `expiring=1`);
+  - tampered callback, wrong store and too few permissions: **no token exchange happens**;
+  - token-endpoint and GraphQL errors normalized without echoing response bodies;
+  - install signature and freshness;
+  - the full API flow through the real database and job runner;
+  - viewers refused;
+  - a second organization refused at start, refused **before the exchange** when both started together, and refused by the database in a race;
+  - reconnect reuses the connection and keeps links, also after a disconnect;
+  - a disconnected store can move to another organization;
+  - audit entries, with no tokens in audit or logs;
+  - the test platform still refuses connect details;
+  - Shopify is offered only when configured, and bad configuration fails at startup.
+- **Backend `make check`: 371 passed**, coverage 97.7 % (security-critical 99 %); ruff, mypy --strict: pass.
+- Frontend: 251 passed, check and build pass; **e2e 9 passed** (test-platform journey unchanged).
+
+**Security**
+- No secrets in URLs, logs, audit or responses.
+- Every Shopify request is signature-checked before any action.
+- Install requests are replay-limited.
+- Shopify hosts are restricted to validated `*.myshopify.com` names, through the SSRF-safe client.
+- The cross-organization check uses a narrow, read-only system lookup.
+
+**Migration:** none (uses 0007 from 2A-02).
+
+**Deviations**
+1. **The install route is a generic `GET /connections/{provider}/install`** rather than Shopify-only, so a future platform with installs reuses it. Platforms that don't declare the capability answer `unsupported`.
+2. **Shopify does not use PKCE.** The CSRF protection for the flow is the single-use server-side state plus Shopify's HMAC.
+3. **Disconnect** deletes AdVegaX's tokens but cannot revoke them at Shopify: no app-initiated revocation is documented for this flow (to confirm live). The web app will tell the person to also uninstall the app in Shopify (2A-10).
+4. **Configuration is validated when the provider registry is built** (at startup), not in the settings module. This keeps platform code out of the core (architecture rule D19, caught by the static test).
+
+**Blocked:** none. Live confirmation on a development store is still deferred (option C).
+
+**Next task:** 2A-04 — token lifecycle: refresh before expiry with a per-store lock, rotation, keeping the 90-day refresh token alive, failure → "Needs reconnecting", and disconnect/uninstall handling.
+

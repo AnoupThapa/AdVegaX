@@ -649,6 +649,18 @@ export interface components {
             /** Result */
             result: string;
         };
+        /**
+         * AuthorizationStartIn
+         * @description Optional connect parameters, e.g. ``{"params": {"shop_domain": "eve-zone"}}`` for Shopify.
+         *
+         *     Each provider validates its own parameters; unknown keys are refused.
+         */
+        AuthorizationStartIn: {
+            /** Params */
+            params?: {
+                [key: string]: string;
+            };
+        };
         /** AuthorizationStartOut */
         AuthorizationStartOut: {
             /** Authorize Url */
@@ -1935,7 +1947,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AuthorizationStartIn"] | null;
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

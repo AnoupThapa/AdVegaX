@@ -110,6 +110,21 @@
         "title": "AuditLogOut",
         "type": "object"
       },
+      "AuthorizationStartIn": {
+        "description": "Optional connect parameters, e.g. ``{\"params\": {\"shop_domain\": \"eve-zone\"}}`` for Shopify.\n\nEach provider validates its own parameters; unknown keys are refused.",
+        "properties": {
+          "params": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "maxProperties": 5,
+            "title": "Params",
+            "type": "object"
+          }
+        },
+        "title": "AuthorizationStartIn",
+        "type": "object"
+      },
       "AuthorizationStartOut": {
         "properties": {
           "authorize_url": {
@@ -2716,6 +2731,23 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/AuthorizationStartIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {

@@ -13,9 +13,10 @@ from datetime import datetime, timedelta
 from urllib.parse import urlencode
 
 from sqlalchemy import ColumnElement, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.errors import Conflict, Forbidden, NotFound
+from app.core.errors import Conflict, Forbidden, NotFound, ValidationFailed
 from app.core.security.tokens import generate_token
 from app.domains.audit.service import Actor, record_audit
 from app.domains.identity.principal import Principal
@@ -39,9 +40,10 @@ from app.domains.organizations.permissions import Permission, authorize
 from app.domains.organizations.service import OrganizationService
 from app.domains.organizations.tenancy import TenantContext
 from app.providers.base.capabilities import Capability
-from app.providers.base.errors import ProviderError
+from app.providers.base.errors import InvalidConnectParamsError, ProviderError
+from app.providers.base.interfaces import PlatformProvider
 from app.providers.base.pkce import pkce_challenge
-from app.providers.base.types import AuthorizationRequest
+from app.providers.base.types import AuthorizationRequest, ConnectResult
 from app.runtime import Runtime
 
 logger = logging.getLogger("advegax.integrations")
@@ -63,6 +65,28 @@ class ResourceNotLinkable(Conflict):
 class AlreadyLinked(Conflict):
     code = "ALREADY_LINKED"
     message = "This resource is already linked to the organization."
+
+
+class AccountInUse(Conflict):
+    code = "ACCOUNT_IN_USE"
+    message = (
+        "This account is already connected to another AdVegaX organization. "
+        "Ask its owner to disconnect it first."
+    )
+
+
+class InvalidConnectParams(ValidationFailed):
+    code = "INVALID_CONNECT_PARAMS"
+    message = "Check the details you entered for this platform (for example the store address)."
+
+
+class InstallNotSupported(NotFound):
+    code = "UNKNOWN_PROVIDER"
+    message = "This platform is not available."
+
+
+ACCOUNT_IN_USE_CODE = "account_in_use"
+MAX_PARAM_LENGTH = 255
 
 
 class NotLinked(Conflict):
@@ -133,14 +157,46 @@ class IntegrationService:
         return f"{self.rt.settings.APP_BASE_URL.rstrip('/')}/connections?{urlencode(params)}"
 
     # ----------------------------------------------------------- authorization flow
-    def start(self, ctx: TenantContext, provider_code: str) -> AuthorizationStartOut:
+    def _live_account_owner(self, provider: str, account_id: str) -> uuid.UUID | None:
+        """Organization holding a live connection to this platform account, if any (Q6).
+
+        A narrow system-role lookup: the app role cannot see other tenants' connections. It
+        answers only "connected elsewhere: yes/no" and never returns another tenant's data.
+        """
+        with self.rt.db.transaction(system=True) as session:
+            return session.execute(
+                select(ExternalConnection.organization_id)
+                .where(
+                    ExternalConnection.provider == provider,
+                    ExternalConnection.external_account_id == account_id,
+                    ExternalConnection.status != "revoked",
+                )
+                .limit(1)
+            ).scalar_one_or_none()
+
+    def start(
+        self, ctx: TenantContext, provider_code: str, params: dict[str, str] | None = None
+    ) -> AuthorizationStartOut:
         authorize(ctx, Permission.CONNECTIONS_MANAGE)
         provider = self.rt.providers.get(provider_code)
+        raw = params or {}
+        if any(len(k) > 64 or len(v) > MAX_PARAM_LENGTH for k, v in raw.items()):
+            raise InvalidConnectParams()
+        try:
+            prepared = provider.prepare_connect(raw)
+        except InvalidConnectParamsError:
+            raise InvalidConnectParams() from None
+        if prepared.account_id is not None:
+            owner = self._live_account_owner(provider.code, prepared.account_id)
+            if owner is not None and owner != ctx.organization_id:
+                raise AccountInUse()
         verifier = generate_token() if provider.capabilities.supports(Capability.PKCE) else None
         ttl = self.rt.settings.CONNECT_STATE_TTL
         state = create_state(
             self.rt.redis,
-            ConnectState(ctx.organization_id, ctx.user_id, provider.code, verifier),
+            ConnectState(
+                ctx.organization_id, ctx.user_id, provider.code, verifier, dict(prepared.params)
+            ),
             ttl,
         )
         url = provider.authorization_url(
@@ -148,6 +204,7 @@ class IntegrationService:
                 state=state,
                 redirect_uri=self._redirect_uri(provider.code),
                 code_challenge=pkce_challenge(verifier) if verifier else None,
+                provider_params=dict(prepared.params),
             )
         )
         with self.rt.db.transaction(org_id=ctx.organization_id, user_id=ctx.user_id) as session:
@@ -183,43 +240,116 @@ class IntegrationService:
             return self._app_redirect(status="cancelled", organization_id=org_param)
         provider = self.rt.providers.get(provider_code)
         try:
+            prepared = provider.prepare_connect(state.provider_params)
+        except InvalidConnectParamsError:
+            return self._app_redirect(
+                status="error", code="invalid_connect_params", organization_id=org_param
+            )
+        # Exchanging the code would retire another organization's token for this account on
+        # platforms like Shopify, so the one-live-connection rule is checked BEFORE it (Q6).
+        if prepared.account_id is not None:
+            owner = self._live_account_owner(provider.code, prepared.account_id)
+            if owner is not None and owner != ctx.organization_id:
+                return self._app_redirect(
+                    status="error", code=ACCOUNT_IN_USE_CODE, organization_id=org_param
+                )
+        try:
             result = provider.complete_authorization(
                 params,
                 redirect_uri=self._redirect_uri(provider.code),
                 code_verifier=state.code_verifier,
+                provider_params=prepared.params,
             )
         except ProviderError as exc:
             logger.warning(
                 "connect_failed", extra={"provider": provider.code, "error_code": exc.code}
             )
             return self._app_redirect(status="error", code=exc.code, organization_id=org_param)
+        try:
+            connection_id = self._save_connection(ctx, provider, result)
+        except IntegrityError:  # another organization connected this account in the meantime
+            return self._app_redirect(
+                status="error", code=ACCOUNT_IN_USE_CODE, organization_id=org_param
+            )
+        return self._app_redirect(
+            status="connected", organization_id=org_param, connection_id=str(connection_id)
+        )
+
+    def _save_connection(
+        self, ctx: TenantContext, provider: PlatformProvider, result: ConnectResult
+    ) -> uuid.UUID:
+        """Create the connection — or, when this organization reconnects the same platform
+        account, reuse its existing connection so stores and imported data are kept (§6.4a)."""
         now = self.rt.clock.now()
         with self.rt.db.transaction(org_id=ctx.organization_id, user_id=ctx.user_id) as session:
-            connection = ExternalConnection(
-                organization_id=ctx.organization_id,
-                provider=provider.code,
-                auth_scheme=provider.auth_scheme.value,
-                authorized_by_user_id=ctx.user_id,
-                granted_scopes=list(result.granted_scopes),
-                external_account_label=result.account_label,
-            )
-            session.add(connection)
-            session.flush()
+            existing = None
+            if result.external_account_id is not None:
+                existing = (
+                    session.execute(
+                        select(ExternalConnection)
+                        .where(
+                            ExternalConnection.organization_id == ctx.organization_id,
+                            ExternalConnection.provider == provider.code,
+                            ExternalConnection.external_account_id == result.external_account_id,
+                        )
+                        .order_by(ExternalConnection.created_at.desc())
+                        .limit(1)
+                        .with_for_update()
+                    )
+                    .scalars()
+                    .first()
+                )
+            if existing is not None:
+                connection = existing
+                before = {"status": connection.status}
+                connection.status = "active"
+                connection.authorized_by_user_id = ctx.user_id
+                connection.granted_scopes = list(result.granted_scopes)
+                connection.external_account_label = result.account_label
+                connection.last_error_code = connection.last_error_at = None
+                connection.revoked_at = None
+                connection.updated_at = now
+                action = "connection.reconnected"
+            else:
+                connection = ExternalConnection(
+                    organization_id=ctx.organization_id,
+                    provider=provider.code,
+                    auth_scheme=provider.auth_scheme.value,
+                    authorized_by_user_id=ctx.user_id,
+                    granted_scopes=list(result.granted_scopes),
+                    external_account_label=result.account_label,
+                    external_account_id=result.external_account_id,
+                )
+                session.add(connection)
+                before = None
+                action = "connection.created"
+            session.flush()  # the live-account unique index is enforced here
             expires = (
                 now + timedelta(seconds=result.token_expires_in_seconds)
                 if result.token_expires_in_seconds
                 else None
             )
+            refresh_expires = (
+                now + timedelta(seconds=result.refresh_expires_in_seconds)
+                if result.refresh_expires_in_seconds
+                else None
+            )
             store_secrets(
-                session, self.rt.cipher, connection, result.secrets, token_expires_at=expires
+                session,
+                self.rt.cipher,
+                connection,
+                result.secrets,
+                token_expires_at=expires,
+                refresh_expires_at=refresh_expires,
             )
             record_audit(
                 session,
                 organization_id=ctx.organization_id,
                 actor=Actor.user(ctx.user_id),
-                action="connection.created",
+                action=action,
                 resource_type="connection",
                 resource_id=connection.id,
+                before=before,
                 after={"provider": provider.code, "scopes": list(result.granted_scopes)},
             )
             create_job(
@@ -231,10 +361,27 @@ class IntegrationService:
                 subject_id=connection.id,
                 requested_by=ctx.user_id,
             )
-            connection_id = connection.id
-        return self._app_redirect(
-            status="connected", organization_id=org_param, connection_id=str(connection_id)
-        )
+            return connection.id
+
+    def install(self, provider_code: str, params: dict[str, str]) -> str:
+        """A platform-initiated install (e.g. a Shopify install link). Nothing is stored here:
+        the person is sent to the web app to sign in and choose the organization, which then
+        starts the normal, state-protected authorization (D-2A-1)."""
+        try:
+            provider = self.rt.providers.get(provider_code)
+        except NotFound:
+            return self._app_redirect(status="error", code="unknown_provider")
+        if not provider.capabilities.supports(Capability.APP_INSTALL):
+            return self._app_redirect(status="error", code="unsupported")
+        try:
+            account = provider.verify_install(params)
+        except ProviderError as exc:
+            logger.warning(
+                "install_refused", extra={"provider": provider.code, "error_code": exc.code}
+            )
+            return self._app_redirect(status="error", code=exc.code)
+        base = self.rt.settings.APP_BASE_URL.rstrip("/")
+        return f"{base}/connect/{provider.code}?{urlencode({'account': account})}"
 
     # ----------------------------------------------------------- connections
     def _get_connection(

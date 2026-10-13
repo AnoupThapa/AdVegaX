@@ -40,6 +40,17 @@ const CONNECT_ERRORS: Readonly<Record<string, string>> = {
   rate_limited: "The platform is busy right now. Please try again in a few minutes.",
   credentials_missing: "This connection's sign-in details are missing. Please reconnect.",
   credentials_unreadable: "This connection's sign-in details could not be read. Please reconnect.",
+  account_in_use:
+    "This account is already connected to another AdVegaX organization. Ask its owner to disconnect it first.",
+  invalid_connect_params: "Check the details you entered, for example the store address.",
+  invalid_signature:
+    "The platform's reply could not be verified, so nothing was connected. Please start again.",
+  account_mismatch:
+    "The platform answered for a different store or account than the one you chose. Please start again.",
+  missing_scopes:
+    "Some permissions AdVegaX needs were not approved. Please connect again and approve all of them.",
+  unsupported: "This platform does not support that way of connecting.",
+  unknown_provider: "This platform is not available.",
 };
 
 export function connectError(code: string | null | undefined): string {

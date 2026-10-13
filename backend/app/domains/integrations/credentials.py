@@ -31,23 +31,26 @@ def store_secrets(
     secrets: dict[str, Any],
     *,
     token_expires_at: datetime | None,
+    refresh_expires_at: datetime | None = None,
 ) -> None:
+    """Encrypt and save the connection's secrets, replacing any previous ones (reconnect)."""
     sealed = cipher.encrypt(
         json.dumps(secrets, separators=(",", ":")).encode("utf-8"),
         associated_data=associated_data(
             connection.organization_id, connection.id, connection.provider
         ),
     )
-    session.add(
-        ExternalConnectionCredential(
-            connection_id=connection.id,
-            organization_id=connection.organization_id,
-            ciphertext=sealed.ciphertext,
-            wrapped_data_key=sealed.wrapped_data_key,
-            key_version=sealed.key_version,
-            token_expires_at=token_expires_at,
+    record = session.get(ExternalConnectionCredential, connection.id)
+    if record is None:
+        record = ExternalConnectionCredential(
+            connection_id=connection.id, organization_id=connection.organization_id
         )
-    )
+        session.add(record)
+    record.ciphertext = sealed.ciphertext
+    record.wrapped_data_key = sealed.wrapped_data_key
+    record.key_version = sealed.key_version
+    record.token_expires_at = token_expires_at
+    record.refresh_expires_at = refresh_expires_at
 
 
 def load_secrets(

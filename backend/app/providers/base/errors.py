@@ -58,3 +58,33 @@ class ResponseTooLargeError(ProviderError):
 
 class OutboundTimeoutError(RetryableError):
     code = "timeout"
+
+
+class InvalidConnectParamsError(InvalidRequestError):
+    """Connect parameters from the web app are missing or invalid (e.g. a bad store address)."""
+
+    code = "invalid_connect_params"
+
+
+class InvalidSignatureError(InvalidRequestError):
+    """A platform request (callback, install, webhook) failed signature verification."""
+
+    code = "invalid_signature"
+
+
+class AccountMismatchError(InvalidRequestError):
+    """The platform answered for a different account than the one the flow started with."""
+
+    code = "account_mismatch"
+
+
+class MissingScopesError(InvalidRequestError):
+    """The person approved fewer permissions than AdVegaX needs."""
+
+    code = "missing_scopes"
+
+
+class UnsupportedOperationError(ProviderError):
+    """The provider does not support this operation (declared through its capabilities)."""
+
+    code = "unsupported"

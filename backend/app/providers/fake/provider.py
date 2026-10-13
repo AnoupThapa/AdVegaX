@@ -15,10 +15,12 @@ from urllib.parse import urlencode
 from app.providers.base.capabilities import Capability, ProviderCapabilities
 from app.providers.base.errors import (
     AuthExpiredError,
+    InvalidConnectParamsError,
     InvalidRequestError,
     PermissionDeniedError,
     RateLimitedError,
     RetryableError,
+    UnsupportedOperationError,
 )
 from app.providers.base.interfaces import Secrets
 from app.providers.base.pkce import pkce_challenge
@@ -26,6 +28,7 @@ from app.providers.base.types import (
     AuthorizationRequest,
     AuthScheme,
     ConnectResult,
+    PreparedConnect,
     ProviderCategory,
     ResourceDescriptor,
     ResourceKind,
@@ -82,6 +85,14 @@ class FakeProvider:
     test_only = True
     rate_limit = (50.0, 50)
 
+    def prepare_connect(self, params: Mapping[str, str]) -> PreparedConnect:
+        if params:  # the fake platform takes no connect parameters
+            raise InvalidConnectParamsError()
+        return PreparedConnect()
+
+    def verify_install(self, params: Mapping[str, str]) -> str:  # noqa: ARG002
+        raise UnsupportedOperationError()
+
     def authorization_url(self, request: AuthorizationRequest) -> str:
         query = {
             "state": request.state,
@@ -98,6 +109,7 @@ class FakeProvider:
         *,
         redirect_uri: str,  # noqa: ARG002 - part of the provider contract
         code_verifier: str | None,
+        provider_params: Mapping[str, str],  # noqa: ARG002 - part of the provider contract
     ) -> ConnectResult:
         code = params.get("code", "")
         if not code.startswith(APPROVAL_PREFIX) or code_verifier is None:

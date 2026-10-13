@@ -121,6 +121,16 @@ class Settings(BaseSettings):
     OUTBOUND_MAX_RESPONSE_BYTES: int = Field(default=10_485_760, ge=1024)
     OUTBOUND_MAX_REDIRECTS: int = Field(default=3, ge=0, le=10)
 
+    # --- Shopify (Phase 2A) ------------------------------------------------------------
+    # JSON list of Shopify apps: [{"client_id": "...", "client_secret": "...", "shops": ["*"]}].
+    # Custom-distribution apps serve one merchant each, so several apps may be configured and
+    # "shops" says which store domains each app serves ("*" = any). Unset = Shopify not offered.
+    # Secrets come from the environment / secret store only — never committed (D15).
+    SHOPIFY_APPS: SecretStr | None = None
+    SHOPIFY_API_VERSION: str = Field(default="2026-10", pattern=r"^\d{4}-(01|04|07|10)$")
+    SHOPIFY_SCOPES: str = "read_products,read_inventory,read_orders"
+    SHOPIFY_INSTALL_MAX_AGE: timedelta = timedelta(minutes=5)
+
     @field_validator("CORS_ALLOWED_ORIGINS", mode="before")
     @classmethod
     def _split_origins(cls, value: object) -> object:
@@ -146,6 +156,7 @@ class Settings(BaseSettings):
             "CONNECT_STATE_TTL": self.CONNECT_STATE_TTL,
             "OUTBOUND_CONNECT_TIMEOUT": self.OUTBOUND_CONNECT_TIMEOUT,
             "OUTBOUND_READ_TIMEOUT": self.OUTBOUND_READ_TIMEOUT,
+            "SHOPIFY_INSTALL_MAX_AGE": self.SHOPIFY_INSTALL_MAX_AGE,
         }
         for name, value in durations.items():
             if value <= timedelta(0):

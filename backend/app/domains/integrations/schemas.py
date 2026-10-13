@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ProviderOut(BaseModel):
@@ -17,6 +17,15 @@ class ProviderOut(BaseModel):
     auth_scheme: str
     capabilities: dict[str, bool]
     test_only: bool
+
+
+class AuthorizationStartIn(BaseModel):
+    """Optional connect parameters, e.g. ``{"params": {"shop_domain": "eve-zone"}}`` for Shopify.
+
+    Each provider validates its own parameters; unknown keys are refused.
+    """
+
+    params: dict[str, str] = Field(default_factory=dict, max_length=5)
 
 
 class AuthorizationStartOut(BaseModel):

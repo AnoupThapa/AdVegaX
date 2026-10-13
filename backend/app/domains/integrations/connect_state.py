@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import timedelta
 
 import redis
@@ -26,6 +26,8 @@ class ConnectState:
     user_id: uuid.UUID
     provider: str
     code_verifier: str | None
+    # Validated connect parameters (e.g. Shopify shop domain), kept server-side only.
+    provider_params: dict[str, str] = field(default_factory=dict)
 
 
 def create_state(client: redis.Redis, state: ConnectState, ttl: timedelta) -> str:
@@ -36,6 +38,7 @@ def create_state(client: redis.Redis, state: ConnectState, ttl: timedelta) -> st
             "user_id": str(state.user_id),
             "provider": state.provider,
             "code_verifier": state.code_verifier,
+            "provider_params": state.provider_params,
         }
     )
     try:
@@ -60,4 +63,5 @@ def consume_state(client: redis.Redis, token: str | None) -> ConnectState | None
         user_id=uuid.UUID(data["user_id"]),
         provider=data["provider"],
         code_verifier=data["code_verifier"],
+        provider_params=dict(data.get("provider_params") or {}),
     )

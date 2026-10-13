@@ -2,7 +2,7 @@
 
 **Last updated:** 2026-10-13
 **Current phase:** Phase 2A approved (A18) and in progress · Phase 1 (1A, 1B, 1C) implemented — awaiting product-owner review
-**Code written:** Phase 1A + 1B backend, Phase 1C web application · **Migrations:** 0001–0007 · **Integrations:** test (fake) platform only — no real platform
+**Code written:** Phase 1A + 1B backend, Phase 1C web application · **Migrations:** 0001–0007 · **Integrations:** Shopify connector in progress (2A, simulator-tested; not yet tried on a live store) · test (fake) platform
 
 Update this file at the end of every phase and every approved sub-phase (ROADMAP §5, step 13).
 
@@ -72,6 +72,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | 2026-10-13 | **Phase 2A plan v2** after independent review: 12 fixes (webhook CSRF exemption, pre-exchange one-store check, connect parameters, no stored webhook bodies, Shopify "sales reversals" definitions, reconnect reuse, streaming downloads, task order); live-testing environment blocked by network settings → decision §2A | `phases/PHASE_02A_PLAN.md §20` |
 | 2026-10-13 | **A18 — Phase 2A approved** with all recommendations (Q5–Q9, D-2A-1…3) and option C: build now against documented formats + simulator; live Shopify checks later | `phases/PHASE_02A_PLAN.md` |
 | 2026-10-13 | **2A-02** commerce data model (migration 0007): 11 tenant tables with RLS + composite keys, system-only webhook log (no bodies), one-live-connection-per-account rule; 16 isolation/integrity tests | `phases/PHASE_02A_PROGRESS.md`, `DATABASE_SCHEMA.md §4A` |
+| 2026-10-13 | **2A-03** Shopify connect: store address or install link, HMAC + same-store checks, expiring tokens, one-store-one-organization enforced before the token exchange, reconnect reuse; Shopify simulator; 74 tests | `phases/PHASE_02A_PROGRESS.md`, `INTEGRATION_GUIDES.md` |
 | 2026-10-08 | **Phase 1B implemented**: connections/resources/links, encrypted credentials, SSRF-safe client, rate limiter, provider framework + fake platform, jobs with retry/dead-letter, single scheduler, audited denials | `backend/`, `phases/PHASE_01B_REPORT.md`, `SECURITY.md`, `INTEGRATION_GUIDES.md` |
 
 ## 3. Decision log

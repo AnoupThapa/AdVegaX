@@ -92,7 +92,7 @@ def build_runtime(
         cipher=cipher_from_settings(
             settings.ENCRYPTION_KEYS.get_secret_value(), settings.ENCRYPTION_ACTIVE_KEY_VERSION
         ),
-        providers=build_registry(settings),
+        providers=build_registry(settings, clock=clock, outbound=outbound_policy(settings)),
         rate_limiter=ProviderRateLimiter(client, clock),
         enqueue_job=enqueue_job,
     )

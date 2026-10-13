@@ -19,6 +19,7 @@ class Capability(StrEnum):
     ECOMMERCE_EVENTS = "ecommerce_events"
     TOKEN_REVOCATION = "token_revocation"  # noqa: S105 - capability name
     PKCE = "pkce"
+    APP_INSTALL = "app_install"  # the platform can start the connection (e.g. Shopify install)
 
 
 @dataclass(frozen=True)

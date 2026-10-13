@@ -14,6 +14,7 @@ from app.providers.base.types import (
     AuthorizationRequest,
     AuthScheme,
     ConnectResult,
+    PreparedConnect,
     ProviderCategory,
     ResourceDescriptor,
     SyncSummary,
@@ -32,11 +33,27 @@ class PlatformProvider(Protocol):
     test_only: bool
     rate_limit: tuple[float, int]  # (requests per second, burst) per connection
 
+    def prepare_connect(self, params: Mapping[str, str]) -> PreparedConnect:
+        """Validate connect parameters from the web app; raise ``InvalidRequestError`` if bad."""
+        ...
+
     def authorization_url(self, request: AuthorizationRequest) -> str: ...
 
     def complete_authorization(
-        self, params: Mapping[str, str], *, redirect_uri: str, code_verifier: str | None
+        self,
+        params: Mapping[str, str],
+        *,
+        redirect_uri: str,
+        code_verifier: str | None,
+        provider_params: Mapping[str, str],
     ) -> ConnectResult: ...
+
+    def verify_install(self, params: Mapping[str, str]) -> str:
+        """Verify a platform-initiated install request; return its account id.
+
+        Only providers declaring ``Capability.APP_INSTALL`` support this; others raise.
+        """
+        ...
 
     def discover_resources(self, secrets: Secrets) -> list[ResourceDescriptor]: ...
 
