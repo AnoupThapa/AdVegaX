@@ -10,6 +10,7 @@ import redis
 from app.domains.integrations import jobs as integration_jobs
 from app.domains.integrations.service import JOB_DISCOVER, JOB_SYNC
 from app.domains.jobs.service import Handler, JobOutcome, recover_stuck_jobs, run_job
+from app.domains.webhooks import service as webhooks
 from app.workers.celery_app import celery_app
 from app.workers.email_tasks import deliver_pending, worker_runtime
 
@@ -17,6 +18,7 @@ HANDLERS: Mapping[str, Handler] = {
     JOB_DISCOVER: integration_jobs.discover,
     JOB_SYNC: integration_jobs.sync,
     integration_jobs.JOB_REFRESH: integration_jobs.refresh_credentials,
+    webhooks.JOB_PLATFORM_REVOKED: webhooks.platform_revoked,
 }
 
 
@@ -62,3 +64,10 @@ def token_refresh_task() -> int | None:
     return run_singleton(
         rt.redis, "token_refresh", ttl, lambda: integration_jobs.enqueue_keepalive_refreshes(rt)
     )
+
+
+@celery_app.task(name="advegax.schedule.webhook_purge")  # type: ignore[untyped-decorator]
+def webhook_purge_task() -> int | None:
+    rt = worker_runtime()
+    ttl = int(rt.settings.SCHEDULE_WEBHOOK_PURGE_INTERVAL.total_seconds() * 0.9)
+    return run_singleton(rt.redis, "webhook_purge", ttl, lambda: webhooks.purge_expired(rt))

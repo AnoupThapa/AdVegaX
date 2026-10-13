@@ -83,6 +83,9 @@ class Settings(BaseSettings):
     THROTTLE_EMAIL_ACTION_PER_EMAIL_PER_HOUR: int = Field(default=3, ge=1)
     THROTTLE_EMAIL_ACTION_PER_IP_PER_HOUR: int = Field(default=10, ge=1)
     THROTTLE_FAIL_OPEN: bool = False
+    # Platform webhooks (2A-05): per source IP. Shopify delivers from many addresses, so this
+    # only bounds abuse; unsigned requests are rejected before any database work.
+    THROTTLE_WEBHOOK_PER_IP_PER_MINUTE: int = Field(default=600, ge=1)
 
     # --- Passwords ------------------------------------------------------------------
     PASSWORD_MIN_LENGTH: int = Field(default=12, ge=8)
@@ -136,6 +139,14 @@ class Settings(BaseSettings):
     SHOPIFY_SCOPES: str = "read_products,read_inventory,read_orders"
     SHOPIFY_INSTALL_MAX_AGE: timedelta = timedelta(minutes=5)
 
+    # --- Webhook intake (Phase 2A, 2A-05; PHASE_02A_PLAN §7) ----------------------------
+    # Deliveries triggered longer ago than this are refused (replay limit). Shopify retries
+    # for up to 4 hours, so this must stay above that.
+    WEBHOOK_MAX_AGE: timedelta = timedelta(hours=6)
+    WEBHOOK_CLOCK_SKEW: timedelta = timedelta(minutes=5)
+    WEBHOOK_RETENTION: timedelta = timedelta(days=30)  # intake metadata is deleted after this
+    SCHEDULE_WEBHOOK_PURGE_INTERVAL: timedelta = timedelta(hours=6)
+
     @field_validator("CORS_ALLOWED_ORIGINS", mode="before")
     @classmethod
     def _split_origins(cls, value: object) -> object:
@@ -165,6 +176,10 @@ class Settings(BaseSettings):
             "TOKEN_REFRESH_MARGIN": self.TOKEN_REFRESH_MARGIN,
             "TOKEN_KEEPALIVE_INTERVAL": self.TOKEN_KEEPALIVE_INTERVAL,
             "SCHEDULE_TOKEN_REFRESH_INTERVAL": self.SCHEDULE_TOKEN_REFRESH_INTERVAL,
+            "WEBHOOK_MAX_AGE": self.WEBHOOK_MAX_AGE,
+            "WEBHOOK_CLOCK_SKEW": self.WEBHOOK_CLOCK_SKEW,
+            "WEBHOOK_RETENTION": self.WEBHOOK_RETENTION,
+            "SCHEDULE_WEBHOOK_PURGE_INTERVAL": self.SCHEDULE_WEBHOOK_PURGE_INTERVAL,
         }
         for name, value in durations.items():
             if value <= timedelta(0):

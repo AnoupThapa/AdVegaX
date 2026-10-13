@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Awaitable, Callable
 from urllib.parse import urlsplit
 
@@ -14,6 +15,10 @@ from app.core.security.csrf import CSRF_HEADER, is_valid_csrf, session_binding
 from app.core.settings import Settings
 
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
+# Server-to-server endpoints authenticated by the platform's own signature over the raw body
+# (PHASE_02A_PLAN §7). They skip only the browser checks (Origin + CSRF); the size and
+# content-type limits still apply. Keep this list short and explicit.
+CSRF_EXEMPT_PATH = re.compile(r"/api/v1/webhooks/[a-z0-9_]{1,32}")
 Next = Callable[[Request], Awaitable[Response]]
 
 
@@ -68,6 +73,9 @@ class RequestGuardMiddleware(BaseHTTPMiddleware):
             content_type = request.headers.get("content-type", "").split(";")[0].strip().lower()
             if content_type != "application/json":
                 return error_response(UnsupportedMediaType())
+
+        if request.method == "POST" and CSRF_EXEMPT_PATH.fullmatch(request.url.path):
+            return await call_next(request)
 
         origin = _origin_of(request.headers.get("origin")) or _origin_of(
             request.headers.get("referer")

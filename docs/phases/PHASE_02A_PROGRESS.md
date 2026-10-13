@@ -8,7 +8,7 @@ Plan: `PHASE_02A_PLAN.md` (approved 2026-10-13, A18, option C: live Shopify chec
 | 2A-02 Data model and migrations | ✅ Done — awaiting review |
 | 2A-03 Shopify connect | ✅ Done — awaiting review |
 | 2A-04 Token lifecycle | ✅ Done — awaiting review |
-| 2A-05 Webhook intake | Not started |
+| 2A-05 Webhook intake | ✅ Done — awaiting review |
 | 2A-06 HTTP client extensions, GraphQL client, initial import | Not started |
 | 2A-07 Webhook processing, incremental sync, reconciliation | Not started |
 | 2A-08 Finance core v1 | Not started |
@@ -215,3 +215,50 @@ All of it is built against Shopify's documented formats and tested with recorded
 **Blocked:** none. Live confirmation on a development store is still deferred (option C).
 
 **Next task:** 2A-05 — webhook intake: signature check on the raw body, duplicate rejection, metadata-only log, app-uninstalled → revoke, and Shopify's mandatory privacy webhooks.
+
+---
+
+## 2A-05 — Webhook intake (2026-10-13)
+
+**Completed**
+- **One webhook address per platform:** `POST /api/v1/webhooks/shopify` receives every Shopify topic, including the three mandatory privacy topics.
+- **Checks before anything is stored:**
+  - per-IP rate limit;
+  - Shopify's **signature over the raw body** (base64 HMAC-SHA256, constant-time), using the store's own app secret first, then a general app; **401 and nothing stored** if it fails;
+  - a delivery triggered more than **6 hours** ago, or more than 5 minutes in the future, is refused as a possible replay (Shopify retries for 4 hours, so real retries pass);
+  - signed but malformed deliveries get 400; the body-size (1 MB) and JSON-only limits still apply.
+- **Browser protections stay on everywhere else:** the request guard skips Origin/CSRF checks only for the exact path `/api/v1/webhooks/<platform>`. Tests prove look-alike paths and all other POSTs are still checked.
+- **Metadata only:** webhook id, topic, store, object id, timestamps, organization and status go into `webhook_events`; **the body is discarded** after the ids are read, so customer names, emails, phones and addresses are never stored or logged (tested). Records are deleted after **30 days** by a scheduled purge.
+- **Duplicates:** Shopify's webhook id is unique in the log, so a redelivery answers `duplicate` and nothing runs twice.
+- **Routing to the organization:** a narrow system lookup — the live connection for the store, otherwise the imported store (privacy requests arrive after uninstall). Unknown stores and topics AdVegaX does not use are recorded as `ignored` and acknowledged.
+- **App uninstalled → connection revoked** in a background job: tokens deleted, links ended, audited `connection.revoked_by_platform`; imported data kept. If queuing the job fails, the record is removed so Shopify's retry is handled afresh.
+- **Privacy requests** (`customers/data_request`, `customers/redact`, `shop/redact`): recorded and audited as `privacy.request_received` with the organization. Carrying them out is task 2A-07 (Shopify allows 30 days).
+- "Object changed" webhooks (products, inventory, orders, refunds, shop, bulk-operation finished) are recorded; fetching the changed objects is 2A-07.
+
+**Files changed** (24)
+- New (5): `app/domains/webhooks/{service,router}.py`, `app/providers/shopify/webhooks.py`; tests `tests/api/test_webhooks.py` (28), `tests/providers/test_shopify_webhooks.py` (28).
+- Modified (19): `app/core/{errors,settings}.py`, `app/core/security/middleware.py`, `app/api/router.py`; `app/providers/base/{types,interfaces}.py`; `app/providers/{shopify,fake}/provider.py`; `app/domains/integrations/service.py`; `app/workers/{celery_app,job_tasks}.py`; `tests/shopify_sim.py`, `tests/unit/test_settings.py`; `.env.example`; docs `API_SPECIFICATION.md`, `SECURITY.md`, `INTEGRATION_GUIDES.md`; status documents.
+- Deleted: none. No frontend change.
+
+**Tests**
+- **57 new:** signature (wrong secret, tampered body, missing/garbled header, invalid store header, store-specific secret); topic classification; no customer details in the metadata, the database or the logs; malformed → 400; replay window both ways and 4-hour retries accepted; exemption limited to the exact path; size/type limits; duplicates; ignored stores and topics; uninstall revokes, keeps data, is idempotent and not repeated on redelivery; failed follow-up leaves no record; privacy requests recorded and audited, including `shop/redact` routed through the store after uninstall; purge and its schedule; per-IP limit; settings defaults.
+- **Backend `make check`: 442 passed**, coverage 97.6 % (security-critical 99 %, new webhook code 100 %); ruff, mypy --strict: pass.
+- Frontend unchanged (251); **e2e 9 passed** against the updated API.
+
+**Security**
+- The only CSRF exemption is a fully matched path pattern, authenticated by the platform signature instead.
+- No personal data stored; intake log readable by the system role only (2A-02) and purged after 30 days.
+- Replay limited by time window plus webhook-id de-duplication.
+
+**Migration:** none (uses `webhook_events` from 0007).
+
+**Deviations**
+1. **One endpoint for all topics** (`/webhooks/shopify`) instead of a separate `/webhooks/shopify/compliance` URL. Shopify accepts the same address for privacy topics, and one verified path keeps the CSRF exemption to a single pattern. The route is generic (`/webhooks/{provider}`) for later platforms.
+2. **The endpoint is not in the web app's OpenAPI schema** (like the connect callback): it is server-to-server. It is documented in API_SPECIFICATION §20 and covered by its own tests.
+3. **Privacy requests are recorded and audited now; carrying them out is in 2A-07**, as planned. For customer requests the Shopify customer id (a number, not personal contact data) is kept in the log so 2A-07 can find that customer's orders; it is deleted with the record after 30 days.
+4. **`revoke_by_platform` became a module function** (the service method delegates to it) so the webhook job can call it for one organization.
+5. **Webhook subscriptions** (which topics Shopify sends) are configured in the Shopify app settings — set up with the live checks (2A-01).
+
+**Blocked:** none. Live delivery from Shopify needs the public HTTPS address (2A-01, deferred).
+
+**Next task:** 2A-06 — HTTP client extensions, GraphQL client and initial import (products, variants, inventory, last 60 days of orders and refunds) with bulk operations.

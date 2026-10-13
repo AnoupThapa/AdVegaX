@@ -19,7 +19,7 @@ from app.core.clock import Clock
 from app.providers.http.client import OutboundPolicy, SafeHttpClient
 from app.providers.shopify.config import ShopifyApp
 from app.providers.shopify.provider import ShopifyProvider
-from app.providers.shopify.signatures import sign_query
+from app.providers.shopify.signatures import sign_body, sign_query
 
 CLIENT_ID = "test-client-id"
 CLIENT_SECRET = "test-client-secret-0123456789"
@@ -177,3 +177,28 @@ def install_params(shop: str, timestamp: int, secret: str = CLIENT_SECRET) -> di
 
 def query_string(params: dict[str, str]) -> str:
     return urlencode(params)
+
+
+def webhook_request(
+    topic: str,
+    payload: dict[str, Any],
+    *,
+    shop: str,
+    webhook_id: str,
+    triggered_at: str | None = None,
+    secret: str = CLIENT_SECRET,
+) -> tuple[dict[str, str], bytes]:
+    """A webhook delivery in Shopify's documented format: base64 HMAC-SHA256 of the raw body
+    in ``X-Shopify-Hmac-Sha256`` plus the topic / shop / webhook-id / triggered-at headers."""
+    body = json.dumps(payload).encode()
+    headers = {
+        "Content-Type": "application/json",
+        "X-Shopify-Topic": topic,
+        "X-Shopify-Hmac-Sha256": sign_body(body, secret),
+        "X-Shopify-Shop-Domain": shop,
+        "X-Shopify-Webhook-Id": webhook_id,
+        "X-Shopify-API-Version": API_VERSION,
+    }
+    if triggered_at is not None:
+        headers["X-Shopify-Triggered-At"] = triggered_at
+    return headers, body

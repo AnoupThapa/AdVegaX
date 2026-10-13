@@ -43,6 +43,10 @@ def test_approved_defaults():
         s.THROTTLE_EMAIL_ACTION_PER_EMAIL_PER_HOUR,
         s.THROTTLE_EMAIL_ACTION_PER_IP_PER_HOUR,
     ) == (3, 10)
+    # Webhook intake (2A-05): replay window above Shopify's 4-hour retry period; 30-day retention.
+    assert s.WEBHOOK_MAX_AGE == timedelta(hours=6)
+    assert s.WEBHOOK_RETENTION == timedelta(days=30)
+    assert s.THROTTLE_WEBHOOK_PER_IP_PER_MINUTE == 600
 
 
 def test_durations_are_configurable_from_environment(monkeypatch):
@@ -62,6 +66,7 @@ def test_durations_are_configurable_from_environment(monkeypatch):
         {"INVITATION_TTL": timedelta(0)},
         {"PASSWORD_RESET_TTL": timedelta(seconds=-1)},
         {"PASSWORD_MIN_LENGTH": 64, "PASSWORD_MAX_LENGTH": 32},
+        {"WEBHOOK_RETENTION": timedelta(0)},
     ],
 )
 def test_invalid_durations_rejected(overrides):

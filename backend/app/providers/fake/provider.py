@@ -34,6 +34,7 @@ from app.providers.base.types import (
     ResourceDescriptor,
     ResourceKind,
     SyncSummary,
+    WebhookDelivery,
 )
 
 AUTHORIZE_URL = "https://fake-platform.invalid/oauth/authorize"
@@ -96,6 +97,9 @@ class FakeProvider:
 
     def verify_install(self, params: Mapping[str, str]) -> str:  # noqa: ARG002
         raise UnsupportedOperationError()
+
+    def parse_webhook(self, headers: Mapping[str, str], body: bytes) -> WebhookDelivery:  # noqa: ARG002
+        raise UnsupportedOperationError()  # the test platform sends no webhooks
 
     def authorization_url(self, request: AuthorizationRequest) -> str:
         query = {

@@ -100,6 +100,21 @@ class RateLimited(AppError):
     message = "Too many requests. Try again later."
 
 
+class InvalidWebhookSignature(AppError):
+    """Platform webhooks: missing/wrong signature or a stale (replayed) delivery. Shopify
+    requires 401 here; nothing is stored."""
+
+    status_code = 401
+    code = "INVALID_SIGNATURE"
+    message = "The request could not be verified."
+
+
+class InvalidWebhook(AppError):
+    status_code = 400
+    code = "INVALID_WEBHOOK"
+    message = "The webhook could not be processed."
+
+
 class ServiceUnavailable(AppError):
     status_code = 503
     code = "SERVICE_UNAVAILABLE"

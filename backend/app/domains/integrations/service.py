@@ -404,54 +404,8 @@ class IntegrationService:
         return f"{base}/connect/{provider.code}?{urlencode({'account': account})}"
 
     def revoke_by_platform(self, provider_code: str, account_id: str, *, reason: str) -> int:
-        """The platform says AdVegaX's access ended (e.g. Shopify ``app/uninstalled``).
-
-        Marks every live connection to that account as revoked, deletes its stored tokens and
-        ends its links; imported data is kept until the platform asks for erasure
-        (D-2A-2). Returns the number of connections changed. Used by webhook processing.
-        """
-        with self.rt.db.transaction(system=True) as session:
-            targets = session.execute(
-                select(ExternalConnection.id, ExternalConnection.organization_id).where(
-                    ExternalConnection.provider == provider_code,
-                    ExternalConnection.external_account_id == account_id,
-                    ExternalConnection.status != "revoked",
-                )
-            ).all()
-        now = self.rt.clock.now()
-        for connection_id, org_id in targets:
-            with self.rt.db.transaction(org_id=org_id) as session:
-                connection = session.get(ExternalConnection, connection_id, with_for_update=True)
-                if connection is None or connection.status == "revoked":
-                    continue
-                erase_secrets(session, connection.id)
-                ended = self._end_links(
-                    session,
-                    org_id,
-                    ExternalResource.connection_id == connection.id,
-                    reason="connection_revoked",
-                    by=None,
-                    now=now,
-                )
-                before = {"status": connection.status}
-                connection.status, connection.revoked_at, connection.updated_at = (
-                    "revoked",
-                    now,
-                    now,
-                )
-                connection.last_error_code = reason
-                record_audit(
-                    session,
-                    organization_id=org_id,
-                    actor=Actor("system", None),
-                    action="connection.revoked_by_platform",
-                    resource_type="connection",
-                    resource_id=connection.id,
-                    before=before,
-                    after={"status": "revoked"},
-                    metadata={"reason": reason, "links_ended": ended},
-                )
-        return len(targets)
+        """See ``revoke_by_platform`` (module function, also used by webhook processing)."""
+        return revoke_by_platform(self.rt, provider_code, account_id, reason=reason)
 
     # ----------------------------------------------------------- connections
     def _get_connection(
@@ -536,31 +490,7 @@ class IntegrationService:
         by: uuid.UUID | None,
         now: datetime,
     ) -> int:
-        links = (
-            session.execute(
-                select(OrganizationResourceLink)
-                .join(
-                    ExternalResource,
-                    ExternalResource.id == OrganizationResourceLink.external_resource_id,
-                )
-                .where(
-                    OrganizationResourceLink.organization_id == org_id,
-                    OrganizationResourceLink.status == "active",
-                    condition,
-                )
-                .with_for_update(of=OrganizationResourceLink)
-            )
-            .scalars()
-            .all()
-        )
-        for link in links:
-            link.status, link.unlinked_at, link.unlinked_by_user_id, link.unlink_reason = (
-                "unlinked",
-                now,
-                by,
-                reason,
-            )
-        return len(links)
+        return end_links(session, org_id, condition, reason=reason, by=by, now=now)
 
     def rediscover(self, ctx: TenantContext, connection_id: uuid.UUID) -> JobOut:
         authorize(ctx, Permission.CONNECTIONS_MANAGE)
@@ -745,3 +675,96 @@ class IntegrationService:
                 metadata={"job_id": job.id},
             )
             return _job_out(job.id, JOB_SYNC)
+
+
+def end_links(
+    session: Session,
+    org_id: uuid.UUID,
+    condition: ColumnElement[bool],
+    *,
+    reason: str,
+    by: uuid.UUID | None,
+    now: datetime,
+) -> int:
+    links = (
+        session.execute(
+            select(OrganizationResourceLink)
+            .join(
+                ExternalResource,
+                ExternalResource.id == OrganizationResourceLink.external_resource_id,
+            )
+            .where(
+                OrganizationResourceLink.organization_id == org_id,
+                OrganizationResourceLink.status == "active",
+                condition,
+            )
+            .with_for_update(of=OrganizationResourceLink)
+        )
+        .scalars()
+        .all()
+    )
+    for link in links:
+        link.status, link.unlinked_at, link.unlinked_by_user_id, link.unlink_reason = (
+            "unlinked",
+            now,
+            by,
+            reason,
+        )
+    return len(links)
+
+
+def revoke_by_platform(
+    rt: Runtime,
+    provider_code: str,
+    account_id: str,
+    *,
+    reason: str,
+    organization_id: uuid.UUID | None = None,
+) -> int:
+    """The platform says AdVegaX's access ended (e.g. Shopify ``app/uninstalled``).
+
+    Marks every live connection to that account as revoked (limited to ``organization_id``
+    when given), deletes its stored tokens and ends its links; imported data is kept until the
+    platform asks for erasure (D-2A-2). Returns the number of connections changed.
+    """
+    with rt.db.transaction(system=True) as session:
+        stmt = select(ExternalConnection.id, ExternalConnection.organization_id).where(
+            ExternalConnection.provider == provider_code,
+            ExternalConnection.external_account_id == account_id,
+            ExternalConnection.status != "revoked",
+        )
+        if organization_id is not None:
+            stmt = stmt.where(ExternalConnection.organization_id == organization_id)
+        targets = session.execute(stmt).all()
+    now = rt.clock.now()
+    changed = 0
+    for connection_id, org_id in targets:
+        with rt.db.transaction(org_id=org_id) as session:
+            connection = session.get(ExternalConnection, connection_id, with_for_update=True)
+            if connection is None or connection.status == "revoked":
+                continue
+            erase_secrets(session, connection.id)
+            ended = end_links(
+                session,
+                org_id,
+                ExternalResource.connection_id == connection.id,
+                reason="connection_revoked",
+                by=None,
+                now=now,
+            )
+            before = {"status": connection.status}
+            connection.status, connection.revoked_at, connection.updated_at = "revoked", now, now
+            connection.last_error_code = reason
+            record_audit(
+                session,
+                organization_id=org_id,
+                actor=Actor("system", None),
+                action="connection.revoked_by_platform",
+                resource_type="connection",
+                resource_id=connection.id,
+                before=before,
+                after={"status": "revoked"},
+                metadata={"reason": reason, "links_ended": ended},
+            )
+            changed += 1
+    return changed

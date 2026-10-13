@@ -3,7 +3,8 @@
 Read-only. Authorization-code grant for a standalone app with **expiring offline tokens**
 (``expiring=1``): 1-hour access token, rotating 90-day refresh token. Every callback and install
 request is HMAC-verified with the serving app's client secret; the shop must match the shop the
-flow started with. Token refresh, webhooks, import and sync follow in tasks 2A-04 … 2A-07.
+flow started with. Tokens are refreshed and rotated (2A-04) and webhooks verified (2A-05);
+import and sync follow in tasks 2A-06 and 2A-07.
 
 Facts verified against shopify.dev on 2026-10-13; anything only confirmable on a live
 development store is listed under "to confirm live" in INTEGRATION_GUIDES (option C, A18).
@@ -37,11 +38,13 @@ from app.providers.base.types import (
     ResourceDescriptor,
     ResourceKind,
     SyncSummary,
+    WebhookDelivery,
 )
 from app.providers.shopify.admin_api import AdminApi, HttpFactory
 from app.providers.shopify.config import ShopifyApp, app_for_shop
 from app.providers.shopify.shops import ShopDomainError, is_valid_shop, normalize_shop
 from app.providers.shopify.signatures import verify_query
+from app.providers.shopify.webhooks import parse_webhook as _parse_webhook
 
 SHOP_PARAM = "shop_domain"
 
@@ -189,6 +192,11 @@ class ShopifyProvider:
         if age < -60 or age > self._install_max_age.total_seconds():
             raise InvalidSignatureError()  # stale or from the future: possible replay
         return shop
+
+    # ------------------------------------------------------------------ webhooks
+    def parse_webhook(self, headers: Mapping[str, str], body: bytes) -> WebhookDelivery:
+        """HMAC over the raw body with the serving app's secret, then metadata only (2A-05)."""
+        return _parse_webhook(self._apps, headers, body)
 
     # ------------------------------------------------------------------ token lifecycle
     def refresh_credentials(self, secrets: Secrets) -> ConnectResult:

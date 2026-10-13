@@ -453,6 +453,14 @@ Provider webhooks must:
 - acknowledge quickly,
 - retry failed internal processing.
 
+### POST /webhooks/{provider} — as built (2A-05)
+
+Machine-to-machine (not in the OpenAPI schema used by the web app). One URL per platform for every topic, including Shopify's three privacy topics (`/api/v1/webhooks/shopify`).
+
+- **Authentication:** the platform's signature over the **raw** body (Shopify: base64 HMAC-SHA256, `X-Shopify-Hmac-Sha256`). No session, no Origin/CSRF check — this exact path shape is the only exemption in the request guard; body-size (1 MB) and `application/json` limits still apply. Per-IP rate limit `THROTTLE_WEBHOOK_PER_IP_PER_MINUTE`.
+- **Responses:** `200 {"data": {"status": "accepted" | "duplicate" | "ignored"}}`; `401 INVALID_SIGNATURE` (bad/missing signature, or triggered outside `WEBHOOK_MAX_AGE` / `WEBHOOK_CLOCK_SKEW` — possible replay; nothing stored); `400 INVALID_WEBHOOK` (signed but malformed); `404` for a platform without webhooks; `413`, `415`, `429`.
+- **Stored:** metadata only in `webhook_events` (webhook id, topic, account, object id, timestamps, organization, status); the body is discarded. Redeliveries (same webhook id) are `duplicate`. Unknown stores and unsubscribed topics are `ignored`. Rows are deleted after `WEBHOOK_RETENTION` (30 days).
+
 ## 21. Pagination
 
 Default:

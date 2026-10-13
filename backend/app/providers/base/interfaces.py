@@ -18,6 +18,7 @@ from app.providers.base.types import (
     ProviderCategory,
     ResourceDescriptor,
     SyncSummary,
+    WebhookDelivery,
 )
 
 Secrets = Mapping[str, Any]
@@ -66,6 +67,16 @@ class PlatformProvider(Protocol):
 
         Raises ``AuthExpiredError`` when the refresh token is no longer valid (the person must
         reconnect) and a retryable error for temporary failures.
+        """
+        ...
+
+    def parse_webhook(self, headers: Mapping[str, str], body: bytes) -> WebhookDelivery:
+        """Verify a webhook's signature over the **raw** body, then return its metadata
+        (``Capability.WEBHOOKS``). ``headers`` keys are lower-case.
+
+        Raises ``InvalidSignatureError`` when the signature is missing or wrong (the caller
+        answers 401 and stores nothing) and ``InvalidRequestError`` for a signed but malformed
+        delivery. Never returns or logs the payload.
         """
         ...
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
 from typing import Any
@@ -87,3 +88,41 @@ class ConnectResult:
 class SyncSummary:
     items_synchronized: int
     detail: dict[str, Any] = field(default_factory=dict)
+
+
+class WebhookKind(StrEnum):
+    """What a verified platform webhook means to the core (PHASE_02A_PLAN §7)."""
+
+    OBJECT_CHANGED = "object_changed"  # "object X changed": fetch it by id (2A-07)
+    APP_UNINSTALLED = "app_uninstalled"  # access ended: revoke the connection now
+    PRIVACY_DATA_REQUEST = "privacy_data_request"
+    PRIVACY_CUSTOMER_REDACT = "privacy_customer_redact"
+    PRIVACY_SHOP_REDACT = "privacy_shop_redact"
+    UNHANDLED = "unhandled"  # verified but not a topic AdVegaX subscribes to
+
+
+PRIVACY_KINDS = frozenset(
+    {
+        WebhookKind.PRIVACY_DATA_REQUEST,
+        WebhookKind.PRIVACY_CUSTOMER_REDACT,
+        WebhookKind.PRIVACY_SHOP_REDACT,
+    }
+)
+
+
+@dataclass(frozen=True)
+class WebhookDelivery:
+    """Metadata of a **verified** webhook. Deliberately has no payload field: the body is
+    discarded after verification so customer personal data is never stored (Q8).
+
+    ``object_external_id`` is the platform's id of the changed object (or, for a customer
+    privacy request, the platform's customer id — a pseudonymous id, never an email or name).
+    """
+
+    webhook_id: str
+    topic: str
+    account_id: str
+    kind: WebhookKind
+    object_external_id: str | None = None
+    object_updated_at: datetime | None = None
+    triggered_at: datetime | None = None
