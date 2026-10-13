@@ -105,6 +105,7 @@ A phase is complete only when its exit criteria are met and `PROJECT_STATUS.md` 
 | `phases/PHASE_01C_PLAN.md` | 1C detailed implementation plan (approved, A17) |
 | `phases/PHASE_01C_PROGRESS.md` | 1C task reports |
 | `phases/PHASE_01C_REPORT.md` | 1C implementation report |
+| `phases/PHASE_02A_PLAN.md` | 2A detailed implementation plan (draft, awaiting approval) |
 | `phases/PHASE_02A_SHOPIFY.md` | 2A |
 | `phases/PHASE_02B_WOOCOMMERCE.md` | 2B |
 | `phases/PHASE_03_GOOGLE_ADS.md` | 3 |

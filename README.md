@@ -19,7 +19,7 @@ AI-powered E-commerce Advertising & Growth Operating System — an independent m
 | `PROJECT_STATUS.md`       | Current progress, decision log, open questions                                                                                                                                                                                                                            |
 | `SECURITY.md`             | How security controls are implemented and tested                                                                                                                                                                                                                          |
 | `INTEGRATION_GUIDES.md`   | How a platform connector is added; per-provider notes                                                                                                                                                                                                                     |
-| `phases/`                 | One plan per phase; `PHASE_01A_PLAN.md` (approved), `PHASE_01A_REPORT.md` (implemented), `PHASE_01B_PLAN.md` (approved), `PHASE_01B_REPORT.md` (implemented), `PHASE_01C_PLAN.md` (approved), `PHASE_01C_PROGRESS.md` (task reports), `PHASE_01C_REPORT.md` (implemented) |
+| `phases/`                 | One plan per phase; `PHASE_01A_PLAN.md` (approved), `PHASE_01A_REPORT.md` (implemented), `PHASE_01B_PLAN.md` (approved), `PHASE_01B_REPORT.md` (implemented), `PHASE_01C_PLAN.md` (approved), `PHASE_01C_PROGRESS.md` (task reports), `PHASE_01C_REPORT.md` (implemented), `PHASE_02A_PLAN.md` (draft, awaiting approval) |
 
 ## Local development (backend)
 

@@ -16,7 +16,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | 1A | Platform core & identity | ✅ **Implemented — awaiting review** | 141 tests, 98.5 % coverage; `phases/PHASE_01A_REPORT.md` |
 | 1B | Integration foundation | ✅ **Implemented — awaiting review** | 277 tests, 98.4 % coverage; `phases/PHASE_01B_REPORT.md` |
 | 1C | Frontend shell | ✅ **Implemented — awaiting review** | 251 unit + 9 end-to-end tests, axe 0 violations; `phases/PHASE_01C_REPORT.md` |
-| 2A | Shopify (read-only) + finance core | Not started | Needs Q5–Q9 before its phase |
+| 2A | Shopify (read-only) + finance core | **Plan drafted — awaiting approval** | `phases/PHASE_02A_PLAN.md`; your answers to Q5–Q9 are in its §2 (with recommendations) |
 | 2B | WooCommerce (read-only) | Not started | Needs Q10 |
 | 3 | Google Ads (read-only) | Not started | Start developer-token application early |
 | 4 | Meta (read-only) | Not started | Start App Review / Business Verification early |
@@ -68,6 +68,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | 2026-10-12 | **1C-07** Connections pages: list, connect (https only), return notice, accounts found, link/unlink, sync status, history, rediscover, disconnect; real-browser + axe check | `frontend/features/connections/`, `phases/PHASE_01C_PROGRESS.md` |
 | 2026-10-12 | **1C-08** end-to-end + accessibility suite (Playwright + axe, 9 tests), CI `frontend`/`e2e` jobs, web Docker image; fixes: sign-out return address, out-of-date Overview text. **Phase 1C implemented** | `frontend/e2e/`, `phases/PHASE_01C_REPORT.md` |
 | 2026-10-13 | **Phase 1C re-check** (independent review + full re-run): fixed stuck "Sync now" after an unreadable job, endless "Looking for accounts…", Docker route for the e2e suite, keyboard test strictness, CI now runs the standalone server; report corrections | `phases/PHASE_01C_REPORT.md §13`, `phases/PHASE_01C_PROGRESS.md` |
+| 2026-10-13 | **Phase 2A plan drafted** (Shopify read-only + finance core): Shopify facts verified on 2026-10-13; recommendations for Q5–Q9; one store = one connection (Shopify allows one current token per app per store); App Store billing rule flagged for Q5 | `phases/PHASE_02A_PLAN.md` |
 | 2026-10-08 | **Phase 1B implemented**: connections/resources/links, encrypted credentials, SSRF-safe client, rate limiter, provider framework + fake platform, jobs with retry/dead-letter, single scheduler, audited denials | `backend/`, `phases/PHASE_01B_REPORT.md`, `SECURITY.md`, `INTEGRATION_GUIDES.md` |
 
 ## 3. Decision log
@@ -98,6 +99,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 **Awaiting product owner now**
 - Start the external approvals that take weeks (see `ROADMAP.md §7`): Google Ads developer token, Meta developer app + Business Verification, Shopify Partner account with a development store.
 - Review of Phase 1: `phases/PHASE_01A_REPORT.md`, `phases/PHASE_01B_REPORT.md` (incl. deviations §10), `phases/PHASE_01C_REPORT.md` (incl. review follow-up §13).
+- Approve or change the Phase 2A plan (`phases/PHASE_02A_PLAN.md` §2, §19); then create the Shopify Partner account + development store (instructions follow approval).
 - Run CI on GitHub: CI runs on pull requests and on pushes to `main` only — a push to `feature/phase-1a` does not start it. Open a pull request `feature/phase-1a → main` to run every job (backend, frontend, end-to-end, Docker, gitleaks).
 
 **Future-phase decisions (not blockers until their phase)** — details in `DISCOVERY_REPORT.md §14`:
