@@ -46,6 +46,8 @@ def outbound_policy(settings: Settings) -> OutboundPolicy:
         read_timeout=settings.OUTBOUND_READ_TIMEOUT.total_seconds(),
         max_response_bytes=settings.OUTBOUND_MAX_RESPONSE_BYTES,
         max_redirects=settings.OUTBOUND_MAX_REDIRECTS,
+        max_download_bytes=settings.OUTBOUND_MAX_DOWNLOAD_BYTES,
+        download_timeout=settings.OUTBOUND_DOWNLOAD_TIMEOUT.total_seconds(),
     )
 
 

@@ -45,7 +45,7 @@ def mark_connection_error(
             )
 
 
-def _call[T](
+def call_provider[T](
     rt: Runtime,
     provider: PlatformProvider,
     org_id: uuid.UUID,
@@ -77,7 +77,7 @@ def discover(rt: Runtime, job: ClaimedJob) -> None:
             raise JobSubjectGoneError()
         provider = rt.providers.get(connection.provider)
     secrets = usable_secrets(rt, org_id, connection_id)
-    descriptors = _call(
+    descriptors = call_provider(
         rt, provider, org_id, connection_id, lambda: provider.discover_resources(secrets)
     )
     now = rt.clock.now()
@@ -188,8 +188,19 @@ def sync(rt: Runtime, job: ClaimedJob) -> None:
             resource.timezone,
         )
         connection_id = connection.id
+        if resource.kind == ResourceKind.STORE.value:
+            from app.domains.commerce import importer
+
+            if importer.commerce_provider(provider) is not None:
+                # Commerce stores sync through bulk exports: (re)start the import chain.
+                store = importer.on_store_linked(
+                    session, rt, resource=resource, connection=connection, user_id=None
+                )
+                if store is not None and store.first_import_completed_at is not None:
+                    importer.start_import(session, rt, store, requested_by=job.requested_by_user_id)
+                return
     secrets = usable_secrets(rt, org_id, connection_id)
-    summary = _call(
+    summary = call_provider(
         rt, provider, org_id, connection_id, lambda: provider.sync_resource(secrets, descriptor)
     )
     with rt.db.transaction(org_id=org_id) as session:

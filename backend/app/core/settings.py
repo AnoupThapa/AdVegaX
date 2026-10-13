@@ -128,6 +128,9 @@ class Settings(BaseSettings):
     OUTBOUND_READ_TIMEOUT: timedelta = timedelta(seconds=20)
     OUTBOUND_MAX_RESPONSE_BYTES: int = Field(default=10_485_760, ge=1024)
     OUTBOUND_MAX_REDIRECTS: int = Field(default=3, ge=0, le=10)
+    # Streaming downloads of platform bulk exports (2A-06): overall size and time limits.
+    OUTBOUND_MAX_DOWNLOAD_BYTES: int = Field(default=2_147_483_648, ge=1024)
+    OUTBOUND_DOWNLOAD_TIMEOUT: timedelta = timedelta(hours=1)
 
     # --- Shopify (Phase 2A) ------------------------------------------------------------
     # JSON list of Shopify apps: [{"client_id": "...", "client_secret": "...", "shops": ["*"]}].
@@ -138,6 +141,18 @@ class Settings(BaseSettings):
     SHOPIFY_API_VERSION: str = Field(default="2026-10", pattern=r"^\d{4}-(01|04|07|10)$")
     SHOPIFY_SCOPES: str = "read_products,read_inventory,read_orders"
     SHOPIFY_INSTALL_MAX_AGE: timedelta = timedelta(minutes=5)
+    # Hosts Shopify serves bulk-export files from (signed URLs). Documented example host;
+    # to be confirmed on a development store (2A-01). Comma-separated, exact host names.
+    SHOPIFY_BULK_DOWNLOAD_HOSTS: str = "storage.googleapis.com"
+    # Order history Shopify allows without the ``read_all_orders`` approval (verified).
+    SHOPIFY_DEFAULT_ORDER_HISTORY: timedelta = timedelta(days=60)
+
+    # --- Commerce import (Phase 2A, 2A-06; PHASE_02A_PLAN §9) ----------------------------
+    # Longest order history imported (13 months, Q9); the platform may allow less (Shopify:
+    # 60 days without ``read_all_orders``).
+    COMMERCE_HISTORY_WINDOW: timedelta = timedelta(days=395)
+    COMMERCE_BULK_POLL_INTERVAL: timedelta = timedelta(seconds=30)
+    COMMERCE_IMPORT_BATCH_SIZE: int = Field(default=500, ge=1, le=5000)
 
     # --- Webhook intake (Phase 2A, 2A-05; PHASE_02A_PLAN §7) ----------------------------
     # Deliveries triggered longer ago than this are refused (replay limit). Shopify retries
@@ -176,6 +191,10 @@ class Settings(BaseSettings):
             "TOKEN_REFRESH_MARGIN": self.TOKEN_REFRESH_MARGIN,
             "TOKEN_KEEPALIVE_INTERVAL": self.TOKEN_KEEPALIVE_INTERVAL,
             "SCHEDULE_TOKEN_REFRESH_INTERVAL": self.SCHEDULE_TOKEN_REFRESH_INTERVAL,
+            "OUTBOUND_DOWNLOAD_TIMEOUT": self.OUTBOUND_DOWNLOAD_TIMEOUT,
+            "COMMERCE_HISTORY_WINDOW": self.COMMERCE_HISTORY_WINDOW,
+            "SHOPIFY_DEFAULT_ORDER_HISTORY": self.SHOPIFY_DEFAULT_ORDER_HISTORY,
+            "COMMERCE_BULK_POLL_INTERVAL": self.COMMERCE_BULK_POLL_INTERVAL,
             "WEBHOOK_MAX_AGE": self.WEBHOOK_MAX_AGE,
             "WEBHOOK_CLOCK_SKEW": self.WEBHOOK_CLOCK_SKEW,
             "WEBHOOK_RETENTION": self.WEBHOOK_RETENTION,

@@ -20,6 +20,7 @@ class Capability(StrEnum):
     TOKEN_REVOCATION = "token_revocation"  # noqa: S105 - capability name
     PKCE = "pkce"
     TOKEN_REFRESH = "token_refresh"  # noqa: S105 - capability name
+    BULK_IMPORT = "bulk_import"  # catalogue and order history through bulk exports (2A-06)
     APP_INSTALL = "app_install"  # the platform can start the connection (e.g. Shopify install)
 
 

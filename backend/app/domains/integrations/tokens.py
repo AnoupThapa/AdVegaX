@@ -51,7 +51,9 @@ def lock_key(provider: str, account_id: str | None, connection_id: uuid.UUID) ->
 
 
 @contextmanager
-def account_lock(client: redis.Redis, key: str, *, wait_seconds: float) -> Iterator[None]:
+def account_lock(
+    client: redis.Redis, key: str, *, wait_seconds: float, ttl_seconds: int = LOCK_TTL_SECONDS
+) -> Iterator[None]:
     """Hold the account lock; wait up to ``wait_seconds`` for it, else raise ``AccountBusy``.
 
     The lock expires on its own (``LOCK_TTL_SECONDS``) if a process dies while holding it, and
@@ -60,7 +62,7 @@ def account_lock(client: redis.Redis, key: str, *, wait_seconds: float) -> Itera
     token = generate_token()
     deadline = time.monotonic() + wait_seconds
     try:
-        while not client.set(key, token, nx=True, ex=LOCK_TTL_SECONDS):
+        while not client.set(key, token, nx=True, ex=ttl_seconds):
             if time.monotonic() >= deadline:
                 raise AccountBusy()
             time.sleep(0.1)

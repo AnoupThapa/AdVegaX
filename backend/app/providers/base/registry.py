@@ -71,4 +71,8 @@ def build_shopify(settings: Settings, clock: Clock, outbound: OutboundPolicy) ->
         scopes=tuple(s.strip() for s in settings.SHOPIFY_SCOPES.split(",") if s.strip()),
         clock=clock,
         install_max_age=settings.SHOPIFY_INSTALL_MAX_AGE,
+        default_order_history=settings.SHOPIFY_DEFAULT_ORDER_HISTORY,
+        download_hosts=frozenset(
+            h.strip().lower() for h in settings.SHOPIFY_BULK_DOWNLOAD_HOSTS.split(",") if h.strip()
+        ),
     )

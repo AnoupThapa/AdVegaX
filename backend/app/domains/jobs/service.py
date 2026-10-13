@@ -68,6 +68,7 @@ def create_job(
     subject_type: str,
     subject_id: uuid.UUID,
     requested_by: uuid.UUID | None,
+    delay_seconds: int = 0,
 ) -> JobRun:
     job = JobRun(
         organization_id=organization_id,
@@ -81,7 +82,7 @@ def create_job(
     session.add(job)
     session.flush()
     job_id = job.id
-    after_commit(session, lambda: rt.enqueue_job(job_id, 0))
+    after_commit(session, lambda: rt.enqueue_job(job_id, max(0, delay_seconds)))
     return job
 
 

@@ -38,6 +38,12 @@ class Shop:
     currency: str = "AUD"
     timezone: str = "Australia/Sydney"
     gid: str = "gid://shopify/Shop/1001"
+    # Bulk-export contents (JSONL nodes, in Shopify's documented format).
+    catalogue: list[dict[str, Any]] = field(default_factory=list)
+    orders: list[dict[str, Any]] = field(default_factory=list)
+
+
+BULK_HOST = "storage.googleapis.com"
 
 
 @dataclass
@@ -49,6 +55,15 @@ class ShopifySim:
     graphql_errors: list[dict[str, Any]] | None = None
     requests: list[httpx.Request] = field(default_factory=list)
     issued: int = 0
+    # Bulk operations: polls answered RUNNING before COMPLETED; final status; failures.
+    bulk_polls_running: int = 0
+    bulk_final_status: str = "COMPLETED"
+    bulk_error_code: str | None = None
+    bulk_user_errors: bool = False
+    download_status: int = 200
+    download_failures: int = 0  # the next N downloads answer 403 (expired signed link)
+    bulk_queries: list[str] = field(default_factory=list)
+    operations: dict[str, dict[str, Any]] = field(default_factory=dict)
 
     def add_shop(self, domain: str, **kw: Any) -> Shop:
         shop = Shop(domain, **kw)
@@ -67,6 +82,8 @@ class ShopifySim:
     def handler(self, request: httpx.Request) -> httpx.Response:
         self.requests.append(request)
         host = request.headers["host"]
+        if host == BULK_HOST:
+            return self._download(request)
         if host not in self.shops:
             return httpx.Response(404, json={"errors": "Not Found"})
         if request.url.path == "/admin/oauth/access_token":
@@ -109,7 +126,12 @@ class ShopifySim:
             return httpx.Response(self.graphql_status, headers=headers, json={"errors": "x"})
         if self.graphql_errors:
             return httpx.Response(200, json={"errors": self.graphql_errors})
-        query = json.loads(request.content)["query"]
+        payload = json.loads(request.content)
+        query = payload["query"]
+        if "bulkOperationRunQuery" in query:
+            return self._bulk_run(shop, payload["variables"]["query"])
+        if "bulkOperation(id:" in query:
+            return self._bulk_state(payload["variables"]["id"])
         if "shop {" in query:
             return httpx.Response(
                 200,
@@ -126,6 +148,78 @@ class ShopifySim:
                 },
             )
         return httpx.Response(200, json={"data": {}})
+
+    # -- bulk operations ------------------------------------------------------------------
+    def _bulk_run(self, shop: Shop, inner: str) -> httpx.Response:
+        self.bulk_queries.append(inner)
+        if self.bulk_user_errors:
+            return httpx.Response(
+                200,
+                json={
+                    "data": {
+                        "bulkOperationRunQuery": {
+                            "bulkOperation": None,
+                            "userErrors": [{"field": ["query"], "message": "Invalid query"}],
+                        }
+                    }
+                },
+            )
+        number = len(self.operations) + 1
+        op_id = f"gid://shopify/BulkOperation/{number}"
+        nodes = shop.catalogue if "products" in inner.split("{", 2)[1] else shop.orders
+        self.operations[op_id] = {"polls": 0, "nodes": nodes, "file": f"/sim/bulk-{number}.jsonl"}
+        return httpx.Response(
+            200,
+            json={
+                "data": {
+                    "bulkOperationRunQuery": {
+                        "bulkOperation": {"id": op_id, "status": "CREATED"},
+                        "userErrors": [],
+                    }
+                }
+            },
+        )
+
+    def _bulk_state(self, op_id: str) -> httpx.Response:
+        op = self.operations.get(op_id)
+        if op is None:
+            return httpx.Response(200, json={"data": {"bulkOperation": None}})
+        op["polls"] += 1
+        running = op["polls"] <= self.bulk_polls_running
+        status = "RUNNING" if running else self.bulk_final_status
+        done = status == "COMPLETED"
+        url = (
+            f"https://{BULK_HOST}{op['file']}?X-Goog-Signature=sim"
+            if done and op["nodes"]
+            else None
+        )
+        return httpx.Response(
+            200,
+            json={
+                "data": {
+                    "bulkOperation": {
+                        "id": op_id,
+                        "status": status,
+                        "errorCode": None if done or running else self.bulk_error_code,
+                        "objectCount": str(len(op["nodes"])),
+                        "url": url,
+                        "partialDataUrl": None,
+                    }
+                }
+            },
+        )
+
+    def _download(self, request: httpx.Request) -> httpx.Response:
+        if self.download_failures > 0:
+            self.download_failures -= 1
+            return httpx.Response(403, text="<Error>ExpiredToken</Error>")
+        if self.download_status != 200:
+            return httpx.Response(self.download_status, text="<Error>AccessDenied</Error>")
+        for op in self.operations.values():
+            if op["file"] == request.url.path:
+                body = "\n".join(json.dumps(n) for n in op["nodes"]) + "\n"
+                return httpx.Response(200, content=body.encode())
+        return httpx.Response(404)
 
     def http_factory(self) -> SafeHttpClient:
         return SafeHttpClient(
@@ -145,6 +239,7 @@ def build_provider(sim: ShopifySim, clock: Clock, apps: tuple[ShopifyApp, ...] |
         scopes=SCOPES,
         clock=clock,
         install_max_age=timedelta(minutes=5),
+        default_order_history=timedelta(days=60),
     )
 
 
@@ -202,3 +297,208 @@ def webhook_request(
     if triggered_at is not None:
         headers["X-Shopify-Triggered-At"] = triggered_at
     return headers, body
+
+
+# ---------------------------------------------------------------- sample bulk exports
+def money(amount: str, currency: str = "AUD") -> dict[str, Any]:
+    return {"shopMoney": {"amount": amount, "currencyCode": currency}}
+
+
+def sample_catalogue() -> list[dict[str, Any]]:
+    """Two products, three variants: one costed + tracked, one uncosted, one untracked."""
+    return [
+        {
+            "id": "gid://shopify/Product/1",
+            "title": "Nitrile Gloves",
+            "handle": "nitrile-gloves",
+            "productType": "Gloves",
+            "vendor": "Mediflex",
+            "status": "ACTIVE",
+            "updatedAt": "2026-10-01T00:00:00Z",
+        },
+        {
+            "id": "gid://shopify/ProductVariant/11",
+            "title": "Medium",
+            "sku": "NG-M",
+            "price": "19.90",
+            "updatedAt": "2026-10-01T00:00:00Z",
+            "inventoryQuantity": 120,
+            "inventoryItem": {
+                "id": "gid://shopify/InventoryItem/111",
+                "tracked": True,
+                "unitCost": {"amount": "7.25", "currencyCode": "AUD"},
+            },
+            "__parentId": "gid://shopify/Product/1",
+        },
+        {
+            "id": "gid://shopify/ProductVariant/12",
+            "title": "Large",
+            "sku": "NG-L",
+            "price": "21.90",
+            "updatedAt": "2026-10-01T00:00:00Z",
+            "inventoryQuantity": 0,
+            "inventoryItem": {"id": "gid://shopify/InventoryItem/112", "tracked": True},
+            "__parentId": "gid://shopify/Product/1",
+        },
+        {
+            "id": "gid://shopify/Product/2",
+            "title": "Gift Wrap",
+            "handle": "gift-wrap",
+            "productType": "",
+            "vendor": "Eve Zone",
+            "status": "UNLISTED",
+            "updatedAt": "2026-10-02T00:00:00Z",
+        },
+        {
+            "id": "gid://shopify/ProductVariant/21",
+            "title": "Default Title",
+            "sku": None,
+            "price": "5.00",
+            "updatedAt": "2026-10-02T00:00:00Z",
+            "inventoryQuantity": -3,
+            "inventoryItem": {
+                "id": "gid://shopify/InventoryItem/211",
+                "tracked": False,
+                "unitCost": {"amount": "1.10", "currencyCode": "AUD"},
+            },
+            "__parentId": "gid://shopify/Product/2",
+        },
+    ]
+
+
+def sample_orders() -> list[dict[str, Any]]:
+    """One order with two lines, a sale per line plus shipping, then a partial return
+    processed three days later; one test order (excluded). Children come after their parents,
+    deliberately not grouped by order (as Shopify allows)."""
+    order = {
+        "id": "gid://shopify/Order/500",
+        "name": "#1001",
+        "processedAt": "2026-10-05T01:30:00Z",
+        "updatedAt": "2026-10-08T03:00:00Z",
+        "cancelledAt": None,
+        "test": False,
+        "currencyCode": "AUD",
+        "displayFinancialStatus": "PARTIALLY_REFUNDED",
+        "totalDiscountsSet": money("2.00"),
+        "totalShippingPriceSet": money("10.00"),
+        "totalTaxSet": money("5.80"),
+        "totalRefundedSet": money("21.89"),
+        "totalPriceSet": money("63.80"),
+        "refunds": [
+            {
+                "id": "gid://shopify/Refund/900",
+                "createdAt": "2026-10-08T03:00:00Z",
+                "totalRefundedSet": money("21.89"),
+            }
+        ],
+    }
+    test_order = {
+        **order,
+        "id": "gid://shopify/Order/501",
+        "name": "#1002",
+        "test": True,
+        "refunds": [],
+    }
+    return [
+        order,
+        test_order,
+        {
+            "id": "gid://shopify/LineItem/601",
+            "title": "Nitrile Gloves - Medium",
+            "sku": "NG-M",
+            "quantity": 2,
+            "variant": {"id": "gid://shopify/ProductVariant/11"},
+            "originalUnitPriceSet": money("19.90"),
+            "__parentId": "gid://shopify/Order/500",
+        },
+        {
+            "id": "gid://shopify/SalesAgreement/700",
+            "happenedAt": "2026-10-05T01:30:00Z",
+            "reason": "ORDER",
+            "__parentId": "gid://shopify/Order/500",
+        },
+        {
+            "id": "gid://shopify/Sale/801",
+            "actionType": "ORDER",
+            "lineType": "PRODUCT",
+            "quantity": 2,
+            "totalAmount": money("41.58"),
+            "totalDiscountAmountBeforeTaxes": money("2.00"),
+            "totalTaxAmount": money("3.78"),
+            "lineItem": {"id": "gid://shopify/LineItem/601"},
+            "__parentId": "gid://shopify/SalesAgreement/700",
+        },
+        {
+            # Sale arrives before its line item (no ordering guarantee between connections).
+            "id": "gid://shopify/Sale/802",
+            "actionType": "ORDER",
+            "lineType": "PRODUCT",
+            "quantity": 1,
+            "totalAmount": money("12.11"),
+            "totalDiscountAmountBeforeTaxes": money("0.00"),
+            "totalTaxAmount": money("1.10"),
+            "lineItem": {"id": "gid://shopify/LineItem/602"},
+            "__parentId": "gid://shopify/SalesAgreement/700",
+        },
+        {
+            "id": "gid://shopify/Sale/803",
+            "actionType": "ORDER",
+            "lineType": "SHIPPING",
+            "quantity": None,
+            "totalAmount": money("10.00"),
+            "totalDiscountAmountBeforeTaxes": money("0.00"),
+            "totalTaxAmount": money("0.92"),
+            "__parentId": "gid://shopify/SalesAgreement/700",
+        },
+        {
+            "id": "gid://shopify/LineItem/602",
+            "title": "Custom engraving",
+            "sku": None,
+            "quantity": 1,
+            "variant": None,
+            "originalUnitPriceSet": money("11.01"),
+            "__parentId": "gid://shopify/Order/500",
+        },
+        {
+            "id": "gid://shopify/SalesAgreement/701",
+            "happenedAt": "2026-10-08T03:00:00Z",
+            "reason": "REFUND",
+            "__parentId": "gid://shopify/Order/500",
+        },
+        {
+            "id": "gid://shopify/Sale/804",
+            "actionType": "RETURN",
+            "lineType": "PRODUCT",
+            "quantity": -1,
+            "totalAmount": money("-20.79"),
+            "totalDiscountAmountBeforeTaxes": money("-1.00"),
+            "totalTaxAmount": money("-1.89"),
+            "lineItem": {"id": "gid://shopify/LineItem/601"},
+            "__parentId": "gid://shopify/SalesAgreement/701",
+        },
+        {
+            "id": "gid://shopify/LineItem/699",
+            "title": "Test line",
+            "sku": "T",
+            "quantity": 1,
+            "variant": None,
+            "originalUnitPriceSet": money("1.00"),
+            "__parentId": "gid://shopify/Order/501",
+        },
+        {
+            "id": "gid://shopify/SalesAgreement/799",
+            "happenedAt": "2026-10-05T01:30:00Z",
+            "reason": "ORDER",
+            "__parentId": "gid://shopify/Order/501",
+        },
+        {
+            "id": "gid://shopify/Sale/899",
+            "actionType": "ORDER",
+            "lineType": "PRODUCT",
+            "quantity": 1,
+            "totalAmount": money("1.00"),
+            "totalDiscountAmountBeforeTaxes": money("0.00"),
+            "totalTaxAmount": money("0.00"),
+            "__parentId": "gid://shopify/SalesAgreement/799",
+        },
+    ]

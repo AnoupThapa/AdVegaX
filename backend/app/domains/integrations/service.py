@@ -606,6 +606,12 @@ class IntegrationService:
                     "external_id": resource.external_id,
                 },
             )
+            # Commerce stores: create the store and start its initial import (2A-06).
+            from app.domains.commerce.importer import on_store_linked
+
+            on_store_linked(
+                session, self.rt, resource=resource, connection=connection, user_id=ctx.user_id
+            )
             return _link_out(link)
 
     def unlink(self, ctx: TenantContext, resource_id: uuid.UUID) -> LinkOut:

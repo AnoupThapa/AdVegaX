@@ -9,6 +9,8 @@ are refused, credentials are not forwarded, and the hop count is limited.
 from __future__ import annotations
 
 import logging
+import time
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from typing import Any
 from urllib.parse import urljoin, urlsplit
@@ -17,6 +19,7 @@ import httpx
 
 from app.providers.base.errors import (
     BlockedDestinationError,
+    InvalidRequestError,
     OutboundTimeoutError,
     ResponseTooLargeError,
     RetryableError,
@@ -26,6 +29,7 @@ from app.providers.http.policy import Destination, Resolver, default_resolver, v
 logger = logging.getLogger("advegax.outbound")
 
 REDIRECT_STATUSES = frozenset({301, 302, 303, 307, 308})
+MAX_LINE_BYTES = 16 * 1024 * 1024  # one JSONL record; larger means a malformed export
 _SENSITIVE_HEADERS = frozenset({"authorization", "cookie", "proxy-authorization", "x-api-key"})
 
 
@@ -36,6 +40,9 @@ class OutboundPolicy:
     max_response_bytes: int
     max_redirects: int
     allowed_ports: frozenset[int] = frozenset({443})
+    # Streaming downloads (2A-06): overall size and wall-clock limits.
+    max_download_bytes: int = 2 * 1024 * 1024 * 1024
+    download_timeout: float = 3600.0
 
 
 @dataclass(frozen=True)
@@ -116,6 +123,67 @@ class SafeHttpClient:
                 current_method, json, data = "GET", None, None
         raise BlockedDestinationError("too_many_redirects")
 
+    def stream_lines(self, url: str, *, allowed_host: Callable[[str], bool]) -> Iterator[bytes]:
+        """GET ``url`` and yield its non-empty lines, streaming (task 2A-06: bulk JSONL exports).
+
+        * Only hosts the caller allows (a per-provider allowlist) — checked before connecting,
+          on top of the usual SSRF validation and address pinning.
+        * No redirects, no credentials sent (the URL is pre-signed).
+        * Bounded: ``max_download_bytes`` overall, ``download_timeout`` wall-clock, and one
+          line may not exceed ``MAX_LINE_BYTES``; memory use stays at about one line.
+        * The URL itself is never logged (signed URLs are bearer secrets).
+        """
+        dest = validate_destination(
+            url, resolver=self._resolver, allowed_ports=self._policy.allowed_ports
+        )
+        if not allowed_host(dest.host):
+            raise BlockedDestinationError("host_not_allowed")
+        deadline = time.monotonic() + self._policy.download_timeout
+        limit = self._policy.max_download_bytes
+        try:
+            with self._client.stream(
+                "GET",
+                _url_for(dest),
+                headers={"Host": _host_header(dest)},
+                extensions={"sni_hostname": dest.host},
+                timeout=httpx.Timeout(
+                    self._policy.read_timeout, connect=self._policy.connect_timeout
+                ),
+            ) as response:
+                status = response.status_code
+                logger.info("outbound_download", extra={"host": dest.host, "status": status})
+                if status in REDIRECT_STATUSES:
+                    raise BlockedDestinationError("redirect_not_allowed")
+                if status in (400, 401, 403, 404, 410):
+                    raise DownloadExpiredError()
+                if status >= 500 or status == 429:
+                    raise RetryableError("download_failed")
+                if status >= 300:
+                    raise InvalidRequestError("download_failed")
+                declared = response.headers.get("content-length")
+                if declared and declared.isdigit() and int(declared) > limit:
+                    raise ResponseTooLargeError()
+                size, pending = 0, b""
+                for chunk in response.iter_bytes():
+                    size += len(chunk)
+                    if size > limit:
+                        raise ResponseTooLargeError()
+                    if time.monotonic() > deadline:
+                        raise OutboundTimeoutError()
+                    pending += chunk
+                    *lines, pending = pending.split(b"\n")
+                    if len(pending) > MAX_LINE_BYTES:
+                        raise ResponseTooLargeError()
+                    for line in lines:
+                        if line.strip():
+                            yield line
+                if pending.strip():
+                    yield pending
+        except httpx.TimeoutException:
+            raise OutboundTimeoutError() from None
+        except httpx.TransportError:
+            raise RetryableError("transport_error") from None
+
     def _send(
         self,
         dest: Destination,
@@ -161,3 +229,9 @@ class SafeHttpClient:
             raise OutboundTimeoutError() from None
         except httpx.TransportError:
             raise RetryableError("transport_error") from None
+
+
+class DownloadExpiredError(InvalidRequestError):
+    """The download link was refused (expired or revoked signed URL)."""
+
+    code = "download_expired"

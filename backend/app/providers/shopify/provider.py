@@ -4,7 +4,7 @@ Read-only. Authorization-code grant for a standalone app with **expiring offline
 (``expiring=1``): 1-hour access token, rotating 90-day refresh token. Every callback and install
 request is HMAC-verified with the serving app's client secret; the shop must match the shop the
 flow started with. Tokens are refreshed and rotated (2A-04) and webhooks verified (2A-05);
-import and sync follow in tasks 2A-06 and 2A-07.
+stores are imported through bulk exports (2A-06); incremental sync follows in 2A-07.
 
 Facts verified against shopify.dev on 2026-10-13; anything only confirmable on a live
 development store is listed under "to confirm live" in INTEGRATION_GUIDES (option C, A18).
@@ -12,8 +12,8 @@ development store is listed under "to confirm live" in INTEGRATION_GUIDES (optio
 
 from __future__ import annotations
 
-from collections.abc import Mapping
-from datetime import timedelta
+from collections.abc import Iterator, Mapping
+from datetime import datetime, timedelta
 from urllib.parse import urlencode
 
 from app.core.clock import Clock
@@ -26,12 +26,16 @@ from app.providers.base.errors import (
     InvalidSignatureError,
     MissingScopesError,
     PermissionDeniedError,
+    RetryableError,
     UnsupportedOperationError,
 )
 from app.providers.base.interfaces import Secrets
 from app.providers.base.types import (
     AuthorizationRequest,
     AuthScheme,
+    BulkKind,
+    BulkOperationState,
+    CommerceRecord,
     ConnectResult,
     PreparedConnect,
     ProviderCategory,
@@ -41,6 +45,15 @@ from app.providers.base.types import (
     WebhookDelivery,
 )
 from app.providers.shopify.admin_api import AdminApi, HttpFactory
+from app.providers.shopify.bulk import (
+    CATALOGUE_QUERY,
+    RUN_MUTATION,
+    STATE_QUERY,
+    BulkExportRejectedError,
+    ExportReader,
+    orders_query,
+    parse_state,
+)
 from app.providers.shopify.config import ShopifyApp, app_for_shop
 from app.providers.shopify.shops import ShopDomainError, is_valid_shop, normalize_shop
 from app.providers.shopify.signatures import verify_query
@@ -73,6 +86,7 @@ class ShopifyProvider:
             {
                 Capability.APP_INSTALL,
                 Capability.TOKEN_REFRESH,
+                Capability.BULK_IMPORT,
                 Capability.WEBHOOKS,
                 Capability.PRODUCT_COST,
                 Capability.INVENTORY,
@@ -93,6 +107,8 @@ class ShopifyProvider:
         scopes: tuple[str, ...],
         clock: Clock,
         install_max_age: timedelta,
+        default_order_history: timedelta,
+        download_hosts: frozenset[str] = frozenset({"storage.googleapis.com"}),
     ) -> None:
         if not apps:
             raise ValueError("at least one Shopify app must be configured")
@@ -101,6 +117,9 @@ class ShopifyProvider:
         self._scopes = scopes
         self._clock = clock
         self._install_max_age = install_max_age
+        self._default_order_history = default_order_history
+        self._download_hosts = download_hosts
+        self._http_factory = http_factory
 
     # ------------------------------------------------------------------ helpers
     def _app(self, shop: str) -> ShopifyApp:
@@ -259,11 +278,55 @@ class ShopifyProvider:
 
     def sync_resource(
         self,
-        secrets: Secrets,  # noqa: ARG002 - implemented in 2A-06/2A-07
+        secrets: Secrets,  # noqa: ARG002 - provider contract
         resource: ResourceDescriptor,  # noqa: ARG002
     ) -> SyncSummary:
-        # Import and sync arrive in tasks 2A-06/2A-07; until then a sync request fails clearly.
+        # Stores are imported through bulk exports driven by the core (``BULK_IMPORT``).
         raise UnsupportedOperationError()
+
+    # ------------------------------------------------------------------ bulk import (2A-06)
+    def history_limit(self, granted_scopes: tuple[str, ...]) -> timedelta | None:
+        """Orders older than 60 days need Shopify's approval and ``read_all_orders``."""
+        return None if "read_all_orders" in granted_scopes else self._default_order_history
+
+    @staticmethod
+    def _credentials(secrets: Secrets) -> tuple[str, str]:
+        shop, token = secrets.get("shop"), secrets.get("access_token")
+        if not isinstance(shop, str) or not is_valid_shop(shop):
+            raise AuthExpiredError("credentials_incomplete")
+        if not isinstance(token, str) or not token:
+            raise AuthExpiredError("credentials_incomplete")
+        return shop, token
+
+    def start_bulk_export(self, secrets: Secrets, kind: BulkKind, *, since: datetime | None) -> str:
+        shop, token = self._credentials(secrets)
+        query = CATALOGUE_QUERY if kind is BulkKind.CATALOGUE else orders_query(since)
+        data = self._api.graphql(shop, token, RUN_MUTATION, {"query": query})
+        payload = data.get("bulkOperationRunQuery")
+        if not isinstance(payload, dict):
+            raise RetryableError("invalid_response")
+        if payload.get("userErrors"):
+            # Messages are not copied (they can echo the query); the code is enough to act on.
+            raise BulkExportRejectedError()
+        operation = payload.get("bulkOperation")
+        operation_id = operation.get("id") if isinstance(operation, dict) else None
+        if not isinstance(operation_id, str) or not operation_id:
+            raise RetryableError("invalid_response")
+        return operation_id
+
+    def bulk_export_state(self, secrets: Secrets, operation_id: str) -> BulkOperationState:
+        shop, token = self._credentials(secrets)
+        data = self._api.graphql(shop, token, STATE_QUERY, {"id": operation_id})
+        return parse_state(data.get("bulkOperation"))
+
+    def read_bulk_export(self, result_url: str, kind: BulkKind) -> Iterator[CommerceRecord]:
+        """Stream the JSONL file from Shopify's storage host (allowlisted), line by line."""
+        client = self._http_factory()
+        try:
+            lines = client.stream_lines(result_url, allowed_host=self._download_hosts.__contains__)
+            yield from ExportReader(kind).records(lines)
+        finally:
+            client.close()
 
     def revoke(self, secrets: Secrets) -> None:  # noqa: ARG002 - see note below
         # No app-initiated revocation is documented for this flow (to confirm live, Step 0

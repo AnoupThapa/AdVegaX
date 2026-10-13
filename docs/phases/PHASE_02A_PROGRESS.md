@@ -9,7 +9,7 @@ Plan: `PHASE_02A_PLAN.md` (approved 2026-10-13, A18, option C: live Shopify chec
 | 2A-03 Shopify connect | ✅ Done — awaiting review |
 | 2A-04 Token lifecycle | ✅ Done — awaiting review |
 | 2A-05 Webhook intake | ✅ Done — awaiting review |
-| 2A-06 HTTP client extensions, GraphQL client, initial import | Not started |
+| 2A-06 HTTP client extensions, GraphQL client, initial import | ✅ Done — awaiting review |
 | 2A-07 Webhook processing, incremental sync, reconciliation | Not started |
 | 2A-08 Finance core v1 | Not started |
 | 2A-09 Read API | Not started |
@@ -262,3 +262,84 @@ All of it is built against Shopify's documented formats and tested with recorded
 **Blocked:** none. Live delivery from Shopify needs the public HTTPS address (2A-01, deferred).
 
 **Next task:** 2A-06 — HTTP client extensions, GraphQL client and initial import (products, variants, inventory, last 60 days of orders and refunds) with bulk operations.
+
+---
+
+## 2A-06 — Initial store import (2026-10-13)
+
+Shopify's schema was re-checked against shopify.dev (Admin GraphQL `2026-10`) before writing the import: bulk operations, `Product`, `ProductVariant`, `InventoryItem`, `Order`, `LineItem`, `Refund`, `SalesAgreement`, `Sale` and their enums.
+
+**Completed**
+- **Linking a Shopify store now imports it.** The store gets its own record (currency, time zone, history start). The import runs in the background as short steps:
+  1. catalogue export: products, variants, price, stock, unit cost;
+  2. orders export: orders created in the history window, with their lines, their **sales agreements** (each sale or reversal with its own date), and refunds;
+  3. links between rows are tidied up and the store is marked active, with progress shown as 0 → 40 → 100 %.
+- **History window:** 60 days by default, which is what Shopify allows without approval. It is 13 months when the store granted `read_all_orders`.
+- **Correct "unknown" handling:**
+  - Stock is empty (not 0) for untracked items.
+  - Cost is empty when Shopify has none or hides it.
+  - Order totals that need every line price are left empty if any price is missing.
+- **Costs:** Shopify keeps no cost history, so the first import records a cost snapshot. Imported order lines are marked "cost at import". Later imports add a new cost row only when a cost changes. A cost that disappears is recorded as empty from that moment. A cost in a different currency is not recorded (no conversion in 2A).
+- **Sales are dated the way Shopify's report dates them:** a refund 3 days after the order is dated on the refund day. Each sale keeps its reason (order / edit / refund / return), its action (order / return / update) and its line type (product, shipping, fee, …).
+- **Test orders are excluded.**
+- **Re-import is safe:** "Sync now" on a store runs the import again. Nothing is duplicated, and older Shopify data never overwrites newer data.
+- **Robust chain:**
+  - one step at a time per store;
+  - a duplicated job message cannot start a second chain;
+  - unlinking or disconnecting stops it;
+  - linking again restarts an unfinished import with the same store;
+  - an expired download link reruns that export;
+  - Shopify refusing the export, a failed export, or the last retry of a temporary error shows as an error on the store, audited as `store.import_failed`.
+- **HTTP client extensions:**
+  - a **streaming download** that reads line by line with bounded memory and has size, time and per-line limits;
+  - a **per-platform host allowlist** for downloads (Shopify: its storage host);
+  - no redirects, and no token sent with downloads;
+  - the signed download link is never logged or stored.
+- **Test platform unaffected:** it has no import capability, so linking its store creates no store record.
+
+**Files changed** (26)
+- New (5): `alembic/versions/0008_commerce_import.py`, `app/domains/commerce/importer.py`, `app/providers/shopify/bulk.py`; tests `tests/api/test_commerce_import.py` (20), `tests/providers/test_shopify_bulk.py` (31).
+- Modified (21):
+  - `app/core/settings.py`, `app/runtime.py`;
+  - `app/providers/base/{types,interfaces,capabilities,registry}.py`, `app/providers/http/client.py`, `app/providers/shopify/provider.py`;
+  - `app/domains/commerce/models.py`, `app/domains/integrations/{service,jobs,tokens}.py`, `app/domains/jobs/service.py`, `app/workers/job_tasks.py`;
+  - `tests/shopify_sim.py`;
+  - `.env.example`; docs `DATABASE_SCHEMA.md`, `SECURITY.md`, `INTEGRATION_GUIDES.md`; status documents.
+- Deleted: none. No frontend change.
+
+**Tests**
+- **51 new:**
+  - query limits, and no personal-data fields in any query;
+  - operation states;
+  - mapping of every value list (unknown values → "other");
+  - test-order exclusion; reversal dating; children arriving out of order;
+  - malformed lines counted, never guessed;
+  - download allowlist, limits, errors and SSRF blocking;
+  - end-to-end import through the API; no unknown shown as 0; the cost snapshot and cost changes;
+  - idempotent re-import and the newer-wins guard;
+  - polling, failure and retry paths; the single-chain guarantees; unlink, disconnect and relink.
+- **Backend `make check`: 493 passed**, coverage 96.7 % (security-critical 99 %); ruff, mypy --strict: pass.
+- Frontend unchanged (251); **e2e 9 passed**.
+
+**Security**
+- Downloads go only to allowlisted hosts, through the SSRF-safe client, with no credentials.
+- Signed links are treated as secrets.
+- Every write runs under the store's tenant context (RLS).
+- No customer data is requested.
+
+**Migration:** `0008_commerce_import` (reversible). It aligns the value lists with Shopify's verified enums, adds `sales_entries.agreement_reason` and `external_line_item_id`, and adds `commerce_sync_state.import_job_id`.
+
+**Deviations**
+1. **The value lists changed (migration 0008).** Shopify's verified enums differ from the plan's draft lists:
+   - products can be `unlisted`;
+   - a sale's action is order / return / update, with the agreement's reason (order, edit, refund, return) stored separately;
+   - there is no "tax" line type (taxes belong to each sale), but there are "additional fee" and "adjustment".
+2. **No hashed customer key and no order country yet.** Reading them needs `Order.customer` / addresses, and whether that needs extra Shopify permissions is a Step 0 question (2A-01). Both stay empty, which means "not available", until confirmed. New-vs-returning customer figures depend on this.
+3. **Refund lines are not imported.** Refund totals are imported, and returned items come through the sales agreements (product, quantity, amount, date), which is what the figures use. `refund_items` stays empty; it can be filled from the refund webhook in 2A-07 if the web app needs it.
+4. **Order gross amount** (display only) is the sum of line prices × quantities. It is empty when any line price is missing.
+5. **The orders filter uses the creation date** (`created_at`), matching Shopify's 60-day rule. This is to be confirmed live, together with the download host, `Order.updatedAt` and the `ProductSale` fragment inside a bulk query. All are listed under "to confirm live" in INTEGRATION_GUIDES.
+6. **Cost-aware rate limiting** (from Shopify's cost reports) remains in 2A-07 as planned. Bulk polling is light: about one call every 30 seconds per store.
+
+**Blocked:** none for the code. A real import needs the live checks (2A-01).
+
+**Next task:** 2A-07 — webhook processing (fetch the changed product/order by id), hourly and nightly reconciliation, cost-aware rate limiting, and carrying out privacy requests (customer and shop erasure).

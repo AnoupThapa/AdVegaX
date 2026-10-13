@@ -6,13 +6,17 @@ is implemented (Phase 2A+) so that the contract is shaped by two real platforms,
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
+from datetime import datetime, timedelta
 from typing import Any, Protocol, runtime_checkable
 
 from app.providers.base.capabilities import ProviderCapabilities
 from app.providers.base.types import (
     AuthorizationRequest,
     AuthScheme,
+    BulkKind,
+    BulkOperationState,
+    CommerceRecord,
     ConnectResult,
     PreparedConnect,
     ProviderCategory,
@@ -81,8 +85,24 @@ class PlatformProvider(Protocol):
         ...
 
 
+@runtime_checkable
 class CommerceProvider(PlatformProvider, Protocol):
-    """Shopify, WooCommerce, … — catalogue/order reads are added in Phase 2A/2B."""
+    """Shopify, WooCommerce, … (``Capability.BULK_IMPORT``). The provider owns the platform's
+    query language and mapping; the core receives only normalized ``Commerce*Record``s."""
+
+    def history_limit(self, granted_scopes: tuple[str, ...]) -> timedelta | None:
+        """How far back order history may be read with these permissions (None = no limit)."""
+        ...
+
+    def start_bulk_export(self, secrets: Secrets, kind: BulkKind, *, since: datetime | None) -> str:
+        """Start a bulk export; return the platform's operation id."""
+        ...
+
+    def bulk_export_state(self, secrets: Secrets, operation_id: str) -> BulkOperationState: ...
+
+    def read_bulk_export(self, result_url: str, kind: BulkKind) -> Iterator[CommerceRecord]:
+        """Stream the finished export as normalized records (bounded memory)."""
+        ...
 
 
 class AdvertisingProvider(PlatformProvider, Protocol):

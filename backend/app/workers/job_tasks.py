@@ -7,6 +7,7 @@ from collections.abc import Callable, Mapping
 
 import redis
 
+from app.domains.commerce import importer
 from app.domains.integrations import jobs as integration_jobs
 from app.domains.integrations.service import JOB_DISCOVER, JOB_SYNC
 from app.domains.jobs.service import Handler, JobOutcome, recover_stuck_jobs, run_job
@@ -19,6 +20,7 @@ HANDLERS: Mapping[str, Handler] = {
     JOB_SYNC: integration_jobs.sync,
     integration_jobs.JOB_REFRESH: integration_jobs.refresh_credentials,
     webhooks.JOB_PLATFORM_REVOKED: webhooks.platform_revoked,
+    importer.JOB_IMPORT_STEP: importer.import_step,
 }
 
 

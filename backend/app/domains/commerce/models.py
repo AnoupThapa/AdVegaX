@@ -35,11 +35,23 @@ MONEY = Numeric(20, 6)
 TZ = DateTime(timezone=True)
 
 STORE_STATUSES = ("importing", "active", "disconnected", "error")
-PRODUCT_STATUSES = ("active", "draft", "archived", "deleted")
+PRODUCT_STATUSES = ("active", "draft", "archived", "unlisted", "deleted")
 COST_SOURCES = ("platform", "import_snapshot")
 LINE_COST_SOURCES = ("order_time", "import_time")
-SALE_ACTIONS = ("order", "return", "cancel", "edit", "other")
-SALE_LINE_TYPES = ("product", "shipping", "tax", "duty", "fee", "tip", "gift_card", "other")
+# Verified Shopify enums (2026-10, migration 0008): a sale's action and its agreement's reason.
+SALE_ACTIONS = ("order", "return", "update", "other")
+AGREEMENT_REASONS = ("order", "order_edit", "refund", "return", "other")
+SALE_LINE_TYPES = (
+    "product",
+    "shipping",
+    "duty",
+    "fee",
+    "additional_fee",
+    "adjustment",
+    "tip",
+    "gift_card",
+    "other",
+)
 
 
 def _in(column: str, values: tuple[str, ...]) -> str:
@@ -263,6 +275,7 @@ class SalesEntry(UUIDPrimaryKey, Base):
         ),
         CheckConstraint(_in("action", SALE_ACTIONS), name="action"),
         CheckConstraint(_in("line_type", SALE_LINE_TYPES), name="line_type"),
+        CheckConstraint(_in("agreement_reason", AGREEMENT_REASONS), name="agreement_reason"),
         Index(
             "ix_sales_entries_organization_id_store_id_happened_at",
             "organization_id",
@@ -275,13 +288,20 @@ class SalesEntry(UUIDPrimaryKey, Base):
     store_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
     order_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
     order_item_id: Mapped[uuid.UUID | None] = mapped_column()
+    # Platform line id: resolves ``order_item_id`` after an import (child rows arrive unordered).
+    external_line_item_id: Mapped[str | None] = mapped_column(String(255))
     external_agreement_id: Mapped[str] = mapped_column(String(255), nullable=False)
     external_sale_id: Mapped[str] = mapped_column(String(255), nullable=False)
     happened_at: Mapped[datetime] = mapped_column(TZ, nullable=False)
+    agreement_reason: Mapped[str] = mapped_column(
+        String(16), nullable=False, server_default="other"
+    )
     action: Mapped[str] = mapped_column(String(16), nullable=False)
     line_type: Mapped[str] = mapped_column(String(16), nullable=False)
     quantity: Mapped[int | None] = mapped_column(Integer)
     # Signed amounts in the store currency, as recorded by the platform (reversals negative).
+    # ``amount`` is the sale total after taxes and discounts; ``discount_amount`` the discounts
+    # allocated before taxes; ``tax_amount`` the sale's taxes (Shopify ``Sale`` fields).
     amount: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
     discount_amount: Mapped[Decimal] = mapped_column(MONEY, nullable=False, server_default="0")
     tax_amount: Mapped[Decimal] = mapped_column(MONEY, nullable=False, server_default="0")
@@ -347,6 +367,8 @@ class CommerceSyncState(Base):
     import_progress: Mapped[int | None] = mapped_column(Integer)
     bulk_operation_id: Mapped[str | None] = mapped_column(String(255))
     bulk_operation_kind: Mapped[str | None] = mapped_column(String(32))
+    # The import step allowed to continue (a duplicated job message stops at this check).
+    import_job_id: Mapped[uuid.UUID | None] = mapped_column()
     last_reconciled_at: Mapped[datetime | None] = mapped_column(TZ)
     last_deep_reconciled_at: Mapped[datetime | None] = mapped_column(TZ)
     last_error_code: Mapped[str | None] = mapped_column(String(64))

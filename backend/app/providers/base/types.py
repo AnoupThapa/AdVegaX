@@ -126,3 +126,119 @@ class WebhookDelivery:
     object_external_id: str | None = None
     object_updated_at: datetime | None = None
     triggered_at: datetime | None = None
+
+
+# ---------------------------------------------------------------- commerce import (2A-06)
+class BulkKind(StrEnum):
+    """What a bulk export contains."""
+
+    CATALOGUE = "catalogue"  # products → variants (with inventory and unit cost)
+    ORDERS = "orders"  # orders → line items, sales agreements → sales; refunds
+
+
+class BulkStatus(StrEnum):
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+@dataclass(frozen=True)
+class BulkOperationState:
+    """State of a platform bulk export. ``result_url`` is a signed, time-limited download link:
+    treat it like a secret — never log or store it (PHASE_02A_PLAN §20 item 12)."""
+
+    status: BulkStatus
+    result_url: str | None = field(default=None, repr=False)
+    error_code: str | None = None
+    object_count: int | None = None
+
+
+@dataclass(frozen=True)
+class CommerceProductRecord:
+    external_id: str
+    title: str
+    status: str  # one of the core PRODUCT_STATUSES
+    handle: str | None = None
+    product_type: str | None = None
+    vendor: str | None = None
+    updated_at: datetime | None = None
+
+
+@dataclass(frozen=True)
+class CommerceVariantRecord:
+    external_id: str
+    product_external_id: str
+    title: str | None = None
+    sku: str | None = None
+    price: Decimal | None = None
+    inventory_item_id: str | None = None
+    inventory_tracked: bool | None = None
+    inventory_available: int | None = None  # None when not tracked — never 0 by default
+    unit_cost: Decimal | None = None  # None = the platform has no cost (or hides it)
+    cost_currency: str | None = None
+    updated_at: datetime | None = None
+
+
+@dataclass(frozen=True)
+class CommerceOrderRecord:
+    external_id: str
+    currency: str
+    ordered_at: datetime
+    order_number: str | None = None
+    cancelled_at: datetime | None = None
+    financial_status: str | None = None
+    discount_amount: Decimal | None = None
+    shipping_amount: Decimal | None = None
+    tax_amount: Decimal | None = None
+    refund_amount: Decimal | None = None
+    total_amount: Decimal | None = None
+    updated_at: datetime | None = None
+
+
+@dataclass(frozen=True)
+class CommerceOrderLineRecord:
+    external_id: str
+    order_external_id: str
+    quantity: int
+    variant_external_id: str | None = None
+    title: str | None = None
+    sku: str | None = None
+    unit_price: Decimal | None = None
+
+
+@dataclass(frozen=True)
+class CommerceSaleRecord:
+    """One sale or reversal with its own date (a platform "sales agreement" line)."""
+
+    external_id: str
+    agreement_external_id: str
+    order_external_id: str
+    happened_at: datetime
+    agreement_reason: str  # order | order_edit | refund | return | other
+    action: str  # order | return | update | other
+    line_type: str  # one of the core SALE_LINE_TYPES
+    amount: Decimal
+    discount_amount: Decimal
+    tax_amount: Decimal
+    currency: str
+    quantity: int | None = None
+    line_item_external_id: str | None = None
+
+
+@dataclass(frozen=True)
+class CommerceRefundRecord:
+    external_id: str
+    order_external_id: str
+    processed_at: datetime
+    currency: str
+    total_amount: Decimal | None = None
+
+
+CommerceRecord = (
+    CommerceProductRecord
+    | CommerceVariantRecord
+    | CommerceOrderRecord
+    | CommerceOrderLineRecord
+    | CommerceSaleRecord
+    | CommerceRefundRecord
+)
