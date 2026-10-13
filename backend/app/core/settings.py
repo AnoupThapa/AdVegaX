@@ -112,6 +112,11 @@ class Settings(BaseSettings):
 
     # --- External connections and credential encryption (Phase 1B, A6/D15) -----------
     CONNECT_STATE_TTL: timedelta = timedelta(minutes=10)
+    # Token lifecycle (Phase 2A, 2A-04): refresh access tokens this long before they expire;
+    # refresh at least this often so rotating refresh tokens never lapse; sweep interval.
+    TOKEN_REFRESH_MARGIN: timedelta = timedelta(minutes=10)
+    TOKEN_KEEPALIVE_INTERVAL: timedelta = timedelta(hours=24)
+    SCHEDULE_TOKEN_REFRESH_INTERVAL: timedelta = timedelta(hours=1)
     ENCRYPTION_KEYS: SecretStr = SecretStr(_DEV_ENCRYPTION_KEYS)
     ENCRYPTION_ACTIVE_KEY_VERSION: int = Field(default=1, ge=1)
 
@@ -157,6 +162,9 @@ class Settings(BaseSettings):
             "OUTBOUND_CONNECT_TIMEOUT": self.OUTBOUND_CONNECT_TIMEOUT,
             "OUTBOUND_READ_TIMEOUT": self.OUTBOUND_READ_TIMEOUT,
             "SHOPIFY_INSTALL_MAX_AGE": self.SHOPIFY_INSTALL_MAX_AGE,
+            "TOKEN_REFRESH_MARGIN": self.TOKEN_REFRESH_MARGIN,
+            "TOKEN_KEEPALIVE_INTERVAL": self.TOKEN_KEEPALIVE_INTERVAL,
+            "SCHEDULE_TOKEN_REFRESH_INTERVAL": self.SCHEDULE_TOKEN_REFRESH_INTERVAL,
         }
         for name, value in durations.items():
             if value <= timedelta(0):

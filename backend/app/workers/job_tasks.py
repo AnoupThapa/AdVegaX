@@ -16,6 +16,7 @@ from app.workers.email_tasks import deliver_pending, worker_runtime
 HANDLERS: Mapping[str, Handler] = {
     JOB_DISCOVER: integration_jobs.discover,
     JOB_SYNC: integration_jobs.sync,
+    integration_jobs.JOB_REFRESH: integration_jobs.refresh_credentials,
 }
 
 
@@ -52,3 +53,12 @@ def job_recovery_task() -> int | None:
     rt = worker_runtime()
     ttl = int(rt.settings.SCHEDULE_JOB_RECOVERY_INTERVAL.total_seconds() * 0.9)
     return run_singleton(rt.redis, "job_recovery", ttl, lambda: recover_stuck_jobs(rt))
+
+
+@celery_app.task(name="advegax.schedule.token_refresh")  # type: ignore[untyped-decorator]
+def token_refresh_task() -> int | None:
+    rt = worker_runtime()
+    ttl = int(rt.settings.SCHEDULE_TOKEN_REFRESH_INTERVAL.total_seconds() * 0.9)
+    return run_singleton(
+        rt.redis, "token_refresh", ttl, lambda: integration_jobs.enqueue_keepalive_refreshes(rt)
+    )

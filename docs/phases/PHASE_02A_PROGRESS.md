@@ -7,7 +7,7 @@ Plan: `PHASE_02A_PLAN.md` (approved 2026-10-13, A18, option C: live Shopify chec
 | 2A-01 Step 0 on a development store (live) | ⏸ Deferred — needs network access to Shopify or a staging server (plan §2A) |
 | 2A-02 Data model and migrations | ✅ Done — awaiting review |
 | 2A-03 Shopify connect | ✅ Done — awaiting review |
-| 2A-04 Token lifecycle | Not started |
+| 2A-04 Token lifecycle | ✅ Done — awaiting review |
 | 2A-05 Webhook intake | Not started |
 | 2A-06 HTTP client extensions, GraphQL client, initial import | Not started |
 | 2A-07 Webhook processing, incremental sync, reconciliation | Not started |
@@ -176,3 +176,42 @@ All of it is built against Shopify's documented formats and tested with recorded
 
 **Next task:** 2A-04 — token lifecycle: refresh before expiry with a per-store lock, rotation, keeping the 90-day refresh token alive, failure → "Needs reconnecting", and disconnect/uninstall handling.
 
+
+---
+
+## 2A-04 — Token lifecycle (2026-10-13)
+
+**Completed**
+- **Refresh before expiry** (`app/domains/integrations/tokens.py`): before any platform call (discovery, sync), the stored access token is refreshed if it expires within `TOKEN_REFRESH_MARGIN` (10 min). Shopify returns a **new refresh token each time**; both new tokens and their expiry times are saved encrypted, and the old ones are discarded.
+- **One refresh at a time per store:** refreshes and reconnects of the same platform account share an **account lock** (Redis, expires on its own after 60 s if a worker dies, released only by its owner). Inside the lock the credential row is re-read with a row lock, so a refresh another worker has just done is not repeated. Tested with 4 simultaneous workers → exactly **one** refresh call.
+- **Keep-alive:** an hourly scheduled sweep (single instance across workers) refreshes connections whose refresh token has been idle for `TOKEN_KEEPALIVE_INTERVAL` (24 h), so a quiet store never reaches the 90-day expiry. It skips revoked connections and ones that already have a refresh job queued.
+- **Refused refresh → "Needs reconnecting":** if the platform rejects the refresh (any 4xx), the connection is marked expired with an audit entry, and the person sees the reconnect prompt. Temporary failures (5xx, timeouts) are retried, not treated as expiry.
+- **Reconnect during a refresh:** the reconnect's token exchange waits for the lock; if it is still busy after 15 s the person is told to try again in a moment (`account_busy`) and **no exchange happens**.
+- **Revocation by the platform:** `revoke_by_platform()` erases the tokens of every live connection for that platform account, marks it revoked and audits `connection.revoked_by_platform`. Store data is kept. The Shopify uninstall webhook calls it in 2A-05.
+- Shopify provider: refresh with `grant_type=refresh_token`; the simulator accepts only the latest refresh token (rotation enforced).
+
+**Files changed** (18)
+- New (2): `app/domains/integrations/tokens.py`; `tests/api/test_token_lifecycle.py`.
+- Modified (16): `app/core/settings.py`; `app/domains/integrations/{credentials,jobs,service}.py`; `app/providers/base/{capabilities,interfaces}.py`; `app/providers/fake/provider.py`; `app/providers/shopify/provider.py`; `app/workers/{celery_app,job_tasks}.py`; `tests/security/test_static_rules.py`; `tests/shopify_sim.py`; `.env.example`; `docs/SECURITY.md`; `docs/INTEGRATION_GUIDES.md`; `frontend/features/connections/labels.ts`.
+- Deleted: none.
+
+**Tests**
+- 14 new: refresh before use; no refresh while fresh; refresh job then discovery; rejected refresh → expired + audit; 4 concurrent workers → one refresh; lock exclusive and owner-released; busy reconnect → no exchange; keep-alive sweep and its skips; beat schedule; Shopify rotation; Shopify 400 (expired) vs 503 (retry); uninstall revocation keeps data.
+- **Backend `make check`: 385 passed**, coverage 97.5 % (security-critical 99 %); ruff, mypy --strict: pass.
+- Frontend: 251 passed, check and build pass; **e2e 9 passed**.
+
+**Security**
+- Tokens are decrypted only in the credentials module, the connect service and the new token module (static test enforces this). No token appears in logs, audit, job results or errors.
+- Lock release is owner-checked, so a slow worker can never release another's lock.
+
+**Migration:** none.
+
+**Deviations**
+1. **Two locks instead of one:** a Redis account lock (across workers and organizations) plus a database row lock (to skip a duplicate refresh). A busy reconnect returns `account_busy` rather than waiting indefinitely.
+2. **The credential-boundary static test was changed deliberately:** job-time decryption moved from `jobs.py` to `tokens.py`, which refreshes first.
+3. **The local test platform now declares token refresh**, so the shared refresh path is exercised in the e2e journey.
+4. **Uninstall handling is a service function now;** the webhook that triggers it is built in 2A-05.
+
+**Blocked:** none. Live confirmation on a development store is still deferred (option C).
+
+**Next task:** 2A-05 — webhook intake: signature check on the raw body, duplicate rejection, metadata-only log, app-uninstalled → revoke, and Shopify's mandatory privacy webhooks.

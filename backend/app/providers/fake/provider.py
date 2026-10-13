@@ -7,6 +7,7 @@ connection, discovery, linking, sync, retry and dead-letter paths are exercised 
 from __future__ import annotations
 
 import secrets
+import secrets as secrets_module
 import threading
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -63,6 +64,7 @@ class FakeBehaviour:
     rate_limited_times: int = 0
     retryable_failures: int = 0
     revoke_fails: bool = False
+    refresh_fails: bool = False
     calls: list[str] = field(default_factory=list)
 
 
@@ -81,7 +83,9 @@ class FakeProvider:
     display_name = "Test platform (local only)"
     category = ProviderCategory.ADVERTISING
     auth_scheme = AuthScheme.OAUTH2
-    capabilities = ProviderCapabilities(frozenset({Capability.PKCE, Capability.TOKEN_REVOCATION}))
+    capabilities = ProviderCapabilities(
+        frozenset({Capability.PKCE, Capability.TOKEN_REVOCATION, Capability.TOKEN_REFRESH})
+    )
     test_only = True
     rate_limit = (50.0, 50)
 
@@ -125,6 +129,24 @@ class FakeProvider:
             granted_scopes=("read",),
             account_label="Fake Business",
             token_expires_in_seconds=3600,
+            refresh_expires_in_seconds=7_776_000,
+        )
+
+    def refresh_credentials(self, secrets: Secrets) -> ConnectResult:
+        with _lock:
+            behaviour.calls.append("refresh")
+            if behaviour.refresh_fails or not str(secrets.get("refresh_token", "")).startswith(
+                "fake-rt-"
+            ):
+                raise AuthExpiredError("refresh_rejected")
+        return ConnectResult(
+            secrets={
+                "access_token": f"fake-at-{secrets_module.token_urlsafe(24)}",
+                "refresh_token": f"fake-rt-{secrets_module.token_urlsafe(24)}",
+            },
+            granted_scopes=("read",),
+            token_expires_in_seconds=3600,
+            refresh_expires_in_seconds=7_776_000,
         )
 
     def _check(self, secrets_: Secrets, operation: str) -> None:

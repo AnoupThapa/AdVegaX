@@ -51,7 +51,8 @@ def test_no_security_definer_functions():
 
 
 def test_credential_boundary():
-    """Only the credentials module touches encryption; only service/jobs/rotation decrypt."""
+    """Only the credentials module touches encryption; only service and the token-lifecycle
+    module decrypt (2A-04 moved job-time decryption into ``tokens.py``, which refreshes first)."""
     importers_of_encryption = {
         p.relative_to(APP).as_posix()
         for p, src in _sources()
@@ -71,7 +72,7 @@ def test_credential_boundary():
     assert decrypters == {
         "domains/integrations/credentials.py",
         "domains/integrations/service.py",
-        "domains/integrations/jobs.py",
+        "domains/integrations/tokens.py",
     }
 
 

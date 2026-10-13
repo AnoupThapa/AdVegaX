@@ -50,6 +50,9 @@ const CONNECT_ERRORS: Readonly<Record<string, string>> = {
   missing_scopes:
     "Some permissions AdVegaX needs were not approved. Please connect again and approve all of them.",
   unsupported: "This platform does not support that way of connecting.",
+  account_busy:
+    "AdVegaX was updating this connection at the same moment. Please wait a few seconds and try again.",
+  app_uninstalled: "The AdVegaX app was uninstalled from this store. Reconnect to continue.",
   unknown_provider: "This platform is not available.",
 };
 

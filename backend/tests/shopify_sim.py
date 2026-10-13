@@ -79,7 +79,14 @@ class ShopifySim:
         if self.token_status != 200:
             return httpx.Response(self.token_status, json={"error": "invalid_request"})
         form = {k: v[0] for k, v in parse_qs(request.content.decode()).items()}
-        if form.get("client_secret") != CLIENT_SECRET or not form.get("code"):
+        if form.get("client_secret") != CLIENT_SECRET:
+            return httpx.Response(400, json={"error": "invalid_request"})
+        if form.get("grant_type") == "refresh_token":
+            # Rotation: only the most recently issued refresh token is accepted.
+            if form.get("refresh_token") != f"shprt_sim_refresh_{self.issued}":
+                return httpx.Response(400, json={"error": "invalid_grant"})
+            form["expiring"] = "1"
+        elif not form.get("code"):
             return httpx.Response(400, json={"error": "invalid_request"})
         self.issued += 1
         body: dict[str, Any] = {

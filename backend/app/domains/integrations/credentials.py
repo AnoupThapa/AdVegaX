@@ -32,6 +32,7 @@ def store_secrets(
     *,
     token_expires_at: datetime | None,
     refresh_expires_at: datetime | None = None,
+    refreshed_at: datetime | None = None,
 ) -> None:
     """Encrypt and save the connection's secrets, replacing any previous ones (reconnect)."""
     sealed = cipher.encrypt(
@@ -40,7 +41,8 @@ def store_secrets(
             connection.organization_id, connection.id, connection.provider
         ),
     )
-    record = session.get(ExternalConnectionCredential, connection.id)
+    # Row lock: a reconnect and a refresh of the same connection never interleave (2A-04).
+    record = session.get(ExternalConnectionCredential, connection.id, with_for_update=True)
     if record is None:
         record = ExternalConnectionCredential(
             connection_id=connection.id, organization_id=connection.organization_id
@@ -51,6 +53,7 @@ def store_secrets(
     record.key_version = sealed.key_version
     record.token_expires_at = token_expires_at
     record.refresh_expires_at = refresh_expires_at
+    record.last_refreshed_at = refreshed_at
 
 
 def load_secrets(

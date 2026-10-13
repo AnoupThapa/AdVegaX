@@ -5,16 +5,18 @@ from __future__ import annotations
 import uuid
 from collections.abc import Callable
 
-from sqlalchemy import select
+from sqlalchemy import String, select
 
 from app.domains.audit.service import Actor, record_audit
-from app.domains.integrations.credentials import load_secrets
 from app.domains.integrations.models import (
     ExternalConnection,
+    ExternalConnectionCredential,
     ExternalResource,
     OrganizationResourceLink,
 )
-from app.domains.jobs.service import ClaimedJob, JobSubjectGoneError
+from app.domains.integrations.tokens import usable_secrets
+from app.domains.jobs.models import JobRun
+from app.domains.jobs.service import ClaimedJob, JobSubjectGoneError, create_job
 from app.providers.base.errors import AuthExpiredError, PermissionDeniedError, ProviderError
 from app.providers.base.interfaces import PlatformProvider
 from app.providers.base.types import ResourceDescriptor, ResourceKind
@@ -23,7 +25,7 @@ from app.runtime import Runtime
 WORKER = Actor("worker", None)
 
 
-def _mark_connection_error(
+def mark_connection_error(
     rt: Runtime, org_id: uuid.UUID, connection_id: uuid.UUID, exc: ProviderError
 ) -> None:
     status = "expired" if isinstance(exc, AuthExpiredError) else "error"
@@ -56,7 +58,7 @@ def _call[T](
     try:
         return fn()
     except (AuthExpiredError, PermissionDeniedError) as exc:
-        _mark_connection_error(rt, org_id, connection_id, exc)
+        mark_connection_error(rt, org_id, connection_id, exc)
         raise
 
 
@@ -74,7 +76,7 @@ def discover(rt: Runtime, job: ClaimedJob) -> None:
         if connection is None or connection.status != "active":
             raise JobSubjectGoneError()
         provider = rt.providers.get(connection.provider)
-        secrets = load_secrets(session, rt.cipher, connection)
+    secrets = usable_secrets(rt, org_id, connection_id)
     descriptors = _call(
         rt, provider, org_id, connection_id, lambda: provider.discover_resources(secrets)
     )
@@ -178,7 +180,6 @@ def sync(rt: Runtime, job: ClaimedJob) -> None:
             raise JobSubjectGoneError()
         resource, connection = row
         provider = rt.providers.get(connection.provider)
-        secrets = load_secrets(session, rt.cipher, connection)
         descriptor = ResourceDescriptor(
             ResourceKind(resource.kind),
             resource.external_id,
@@ -187,6 +188,7 @@ def sync(rt: Runtime, job: ClaimedJob) -> None:
             resource.timezone,
         )
         connection_id = connection.id
+    secrets = usable_secrets(rt, org_id, connection_id)
     summary = _call(
         rt, provider, org_id, connection_id, lambda: provider.sync_resource(secrets, descriptor)
     )
@@ -203,3 +205,60 @@ def sync(rt: Runtime, job: ClaimedJob) -> None:
             resource_id=resource_id,
             metadata={"items": summary.items_synchronized, "job_id": str(job.id)},
         )
+
+
+def refresh_credentials(rt: Runtime, job: ClaimedJob) -> None:
+    """Keep-alive refresh (scheduled): rotating refresh tokens never reach their expiry."""
+    org_id = job.organization_id
+    if org_id is None or job.subject_id is None:
+        raise JobSubjectGoneError()
+    connection_id = uuid.UUID(job.subject_id)
+    with rt.db.transaction(org_id=org_id) as session:
+        connection = session.get(ExternalConnection, connection_id)
+        if connection is None or connection.status != "active":
+            raise JobSubjectGoneError()
+    usable_secrets(rt, org_id, connection_id, force=True)
+
+
+JOB_REFRESH = "connection.refresh_credentials"
+
+
+def enqueue_keepalive_refreshes(rt: Runtime) -> int:
+    """Scheduled sweep: queue a refresh for every live connection whose rotating refresh token
+    has not been used within ``TOKEN_KEEPALIVE_INTERVAL`` (so it never reaches its expiry).
+
+    The candidate list is read with the system role (ids only — no secrets are decrypted
+    here); each job is created inside its own organization's tenant context.
+    """
+    cutoff = rt.clock.now() - rt.settings.TOKEN_KEEPALIVE_INTERVAL
+    with rt.db.transaction(system=True) as session:
+        pending = select(JobRun.subject_id).where(
+            JobRun.job_type == JOB_REFRESH, JobRun.status.in_(("queued", "running"))
+        )
+        candidates = session.execute(
+            select(ExternalConnection.id, ExternalConnection.organization_id)
+            .join(
+                ExternalConnectionCredential,
+                ExternalConnectionCredential.connection_id == ExternalConnection.id,
+            )
+            .where(
+                ExternalConnection.status == "active",
+                ExternalConnectionCredential.ciphertext.is_not(None),
+                ExternalConnectionCredential.refresh_expires_at.is_not(None),
+                (ExternalConnectionCredential.last_refreshed_at.is_(None))
+                | (ExternalConnectionCredential.last_refreshed_at < cutoff),
+                ExternalConnection.id.cast(String).not_in(pending),
+            )
+        ).all()
+    for connection_id, org_id in candidates:
+        with rt.db.transaction(org_id=org_id) as session:
+            create_job(
+                session,
+                rt,
+                organization_id=org_id,
+                job_type=JOB_REFRESH,
+                subject_type="connection",
+                subject_id=connection_id,
+                requested_by=None,
+            )
+    return len(candidates)

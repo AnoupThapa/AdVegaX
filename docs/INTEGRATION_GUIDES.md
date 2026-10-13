@@ -77,6 +77,7 @@ Add one section per provider when its phase is implemented.
 - **Capabilities:** app install, webhooks, product cost, inventory, refund lines, presentment currency. **No token revocation** declared (no documented app-initiated revoke for this flow).
 - **Rate limits:** cost-based (100/200/1,000 points per second by plan); `THROTTLED` and 429 → `rate_limited`. Cost-aware limiting in 2A-07.
 - **Errors:** 401 → `auth_expired`; 402/403/423/`ACCESS_DENIED` → `permission_denied`; 404 → `not_found`; 429/`THROTTLED` → `rate_limited`; 5xx/invalid JSON → retryable. Response bodies and Shopify messages never enter errors or logs.
+- **Token lifecycle (2A-04):** refresh with `grant_type=refresh_token`; the new refresh token replaces the old one (the old one is retired); any 4xx on refresh → `auth_expired` ("Needs reconnecting"), 5xx → retried. Refresh and reconnect share one account lock.
 - **Data synchronized:** none yet (2A-06/2A-07).
 - **To confirm live (development store):** exact scope behaviour incl. whether `Order.customer.id` needs `read_customers`; bulk query shapes; app-initiated revocation; bulk-download host; `read_all_orders` and expiring tokens for custom-distribution apps; Sales-report reproduction (Step 0, plan §4.2).
 

@@ -34,6 +34,10 @@ celery_app.conf.update(
             "task": "advegax.schedule.job_recovery",
             "schedule": _settings.SCHEDULE_JOB_RECOVERY_INTERVAL.total_seconds(),
         },
+        "token-refresh": {
+            "task": "advegax.schedule.token_refresh",
+            "schedule": _settings.SCHEDULE_TOKEN_REFRESH_INTERVAL.total_seconds(),
+        },
     },
 )
 

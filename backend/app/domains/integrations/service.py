@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+from contextlib import nullcontext
 from datetime import datetime, timedelta
 from urllib.parse import urlencode
 
@@ -20,6 +21,7 @@ from app.core.errors import Conflict, Forbidden, NotFound, ValidationFailed
 from app.core.security.tokens import generate_token
 from app.domains.audit.service import Actor, record_audit
 from app.domains.identity.principal import Principal
+from app.domains.integrations import tokens
 from app.domains.integrations.connect_state import ConnectState, consume_state, create_state
 from app.domains.integrations.credentials import erase_secrets, load_secrets, store_secrets
 from app.domains.integrations.models import (
@@ -35,6 +37,7 @@ from app.domains.integrations.schemas import (
     ProviderOut,
     ResourceOut,
 )
+from app.domains.integrations.tokens import AccountBusy, account_lock, lock_key
 from app.domains.jobs.service import create_job
 from app.domains.organizations.permissions import Permission, authorize
 from app.domains.organizations.service import OrganizationService
@@ -253,24 +256,41 @@ class IntegrationService:
                 return self._app_redirect(
                     status="error", code=ACCOUNT_IN_USE_CODE, organization_id=org_param
                 )
+        # A reconnect must never overlap a token refresh of the same account: acquiring a new
+        # token retires the other one (2A-04). Accounts without an id get a no-op scope.
+        lock = (
+            account_lock(
+                self.rt.redis,
+                lock_key(provider.code, prepared.account_id, ctx.organization_id),
+                wait_seconds=tokens.LOCK_WAIT_SECONDS,
+            )
+            if prepared.account_id is not None
+            else nullcontext()
+        )
         try:
-            result = provider.complete_authorization(
-                params,
-                redirect_uri=self._redirect_uri(provider.code),
-                code_verifier=state.code_verifier,
-                provider_params=prepared.params,
-            )
-        except ProviderError as exc:
-            logger.warning(
-                "connect_failed", extra={"provider": provider.code, "error_code": exc.code}
-            )
+            with lock:
+                try:
+                    result = provider.complete_authorization(
+                        params,
+                        redirect_uri=self._redirect_uri(provider.code),
+                        code_verifier=state.code_verifier,
+                        provider_params=prepared.params,
+                    )
+                except ProviderError as exc:
+                    logger.warning(
+                        "connect_failed", extra={"provider": provider.code, "error_code": exc.code}
+                    )
+                    return self._app_redirect(
+                        status="error", code=exc.code, organization_id=org_param
+                    )
+                try:
+                    connection_id = self._save_connection(ctx, provider, result)
+                except IntegrityError:  # another organization connected this account meanwhile
+                    return self._app_redirect(
+                        status="error", code=ACCOUNT_IN_USE_CODE, organization_id=org_param
+                    )
+        except AccountBusy as exc:
             return self._app_redirect(status="error", code=exc.code, organization_id=org_param)
-        try:
-            connection_id = self._save_connection(ctx, provider, result)
-        except IntegrityError:  # another organization connected this account in the meantime
-            return self._app_redirect(
-                status="error", code=ACCOUNT_IN_USE_CODE, organization_id=org_param
-            )
         return self._app_redirect(
             status="connected", organization_id=org_param, connection_id=str(connection_id)
         )
@@ -382,6 +402,56 @@ class IntegrationService:
             return self._app_redirect(status="error", code=exc.code)
         base = self.rt.settings.APP_BASE_URL.rstrip("/")
         return f"{base}/connect/{provider.code}?{urlencode({'account': account})}"
+
+    def revoke_by_platform(self, provider_code: str, account_id: str, *, reason: str) -> int:
+        """The platform says AdVegaX's access ended (e.g. Shopify ``app/uninstalled``).
+
+        Marks every live connection to that account as revoked, deletes its stored tokens and
+        ends its links; imported data is kept until the platform asks for erasure
+        (D-2A-2). Returns the number of connections changed. Used by webhook processing.
+        """
+        with self.rt.db.transaction(system=True) as session:
+            targets = session.execute(
+                select(ExternalConnection.id, ExternalConnection.organization_id).where(
+                    ExternalConnection.provider == provider_code,
+                    ExternalConnection.external_account_id == account_id,
+                    ExternalConnection.status != "revoked",
+                )
+            ).all()
+        now = self.rt.clock.now()
+        for connection_id, org_id in targets:
+            with self.rt.db.transaction(org_id=org_id) as session:
+                connection = session.get(ExternalConnection, connection_id, with_for_update=True)
+                if connection is None or connection.status == "revoked":
+                    continue
+                erase_secrets(session, connection.id)
+                ended = self._end_links(
+                    session,
+                    org_id,
+                    ExternalResource.connection_id == connection.id,
+                    reason="connection_revoked",
+                    by=None,
+                    now=now,
+                )
+                before = {"status": connection.status}
+                connection.status, connection.revoked_at, connection.updated_at = (
+                    "revoked",
+                    now,
+                    now,
+                )
+                connection.last_error_code = reason
+                record_audit(
+                    session,
+                    organization_id=org_id,
+                    actor=Actor("system", None),
+                    action="connection.revoked_by_platform",
+                    resource_type="connection",
+                    resource_id=connection.id,
+                    before=before,
+                    after={"status": "revoked"},
+                    metadata={"reason": reason, "links_ended": ended},
+                )
+        return len(targets)
 
     # ----------------------------------------------------------- connections
     def _get_connection(

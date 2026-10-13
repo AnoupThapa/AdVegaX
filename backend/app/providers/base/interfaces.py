@@ -61,6 +61,14 @@ class PlatformProvider(Protocol):
 
     def revoke(self, secrets: Secrets) -> None: ...
 
+    def refresh_credentials(self, secrets: Secrets) -> ConnectResult:
+        """Exchange the refresh token for new credentials (``Capability.TOKEN_REFRESH``).
+
+        Raises ``AuthExpiredError`` when the refresh token is no longer valid (the person must
+        reconnect) and a retryable error for temporary failures.
+        """
+        ...
+
 
 class CommerceProvider(PlatformProvider, Protocol):
     """Shopify, WooCommerce, … — catalogue/order reads are added in Phase 2A/2B."""

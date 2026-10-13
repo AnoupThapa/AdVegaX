@@ -19,10 +19,12 @@ from app.core.clock import Clock
 from app.providers.base.capabilities import Capability, ProviderCapabilities
 from app.providers.base.errors import (
     AccountMismatchError,
+    AuthExpiredError,
     InvalidConnectParamsError,
     InvalidRequestError,
     InvalidSignatureError,
     MissingScopesError,
+    PermissionDeniedError,
     UnsupportedOperationError,
 )
 from app.providers.base.interfaces import Secrets
@@ -67,6 +69,7 @@ class ShopifyProvider:
         frozenset(
             {
                 Capability.APP_INSTALL,
+                Capability.TOKEN_REFRESH,
                 Capability.WEBHOOKS,
                 Capability.PRODUCT_COST,
                 Capability.INVENTORY,
@@ -186,6 +189,46 @@ class ShopifyProvider:
         if age < -60 or age > self._install_max_age.total_seconds():
             raise InvalidSignatureError()  # stale or from the future: possible replay
         return shop
+
+    # ------------------------------------------------------------------ token lifecycle
+    def refresh_credentials(self, secrets: Secrets) -> ConnectResult:
+        """Rotate expiring offline tokens (verified 2026-10-13): ``POST
+        https://{shop}/admin/oauth/access_token`` with ``grant_type=refresh_token``. Each
+        refresh returns a new access token **and** a new refresh token; both must be saved."""
+        shop = str(secrets.get("shop", ""))
+        refresh = secrets.get("refresh_token")
+        if not is_valid_shop(shop) or not isinstance(refresh, str) or not refresh:
+            raise AuthExpiredError("refresh_unavailable")
+        app = app_for_shop(self._apps, shop)
+        if app is None:  # the serving app was removed from configuration
+            raise AuthExpiredError("app_not_configured")
+        try:
+            token = self._api.post_form(
+                shop,
+                "/admin/oauth/access_token",
+                {
+                    "client_id": app.client_id,
+                    "client_secret": app.client_secret,
+                    "grant_type": "refresh_token",
+                    "refresh_token": refresh,
+                },
+            )
+        except (InvalidRequestError, PermissionDeniedError, AuthExpiredError):
+            # Shopify refused the refresh token (expired, retired by a newer token, or the app
+            # was uninstalled): the person must reconnect. Retryable errors propagate.
+            raise AuthExpiredError("refresh_rejected") from None
+        access, new_refresh = token.get("access_token"), token.get("refresh_token")
+        if not isinstance(access, str) or not access or not isinstance(new_refresh, str):
+            raise AuthExpiredError("refresh_rejected")
+        granted = {s.strip() for s in str(token.get("scope", "")).split(",") if s.strip()}
+        return ConnectResult(
+            secrets={"shop": shop, "access_token": access, "refresh_token": new_refresh},
+            granted_scopes=tuple(sorted(granted)),
+            account_label=shop,
+            token_expires_in_seconds=_positive_int(token.get("expires_in")),
+            refresh_expires_in_seconds=_positive_int(token.get("refresh_token_expires_in")),
+            external_account_id=shop,
+        )
 
     # ------------------------------------------------------------------ discovery
     def discover_resources(self, secrets: Secrets) -> list[ResourceDescriptor]:
