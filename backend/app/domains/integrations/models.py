@@ -42,6 +42,15 @@ class ExternalConnection(UUIDPrimaryKey, Timestamps, Base):
         CheckConstraint("status IN ('active', 'expired', 'revoked', 'error')", name="status"),
         CheckConstraint("auth_scheme IN ('oauth2', 'api_key', 'app_key')", name="auth_scheme"),
         Index("ix_external_connections_organization_id_provider", "organization_id", "provider"),
+        # One live connection per platform account across ALL organizations (Q6, Phase 2A): a
+        # second connection would retire the first one's token on platforms such as Shopify.
+        Index(
+            "uq_external_connections_live_account",
+            "provider",
+            "external_account_id",
+            unique=True,
+            postgresql_where=text("external_account_id IS NOT NULL AND status <> 'revoked'"),
+        ),
     )
 
     organization_id: Mapped[uuid.UUID] = mapped_column(
@@ -57,6 +66,9 @@ class ExternalConnection(UUIDPrimaryKey, Timestamps, Base):
         ARRAY(String(255)), nullable=False, server_default="{}"
     )
     external_account_label: Mapped[str | None] = mapped_column(String(255))
+    # Stable platform account identifier (e.g. a Shopify shop domain). NULL for providers
+    # that connect to many accounts at once.
+    external_account_id: Mapped[str | None] = mapped_column(String(255))
     last_error_code: Mapped[str | None] = mapped_column(String(64))
     last_error_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

@@ -10,10 +10,10 @@ This document is the **target data model**. Tables are created only in the phase
 |---|---|
 | 1A | users, user_password_credentials, sessions, user_action_tokens, organizations, memberships, invitations, audit_logs, security_events, email_outbox |
 | 1B | external_connections, external_connection_credentials, external_resources, organization_resource_links, job_runs |
-| 2A | stores (resource extension), products, product_variants, inventory_levels, product_cost_history, orders, order_items, refunds, refund_lines, customer_refs, webhook_events, sync_runs |
+| 2A | **as built (migration 0007):** stores, products, product_variants (incl. inventory), product_cost_history, orders (incl. hashed customer key), order_items, sales_entries, refunds, refund_items, commerce_sync_state, webhook_events, financial_daily (store components) — see §4A |
 | 3–4 | ad_accounts (resource extension), campaigns, ad_groups, ads, budgets, ad_performance_daily, keywords, audience_targets |
 | 5 | analytics_properties (resource extension), analytics table per decision Q11 |
-| 6 | fx_rates, metric_definitions, financial_daily, store_cost_rules |
+| 6 | fx_rates, metric_definitions, store_cost_rules; financial_daily gains ad-spend components |
 | 7 | funnel_daily |
 | 8–9 | ai_models, prompt_versions, ai_runs, campaign_strategies, creatives |
 | 10A | actions, approvals, idempotency_keys |
@@ -171,11 +171,11 @@ The API role may only insert; the worker (`advegax_system`) reads and updates.
 
 ## 4. External Connections and Resources (Phase 1B — implemented, migrations 0005–0006)
 
-Approved model A6/A16: **Organization owns the connection; a User authorizes it.** Connection → discovered resources → explicit organization links. If the same platform account must serve two organizations, each organization creates its own connection (credentials are never shared across organizations).
+Approved model A6/A16: **Organization owns the connection; a User authorizes it.** Connection → discovered resources → explicit organization links. If the same platform account must serve two organizations, each organization creates its own connection (credentials are never shared across organizations) — **except** for platforms that allow only one live token per account, such as Shopify: there a platform account may be live in only one organization at a time (Q6, `external_account_id`, §4A).
 
 All five tables have RLS **enabled and forced** with tenant policies for `advegax_app` (SELECT/INSERT/UPDATE; **no DELETE**). Child tables reference their parent with a **composite foreign key on `(organization_id, id)`**, so a row can never point at another tenant's parent.
 
-### external_connections (0005)
+### external_connections (0005; `external_account_id` added in 0007)
 - id (uuid PK), organization_id (FK organizations, cascade)
 - provider (varchar 32), auth_scheme (`oauth2` | `api_key` | `app_key`)
 - authorized_by_user_id (FK users, set null)
@@ -221,7 +221,30 @@ Durable record and source of truth for background work.
 - Indexes (status, next_attempt_at), (organization_id, created_at)
 - RLS: tenant policies for `advegax_app`; `advegax_system` SELECT/UPDATE across tenants to claim, retry and recover jobs (handlers then run under the job's tenant context).
 
+## 4A. Commerce, webhook intake and daily figures (Phase 2A — migration 0007)
+
+Platform-neutral tables (D4, D19); providers map into them. **Tenant tables** (`stores`, `products`, `product_variants`, `product_cost_history`, `orders`, `order_items`, `sales_entries`, `refunds`, `refund_items`, `commerce_sync_state`, `financial_daily`): RLS enabled and forced; `advegax_app` policies for SELECT/INSERT/UPDATE **and DELETE** (needed for erasure requests and re-imports; still limited to the current organization); composite `(organization_id, parent_id)` foreign keys everywhere. Optional references from financial history (order line → variant, sales entry / refund line → order line) do **not** cascade, so deleting a product never deletes order history. Money is `NUMERIC(20,6)` in the store's currency; missing values are NULL with a source/availability marker, never 0 (A10).
+
+| Table | Key columns and rules |
+|---|---|
+| `stores` | resource extension (`external_resource_id` unique, composite FK); provider, external_store_id, domain, name, currency (3), timezone, status (`importing`/`active`/`disconnected`/`error`), `history_from` (Q9), `first_import_completed_at`; unique (organization, provider, external_store_id) |
+| `products` | store FK; external_product_id (unique per store), title, handle, product_type, vendor, status (`active`/`draft`/`archived`/`deleted`), `external_updated_at` (an older update never overwrites a newer one) |
+| `product_variants` | product + store FKs; external_variant_id (unique per store), external_inventory_item_id, title, sku, price; inventory: `inventory_tracked`, `inventory_available` (summed across locations; NULL = not tracked / not synchronized), `inventory_synced_at`; `deleted` flag (soft delete) |
+| `product_cost_history` | variant FK; `unit_cost` (NULL = no cost from that moment), currency, `effective_from` (unique per variant), source (`platform`/`import_snapshot`), `recorded_at` |
+| `orders` | store FK; external_order_id (unique per store), order_number, currency, `ordered_at`, `cancelled_at`, financial_status; display amounts (gross, discount, shipping, tax, refund, total); **`customer_key`** (one-way, organization-keyed hash — no names, emails, phones or addresses, Q8); `country_code` (2); `external_updated_at` |
+| `order_items` | order FK; variant (optional, non-cascading); external_line_item_id (unique per order), title, sku, quantity, unit_price; `unit_cost` + `cost_source` (`order_time`/`import_time`) — both NULL or both set |
+| `sales_entries` | one sale or reversal with its own `happened_at`; `action` (`order`/`return`/`cancel`/`edit`/`other`), `line_type` (`product`/`shipping`/`tax`/`duty`/`fee`/`tip`/`gift_card`/`other`), quantity, signed `amount`, `discount_amount`, `tax_amount`, currency; external agreement/sale ids (sale unique per store); optional order line (non-cascading). Source of §10 figures |
+| `refunds`, `refund_items` | refund with `processed_at`, total, currency; lines with quantity, subtotal, restocked |
+| `commerce_sync_state` | one row per store: import progress (0–100), bulk operation id/kind, last reconciliation times, last error code |
+| `financial_daily` | per store, `day` (store time zone), currency, `definition_version` (unique per store/day/version); additive components: gross_sales, discounts, sales_reversals, net_sales, shipping, taxes, duties, fees, total_sales, orders_count; **`cogs` NULL exactly when `uncosted_lines > 0`** (check constraint), `costed_net_sales` for coverage; `computed_at`. Ratios computed on read (A5). Ad-spend components are added in Phase 6 |
+| `webhook_events` | **system role only** (no app-role grants). Metadata only — provider, `webhook_id` (unique per provider, duplicate deliveries rejected), topic, external_account_id, object id, `object_updated_at`, `triggered_at`, `received_at`, resolved organization (nullable), status, processed_at, error_code. **No body column**: payload personal data is never stored |
+| `external_connections.external_account_id` | platform account id (e.g. shop domain); partial unique index `(provider, external_account_id)` where not NULL and status ≠ `revoked` — one live connection per account across organizations (Q6) |
+
+System-role grants added in 0007 (narrow, read-only): `SELECT` on `stores` (route a webhook to its store before a tenant context exists) and on `external_connections` (cross-organization live-account check before a token exchange). The system role cannot read orders, products or figures.
+
 ## 5. Stores
+
+> Original target model, kept for reference. **As built in Phase 2A: see §4A.**
 
 ### stores
 Commerce-specific extension of an external resource of kind `store`.
@@ -242,6 +265,8 @@ Unique:
 - organization_id + provider + external_store_id
 
 ## 6. Products
+
+> Original target model, kept for reference. **As built in Phase 2A: see §4A.**
 
 ### products
 - id
@@ -284,6 +309,8 @@ Indexes:
 - sku where appropriate
 
 ## 7. Orders
+
+> Original target model, kept for reference. **As built in Phase 2A: see §4A.**
 
 ### orders
 - id
@@ -467,6 +494,8 @@ Unique key should prevent duplicate provider/date/entity records.
 - purchases
 
 ## 13. Financial Aggregates
+
+> Original target model, kept for reference. **As built in Phase 2A: see §4A.**
 
 ### financial_daily
 - id

@@ -12,7 +12,7 @@ AdVegaX — independent, multi-tenant e-commerce advertising and growth SaaS.
 | 1A — Platform core & identity | Implemented, pushed — awaiting review |
 | 1B — Integration foundation | Implemented, pushed — awaiting review |
 | 1C — Frontend shell | Implemented, awaiting review (`phases/PHASE_01C_REPORT.md`) |
-| 2A — Shopify + finance core | Plan drafted, awaiting approval (`phases/PHASE_02A_PLAN.md`) — no code before approval |
+| 2A — Shopify + finance core | **Approved (A18) — in progress**; next task in `phases/PHASE_02A_PROGRESS.md` (live Shopify checks deferred, option C) |
 | 2B onward | Not started |
 
 Repository: https://github.com/AnoupThapa/AdVegaX · working branch `feature/phase-1a`.

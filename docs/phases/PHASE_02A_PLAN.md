@@ -1,6 +1,8 @@
 # Phase 2A — Shopify (read-only) + Finance Core: Implementation Plan
 
-**Status:** 📝 **Draft v2 — awaiting product-owner approval** (proposed approval id A18). No Phase 2A code is written before approval. · **Date:** 2026-10-13 (v2 after independent review, §20)
+**Status:** ✅ **Approved by the product owner (2026-10-13, A18)** with all §2 recommendations and live-testing option **C** (§2A): build against Shopify's documented formats, recorded fixtures and a simulator now; live development-store checks once network access or a staging server exists. Implementation authorized for Phase 2A only. · **Date:** 2026-10-13 (v2 after independent review, §20)
+
+> **Task order under option C:** 2A-02 → 2A-03 … 2A-10 → 2A-11, with the **live** parts of 2A-01 (Step 0 on a development store) done when access exists. Everything Step 0 would confirm is built from Shopify's documentation and marked "to confirm live" in INTEGRATION_GUIDES.
 **Depends on:** Phase 1 (1A, 1B, 1C implemented; awaiting review) · **Followed by:** Phase 2B (WooCommerce)
 **Governing documents:** MASTER_SPECIFICATION §7, §14, §20 (D2, D4, D6, D14, D15, D17, D19, D22), ARCHITECTURE §9–§10, DATABASE_SCHEMA §5–§7, §13, §19A, INTEGRATION_GUIDES §2, `phases/PHASE_02A_SHOPIFY.md` (outline), DISCOVERY_REPORT §3 (C9, C10), §14 (Q5–Q9)
 

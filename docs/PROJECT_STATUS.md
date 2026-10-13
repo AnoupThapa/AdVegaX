@@ -1,8 +1,8 @@
 # AdVegaX — Project Status & Progress Log
 
 **Last updated:** 2026-10-13
-**Current phase:** Phase 1 (1A, 1B, 1C) implemented — awaiting product-owner review
-**Code written:** Phase 1A + 1B backend, Phase 1C web application · **Migrations:** 0001–0006 · **Integrations:** test (fake) platform only — no real platform
+**Current phase:** Phase 2A approved (A18) and in progress · Phase 1 (1A, 1B, 1C) implemented — awaiting product-owner review
+**Code written:** Phase 1A + 1B backend, Phase 1C web application · **Migrations:** 0001–0007 · **Integrations:** test (fake) platform only — no real platform
 
 Update this file at the end of every phase and every approved sub-phase (ROADMAP §5, step 13).
 
@@ -16,7 +16,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | 1A | Platform core & identity | ✅ **Implemented — awaiting review** | 141 tests, 98.5 % coverage; `phases/PHASE_01A_REPORT.md` |
 | 1B | Integration foundation | ✅ **Implemented — awaiting review** | 277 tests, 98.4 % coverage; `phases/PHASE_01B_REPORT.md` |
 | 1C | Frontend shell | ✅ **Implemented — awaiting review** | 251 unit + 9 end-to-end tests, axe 0 violations; `phases/PHASE_01C_REPORT.md` |
-| 2A | Shopify (read-only) + finance core | **Plan drafted — awaiting approval** | `phases/PHASE_02A_PLAN.md`; your answers to Q5–Q9 are in its §2 (with recommendations) |
+| 2A | Shopify (read-only) + finance core | **Approved (A18) — in progress** (live checks deferred, option C) | `phases/PHASE_02A_PLAN.md`, `phases/PHASE_02A_PROGRESS.md` |
 | 2B | WooCommerce (read-only) | Not started | Needs Q10 |
 | 3 | Google Ads (read-only) | Not started | Start developer-token application early |
 | 4 | Meta (read-only) | Not started | Start App Review / Business Verification early |
@@ -70,6 +70,8 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | 2026-10-13 | **Phase 1C re-check** (independent review + full re-run): fixed stuck "Sync now" after an unreadable job, endless "Looking for accounts…", Docker route for the e2e suite, keyboard test strictness, CI now runs the standalone server; report corrections | `phases/PHASE_01C_REPORT.md §13`, `phases/PHASE_01C_PROGRESS.md` |
 | 2026-10-13 | **Phase 2A plan drafted** (Shopify read-only + finance core): Shopify facts verified on 2026-10-13; recommendations for Q5–Q9; one store = one connection (Shopify allows one current token per app per store); App Store billing rule flagged for Q5 | `phases/PHASE_02A_PLAN.md` |
 | 2026-10-13 | **Phase 2A plan v2** after independent review: 12 fixes (webhook CSRF exemption, pre-exchange one-store check, connect parameters, no stored webhook bodies, Shopify "sales reversals" definitions, reconnect reuse, streaming downloads, task order); live-testing environment blocked by network settings → decision §2A | `phases/PHASE_02A_PLAN.md §20` |
+| 2026-10-13 | **A18 — Phase 2A approved** with all recommendations (Q5–Q9, D-2A-1…3) and option C: build now against documented formats + simulator; live Shopify checks later | `phases/PHASE_02A_PLAN.md` |
+| 2026-10-13 | **2A-02** commerce data model (migration 0007): 11 tenant tables with RLS + composite keys, system-only webhook log (no bodies), one-live-connection-per-account rule; 16 isolation/integrity tests | `phases/PHASE_02A_PROGRESS.md`, `DATABASE_SCHEMA.md §4A` |
 | 2026-10-08 | **Phase 1B implemented**: connections/resources/links, encrypted credentials, SSRF-safe client, rate limiter, provider framework + fake platform, jobs with retry/dead-letter, single scheduler, audited denials | `backend/`, `phases/PHASE_01B_REPORT.md`, `SECURITY.md`, `INTEGRATION_GUIDES.md` |
 
 ## 3. Decision log
@@ -94,13 +96,14 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | A15 | Phase 1A plan and §22 defaults; configurable security settings | Approved |
 | A16 | Phase 1B plan and §20 defaults; organization owns connections, user authorizes; credentials never exposed; SSRF mandatory | Approved — implemented |
 | A17 | Phase 1C plan with all §15 recommendations; task-by-task delivery | Approved — implemented, awaiting review |
+| A18 | Phase 2A plan v2 with all §2 recommendations (Q5–Q9, D-2A-1…3); live-testing option C | Approved 2026-10-13 — in progress |
 
 ## 4. Open items
 
 **Awaiting product owner now**
 - Start the external approvals that take weeks (see `ROADMAP.md §7`): Google Ads developer token, Meta developer app + Business Verification, Shopify Partner account with a development store.
 - Review of Phase 1: `phases/PHASE_01A_REPORT.md`, `phases/PHASE_01B_REPORT.md` (incl. deviations §10), `phases/PHASE_01C_REPORT.md` (incl. review follow-up §13).
-- Approve or change the Phase 2A plan (`phases/PHASE_02A_PLAN.md` §2, §19); then create the Shopify Partner account + development store (instructions follow approval).
+- When convenient: allow Shopify domains in Claude network settings (or decide a staging server) so the live Shopify checks can run; create a Shopify Partner account + development store (instructions on request).
 - Run CI on GitHub: CI runs on pull requests and on pushes to `main` only — a push to `feature/phase-1a` does not start it. Open a pull request `feature/phase-1a → main` to run every job (backend, frontend, end-to-end, Docker, gitleaks).
 
 **Future-phase decisions (not blockers until their phase)** — details in `DISCOVERY_REPORT.md §14`:
