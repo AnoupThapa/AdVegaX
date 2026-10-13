@@ -24,9 +24,10 @@ from collections.abc import Callable, Iterable, Iterator
 from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
+from enum import StrEnum
 from typing import Any, cast
 
-from sqlalchemy import Table, select, text
+from sqlalchemy import BindParameter, Table, bindparam, select, text
 from sqlalchemy.dialects.postgresql import distinct_on, insert
 from sqlalchemy.orm import Session
 
@@ -132,31 +133,62 @@ def on_store_linked(
     return store
 
 
+class SyncMode(StrEnum):
+    INITIAL = "initial"  # first import: catalogue + order history
+    RECONCILE = "reconcile"  # hourly: what changed since the last run
+    DEEP = "deep"  # nightly / "Sync now": whole catalogue + recent orders
+
+
 def start_import(
     session: Session, rt: Runtime, store: Store, *, requested_by: uuid.UUID | None
 ) -> uuid.UUID:
-    """(Re)start the import chain from the catalogue step."""
+    """(Re)start the initial import from the catalogue step."""
+    return start_sync(session, rt, store, SyncMode.INITIAL, requested_by=requested_by)
+
+
+def start_sync(
+    session: Session,
+    rt: Runtime,
+    store: Store,
+    mode: SyncMode,
+    *,
+    requested_by: uuid.UUID | None = None,
+) -> uuid.UUID:
+    """Start a chain in ``mode`` (replacing any chain that was running for this store)."""
     state = session.get(CommerceSyncState, store.id, with_for_update=True)
     if state is None:
         state = CommerceSyncState(store_id=store.id, organization_id=store.organization_id)
         session.add(state)
-    store.status = "importing"
+    now = rt.clock.now()
+    if mode is SyncMode.INITIAL:
+        store.status = "importing"
+        state.import_progress = 0
+    state.sync_mode, state.sync_started_at = mode.value, now
     state.bulk_operation_id, state.bulk_operation_kind = None, BulkKind.CATALOGUE.value
-    state.import_progress, state.last_error_code, state.last_error_at = 0, None, None
+    state.last_error_code, state.last_error_at = None, None
     job = _schedule(session, rt, store, state, delay=0, requested_by=requested_by)
-    record_audit(
-        session,
-        organization_id=store.organization_id,
-        actor=Actor.user(requested_by) if requested_by else WORKER,
-        action="store.import_started",
-        resource_type="store",
-        resource_id=store.id,
-        metadata={
-            "job_id": str(job),
-            "history_from": store.history_from.isoformat() if store.history_from else None,
-        },
-    )
+    if mode is SyncMode.INITIAL or requested_by is not None:
+        record_audit(
+            session,
+            organization_id=store.organization_id,
+            actor=Actor.user(requested_by) if requested_by else WORKER,
+            action="store.import_started" if mode is SyncMode.INITIAL else "store.sync_started",
+            resource_type="store",
+            resource_id=store.id,
+            metadata={
+                "job_id": str(job),
+                "mode": mode.value,
+                "history_from": store.history_from.isoformat() if store.history_from else None,
+            },
+        )
     return job
+
+
+def chain_running(rt: Runtime, state: CommerceSyncState) -> bool:
+    """A chain is running unless none was started or it has been silent too long."""
+    if state.import_job_id is None:
+        return False
+    return state.updated_at > rt.clock.now() - rt.settings.COMMERCE_CHAIN_STALE_AFTER
 
 
 def _schedule(
@@ -194,6 +226,9 @@ class _Context:
     kind: BulkKind
     operation_id: str | None
     first_import: bool
+    mode: SyncMode = SyncMode.INITIAL
+    started_at: datetime | None = None
+    last_reconciled_at: datetime | None = None
 
 
 def import_step(rt: Runtime, job: ClaimedJob) -> None:
@@ -256,6 +291,9 @@ def _load(rt: Runtime, job: ClaimedJob, org_id: uuid.UUID, store_id: uuid.UUID):
             kind=BulkKind(state.bulk_operation_kind or BulkKind.CATALOGUE.value),
             operation_id=state.bulk_operation_id,
             first_import=store.first_import_completed_at is None,
+            mode=SyncMode(state.sync_mode or SyncMode.INITIAL.value),
+            started_at=state.sync_started_at,
+            last_reconciled_at=state.last_reconciled_at,
         )
         return ctx, provider
 
@@ -287,8 +325,12 @@ def _run(rt: Runtime, ctx: _Context, provider: CommerceProvider) -> int | None:
         return call_provider(rt, provider, org_id, ctx.connection_id, fn)
 
     if ctx.operation_id is None:
-        since = ctx.history_from if ctx.kind is BulkKind.ORDERS else None
-        operation_id = call(lambda: provider.start_bulk_export(secrets, ctx.kind, since=since))
+        created, updated = _filters(rt, ctx)
+        operation_id = call(
+            lambda: provider.start_bulk_export(
+                secrets, ctx.kind, created_since=created, updated_since=updated
+            )
+        )
         with rt.db.transaction(org_id=org_id) as session:
             state = session.get(CommerceSyncState, store_id, with_for_update=True)
             assert state is not None
@@ -322,12 +364,27 @@ def _run(rt: Runtime, ctx: _Context, provider: CommerceProvider) -> int | None:
             state = session.get(CommerceSyncState, store_id, with_for_update=True)
             assert state is not None
             state.bulk_operation_id, state.bulk_operation_kind = None, BulkKind.ORDERS.value
-            state.import_progress = PROGRESS_AFTER_CATALOGUE
+            if ctx.mode is SyncMode.INITIAL:
+                state.import_progress = PROGRESS_AFTER_CATALOGUE
+                _audit_counts(session, ctx, "store.catalogue_imported", counts)
             state.updated_at = rt.clock.now()
-            _audit_counts(session, ctx, "store.catalogue_imported", counts)
         return 0
     _finish(rt, ctx, counts)
     return None
+
+
+def _filters(rt: Runtime, ctx: _Context) -> tuple[datetime | None, datetime | None]:
+    """(created_since, updated_since) for the export about to start."""
+    if ctx.mode is SyncMode.RECONCILE:
+        base = ctx.last_reconciled_at or ctx.started_at or rt.clock.now()
+        updated = base - rt.settings.COMMERCE_RECONCILE_OVERLAP
+        return (ctx.history_from if ctx.kind is BulkKind.ORDERS else None), updated
+    if ctx.kind is BulkKind.CATALOGUE:
+        return None, None
+    if ctx.mode is SyncMode.DEEP:
+        recent = rt.clock.now() - rt.settings.COMMERCE_DEEP_WINDOW
+        return (max(recent, ctx.history_from) if ctx.history_from else recent), None
+    return ctx.history_from, None
 
 
 def _fail(rt: Runtime, ctx: _Context, code: str) -> None:
@@ -347,7 +404,7 @@ def _fail(rt: Runtime, ctx: _Context, code: str) -> None:
             action="store.import_failed",
             resource_type="store",
             resource_id=ctx.store_id,
-            metadata={"kind": ctx.kind.value, "error": code[:64]},
+            metadata={"kind": ctx.kind.value, "mode": ctx.mode.value, "error": code[:64]},
         )
 
 
@@ -359,13 +416,23 @@ def _finish(rt: Runtime, ctx: _Context, counts: dict[str, int]) -> None:
         store = session.get(Store, ctx.store_id)
         assert state is not None
         assert store is not None
+        started = ctx.started_at or now
         state.bulk_operation_id, state.bulk_operation_kind = None, None
         state.import_job_id, state.import_progress = None, 100
-        state.last_reconciled_at, state.updated_at = now, now
+        state.sync_mode, state.updated_at = None, now
+        # The next hourly run starts from when this one began (plus an overlap).
+        state.last_reconciled_at = started
+        if ctx.mode is SyncMode.DEEP:
+            state.last_deep_reconciled_at = started
         store.status = "active"
         if store.first_import_completed_at is None:
             store.first_import_completed_at = now
-        _audit_counts(session, ctx, "store.import_completed", counts)
+        if ctx.mode is SyncMode.INITIAL:
+            _audit_counts(session, ctx, "store.import_completed", counts)
+    logger.info(
+        "store_sync_finished",
+        extra={"store_id": str(ctx.store_id), "mode": ctx.mode.value, "counts": counts},
+    )
 
 
 def _audit_counts(session: Session, ctx: _Context, action: str, counts: dict[str, int]) -> None:
@@ -749,14 +816,19 @@ def _upsert_lines(session: Session, ctx: _Context, records: list[CommerceOrderLi
         ProductVariant.store_id == ctx.store_id,
         (r.variant_external_id for r in records if r.variant_external_id),
     )
-    costs = _current_costs(session, list(variants.values()))
+    history = _cost_history(session, list(variants.values()))
+    ordered = _order_times(session, list(orders.values()))
     rows = []
     for r in _dedupe(records):
         order_id = orders.get(r.order_external_id)
         if order_id is None:
             continue
         variant_id = variants.get(r.variant_external_id or "")
-        cost = costs.get(variant_id) if variant_id else None
+        cost, source = (
+            _cost_for(history.get(variant_id, []), ordered[order_id])
+            if variant_id
+            else (None, None)
+        )
         rows.append(
             {
                 "id": uuid.uuid4(),
@@ -768,9 +840,8 @@ def _upsert_lines(session: Session, ctx: _Context, records: list[CommerceOrderLi
                 "sku": r.sku,
                 "quantity": r.quantity,
                 "unit_price": r.unit_price,
-                # Shopify keeps no cost history: imported orders take the cost at import time.
                 "unit_cost": cost,
-                "cost_source": "import_time" if cost is not None else None,
+                "cost_source": source,
             }
         )
     if not rows:
@@ -789,16 +860,53 @@ def _upsert_lines(session: Session, ctx: _Context, records: list[CommerceOrderLi
     return len(rows)
 
 
-def _current_costs(session: Session, variant_ids: list[uuid.UUID]) -> dict[uuid.UUID, Decimal]:
-    if not variant_ids:
+def _order_times(session: Session, order_ids: list[uuid.UUID]) -> dict[uuid.UUID, datetime]:
+    if not order_ids:
         return {}
+    rows = session.execute(select(Order.id, Order.ordered_at).where(Order.id.in_(order_ids)))
+    times: dict[uuid.UUID, datetime] = {}
+    for order_id, ordered_at in rows:
+        times[order_id] = ordered_at
+    return times
+
+
+def _cost_history(
+    session: Session, variant_ids: list[uuid.UUID]
+) -> dict[uuid.UUID, list[tuple[datetime, Decimal | None]]]:
+    history: dict[uuid.UUID, list[tuple[datetime, Decimal | None]]] = {}
+    if not variant_ids:
+        return history
     rows = session.execute(
-        select(ProductCostHistory.variant_id, ProductCostHistory.unit_cost)
+        select(
+            ProductCostHistory.variant_id,
+            ProductCostHistory.effective_from,
+            ProductCostHistory.unit_cost,
+        )
         .where(ProductCostHistory.variant_id.in_(variant_ids))
-        .ext(distinct_on(ProductCostHistory.variant_id))
-        .order_by(ProductCostHistory.variant_id, ProductCostHistory.effective_from.desc())
-    ).all()
-    return {vid: cost for vid, cost in rows if cost is not None}
+        .order_by(ProductCostHistory.variant_id, ProductCostHistory.effective_from)
+    )
+    for variant_id, effective_from, cost in rows:
+        history.setdefault(variant_id, []).append((effective_from, cost))
+    return history
+
+
+def _cost_for(
+    history: list[tuple[datetime, Decimal | None]], ordered_at: datetime
+) -> tuple[Decimal | None, str | None]:
+    """Unit cost for a line ordered at ``ordered_at`` (PHASE_02A_PLAN §8).
+
+    * Ordered after cost tracking began: the cost valid at that moment (``order_time``).
+    * Ordered before (imported history): the first recorded cost (``import_time``) — Shopify
+      keeps no cost history, so this is the best available and is marked as such.
+    * No cost known: ``(None, None)`` — never 0.
+    """
+    if not history:
+        return None, None
+    if ordered_at < history[0][0]:
+        cost = history[0][1]
+        return (cost, "import_time") if cost is not None else (None, None)
+    valid = [cost for effective_from, cost in history if effective_from <= ordered_at][-1]
+    return (valid, "order_time") if valid is not None else (None, None)
 
 
 def _upsert_sales(session: Session, ctx: _Context, records: list[CommerceSaleRecord]) -> int:
@@ -857,29 +965,126 @@ def _upsert_sales(session: Session, ctx: _Context, records: list[CommerceSaleRec
     return len(rows)
 
 
-def _resolve_links(session: Session, ctx: _Context) -> None:
-    """Rows whose platform parent arrived later in the export are linked now; order display
-    totals that need the lines (gross = sum of unit price times quantity) are filled in."""
-    params = {"store": ctx.store_id, "org": ctx.org_id}
-    session.execute(
-        text(
-            "UPDATE sales_entries s SET order_item_id = oi.id "
-            "FROM order_items oi "
-            "WHERE s.store_id = :store AND s.organization_id = :org "
-            "AND s.order_item_id IS NULL AND s.external_line_item_id IS NOT NULL "
-            "AND oi.organization_id = s.organization_id AND oi.order_id = s.order_id "
-            "AND oi.external_line_item_id = s.external_line_item_id"
-        ),
-        params,
+_LINK_SALES = (
+    "UPDATE sales_entries s SET order_item_id = oi.id "
+    "FROM order_items oi "
+    "WHERE s.store_id = :store AND s.organization_id = :org "
+    "AND s.order_item_id IS NULL AND s.external_line_item_id IS NOT NULL "
+    "AND oi.organization_id = s.organization_id AND oi.order_id = s.order_id "
+    "AND oi.external_line_item_id = s.external_line_item_id"
+)
+_LINK_SALES_FOR_ORDERS = _LINK_SALES + " AND s.order_id IN :orders"
+_GROSS_TEMPLATE = (
+    "UPDATE orders o SET gross_amount = CASE WHEN t.unknown = 0 THEN t.gross END "
+    "FROM ("
+    "  SELECT oi.order_id, SUM(oi.unit_price * oi.quantity) AS gross, "
+    "         COUNT(*) FILTER (WHERE oi.unit_price IS NULL) AS unknown "
+    "  FROM order_items oi JOIN orders po "
+    "    ON po.id = oi.order_id AND po.organization_id = oi.organization_id "
+    "  WHERE po.store_id = :store AND oi.organization_id = :org {only} "
+    "  GROUP BY oi.order_id"
+    ") t WHERE o.id = t.order_id AND o.organization_id = :org"
+)
+_GROSS = _GROSS_TEMPLATE.format(only="")
+_GROSS_FOR_ORDERS = _GROSS_TEMPLATE.format(only="AND oi.order_id IN :orders")
+
+
+def _resolve_links(
+    session: Session, ctx: _Context, order_ids: list[uuid.UUID] | None = None
+) -> None:
+    """Rows whose platform parent arrived later in the export are linked now, and the order
+    display total that needs every line (gross = sum of unit price times quantity) is set —
+    empty when any line price is unknown. ``order_ids`` limits the work to those orders."""
+    params: dict[str, Any] = {"store": ctx.store_id, "org": ctx.org_id}
+    if order_ids is None:
+        session.execute(text(_LINK_SALES), params)
+        session.execute(text(_GROSS), params)
+        return
+    if not order_ids:
+        return
+    params["orders"] = order_ids
+    orders: BindParameter[Any] = bindparam("orders", expanding=True)
+    session.execute(text(_LINK_SALES_FOR_ORDERS).bindparams(orders), params)
+    session.execute(text(_GROSS_FOR_ORDERS).bindparams(orders), params)
+
+
+# ------------------------------------------------------------------ scheduled reconciliation
+def enqueue_reconciliations(rt: Runtime, mode: SyncMode) -> int:
+    """Start a ``reconcile`` (hourly) or ``deep`` (nightly) chain for every imported store that
+    has no chain running. Returns how many were started.
+
+    The store list comes from a narrow system-role read of ``stores`` (0007 grant); everything
+    else runs under each store's tenant context.
+    """
+    with rt.db.transaction(system=True) as session:
+        stores = session.execute(
+            select(Store.id, Store.organization_id).where(
+                Store.first_import_completed_at.is_not(None),
+                Store.status.in_(("active", "error")),
+            )
+        ).all()
+    started = 0
+    for store_id, org_id in stores:
+        with rt.db.transaction(org_id=org_id) as session:
+            store = session.get(Store, store_id)
+            state = session.get(CommerceSyncState, store_id, with_for_update=True)
+            if store is None or (state is not None and chain_running(rt, state)):
+                continue
+            start_sync(session, rt, store, mode)
+            started += 1
+    if started:
+        logger.info("reconciliations_started", extra={"mode": mode.value, "count": started})
+    return started
+
+
+def request_reconcile(rt: Runtime, org_id: uuid.UUID, store_id: uuid.UUID) -> bool:
+    """Ask for a reconciliation soon (e.g. an object too large to fetch on its own)."""
+    with rt.db.transaction(org_id=org_id) as session:
+        store = session.get(Store, store_id)
+        state = session.get(CommerceSyncState, store_id, with_for_update=True)
+        if store is None or store.first_import_completed_at is None:
+            return False
+        if state is not None and chain_running(rt, state):
+            return False
+        start_sync(session, rt, store, SyncMode.RECONCILE)
+        return True
+
+
+# ------------------------------------------------------------------ single-object updates
+@dataclass(frozen=True)
+class StoreRef:
+    org_id: uuid.UUID
+    store_id: uuid.UUID
+    connection_id: uuid.UUID
+    currency: str
+    history_from: datetime | None
+
+
+def apply_records(
+    rt: Runtime, store: StoreRef, records: Iterable[CommerceRecord]
+) -> dict[str, int]:
+    """Apply fetched records (a webhook's object) with the same upserts and guards as the
+    import, then resolve links. Cost rows are recorded as platform changes."""
+    ctx = _Context(
+        org_id=store.org_id,
+        store_id=store.store_id,
+        connection_id=store.connection_id,
+        currency=store.currency,
+        history_from=store.history_from,
+        kind=BulkKind.ORDERS,
+        operation_id=None,
+        first_import=False,
+        mode=SyncMode.RECONCILE,
     )
-    session.execute(
-        text(
-            "UPDATE orders o SET gross_amount = t.gross FROM ("
-            "  SELECT order_id, SUM(unit_price * quantity) AS gross, "
-            "         COUNT(*) FILTER (WHERE unit_price IS NULL) AS unknown "
-            "  FROM order_items WHERE organization_id = :org GROUP BY order_id"
-            ") t WHERE o.id = t.order_id AND o.store_id = :store AND o.organization_id = :org "
-            "AND t.unknown = 0"
-        ),
-        params,
-    )
+    materialized = list(records)
+    counts = _apply(rt, ctx, materialized)
+    order_refs = {
+        r.order_external_id
+        for r in materialized
+        if isinstance(r, (CommerceOrderRecord, CommerceOrderLineRecord, CommerceSaleRecord))
+        and not isinstance(r, CommerceOrderRecord)
+    } | {r.external_id for r in materialized if isinstance(r, CommerceOrderRecord)}
+    with rt.db.transaction(org_id=store.org_id) as session:
+        ids = list(_order_ids(session, ctx, order_refs).values())
+        _resolve_links(session, ctx, ids)
+    return counts

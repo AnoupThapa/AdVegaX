@@ -7,7 +7,7 @@ from collections.abc import Callable, Mapping
 
 import redis
 
-from app.domains.commerce import importer
+from app.domains.commerce import importer, incremental, privacy
 from app.domains.integrations import jobs as integration_jobs
 from app.domains.integrations.service import JOB_DISCOVER, JOB_SYNC
 from app.domains.jobs.service import Handler, JobOutcome, recover_stuck_jobs, run_job
@@ -21,6 +21,10 @@ HANDLERS: Mapping[str, Handler] = {
     integration_jobs.JOB_REFRESH: integration_jobs.refresh_credentials,
     webhooks.JOB_PLATFORM_REVOKED: webhooks.platform_revoked,
     importer.JOB_IMPORT_STEP: importer.import_step,
+    incremental.JOB_OBJECT_CHANGED: incremental.object_changed,
+    privacy.JOB_CUSTOMER_DATA_REQUEST: privacy.customer_data_request,
+    privacy.JOB_CUSTOMER_REDACT: privacy.customer_redact,
+    privacy.JOB_SHOP_REDACT: privacy.shop_redact,
 }
 
 
@@ -73,3 +77,27 @@ def webhook_purge_task() -> int | None:
     rt = worker_runtime()
     ttl = int(rt.settings.SCHEDULE_WEBHOOK_PURGE_INTERVAL.total_seconds() * 0.9)
     return run_singleton(rt.redis, "webhook_purge", ttl, lambda: webhooks.purge_expired(rt))
+
+
+@celery_app.task(name="advegax.schedule.commerce_reconcile")  # type: ignore[untyped-decorator]
+def commerce_reconcile_task() -> int | None:
+    rt = worker_runtime()
+    ttl = int(rt.settings.SCHEDULE_COMMERCE_RECONCILE_INTERVAL.total_seconds() * 0.9)
+    return run_singleton(
+        rt.redis,
+        "commerce_reconcile",
+        ttl,
+        lambda: importer.enqueue_reconciliations(rt, importer.SyncMode.RECONCILE),
+    )
+
+
+@celery_app.task(name="advegax.schedule.commerce_deep")  # type: ignore[untyped-decorator]
+def commerce_deep_task() -> int | None:
+    rt = worker_runtime()
+    ttl = int(rt.settings.SCHEDULE_COMMERCE_DEEP_INTERVAL.total_seconds() * 0.9)
+    return run_singleton(
+        rt.redis,
+        "commerce_deep",
+        ttl,
+        lambda: importer.enqueue_reconciliations(rt, importer.SyncMode.DEEP),
+    )

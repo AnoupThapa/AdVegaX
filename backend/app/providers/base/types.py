@@ -242,3 +242,32 @@ CommerceRecord = (
     | CommerceSaleRecord
     | CommerceRefundRecord
 )
+
+
+# ---------------------------------------------------------------- incremental sync (2A-07)
+class ChangedObject(StrEnum):
+    """What an "object changed" webhook points at, once mapped by the provider."""
+
+    PRODUCT = "product"
+    ORDER = "order"
+    INVENTORY_ITEM = "inventory_item"  # resolved by the core to its product
+    NONE = "none"  # nothing to fetch (e.g. shop or bulk-operation notices)
+
+
+@dataclass(frozen=True)
+class WebhookTarget:
+    object: ChangedObject
+    deleted: bool = False  # the platform deleted the object: remove/mark it, fetch nothing
+
+
+@dataclass(frozen=True)
+class FetchResult:
+    """One object fetched by id, as normalized records (same shapes as a bulk export).
+
+    ``found`` is False when the platform no longer has it; ``complete`` is False when a nested
+    list was longer than one request allows — the core then reconciles the store instead.
+    """
+
+    records: tuple[CommerceRecord, ...] = ()
+    found: bool = True
+    complete: bool = True

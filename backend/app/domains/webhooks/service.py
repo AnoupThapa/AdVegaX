@@ -11,9 +11,9 @@ Flow for every delivery, before anything is stored:
 5. the platform account is mapped to its organization with a narrow system-role lookup, and any
    follow-up work runs as a tenant job — the response goes back well within Shopify's 5 s.
 
-What happens per kind in this task: an uninstall revokes the connection (job below); privacy
-requests are recorded and audited; "object changed" signals are recorded. Fetching changed
-objects and carrying out privacy requests are task 2A-07.
+What happens per kind: an uninstall revokes the connection (job below); privacy requests are
+audited and carried out by ``commerce.privacy`` jobs; "object changed" signals queue a fetch of
+the object's current state (``commerce.incremental``), coalescing bursts (2A-07).
 """
 
 from __future__ import annotations
@@ -23,26 +23,35 @@ import uuid
 from collections.abc import Mapping
 from enum import StrEnum
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.core.errors import InvalidWebhook, InvalidWebhookSignature, NotFound
 from app.core.security.throttle import Limit
 from app.domains.audit.service import Actor, record_audit
+from app.domains.commerce import privacy
+from app.domains.commerce.importer import commerce_provider
+from app.domains.commerce.incremental import schedule_fetch
 from app.domains.commerce.models import Store
 from app.domains.integrations.models import ExternalConnection
 from app.domains.integrations.service import revoke_by_platform
 from app.domains.jobs.service import ClaimedJob, JobSubjectGoneError, create_job
+from app.domains.webhooks.events import finish_event
 from app.domains.webhooks.models import WebhookEvent
 from app.providers.base.capabilities import Capability
 from app.providers.base.errors import InvalidRequestError, InvalidSignatureError
-from app.providers.base.types import PRIVACY_KINDS, WebhookDelivery, WebhookKind
+from app.providers.base.types import PRIVACY_KINDS, ChangedObject, WebhookDelivery, WebhookKind
 from app.runtime import Runtime
 
 logger = logging.getLogger("advegax.webhooks")
 
 JOB_PLATFORM_REVOKED = "connection.platform_revoked"
+PRIVACY_JOBS = {
+    WebhookKind.PRIVACY_DATA_REQUEST: privacy.JOB_CUSTOMER_DATA_REQUEST,
+    WebhookKind.PRIVACY_CUSTOMER_REDACT: privacy.JOB_CUSTOMER_REDACT,
+    WebhookKind.PRIVACY_SHOP_REDACT: privacy.JOB_SHOP_REDACT,
+}
 SYSTEM = Actor("system", None)
 MINUTE = 60
 
@@ -139,7 +148,7 @@ def receive(
         return Outcome.IGNORED
 
     try:
-        _follow_up(rt, org_id, event_id, delivery)
+        _follow_up(rt, provider_code, org_id, event_id, delivery)
     except Exception:
         # Undo the record so the platform's retry is processed afresh rather than being
         # mistaken for an already-handled duplicate.
@@ -150,7 +159,11 @@ def receive(
 
 
 def _follow_up(
-    rt: Runtime, org_id: uuid.UUID, event_id: uuid.UUID, delivery: WebhookDelivery
+    rt: Runtime,
+    provider_code: str,
+    org_id: uuid.UUID,
+    event_id: uuid.UUID,
+    delivery: WebhookDelivery,
 ) -> None:
     if delivery.kind is WebhookKind.APP_UNINSTALLED:
         with rt.db.transaction(org_id=org_id) as session:
@@ -164,7 +177,7 @@ def _follow_up(
                 requested_by=None,
             )
     elif delivery.kind in PRIVACY_KINDS:
-        # Recorded and audited now; carried out by task 2A-07 (Shopify allows 30 days).
+        # Audited on receipt and carried out by a job (Shopify allows 30 days).
         with rt.db.transaction(org_id=org_id) as session:
             record_audit(
                 session,
@@ -175,18 +188,36 @@ def _follow_up(
                 resource_id=event_id,
                 metadata={"topic": delivery.topic, "kind": delivery.kind.value},
             )
+            create_job(
+                session,
+                rt,
+                organization_id=org_id,
+                job_type=PRIVACY_JOBS[delivery.kind],
+                subject_type="webhook_event",
+                subject_id=event_id,
+                requested_by=None,
+            )
+    elif delivery.kind is WebhookKind.OBJECT_CHANGED:
+        provider = commerce_provider(rt.providers.get(provider_code))
+        target = provider.webhook_target(delivery.topic) if provider else None
+        if target is None or target.object is ChangedObject.NONE or not delivery.object_external_id:
+            finish_event(rt, event_id, "processed", "nothing_to_fetch")
+            return
+        with rt.db.transaction(org_id=org_id) as session:
+            queued = schedule_fetch(
+                session,
+                rt,
+                org_id=org_id,
+                event_id=event_id,
+                provider=provider_code,
+                account=delivery.account_id,
+                object_id=delivery.object_external_id,
+            )
+        if not queued:
+            finish_event(rt, event_id, "ignored", "coalesced")
 
 
 # ------------------------------------------------------------------ job handlers
-def _finish(rt: Runtime, event_id: uuid.UUID, status: str, error: str | None = None) -> None:
-    with rt.db.transaction(system=True) as session:
-        session.execute(
-            update(WebhookEvent)
-            .where(WebhookEvent.id == event_id)
-            .values(status=status, processed_at=rt.clock.now(), error_code=error)
-        )
-
-
 def platform_revoked(rt: Runtime, job: ClaimedJob) -> None:
     """``app/uninstalled``: AdVegaX's access to the store has ended. Delete its tokens, mark
     the connection revoked, end its links; keep imported data (D-2A-2)."""
@@ -203,7 +234,7 @@ def platform_revoked(rt: Runtime, job: ClaimedJob) -> None:
     revoke_by_platform(
         rt, provider, account, reason="app_uninstalled", organization_id=job.organization_id
     )
-    _finish(rt, event_id, "processed")
+    finish_event(rt, event_id, "processed")
 
 
 def purge_expired(rt: Runtime) -> int:

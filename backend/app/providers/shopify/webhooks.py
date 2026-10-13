@@ -21,7 +21,7 @@ from datetime import datetime
 from typing import Any
 
 from app.providers.base.errors import InvalidRequestError, InvalidSignatureError
-from app.providers.base.types import WebhookDelivery, WebhookKind
+from app.providers.base.types import ChangedObject, WebhookDelivery, WebhookKind, WebhookTarget
 from app.providers.shopify.config import ShopifyApp
 from app.providers.shopify.shops import is_valid_shop
 from app.providers.shopify.signatures import verify_body
@@ -54,6 +54,35 @@ TOPIC_KINDS: Mapping[str, WebhookKind] = {
 }
 
 
+# What each "object changed" topic points at (2A-07). The object id recorded at intake is
+# always the Shopify GID of that object (``gid://shopify/<Type>/<id>``).
+WEBHOOK_TARGETS: Mapping[str, WebhookTarget] = {
+    "products/create": WebhookTarget(ChangedObject.PRODUCT),
+    "products/update": WebhookTarget(ChangedObject.PRODUCT),
+    "products/delete": WebhookTarget(ChangedObject.PRODUCT, deleted=True),
+    "inventory_levels/update": WebhookTarget(ChangedObject.INVENTORY_ITEM),
+    "orders/create": WebhookTarget(ChangedObject.ORDER),
+    "orders/updated": WebhookTarget(ChangedObject.ORDER),
+    "orders/cancelled": WebhookTarget(ChangedObject.ORDER),
+    "orders/delete": WebhookTarget(ChangedObject.ORDER, deleted=True),
+    "refunds/create": WebhookTarget(ChangedObject.ORDER),  # refetch the refunded order
+}
+
+# Payload field holding the numeric id, and the GID type, per topic. Delete payloads carry
+# only ``id``; refunds point at ``order_id``; inventory levels at ``inventory_item_id``.
+_ID_SOURCES: Mapping[str, tuple[str, str]] = {
+    "products/create": ("id", "Product"),
+    "products/update": ("id", "Product"),
+    "products/delete": ("id", "Product"),
+    "orders/create": ("id", "Order"),
+    "orders/updated": ("id", "Order"),
+    "orders/cancelled": ("id", "Order"),
+    "orders/delete": ("id", "Order"),
+    "refunds/create": ("order_id", "Order"),
+    "inventory_levels/update": ("inventory_item_id", "InventoryItem"),
+}
+
+
 def _apps_for(apps: tuple[ShopifyApp, ...], shop: str) -> list[ShopifyApp]:
     """Apps that may have signed a webhook for ``shop``: explicit entries first."""
     explicit = [a for a in apps if shop in a.shops]
@@ -77,11 +106,27 @@ def _short(value: object) -> str | None:
     return text if 0 < len(text) <= _MAX_ID else None
 
 
-def _object_id(kind: WebhookKind, payload: dict[str, Any]) -> str | None:
+def _gid(kind: str, value: object) -> str | None:
+    if isinstance(value, bool) or not isinstance(value, (int, str)):
+        return None
+    text = str(value)
+    if text.startswith("gid://shopify/"):
+        return _short(text)
+    return _short(f"gid://shopify/{kind}/{text}") if text.isdigit() else None
+
+
+def _object_id(topic: str, kind: WebhookKind, payload: dict[str, Any]) -> str | None:
     if kind in (WebhookKind.PRIVACY_DATA_REQUEST, WebhookKind.PRIVACY_CUSTOMER_REDACT):
         customer = payload.get("customer")
         return _short(customer.get("id")) if isinstance(customer, dict) else None
     if kind is WebhookKind.OBJECT_CHANGED:
+        source = _ID_SOURCES.get(topic)
+        if source is not None:
+            field_name, gid_type = source
+            api_id = payload.get("admin_graphql_api_id")
+            if isinstance(api_id, str) and api_id.startswith(f"gid://shopify/{gid_type}/"):
+                return _short(api_id)
+            return _gid(gid_type, payload.get(field_name))
         return _short(payload.get("admin_graphql_api_id")) or _short(payload.get("id"))
     return None
 
@@ -117,7 +162,7 @@ def parse_webhook(
         topic=topic,
         account_id=shop,
         kind=kind,
-        object_external_id=_object_id(kind, payload),
+        object_external_id=_object_id(topic, kind, payload),
         object_updated_at=_timestamp(payload.get("updated_at")),
         triggered_at=_timestamp(headers.get(TRIGGERED_AT_HEADER)),
     )

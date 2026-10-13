@@ -102,7 +102,8 @@ def test_signed_webhook_is_accepted_without_session_or_csrf(owner, client, clock
     assert event["organization_id"] == uuid.UUID(owner.org)
     assert event["topic"] == "products/update"
     assert event["object_external_id"] == "gid://shopify/Product/1"
-    assert event["status"] == "received"  # fetched and applied in 2A-07
+    # Connected but the store is not linked/imported: the fetch job records why it skipped.
+    assert (event["status"], event["error_code"]) == ("ignored", "store_not_imported")
 
 
 def test_bad_signature_is_401_and_nothing_is_stored(owner, client, clock, admin_engine):
@@ -335,8 +336,14 @@ def test_customer_privacy_requests_are_recorded_and_audited(
     response = _deliver(client.http, clock, topic, payload)
     assert response.status_code == 200
     (event,) = _events(admin_engine)
-    assert (event["status"], event["object_external_id"]) == ("received", object_id)
-    assert "privacy.request_received" in _audit_actions(admin_engine, owner.org)
+    # Carried out at once (2A-07): nothing personal is held, and the customer id that came
+    # with the request is removed from the intake log.
+    assert (event["status"], event["object_external_id"]) == ("processed", None)
+    assert event["error_code"] == "no_personal_data_held"
+    actions = _audit_actions(admin_engine, owner.org)
+    assert "privacy.request_received" in actions
+    assert {"privacy.data_request_answered", "privacy.customer_redacted"} & set(actions)
+    assert object_id
 
 
 def test_shop_redact_after_uninstall_is_routed_through_the_store(
@@ -362,7 +369,13 @@ def test_shop_redact_after_uninstall_is_routed_through_the_store(
     assert response.json()["data"]["status"] == "accepted"
     event = _events(admin_engine)[-1]
     assert (event["topic"], event["organization_id"]) == ("shop/redact", uuid.UUID(owner.org))
-    assert _audit_actions(admin_engine, owner.org)[-1] == "privacy.request_received"
+    assert _audit_actions(admin_engine, owner.org)[-2:] == [
+        "privacy.request_received",
+        "privacy.shop_redacted",
+    ]
+    assert _events(admin_engine)[-1]["status"] == "processed"
+    with admin_engine.begin() as db:
+        assert db.execute(text("SELECT count(*) FROM stores")).scalar_one() == 0  # erased
 
 
 def test_privacy_request_for_a_store_never_connected_is_acknowledged(client, shopify, clock):
@@ -387,7 +400,7 @@ def test_metadata_older_than_the_retention_period_is_purged(
     _deliver(client.http, clock, "products/update", {"id": 2})
     clock.advance(timedelta(days=2))
     assert webhooks.purge_expired(runtime) == 1
-    assert [e["object_external_id"] for e in _events(admin_engine)] == ["2"]
+    assert [e["object_external_id"] for e in _events(admin_engine)] == ["gid://shopify/Product/2"]
 
 
 def test_purge_is_scheduled(runtime):

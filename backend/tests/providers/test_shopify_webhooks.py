@@ -59,7 +59,7 @@ def test_order_webhook_does_not_carry_customer_details():
             "shipping_address": {"address1": "123 Street"},
         },
     )
-    assert delivery.object_external_id == "820982911946154508"
+    assert delivery.object_external_id == "gid://shopify/Order/820982911946154508"
     assert "example.com" not in repr(delivery) and "Street" not in repr(delivery)
 
 

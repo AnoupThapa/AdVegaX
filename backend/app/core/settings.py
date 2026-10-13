@@ -153,6 +153,16 @@ class Settings(BaseSettings):
     COMMERCE_HISTORY_WINDOW: timedelta = timedelta(days=395)
     COMMERCE_BULK_POLL_INTERVAL: timedelta = timedelta(seconds=30)
     COMMERCE_IMPORT_BATCH_SIZE: int = Field(default=500, ge=1, le=5000)
+    # Reconciliation (2A-07): hourly changes since the last run (minus an overlap), nightly a
+    # deeper check of the catalogue and recent orders. A chain silent for longer than
+    # COMMERCE_CHAIN_STALE_AFTER is considered dead and may be restarted.
+    SCHEDULE_COMMERCE_RECONCILE_INTERVAL: timedelta = timedelta(hours=1)
+    SCHEDULE_COMMERCE_DEEP_INTERVAL: timedelta = timedelta(hours=24)
+    COMMERCE_RECONCILE_OVERLAP: timedelta = timedelta(minutes=10)
+    COMMERCE_DEEP_WINDOW: timedelta = timedelta(days=30)
+    COMMERCE_CHAIN_STALE_AFTER: timedelta = timedelta(hours=6)
+    # Webhook bursts for one object are coalesced into one fetch within this window.
+    COMMERCE_FETCH_COALESCE: timedelta = timedelta(minutes=5)
 
     # --- Webhook intake (Phase 2A, 2A-05; PHASE_02A_PLAN §7) ----------------------------
     # Deliveries triggered longer ago than this are refused (replay limit). Shopify retries
@@ -194,6 +204,12 @@ class Settings(BaseSettings):
             "OUTBOUND_DOWNLOAD_TIMEOUT": self.OUTBOUND_DOWNLOAD_TIMEOUT,
             "COMMERCE_HISTORY_WINDOW": self.COMMERCE_HISTORY_WINDOW,
             "SHOPIFY_DEFAULT_ORDER_HISTORY": self.SHOPIFY_DEFAULT_ORDER_HISTORY,
+            "SCHEDULE_COMMERCE_RECONCILE_INTERVAL": self.SCHEDULE_COMMERCE_RECONCILE_INTERVAL,
+            "SCHEDULE_COMMERCE_DEEP_INTERVAL": self.SCHEDULE_COMMERCE_DEEP_INTERVAL,
+            "COMMERCE_RECONCILE_OVERLAP": self.COMMERCE_RECONCILE_OVERLAP,
+            "COMMERCE_DEEP_WINDOW": self.COMMERCE_DEEP_WINDOW,
+            "COMMERCE_CHAIN_STALE_AFTER": self.COMMERCE_CHAIN_STALE_AFTER,
+            "COMMERCE_FETCH_COALESCE": self.COMMERCE_FETCH_COALESCE,
             "COMMERCE_BULK_POLL_INTERVAL": self.COMMERCE_BULK_POLL_INTERVAL,
             "WEBHOOK_MAX_AGE": self.WEBHOOK_MAX_AGE,
             "WEBHOOK_CLOCK_SKEW": self.WEBHOOK_CLOCK_SKEW,

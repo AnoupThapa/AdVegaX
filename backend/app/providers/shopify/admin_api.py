@@ -65,6 +65,35 @@ def parse_json(response: SafeResponse) -> dict[str, Any]:
     return data
 
 
+MIN_THROTTLE_WAIT = 1.0
+MAX_THROTTLE_WAIT = 60.0
+
+
+def throttle_wait(body: dict[str, Any]) -> float:
+    """Seconds until enough query cost is restored (cost-aware back-off, 2A-07).
+
+    Shopify reports ``extensions.cost`` with ``requestedQueryCost`` and ``throttleStatus``
+    (``maximumAvailable``, ``currentlyAvailable``, ``restoreRate`` points per second).
+    """
+    cost = (body.get("extensions") or {}).get("cost") if isinstance(body, dict) else None
+    if not isinstance(cost, dict):
+        return MIN_THROTTLE_WAIT
+    status = cost.get("throttleStatus")
+    requested = cost.get("requestedQueryCost")
+    if not isinstance(status, dict):
+        return MIN_THROTTLE_WAIT
+    try:
+        available = float(status.get("currentlyAvailable", 0))
+        rate = float(status.get("restoreRate", 0))
+        needed = float(requested) if requested is not None else 0.0
+    except (TypeError, ValueError):
+        return MIN_THROTTLE_WAIT
+    if rate <= 0:
+        return MAX_THROTTLE_WAIT
+    wait = (needed - available) / rate
+    return min(MAX_THROTTLE_WAIT, max(MIN_THROTTLE_WAIT, wait))
+
+
 class AdminApi:
     def __init__(self, http_factory: HttpFactory, api_version: str) -> None:
         self._http_factory = http_factory
@@ -118,7 +147,7 @@ class AdminApi:
                 if isinstance(e, dict)
             }
             if "THROTTLED" in codes:
-                raise RateLimitedError(retry_after_seconds=1.0)
+                raise RateLimitedError(retry_after_seconds=throttle_wait(body))
             if "ACCESS_DENIED" in codes:
                 raise PermissionDeniedError()
             raise GraphQLError()

@@ -35,28 +35,36 @@ from app.providers.base.types import (
     AuthScheme,
     BulkKind,
     BulkOperationState,
+    ChangedObject,
     CommerceRecord,
     ConnectResult,
+    FetchResult,
     PreparedConnect,
     ProviderCategory,
     ResourceDescriptor,
     ResourceKind,
     SyncSummary,
     WebhookDelivery,
+    WebhookTarget,
 )
 from app.providers.shopify.admin_api import AdminApi, HttpFactory
 from app.providers.shopify.bulk import (
-    CATALOGUE_QUERY,
+    ORDER_FETCH,
+    PRODUCT_FETCH,
     RUN_MUTATION,
     STATE_QUERY,
     BulkExportRejectedError,
     ExportReader,
+    catalogue_query,
+    flatten_order,
+    flatten_product,
     orders_query,
     parse_state,
 )
 from app.providers.shopify.config import ShopifyApp, app_for_shop
 from app.providers.shopify.shops import ShopDomainError, is_valid_shop, normalize_shop
 from app.providers.shopify.signatures import verify_query
+from app.providers.shopify.webhooks import WEBHOOK_TARGETS
 from app.providers.shopify.webhooks import parse_webhook as _parse_webhook
 
 SHOP_PARAM = "shop_domain"
@@ -298,9 +306,20 @@ class ShopifyProvider:
             raise AuthExpiredError("credentials_incomplete")
         return shop, token
 
-    def start_bulk_export(self, secrets: Secrets, kind: BulkKind, *, since: datetime | None) -> str:
+    def start_bulk_export(
+        self,
+        secrets: Secrets,
+        kind: BulkKind,
+        *,
+        created_since: datetime | None = None,
+        updated_since: datetime | None = None,
+    ) -> str:
         shop, token = self._credentials(secrets)
-        query = CATALOGUE_QUERY if kind is BulkKind.CATALOGUE else orders_query(since)
+        query = (
+            catalogue_query(updated_since)
+            if kind is BulkKind.CATALOGUE
+            else orders_query(created_since, updated_since)
+        )
         data = self._api.graphql(shop, token, RUN_MUTATION, {"query": query})
         payload = data.get("bulkOperationRunQuery")
         if not isinstance(payload, dict):
@@ -327,6 +346,32 @@ class ShopifyProvider:
             yield from ExportReader(kind).records(lines)
         finally:
             client.close()
+
+    # ------------------------------------------------------------------ incremental (2A-07)
+    def webhook_target(self, topic: str) -> WebhookTarget:
+        return WEBHOOK_TARGETS.get(topic, WebhookTarget(ChangedObject.NONE))
+
+    def fetch_product(self, secrets: Secrets, external_id: str) -> FetchResult:
+        shop, token = self._credentials(secrets)
+        data = self._api.graphql(shop, token, PRODUCT_FETCH, {"id": external_id})
+        node = data.get("product")
+        if not isinstance(node, dict):
+            return FetchResult(found=False)
+        nodes, complete = flatten_product(node)
+        records = ExportReader(BulkKind.CATALOGUE).nodes(nodes)
+        return FetchResult(records=tuple(records), complete=complete)
+
+    def fetch_order(self, secrets: Secrets, external_id: str) -> FetchResult:
+        shop, token = self._credentials(secrets)
+        data = self._api.graphql(shop, token, ORDER_FETCH, {"id": external_id})
+        node = data.get("order")
+        if not isinstance(node, dict):
+            return FetchResult(found=False)
+        nodes, complete = flatten_order(node)
+        records = ExportReader(BulkKind.ORDERS).nodes(nodes)
+        # A test order maps to no records: treated as "not ours", like a missing order.
+        found = any(r.external_id == external_id for r in records)
+        return FetchResult(records=tuple(records), found=found, complete=complete)
 
     def revoke(self, secrets: Secrets) -> None:  # noqa: ARG002 - see note below
         # No app-initiated revocation is documented for this flow (to confirm live, Step 0

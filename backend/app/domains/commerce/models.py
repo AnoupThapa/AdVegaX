@@ -360,6 +360,10 @@ class CommerceSyncState(Base):
             "import_progress IS NULL OR (import_progress BETWEEN 0 AND 100)",
             name="import_progress",
         ),
+        CheckConstraint(
+            "sync_mode IS NULL OR sync_mode IN ('initial', 'reconcile', 'deep')",
+            name="sync_mode",
+        ),
     )
 
     store_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
@@ -369,6 +373,9 @@ class CommerceSyncState(Base):
     bulk_operation_kind: Mapped[str | None] = mapped_column(String(32))
     # The import step allowed to continue (a duplicated job message stops at this check).
     import_job_id: Mapped[uuid.UUID | None] = mapped_column()
+    # What the running chain is (initial / reconcile / deep) and when it started (0009).
+    sync_mode: Mapped[str | None] = mapped_column(String(16))
+    sync_started_at: Mapped[datetime | None] = mapped_column(TZ)
     last_reconciled_at: Mapped[datetime | None] = mapped_column(TZ)
     last_deep_reconciled_at: Mapped[datetime | None] = mapped_column(TZ)
     last_error_code: Mapped[str | None] = mapped_column(String(64))

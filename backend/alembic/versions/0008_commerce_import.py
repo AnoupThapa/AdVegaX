@@ -44,6 +44,14 @@ NEW_LINE = (
 REASON = "agreement_reason IN ('order', 'order_edit', 'refund', 'return', 'other')"
 
 
+def _unrestricted(table: str, sql: str) -> None:
+    """Run a data statement over all tenants: RLS is forced on tenant tables (even for their
+    owner), so it is lifted for this one statement inside the migration transaction."""
+    op.execute(f"ALTER TABLE {table} NO FORCE ROW LEVEL SECURITY")
+    op.execute(sql)
+    op.execute(f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY")
+
+
 def _replace_check(table: str, name: str, condition: str) -> None:
     op.drop_constraint(op.f(f"ck_{table}_{name}"), table, type_="check")
     op.create_check_constraint(op.f(f"ck_{table}_{name}"), table, condition)
@@ -51,7 +59,7 @@ def _replace_check(table: str, name: str, condition: str) -> None:
 
 def upgrade() -> None:
     _replace_check("products", "status", NEW_PRODUCT)
-    op.execute("DELETE FROM sales_entries")  # defensive: no rows exist before 2A-06 imports
+    _unrestricted("sales_entries", "DELETE FROM sales_entries")  # defensive: none before 2A-06
     _replace_check("sales_entries", "action", NEW_ACTION)
     _replace_check("sales_entries", "line_type", NEW_LINE)
     op.add_column(
@@ -70,8 +78,8 @@ def downgrade() -> None:
     op.drop_column("sales_entries", "external_line_item_id")
     op.drop_constraint(op.f("ck_sales_entries_agreement_reason"), "sales_entries", type_="check")
     op.drop_column("sales_entries", "agreement_reason")
-    op.execute("DELETE FROM sales_entries")
+    _unrestricted("sales_entries", "DELETE FROM sales_entries")
     _replace_check("sales_entries", "line_type", OLD_LINE)
     _replace_check("sales_entries", "action", OLD_ACTION)
-    op.execute("UPDATE products SET status = 'active' WHERE status = 'unlisted'")
+    _unrestricted("products", "UPDATE products SET status = 'active' WHERE status = 'unlisted'")
     _replace_check("products", "status", OLD_PRODUCT)

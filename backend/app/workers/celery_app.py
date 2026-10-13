@@ -38,6 +38,14 @@ celery_app.conf.update(
             "task": "advegax.schedule.token_refresh",
             "schedule": _settings.SCHEDULE_TOKEN_REFRESH_INTERVAL.total_seconds(),
         },
+        "commerce-reconcile": {
+            "task": "advegax.schedule.commerce_reconcile",
+            "schedule": _settings.SCHEDULE_COMMERCE_RECONCILE_INTERVAL.total_seconds(),
+        },
+        "commerce-deep": {
+            "task": "advegax.schedule.commerce_deep",
+            "schedule": _settings.SCHEDULE_COMMERCE_DEEP_INTERVAL.total_seconds(),
+        },
         "webhook-purge": {
             "task": "advegax.schedule.webhook_purge",
             "schedule": _settings.SCHEDULE_WEBHOOK_PURGE_INTERVAL.total_seconds(),

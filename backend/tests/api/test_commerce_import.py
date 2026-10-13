@@ -376,7 +376,9 @@ def test_steps_run_one_at_a_time_in_order(owner, sim, held, admin_engine):
     _run(held.last)  # finished → apply the catalogue
     progress = _one(admin_engine, "SELECT import_progress FROM commerce_sync_state")
     assert progress["import_progress"] == importer.PROGRESS_AFTER_CATALOGUE
-    while _chain_job(admin_engine):
+    for _ in range(30):
+        if not _chain_job(admin_engine):
+            break
         _run(held.last)
     assert _one(admin_engine, "SELECT status FROM stores")["status"] == "active"
 
@@ -437,7 +439,9 @@ def test_relinking_restarts_an_unfinished_import(owner, sim, held, admin_engine)
     owner.post(f"/organizations/{owner.org}/resources/{resource}/unlink")
     owner.post(f"/organizations/{owner.org}/resources/{resource}/link")
     assert _one(admin_engine, "SELECT count(*) AS n FROM stores")["n"] == 1  # same store reused
-    while _chain_job(admin_engine):
+    for _ in range(30):
+        if not _chain_job(admin_engine):
+            break
         _run(held.last)
     assert _one(admin_engine, "SELECT status FROM stores")["status"] == "active"
 

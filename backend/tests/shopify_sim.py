@@ -63,6 +63,10 @@ class ShopifySim:
     download_status: int = 200
     download_failures: int = 0  # the next N downloads answer 403 (expired signed link)
     bulk_queries: list[str] = field(default_factory=list)
+    # Single-object fetches (2A-07): max nodes per nested list before hasNextPage is true.
+    page_limit: int = 250
+    fetches: list[tuple[str, str]] = field(default_factory=list)
+    throttle_next: int = 0  # answer the next N GraphQL calls with THROTTLED
     operations: dict[str, dict[str, Any]] = field(default_factory=dict)
 
     def add_shop(self, domain: str, **kw: Any) -> Shop:
@@ -128,6 +132,29 @@ class ShopifySim:
             return httpx.Response(200, json={"errors": self.graphql_errors})
         payload = json.loads(request.content)
         query = payload["query"]
+        if self.throttle_next > 0:
+            self.throttle_next -= 1
+            return httpx.Response(
+                200,
+                json={
+                    "errors": [{"message": "Throttled", "extensions": {"code": "THROTTLED"}}],
+                    "extensions": {
+                        "cost": {
+                            "requestedQueryCost": 502,
+                            "actualQueryCost": None,
+                            "throttleStatus": {
+                                "maximumAvailable": 2000.0,
+                                "currentlyAvailable": 2,
+                                "restoreRate": 100.0,
+                            },
+                        }
+                    },
+                },
+            )
+        if "query AdVegaXProduct(" in query:
+            return self._fetch(shop, "product", payload["variables"]["id"])
+        if "query AdVegaXOrder(" in query:
+            return self._fetch(shop, "order", payload["variables"]["id"])
         if "bulkOperationRunQuery" in query:
             return self._bulk_run(shop, payload["variables"]["query"])
         if "bulkOperation(id:" in query:
@@ -148,6 +175,37 @@ class ShopifySim:
                 },
             )
         return httpx.Response(200, json={"data": {}})
+
+    # -- single-object fetches (2A-07) ---------------------------------------------------
+    def _connection(self, nodes: list[dict[str, Any]]) -> dict[str, Any]:
+        page = nodes[: self.page_limit]
+        return {
+            "pageInfo": {"hasNextPage": len(nodes) > self.page_limit},
+            "edges": [{"node": strip(n)} for n in page],
+        }
+
+    def _fetch(self, shop: Shop, kind: str, object_id: str) -> httpx.Response:
+        self.fetches.append((kind, object_id))
+        source = shop.catalogue if kind == "product" else shop.orders
+        node = next((n for n in source if n.get("id") == object_id and "__parentId" not in n), None)
+        if node is None:
+            return httpx.Response(200, json={"data": {kind: None}})
+        children = [n for n in source if n.get("__parentId") == object_id]
+        result = strip(node)
+        if kind == "product":
+            result["variants"] = self._connection(children)
+        else:
+            lines = [c for c in children if "originalUnitPriceSet" in c]
+            agreements = []
+            for agreement in (c for c in children if "happenedAt" in c):
+                sales = [n for n in source if n.get("__parentId") == agreement["id"]]
+                agreements.append({**strip(agreement), "sales": self._connection(sales)})
+            result["lineItems"] = self._connection(lines)
+            result["agreements"] = {
+                "pageInfo": {"hasNextPage": len(agreements) > self.page_limit},
+                "edges": [{"node": a} for a in agreements[: self.page_limit]],
+            }
+        return httpx.Response(200, json={"data": {kind: result}})
 
     # -- bulk operations ------------------------------------------------------------------
     def _bulk_run(self, shop: Shop, inner: str) -> httpx.Response:
@@ -297,6 +355,11 @@ def webhook_request(
     if triggered_at is not None:
         headers["X-Shopify-Triggered-At"] = triggered_at
     return headers, body
+
+
+def strip(node: dict[str, Any]) -> dict[str, Any]:
+    """A node as a GraphQL response returns it (no bulk ``__parentId``)."""
+    return {k: v for k, v in node.items() if k != "__parentId"}
 
 
 # ---------------------------------------------------------------- sample bulk exports

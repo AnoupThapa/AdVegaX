@@ -18,11 +18,13 @@ from app.providers.base.types import (
     BulkOperationState,
     CommerceRecord,
     ConnectResult,
+    FetchResult,
     PreparedConnect,
     ProviderCategory,
     ResourceDescriptor,
     SyncSummary,
     WebhookDelivery,
+    WebhookTarget,
 )
 
 Secrets = Mapping[str, Any]
@@ -94,8 +96,16 @@ class CommerceProvider(PlatformProvider, Protocol):
         """How far back order history may be read with these permissions (None = no limit)."""
         ...
 
-    def start_bulk_export(self, secrets: Secrets, kind: BulkKind, *, since: datetime | None) -> str:
-        """Start a bulk export; return the platform's operation id."""
+    def start_bulk_export(
+        self,
+        secrets: Secrets,
+        kind: BulkKind,
+        *,
+        created_since: datetime | None = None,
+        updated_since: datetime | None = None,
+    ) -> str:
+        """Start a bulk export, optionally filtered by creation / update time; return the
+        platform's operation id."""
         ...
 
     def bulk_export_state(self, secrets: Secrets, operation_id: str) -> BulkOperationState: ...
@@ -103,6 +113,14 @@ class CommerceProvider(PlatformProvider, Protocol):
     def read_bulk_export(self, result_url: str, kind: BulkKind) -> Iterator[CommerceRecord]:
         """Stream the finished export as normalized records (bounded memory)."""
         ...
+
+    def webhook_target(self, topic: str) -> WebhookTarget:
+        """What an "object changed" topic refers to (2A-07)."""
+        ...
+
+    def fetch_product(self, secrets: Secrets, external_id: str) -> FetchResult: ...
+
+    def fetch_order(self, secrets: Secrets, external_id: str) -> FetchResult: ...
 
 
 class AdvertisingProvider(PlatformProvider, Protocol):

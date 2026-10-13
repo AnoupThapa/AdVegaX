@@ -59,7 +59,7 @@ def test_queries_stay_within_shopify_bulk_limits_and_ask_for_no_personal_data():
         for field in ("customer", "email", "phone", "Address", "firstName", "lastName"):
             assert field not in query
     assert "created_at:>='2026-08-14T09:30:00Z'" in orders
-    assert "(query:" not in orders_query(None)
+    assert "(query:" not in orders_query()
 
 
 def test_history_window_depends_on_read_all_orders(clock):
@@ -191,7 +191,7 @@ def sim():
 
 def test_bulk_export_round_trip(sim, clock):
     provider = build_provider(sim, clock)
-    op = provider.start_bulk_export(SECRETS, BulkKind.CATALOGUE, since=None)
+    op = provider.start_bulk_export(SECRETS, BulkKind.CATALOGUE)
     assert op == "gid://shopify/BulkOperation/1"
     assert "products" in sim.bulk_queries[0]
     state = provider.bulk_export_state(SECRETS, op)
@@ -206,7 +206,7 @@ def test_bulk_export_round_trip(sim, clock):
 def test_bulk_user_errors_are_a_permanent_failure_without_the_message(sim, clock):
     sim.bulk_user_errors = True
     with pytest.raises(InvalidRequestError) as caught:
-        build_provider(sim, clock).start_bulk_export(SECRETS, BulkKind.ORDERS, since=None)
+        build_provider(sim, clock).start_bulk_export(SECRETS, BulkKind.ORDERS)
     assert caught.value.code == "bulk_export_rejected"
     assert "Invalid query" not in str(caught.value)
 
@@ -223,7 +223,7 @@ def test_download_host_must_be_allowlisted(sim, clock):
 )
 def test_download_errors(sim, clock, status, error):
     provider = build_provider(sim, clock)
-    op = provider.start_bulk_export(SECRETS, BulkKind.CATALOGUE, since=None)
+    op = provider.start_bulk_export(SECRETS, BulkKind.CATALOGUE)
     url = provider.bulk_export_state(SECRETS, op).result_url
     sim.download_status = status
     with pytest.raises(error):
@@ -237,7 +237,7 @@ def test_incomplete_credentials_mean_reconnect(sim, clock, secrets):
     from app.providers.base.errors import AuthExpiredError
 
     with pytest.raises(AuthExpiredError):
-        build_provider(sim, clock).start_bulk_export(secrets, BulkKind.CATALOGUE, since=None)
+        build_provider(sim, clock).start_bulk_export(secrets, BulkKind.CATALOGUE)
 
 
 # ------------------------------------------------------------------ streaming client

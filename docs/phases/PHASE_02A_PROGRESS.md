@@ -10,7 +10,7 @@ Plan: `PHASE_02A_PLAN.md` (approved 2026-10-13, A18, option C: live Shopify chec
 | 2A-04 Token lifecycle | ✅ Done — awaiting review |
 | 2A-05 Webhook intake | ✅ Done — awaiting review |
 | 2A-06 HTTP client extensions, GraphQL client, initial import | ✅ Done — awaiting review |
-| 2A-07 Webhook processing, incremental sync, reconciliation | Not started |
+| 2A-07 Webhook processing, incremental sync, reconciliation | ✅ Done — awaiting review |
 | 2A-08 Finance core v1 | Not started |
 | 2A-09 Read API | Not started |
 | 2A-10 Web app | Not started |
@@ -343,3 +343,75 @@ Shopify's schema was re-checked against shopify.dev (Admin GraphQL `2026-10`) be
 **Blocked:** none for the code. A real import needs the live checks (2A-01).
 
 **Next task:** 2A-07 — webhook processing (fetch the changed product/order by id), hourly and nightly reconciliation, cost-aware rate limiting, and carrying out privacy requests (customer and shop erasure).
+
+---
+
+## 2A-07 — Keeping stores up to date (2026-10-13)
+
+**Completed**
+- **Webhooks now update data within seconds:**
+  - Each Shopify notice only says "this product/order changed". AdVegaX fetches that object's **current** state from Shopify and saves it with the same rules as the import. The notice body is never used as data.
+  - A burst of notices for one product becomes **one** fetch.
+  - A deleted product is marked deleted; its order history stays.
+  - A deleted order is removed with its lines, sales and refunds.
+  - A stock change refreshes that product's variants.
+  - A refund refetches its order.
+  - An object too big for one request is saved as far as fetched, then the store is checked in full by bulk export.
+  - Stores still importing, unlinked or disconnected skip notices, and the reason is recorded.
+- **Reconciliation, because Shopify doesn't guarantee webhook delivery:**
+  - **every hour**, everything changed since the last run (with a 10-minute overlap);
+  - **every night**, the whole catalogue plus the last 30 days of orders;
+  - **"Sync now"** runs the nightly-style check.
+  - These reuse the import chain: one at a time per store, never overlapping a running import. A chain that has been silent for 6 hours is treated as dead and restarted. Scheduled runs don't fill the audit log.
+- **Cost at order time:**
+  - Orders placed after cost tracking began take the cost valid on the order date ("order time").
+  - Older imported orders keep "cost at import".
+  - A removed cost means "unknown", never 0.
+- **Shopify rate limits:** a throttled request waits as long as Shopify needs to restore the requested query cost (1–60 s), then retries automatically.
+- **Privacy requests are carried out:**
+  - Customer data request / erasure: AdVegaX holds no customer personal data. This is recorded and audited, and the customer id that came with the request is removed from the log.
+  - Store erasure (48 h after uninstall): **every imported row for the store is deleted** and audited with counts. It is skipped (and audited) if the merchant connected the store again.
+
+**Files changed** (25)
+- New (6): `alembic/versions/0009_commerce_sync_modes.py`, `app/domains/commerce/{incremental,privacy}.py`, `app/domains/webhooks/events.py`; tests `tests/api/test_commerce_sync.py` (33).
+- Modified (19):
+  - `app/core/settings.py`;
+  - `app/providers/base/{types,interfaces}.py`, `app/providers/shopify/{provider,bulk,webhooks,admin_api}.py`;
+  - `app/domains/commerce/{importer,models}.py`, `app/domains/integrations/jobs.py`, `app/domains/webhooks/service.py`, `app/workers/{celery_app,job_tasks}.py`;
+  - `alembic/versions/0008_commerce_import.py` (see deviation 3);
+  - tests `shopify_sim.py`, `test_webhooks.py`, `test_shopify_webhooks.py`, `test_shopify_bulk.py`, `test_commerce_import.py` (updated for the new behaviour);
+  - `.env.example`; docs `INTEGRATION_GUIDES.md`, `SECURITY.md`, `DATABASE_SCHEMA.md`; status documents.
+- Deleted: none. No frontend change.
+
+**Tests**
+- **33 new:**
+  - product, stock, refund and new-order updates;
+  - deletions; coalescing; not-found; oversized → reconcile;
+  - importing, unlinked and failed cases;
+  - hourly and nightly filters; skipping a running chain and restarting a dead one; "Sync now";
+  - schedules and their single run per tick;
+  - throttle back-off maths;
+  - cost-at-order-time rules;
+  - store erasure, the reconnected-store skip, and replayed privacy jobs.
+- Five 2A-05 webhook tests were updated, because those events are now carried out instead of only recorded.
+- **Backend `make check`: 526 passed**, coverage 96.4 % (security-critical 99 %); ruff, mypy --strict: pass.
+- Frontend unchanged (251); **e2e 9 passed**.
+
+**Security / privacy**
+- Webhook payloads are still discarded at intake; only ids are used.
+- Customer ids are removed once a request is handled.
+- Store erasure deletes all imported data under the tenant's own context (RLS).
+- Every privacy outcome is audited.
+
+**Migration:** `0009_commerce_sync_modes` (reversible). It adds the sync mode and start time.
+
+**Deviations**
+1. **Reconciliation reuses the bulk-export import chain** (with update-time filters) instead of a separate sync path. It is one code path with the same safety guarantees.
+2. **Missing objects are never deleted on a fetch.** Shopify returns nothing for orders older than 60 days without approval, so "not found" cannot mean "deleted". Deletions come only from the delete topics.
+3. **The 0008 migration was corrected.** Its data statements now lift forced row-level security for the one statement, otherwise they would silently touch no rows. This only matters for downgrades with data, but it was found while testing.
+4. **Proactive cost budgeting** (slowing down before Shopify throttles) is not added. The back-off on throttling plus the per-connection request limiter keeps single fetches well within limits.
+5. **Product deletions are not detected by reconciliation**, only by `products/delete`. Shopify's bulk exports don't list deleted products.
+
+**Blocked:** none for the code. Live checks on a development store are still pending (2A-01).
+
+**Next task:** 2A-08 — Finance core v1: the daily store figures (gross sales, discounts, sales reversals, net sales, shipping, taxes, cost of goods with coverage) built from the sales records, matching Shopify's report dating, never showing unknown values as 0.

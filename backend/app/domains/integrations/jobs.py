@@ -197,7 +197,14 @@ def sync(rt: Runtime, job: ClaimedJob) -> None:
                     session, rt, resource=resource, connection=connection, user_id=None
                 )
                 if store is not None and store.first_import_completed_at is not None:
-                    importer.start_import(session, rt, store, requested_by=job.requested_by_user_id)
+                    # "Sync now" on an imported store: a deep check (catalogue + recent orders).
+                    importer.start_sync(
+                        session,
+                        rt,
+                        store,
+                        importer.SyncMode.DEEP,
+                        requested_by=job.requested_by_user_id,
+                    )
                 return
     secrets = usable_secrets(rt, org_id, connection_id)
     summary = call_provider(

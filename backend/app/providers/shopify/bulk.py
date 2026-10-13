@@ -28,7 +28,7 @@ from __future__ import annotations
 
 import json
 import logging
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
@@ -74,59 +74,158 @@ query AdVegaXBulkState($id: ID!) {
 
 _MONEY = "shopMoney { amount currencyCode }"
 
-CATALOGUE_QUERY = """
-{
-  products {
-    edges { node {
-      id title handle productType vendor status updatedAt
-      variants { edges { node {
-        id title sku price updatedAt inventoryQuantity
-        inventoryItem { id tracked unitCost { amount currencyCode } }
-      } } }
-    } }
-  }
-}
-"""
-
-
-def orders_query(since: datetime | None) -> str:
-    """Orders created since ``since`` (UTC), with lines, sales agreements and refunds.
-
-    Four connections (orders, lineItems, agreements, sales) and two levels of nesting — within
-    Shopify's bulk limits. ``refunds`` is a plain list, not a connection.
-    """
-    search = ""
-    if since is not None:
-        stamp = since.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-        search = f"(query: \"created_at:>='{stamp}'\")"
-    return f"""
-{{
-  orders{search} {{
-    edges {{ node {{
-      id name processedAt updatedAt cancelledAt test currencyCode displayFinancialStatus
+# Field lists shared by bulk exports and by single-object fetches (webhooks, 2A-07), so both
+# paths produce identical nodes and go through the same mapping.
+PRODUCT_FIELDS = "id title handle productType vendor status updatedAt"
+VARIANT_FIELDS = (
+    "id title sku price updatedAt inventoryQuantity "
+    "inventoryItem { id tracked unitCost { amount currencyCode } }"
+)
+ORDER_FIELDS = f"""id name processedAt updatedAt cancelledAt test currencyCode
+      displayFinancialStatus
       totalDiscountsSet {{ {_MONEY} }}
       totalShippingPriceSet {{ {_MONEY} }}
       totalTaxSet {{ {_MONEY} }}
       totalRefundedSet {{ {_MONEY} }}
       totalPriceSet {{ {_MONEY} }}
-      refunds {{ id createdAt totalRefundedSet {{ {_MONEY} }} }}
-      lineItems {{ edges {{ node {{
-        id title sku quantity variant {{ id }} originalUnitPriceSet {{ {_MONEY} }}
-      }} }} }}
-      agreements {{ edges {{ node {{
-        id happenedAt reason
-        sales {{ edges {{ node {{
-          id actionType lineType quantity
+      refunds {{ id createdAt totalRefundedSet {{ {_MONEY} }} }}"""
+LINE_FIELDS = f"id title sku quantity variant {{ id }} originalUnitPriceSet {{ {_MONEY} }}"
+AGREEMENT_FIELDS = "id happenedAt reason"
+SALE_FIELDS = f"""id actionType lineType quantity
           totalAmount {{ {_MONEY} }}
           totalDiscountAmountBeforeTaxes {{ {_MONEY} }}
           totalTaxAmount {{ {_MONEY} }}
-          ... on ProductSale {{ lineItem {{ id }} }}
+          ... on ProductSale {{ lineItem {{ id }} }}"""
+
+
+def _stamp(value: datetime) -> str:
+    return value.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _search(created_since: datetime | None, updated_since: datetime | None) -> str:
+    terms = []
+    if created_since is not None:
+        terms.append(f"created_at:>='{_stamp(created_since)}'")
+    if updated_since is not None:
+        terms.append(f"updated_at:>='{_stamp(updated_since)}'")
+    return f'(query: "{" AND ".join(terms)}")' if terms else ""
+
+
+def catalogue_query(updated_since: datetime | None = None) -> str:
+    """Products (optionally only those updated since a time) with their variants."""
+    return f"""
+{{
+  products{_search(None, updated_since)} {{
+    edges {{ node {{
+      {PRODUCT_FIELDS}
+      variants {{ edges {{ node {{
+        {VARIANT_FIELDS}
+      }} }} }}
+    }} }}
+  }}
+}}
+"""
+
+
+CATALOGUE_QUERY = catalogue_query()
+
+
+def orders_query(
+    created_since: datetime | None = None, updated_since: datetime | None = None
+) -> str:
+    """Orders (filtered by creation and/or update time), with lines, sales agreements and
+    refunds. Four connections (orders, lineItems, agreements, sales) and two levels of
+    nesting — within Shopify's bulk limits. ``refunds`` is a plain list, not a connection.
+    """
+    return f"""
+{{
+  orders{_search(created_since, updated_since)} {{
+    edges {{ node {{
+      {ORDER_FIELDS}
+      lineItems {{ edges {{ node {{
+        {LINE_FIELDS}
+      }} }} }}
+      agreements {{ edges {{ node {{
+        {AGREEMENT_FIELDS}
+        sales {{ edges {{ node {{
+          {SALE_FIELDS}
         }} }} }}
       }} }} }}
     }} }}
   }}
 }}
 """
+
+
+# Single-object fetches (2A-07). Page sizes keep each query well under Shopify's 1,000-point
+# single-query limit; a longer nested list is reported as incomplete and the store is then
+# reconciled through a bulk export instead.
+PRODUCT_FETCH = f"""
+query AdVegaXProduct($id: ID!) {{
+  product(id: $id) {{
+    {PRODUCT_FIELDS}
+    variants(first: 250) {{ pageInfo {{ hasNextPage }} edges {{ node {{ {VARIANT_FIELDS} }} }} }}
+  }}
+}}
+"""
+
+ORDER_FETCH = f"""
+query AdVegaXOrder($id: ID!) {{
+  order(id: $id) {{
+    {ORDER_FIELDS}
+    lineItems(first: 100) {{ pageInfo {{ hasNextPage }} edges {{ node {{ {LINE_FIELDS} }} }} }}
+    agreements(first: 10) {{
+      pageInfo {{ hasNextPage }}
+      edges {{ node {{
+        {AGREEMENT_FIELDS}
+        sales(first: 50) {{ pageInfo {{ hasNextPage }} edges {{ node {{
+          {SALE_FIELDS}
+        }} }} }}
+      }} }}
+    }}
+  }}
+}}
+"""
+
+
+def _children(node: dict[str, Any], field_name: str) -> tuple[list[dict[str, Any]], bool]:
+    """Nodes of a fetched connection and whether it was complete."""
+    connection = node.pop(field_name, None)
+    if not isinstance(connection, dict):
+        return [], True
+    info = connection.get("pageInfo")
+    complete = not (isinstance(info, dict) and info.get("hasNextPage") is True)
+    edges = connection.get("edges")
+    nodes = [
+        e["node"]
+        for e in (edges if isinstance(edges, list) else [])
+        if isinstance(e, dict) and isinstance(e.get("node"), dict)
+    ]
+    return nodes, complete
+
+
+def flatten_product(product: dict[str, Any]) -> tuple[list[dict[str, Any]], bool]:
+    """A fetched product as bulk-style nodes (children carry ``__parentId``)."""
+    product = dict(product)
+    variants, complete = _children(product, "variants")
+    parent = product.get("id")
+    return [product, *({**v, "__parentId": parent} for v in variants)], complete
+
+
+def flatten_order(order: dict[str, Any]) -> tuple[list[dict[str, Any]], bool]:
+    order = dict(order)
+    parent = order.get("id")
+    lines, lines_complete = _children(order, "lineItems")
+    agreements, agreements_complete = _children(order, "agreements")
+    nodes: list[dict[str, Any]] = [order, *({**line, "__parentId": parent} for line in lines)]
+    complete = lines_complete and agreements_complete
+    for agreement in agreements:
+        agreement = dict(agreement)
+        sales, sales_complete = _children(agreement, "sales")
+        complete = complete and sales_complete
+        nodes.append({**agreement, "__parentId": parent})
+        nodes.extend({**sale, "__parentId": agreement.get("id")} for sale in sales)
+    return nodes, complete
 
 
 # ------------------------------------------------------------------ operation state
@@ -254,6 +353,10 @@ class ExportReader:
             yield from self._map(node)
         if self.skipped_lines:
             logger.warning("bulk_lines_skipped", extra={"count": self.skipped_lines})
+
+    def nodes(self, nodes: Iterable[dict[str, Any]]) -> list[CommerceRecord]:
+        """Map already-parsed nodes (a single-object fetch, flattened)."""
+        return [record for node in nodes for record in self._map(node)]
 
     def _map(self, node: dict[str, Any]) -> list[CommerceRecord]:
         node_id = _id(node.get("id"))
