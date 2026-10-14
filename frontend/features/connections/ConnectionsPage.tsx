@@ -2,17 +2,19 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { PageHeading } from "@/components/ui/PageHeading";
+import { TextField } from "@/components/ui/TextField";
 import { useCurrentOrganization } from "@/features/organizations/OrganizationShell";
 import { canManageConnections } from "@/features/organizations/permissions";
 import { ApiError, messageFor } from "@/lib/api/errors";
 import { goToExternal } from "@/lib/navigation/external";
 
 import { useConnections, useProviders, useStartConnection, type Provider } from "./api";
+import { CONNECT_FIELDS, normalizeShopDomain } from "./connect-fields";
 import styles from "./connections.module.css";
 import { connectError, connectionStatus } from "./labels";
 
@@ -51,8 +53,8 @@ function ConnectSection({ orgId, onNotice }: { orgId: string; onNotice: (n: Noti
   const providers = useProviders();
   const start = useStartConnection(orgId);
 
-  function connect(provider: Provider) {
-    start.mutate(provider.code, {
+  function connect(provider: Provider, params?: Record<string, string>) {
+    start.mutate(params ? { provider: provider.code, params } : { provider: provider.code }, {
       onSuccess: (result) => {
         if (!goToExternal(result.authorize_url)) {
           onNotice({ tone: "error", text: connectError(null), requestId: null });
@@ -88,14 +90,23 @@ function ConnectSection({ orgId, onNotice }: { orgId: string; onNotice: (n: Noti
                   <p className={styles.muted}>For testing only — not a real platform.</p>
                 ) : null}
               </div>
-              <Button
-                busy={start.isPending && start.variables === p.code}
-                disabled={start.isPending}
-                aria-label={`Connect ${p.display_name}`}
-                onClick={() => connect(p)}
-              >
-                Connect
-              </Button>
+              {CONNECT_FIELDS[p.code] ? (
+                <ConnectForm
+                  provider={p}
+                  busy={start.isPending && start.variables?.provider === p.code}
+                  disabled={start.isPending}
+                  onConnect={(params) => connect(p, params)}
+                />
+              ) : (
+                <Button
+                  busy={start.isPending && start.variables?.provider === p.code}
+                  disabled={start.isPending}
+                  aria-label={`Connect ${p.display_name}`}
+                  onClick={() => connect(p)}
+                >
+                  Connect
+                </Button>
+              )}
             </li>
           ))}
         </ul>
@@ -105,6 +116,62 @@ function ConnectSection({ orgId, onNotice }: { orgId: string; onNotice: (n: Noti
         see your password there.
       </p>
     </section>
+  );
+}
+
+/** A platform that needs details first (e.g. the Shopify store address). */
+function ConnectForm({
+  provider,
+  busy,
+  disabled,
+  onConnect,
+}: {
+  provider: Provider;
+  busy: boolean;
+  disabled: boolean;
+  onConnect: (params: Record<string, string>) => void;
+}) {
+  const fields = CONNECT_FIELDS[provider.code] ?? [];
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    const shop = normalizeShopDomain(values.shop_domain ?? "");
+    if (fields.some((f) => f.name === "shop_domain") && !shop) {
+      setErrors({ shop_domain: "Enter a store address like your-store.myshopify.com." });
+      return;
+    }
+    setErrors({});
+    onConnect(shop ? { shop_domain: shop } : {});
+  }
+
+  return (
+    <form
+      className={styles.connectForm}
+      onSubmit={submit}
+      aria-label={`Connect ${provider.display_name}`}
+      noValidate
+    >
+      {fields.map((field) => (
+        <TextField
+          key={field.name}
+          label={field.label}
+          hint={field.hint}
+          placeholder={field.placeholder}
+          required
+          autoComplete="off"
+          spellCheck={false}
+          maxLength={255}
+          value={values[field.name] ?? ""}
+          errors={errors[field.name] ? [errors[field.name] as string] : []}
+          onChange={(event) => setValues({ ...values, [field.name]: event.target.value })}
+        />
+      ))}
+      <Button type="submit" busy={busy} disabled={disabled}>
+        Connect {provider.display_name}
+      </Button>
+    </form>
   );
 }
 

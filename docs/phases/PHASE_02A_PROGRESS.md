@@ -12,8 +12,8 @@ Plan: `PHASE_02A_PLAN.md` (approved 2026-10-13, A18, option C: live Shopify chec
 | 2A-06 HTTP client extensions, GraphQL client, initial import | ✅ Done — awaiting review |
 | 2A-07 Webhook processing, incremental sync, reconciliation | ✅ Done — awaiting review |
 | 2A-08 Finance core v1 | ✅ Done — awaiting review |
-| 2A-09 Read API | ✅ Done — awaiting review |
-| 2A-10 Web app | Not started |
+| 2A-09 Read API | ✅ Done |
+| 2A-10 Web app | ✅ Done — awaiting review |
 | 2A-11 Simulator, e2e, docs, report | Not started |
 
 ---
@@ -540,3 +540,72 @@ Shopify's schema was re-checked against shopify.dev (Admin GraphQL `2026-10`) be
 **Blocked:** none.
 
 **Next task:** 2A-10 — Web app: Shopify connect form and "Choose organization" page for install links, stores list with sync status, products page, store revenue view with availability, and "Sync now".
+
+---
+
+## 2A-10 — Web app (2026-10-14)
+
+**Completed**
+- **Connect Shopify:** on the Connections page, Shopify asks for the store address first.
+  - It accepts "your-store", "your-store.myshopify.com" or a pasted store URL.
+  - It checks the address before leaving.
+  - It sends only the cleaned address (`{params: {shop_domain}}`), and the API checks it again.
+- **Install links from Shopify** (`/connect/shopify?account=…`):
+  - after sign-in, the person picks one of the organizations they can manage (owner, admin or manager), then approves access on Shopify as usual;
+  - broken links, unknown platforms and people with no eligible organization get a plain explanation.
+- **Disconnect note:** disconnecting Shopify tells the person to also uninstall the app in their Shopify admin, because AdVegaX cannot revoke access at Shopify itself.
+- **Stores tab** (new in the organization menu):
+  - each store with its status in plain words: Importing (with %), Up to date, Needs reconnecting, Not linked, or the problem explained;
+  - refreshes itself while a sync runs;
+  - with no stores, points to the Connections page.
+- **Store page:**
+  - store facts: address, currency, time zone, oldest history Shopify allows, last checks;
+  - **"Sync now"** for owners, admins and managers, disabled while a sync runs;
+  - **revenue view** for 7, 30 or 90 days: period totals, a breakdown and a daily table.
+- **Products page:** search by title or SKU, status filter, "Show more products". Each variant shows price, stock and cost, with where the cost came from or why it is missing.
+- **Missing data is never shown as 0:**
+  - every figure carries a reason: "Not synced yet", "Some products have no cost", "Not provided by the platform", "Not collected yet", "Not tracked";
+  - a period with any unsynced day shows no totals and says why.
+- **Money:** exact decimal strings from the API are rounded half-even only for display, using the currency's minor units.
+
+**Files changed** (24)
+- New (18):
+  - `features/stores/{api.ts,labels.ts,dates.ts,StoresPage.tsx,StorePage.tsx,RevenueView.tsx,ProductsPage.tsx,stores.module.css}`;
+  - `features/connections/{connect-fields.ts,InstallLanding.tsx}`; `lib/format/money.ts`;
+  - routes `app/orgs/[organizationId]/stores/{page,[storeId]/page,[storeId]/products/page}.tsx` and `app/connect/[provider]/page.tsx`;
+  - tests `tests/unit/money.test.ts`, `tests/features/stores.test.tsx`, `tests/features/shopify-connect.test.tsx`.
+- Modified (6):
+  - `features/connections/{ConnectionsPage.tsx,ConnectionDetailPage.tsx,api.ts,connections.module.css}`;
+  - `features/organizations/OrganizationShell.tsx`;
+  - `e2e/journey.spec.ts`;
+  - plus status documents.
+- Deleted: none. No backend change, no migration.
+
+**Tests**
+- **39 new frontend tests:**
+  - money: half-even rounding, negatives, zero-decimal currencies, bad input; ratios; figure reasons;
+  - stores list: states, empty state, sync problems;
+  - store page:
+    - facts and figures, never 0 for missing data;
+    - unsynced periods and period change;
+    - "Sync now": busy, rate limit, viewers cannot sync;
+    - not found;
+  - products: stock and cost availability, search, status filter, paging;
+  - Shopify connect form: validation and the exact request body;
+  - install landing: bad links, no eligible organization, only manageable organizations offered, refused address.
+- E2E: the journey now opens the Stores tab and checks its empty state and accessibility.
+- **Frontend `npm run check`: 290 passed** (97.4 % statement coverage), build passes; **e2e 9 passed**.
+- **Backend `make check`: 577 passed** (unchanged).
+
+**Security**
+- No tokens or secrets reach the browser. The install landing sends only the cleaned store address.
+- Leaving for Shopify goes through the existing https-only check.
+- No inline styles, no browser storage.
+
+**Deviations**
+1. **Number and date formats follow the person's browser language.** For example, an Australian-dollar store may show "A$" to someone whose browser is set to US English. The plan did not specify this.
+2. **The revenue view offers 7, 30 and 90 days.** The API allows up to 400; a custom date range is left for later.
+
+**Blocked:** none. Live Shopify checks remain deferred (A18 option C).
+
+**Next task:** 2A-11 — the simulator end-to-end run (connect → import → webhooks → figures), documentation, and the Phase 2A report.

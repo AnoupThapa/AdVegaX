@@ -254,6 +254,12 @@ function Detail({ connectionId }: { connectionId: string }) {
         <p>
           Linked accounts will be unlinked and data will stop updating. You can connect again later.
         </p>
+        {c.provider === "shopify" ? (
+          <p>
+            AdVegaX deletes its access here. To remove the app completely, also uninstall it in your
+            Shopify admin (Settings → Apps).
+          </p>
+        ) : null}
       </ConfirmDialog>
     </section>
   );

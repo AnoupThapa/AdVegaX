@@ -124,12 +124,19 @@ export function useJob(orgId: string, jobId: string | null) {
   });
 }
 
+export type StartConnection = {
+  readonly provider: string;
+  /** Platform-specific details, e.g. a Shopify store address ({ shop_domain }). */
+  readonly params?: Record<string, string>;
+};
+
 export function useStartConnection(orgId: string) {
   return useMutation({
-    mutationFn: (provider: string) =>
+    mutationFn: ({ provider, params }: StartConnection) =>
       unwrap(
         api.POST("/api/v1/organizations/{organization_id}/connections/{provider}/start", {
           params: { path: { ...org(orgId), provider } },
+          ...(params ? { body: { params } } : {}),
         }),
       ),
   });
