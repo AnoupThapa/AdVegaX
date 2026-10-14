@@ -17,7 +17,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | 1B | Integration foundation | ✅ **Implemented — awaiting review** | 277 tests, 98.4 % coverage; `phases/PHASE_01B_REPORT.md` |
 | 1C | Frontend shell | ✅ **Implemented — awaiting review** | 251 unit + 9 end-to-end tests, axe 0 violations; `phases/PHASE_01C_REPORT.md` |
 | 2A | Shopify (read-only) + finance core | ✅ **Implemented against the Shopify simulator — awaiting review**; live checks on a development store (2A-01) pending | 582 backend + 290 frontend + 10 end-to-end tests; `phases/PHASE_02A_REPORT.md` |
-| 2B | WooCommerce (read-only) | Not started | Needs Q10 |
+| 2B | WooCommerce (read-only) | **Plan drafted — awaiting approval** | `phases/PHASE_02B_PLAN.md` (Q10a, Q10b, Q-2B-1…7, test environment §2A) |
 | 3 | Google Ads (read-only) | Not started | Start developer-token application early |
 | 4 | Meta (read-only) | Not started | Start App Review / Business Verification early |
 | 5 | GA4 (read-only) | Not started | Needs Q11 |
@@ -81,6 +81,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | 2026-10-14 | **2A-09** Read API: stores (sync status, history limit), products (cursor, search, cost and stock availability), daily figures with availability and totals, "Sync now" (rate-limited, 409 when busy/unlinked); new store permissions; 19 tests | `phases/PHASE_02A_PROGRESS.md`, `API_SPECIFICATION.md §19A` |
 | 2026-10-14 | **2A-10** Web app: Shopify connect form and install-link organization chooser, Stores tab with sync status, store page with revenue view (availability, never 0 for missing data) and "Sync now", products page with stock and cost availability; 39 tests + e2e step | `phases/PHASE_02A_PROGRESS.md` |
 | 2026-10-14 | **2A-11** Whole-journey test against a strict-token Shopify simulator (connect → import → webhook → hourly check with token rotation → Sync now → uninstall → reinstall → store erasure, no token anywhere); browser test with an imported store + axe; fixed a test date time bomb (would have failed from December 2026); test code excluded from the Docker image. **Phase 2A implemented** (live checks pending) | `phases/PHASE_02A_REPORT.md`, `phases/PHASE_02A_PROGRESS.md` |
+| 2026-10-14 | **Phase 2B plan drafted** (WooCommerce read-only): facts verified against WooCommerce docs on 2026-10-14; read-only keys cannot create webhooks → 15-minute checks; native COGS (10.3+) records order-time cost; SSRF hardening for merchant addresses; paged-import framework; parity tests with Shopify | `phases/PHASE_02B_PLAN.md` |
 | 2026-10-08 | **Phase 1B implemented**: connections/resources/links, encrypted credentials, SSRF-safe client, rate limiter, provider framework + fake platform, jobs with retry/dead-letter, single scheduler, audited denials | `backend/`, `phases/PHASE_01B_REPORT.md`, `SECURITY.md`, `INTEGRATION_GUIDES.md` |
 
 ## 3. Decision log
@@ -128,4 +129,4 @@ Q5 Shopify public-app approach (2A production) · Q6 same store/account in two o
 3. Live Shopify checks (2A-01): Shopify Partner account + development store + app in the Dev Dashboard, and a reachable public HTTPS address (Shopify domains allowed in Claude network settings plus a tunnel, or a staging server).
 4. Start the other external approvals: Google Ads developer token, Meta app review; ask Shopify Partner Support in writing about billing for the production distribution (Q5).
 5. Privacy policy and merchant data-protection agreement before any other merchant connects.
-6. Phase 2B (WooCommerce) starts only after its plan is approved.
+6. Phase 2B (WooCommerce): review the plan `phases/PHASE_02B_PLAN.md` and decide Q10a, Q10b, Q-2B-1…7 and the test environment (§2A). Implementation starts only after approval.
