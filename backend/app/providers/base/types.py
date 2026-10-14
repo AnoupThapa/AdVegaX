@@ -271,3 +271,14 @@ class FetchResult:
     records: tuple[CommerceRecord, ...] = ()
     found: bool = True
     complete: bool = True
+
+
+# ---------------------------------------------------------------- paged import (2B-02)
+@dataclass(frozen=True)
+class CommercePage:
+    """One page of a paged import. ``next_cursor`` is the provider's opaque position (None =
+    this kind is complete); ``progress`` is an optional 0-100 estimate within the kind."""
+
+    records: tuple[CommerceRecord, ...]
+    next_cursor: str | None = None
+    progress: int | None = None

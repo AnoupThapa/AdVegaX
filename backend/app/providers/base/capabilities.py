@@ -21,6 +21,7 @@ class Capability(StrEnum):
     PKCE = "pkce"
     TOKEN_REFRESH = "token_refresh"  # noqa: S105 - capability name
     BULK_IMPORT = "bulk_import"  # catalogue and order history through bulk exports (2A-06)
+    PAGED_IMPORT = "paged_import"  # catalogue and order history read page by page (2B-02)
     APP_INSTALL = "app_install"  # the platform can start the connection (e.g. Shopify install)
 
 

@@ -10,7 +10,7 @@ This document is the **target data model**. Tables are created only in the phase
 |---|---|
 | 1A | users, user_password_credentials, sessions, user_action_tokens, organizations, memberships, invitations, audit_logs, security_events, email_outbox |
 | 1B | external_connections, external_connection_credentials, external_resources, organization_resource_links, job_runs |
-| 2A | **as built (migrations 0007–0009):** stores, products, product_variants (incl. inventory), product_cost_history, orders (incl. hashed customer key), order_items, sales_entries, refunds, refund_items, commerce_sync_state, webhook_events, financial_daily (store components) — see §4A |
+| 2A / 2B | **as built (migrations 0007–0010):** stores, products, product_variants (incl. inventory), product_cost_history, orders (incl. hashed customer key), order_items, sales_entries, refunds, refund_items, commerce_sync_state, webhook_events, financial_daily (store components) — see §4A |
 | 3–4 | ad_accounts (resource extension), campaigns, ad_groups, ads, budgets, ad_performance_daily, keywords, audience_targets |
 | 5 | analytics_properties (resource extension), analytics table per decision Q11 |
 | 6 | fx_rates, metric_definitions, store_cost_rules; financial_daily gains ad-spend components |
@@ -239,6 +239,11 @@ Platform-neutral tables (D4, D19); providers map into them. **Tenant tables** (`
 | `financial_daily` | per store, `day` (store time zone), currency, `definition_version` (unique per store/day/version); additive components: gross_sales, discounts, sales_reversals, net_sales, shipping, taxes, duties, fees, total_sales, orders_count; **`cogs` NULL exactly when `uncosted_lines > 0`** (check constraint), `costed_net_sales` for coverage; `computed_at`. Ratios computed on read (A5). Ad-spend components are added in Phase 6. **Filled from 2A-08** by `app/domains/finance/service.py` (rebuilt for the affected store-local days after every import, reconciliation and order webhook); the definitions are in `app/domains/finance/definitions.py` (`finance-v1`) |
 | `webhook_events` | **system role only** (no app-role grants). Metadata only — provider, `webhook_id` (unique per provider, duplicate deliveries rejected), topic, external_account_id, object id, `object_updated_at`, `triggered_at`, `received_at`, resolved organization (nullable), status, processed_at, error_code. **No body column**: payload personal data is never stored |
 | `external_connections.external_account_id` | platform account id (e.g. shop domain); partial unique index `(provider, external_account_id)` where not NULL and status ≠ `revoked` — one live connection per account across organizations (Q6) |
+
+**0010 (2B-02, Phase 2B)** is additive. It adds:
+- On `stores`: `site_url` (normalized base URL; WordPress may live in a sub-folder), `platform_version`, `health_code` and `health_checked_at` (plain-language health of a self-hosted store), and `counted_statuses` (the order statuses counted in the figures, Q-2B-2).
+- On `orders`: `excluded_reason` (`status` / `other_currency`: kept but not counted).
+- On `commerce_sync_state`: `import_cursor` (the provider's opaque cursor for the next page of a paged import, ≤ 2048 characters) and `import_counts` (records applied by the running chain, JSONB).
 
 **0009 (2A-07)** adds `commerce_sync_state.sync_mode` (`initial`/`reconcile`/`deep`) and `sync_started_at` (the next reconciliation's starting point).
 

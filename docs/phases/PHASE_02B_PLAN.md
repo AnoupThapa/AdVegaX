@@ -1,6 +1,8 @@
 # Phase 2B — WooCommerce (read-only): Implementation Plan
 
-**Status:** 📝 **Draft — awaiting product-owner approval.** Nothing in this plan is implemented. · **Date:** 2026-10-14
+**Status:** ✅ **Approved by the product owner (2026-10-14, A19: "go ahead") with all §2 recommendations.** Implementation authorized for Phase 2B only. · **Date:** 2026-10-14
+
+> **Test environment (§2A):** option A is recommended, but the WordPress download sites were still blocked on 2026-10-14. Until they are allowed, work proceeds as in 2A's option C: build against WooCommerce's documentation and a simulator, and run Step 0 (2B-01) on a local test store as soon as the downloads work. Everything Step 0 would confirm is marked "to confirm live".
 **Depends on:** Phase 2A (implemented against the simulator; awaiting review) · **Followed by:** Phase 3 (Google Ads) per ROADMAP
 **Governing documents:** MASTER_SPECIFICATION §7, §14, §20 (D4, D6, D14, D15, D19, D22), ARCHITECTURE §9–§10, DATABASE_SCHEMA §4A, INTEGRATION_GUIDES §2, `phases/PHASE_02B_WOOCOMMERCE.md` (outline), `phases/PHASE_02A_PLAN.md` and `PHASE_02A_REPORT.md`, DISCOVERY_REPORT §10, §14 (Q10), risk 6 (SSRF, CRITICAL)
 

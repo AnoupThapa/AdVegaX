@@ -17,7 +17,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | 1B | Integration foundation | ✅ **Implemented — awaiting review** | 277 tests, 98.4 % coverage; `phases/PHASE_01B_REPORT.md` |
 | 1C | Frontend shell | ✅ **Implemented — awaiting review** | 251 unit + 9 end-to-end tests, axe 0 violations; `phases/PHASE_01C_REPORT.md` |
 | 2A | Shopify (read-only) + finance core | ✅ **Implemented against the Shopify simulator — awaiting review**; live checks on a development store (2A-01) pending | 582 backend + 290 frontend + 10 end-to-end tests; `phases/PHASE_02A_REPORT.md` |
-| 2B | WooCommerce (read-only) | **Plan drafted — awaiting approval** | `phases/PHASE_02B_PLAN.md` (Q10a, Q10b, Q-2B-1…7, test environment §2A) |
+| 2B | WooCommerce (read-only) | **Approved (A19) — in progress** (Step 0 waits for WordPress downloads to be allowed) | `phases/PHASE_02B_PLAN.md`, `phases/PHASE_02B_PROGRESS.md` |
 | 3 | Google Ads (read-only) | Not started | Start developer-token application early |
 | 4 | Meta (read-only) | Not started | Start App Review / Business Verification early |
 | 5 | GA4 (read-only) | Not started | Needs Q11 |
@@ -82,6 +82,8 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | 2026-10-14 | **2A-10** Web app: Shopify connect form and install-link organization chooser, Stores tab with sync status, store page with revenue view (availability, never 0 for missing data) and "Sync now", products page with stock and cost availability; 39 tests + e2e step | `phases/PHASE_02A_PROGRESS.md` |
 | 2026-10-14 | **2A-11** Whole-journey test against a strict-token Shopify simulator (connect → import → webhook → hourly check with token rotation → Sync now → uninstall → reinstall → store erasure, no token anywhere); browser test with an imported store + axe; fixed a test date time bomb (would have failed from December 2026); test code excluded from the Docker image. **Phase 2A implemented** (live checks pending) | `phases/PHASE_02A_REPORT.md`, `phases/PHASE_02A_PROGRESS.md` |
 | 2026-10-14 | **Phase 2B plan drafted** (WooCommerce read-only): facts verified against WooCommerce docs on 2026-10-14; read-only keys cannot create webhooks → 15-minute checks; native COGS (10.3+) records order-time cost; SSRF hardening for merchant addresses; paged-import framework; parity tests with Shopify | `phases/PHASE_02B_PLAN.md` |
+| 2026-10-14 | **A19 — Phase 2B approved** ("go ahead") with all recommendations. WordPress downloads still blocked, so Step 0 (2B-01) waits; building against documentation + simulator meanwhile | `phases/PHASE_02B_PLAN.md` |
+| 2026-10-14 | **2B-02** Paged-import framework (one page per job step, resumable cursor, shared locks/upserts/figures) + migration 0010 (self-hosted store fields, excluded orders, page cursor); paged import proven identical to the bulk import; 10 tests | `phases/PHASE_02B_PROGRESS.md`, `DATABASE_SCHEMA.md §4A` |
 | 2026-10-08 | **Phase 1B implemented**: connections/resources/links, encrypted credentials, SSRF-safe client, rate limiter, provider framework + fake platform, jobs with retry/dead-letter, single scheduler, audited denials | `backend/`, `phases/PHASE_01B_REPORT.md`, `SECURITY.md`, `INTEGRATION_GUIDES.md` |
 
 ## 3. Decision log
@@ -106,6 +108,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | A15 | Phase 1A plan and §22 defaults; configurable security settings | Approved |
 | A16 | Phase 1B plan and §20 defaults; organization owns connections, user authorizes; credentials never exposed; SSRF mandatory | Approved — implemented |
 | A17 | Phase 1C plan with all §15 recommendations; task-by-task delivery | Approved — implemented, awaiting review |
+| A19 | Phase 2B plan with all §2 recommendations (Q10a, Q10b, Q-2B-1…7); test environment A recommended, C-style until WordPress downloads are allowed | Approved 2026-10-14 ("go ahead") — in progress |
 | A18 | Phase 2A plan v2 with all §2 recommendations (Q5–Q9, D-2A-1…3); live-testing option C | Approved 2026-10-13 — implemented, awaiting review (live checks pending) |
 
 ## 4. Open items

@@ -155,6 +155,9 @@ class Settings(BaseSettings):
     COMMERCE_HISTORY_WINDOW: timedelta = timedelta(days=395)
     COMMERCE_BULK_POLL_INTERVAL: timedelta = timedelta(seconds=30)
     COMMERCE_IMPORT_BATCH_SIZE: int = Field(default=500, ge=1, le=5000)
+    # Paged imports (2B-02): pause between pages (0 = next page at once; the per-store request
+    # limiter still applies). Must not be negative.
+    COMMERCE_PAGE_INTERVAL: timedelta = timedelta(seconds=0)
     # Reconciliation (2A-07): hourly changes since the last run (minus an overlap), nightly a
     # deeper check of the catalogue and recent orders. A chain silent for longer than
     # COMMERCE_CHAIN_STALE_AFTER is considered dead and may be restarted.
@@ -223,6 +226,8 @@ class Settings(BaseSettings):
         for name, value in durations.items():
             if value <= timedelta(0):
                 raise ValueError(f"{name} must be a positive duration")
+        if timedelta(0) > self.COMMERCE_PAGE_INTERVAL:
+            raise ValueError("COMMERCE_PAGE_INTERVAL must not be negative")
         if self.SESSION_IDLE_TIMEOUT > self.SESSION_ABSOLUTE_TIMEOUT:
             raise ValueError("SESSION_IDLE_TIMEOUT must not exceed SESSION_ABSOLUTE_TIMEOUT")
         if self.JOB_RETRY_BASE_DELAY > self.JOB_RETRY_MAX_DELAY:

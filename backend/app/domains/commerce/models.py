@@ -27,6 +27,7 @@ from sqlalchemy import (
     UniqueConstraint,
     text,
 )
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, Timestamps, UUIDPrimaryKey
@@ -38,6 +39,8 @@ STORE_STATUSES = ("importing", "active", "disconnected", "error")
 PRODUCT_STATUSES = ("active", "draft", "archived", "unlisted", "deleted")
 COST_SOURCES = ("platform", "import_snapshot")
 LINE_COST_SOURCES = ("order_time", "import_time")
+# Why an order is kept but not counted in the figures (2B, Q-2B-2 / Q-2B-5).
+ORDER_EXCLUDED_REASONS = ("status", "other_currency")
 # Verified Shopify enums (2026-10, migration 0008): a sale's action and its agreement's reason.
 SALE_ACTIONS = ("order", "return", "update", "other")
 AGREEMENT_REASONS = ("order", "order_edit", "refund", "return", "other")
@@ -104,6 +107,14 @@ class Store(UUIDPrimaryKey, Timestamps, Base):
     # Earliest order date AdVegaX may hold (60 days, or 13 months with read_all_orders — Q9).
     history_from: Mapped[datetime | None] = mapped_column(TZ)
     first_import_completed_at: Mapped[datetime | None] = mapped_column(TZ)
+    # Self-hosted platforms (2B): normalized base URL (WordPress may live in a sub-folder),
+    # platform version, last health check (plain-language message keys, never raw errors) and
+    # the order statuses counted in the figures (Q-2B-2), shown on the store page.
+    site_url: Mapped[str | None] = mapped_column(String(2048))
+    platform_version: Mapped[str | None] = mapped_column(String(32))
+    health_code: Mapped[str | None] = mapped_column(String(64))
+    health_checked_at: Mapped[datetime | None] = mapped_column(TZ)
+    counted_statuses: Mapped[list[str] | None] = mapped_column(ARRAY(String(32)))
 
 
 class Product(UUIDPrimaryKey, Timestamps, Base):
@@ -206,6 +217,10 @@ class Order(UUIDPrimaryKey, Timestamps, Base):
             "ordered_at",
         ),
         Index("ix_orders_store_id_customer_key", "store_id", "customer_key"),
+        CheckConstraint(
+            "excluded_reason IS NULL OR " + _in("excluded_reason", ORDER_EXCLUDED_REASONS),
+            name="excluded_reason",
+        ),
     )
 
     organization_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
@@ -227,6 +242,8 @@ class Order(UUIDPrimaryKey, Timestamps, Base):
     customer_key: Mapped[str | None] = mapped_column(String(64))
     country_code: Mapped[str | None] = mapped_column(String(2))
     external_updated_at: Mapped[datetime | None] = mapped_column(TZ)
+    # Kept but not counted in the figures, and why (2B): ``status`` or ``other_currency``.
+    excluded_reason: Mapped[str | None] = mapped_column(String(32))
 
 
 class OrderItem(UUIDPrimaryKey, Base):
@@ -364,6 +381,9 @@ class CommerceSyncState(Base):
             "sync_mode IS NULL OR sync_mode IN ('initial', 'reconcile', 'deep')",
             name="sync_mode",
         ),
+        CheckConstraint(
+            "import_cursor IS NULL OR char_length(import_cursor) <= 2048", name="import_cursor"
+        ),
     )
 
     store_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
@@ -376,6 +396,10 @@ class CommerceSyncState(Base):
     # What the running chain is (initial / reconcile / deep) and when it started (0009).
     sync_mode: Mapped[str | None] = mapped_column(String(16))
     sync_started_at: Mapped[datetime | None] = mapped_column(TZ)
+    # Paged imports (2B): the provider's opaque cursor for the next page of the current kind,
+    # and record counts accumulated over the running chain (for the audit and the store page).
+    import_cursor: Mapped[str | None] = mapped_column(String(2048))
+    import_counts: Mapped[dict[str, int] | None] = mapped_column(JSONB)
     last_reconciled_at: Mapped[datetime | None] = mapped_column(TZ)
     last_deep_reconciled_at: Mapped[datetime | None] = mapped_column(TZ)
     last_error_code: Mapped[str | None] = mapped_column(String(64))

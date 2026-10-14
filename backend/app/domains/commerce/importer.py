@@ -9,6 +9,11 @@ import. The import is a chain of short jobs (``commerce.import_step``), one step
 3. the same for orders since ``history_from`` (lines, sales agreements, refunds);
 4. resolve links between rows that arrived out of order, mark the store active.
 
+Platforms without bulk exports (WooCommerce, 2B-02) declare ``PAGED_IMPORT`` instead: each
+step reads **one page** of the current kind and saves the provider's opaque cursor in
+``commerce_sync_state.import_cursor``, so a stopped import resumes where it was. Everything
+else — locks, the single-chain rule, upserts, links, figures — is shared.
+
 Safety: one step at a time per store (Redis lock), and ``commerce_sync_state.import_job_id``
 names the only step allowed to continue, so a duplicated job message cannot start a second
 chain. Upserts are idempotent and never let an older platform version overwrite a newer one.
@@ -54,7 +59,12 @@ from app.domains.integrations.tokens import AccountBusy, account_lock, usable_se
 from app.domains.jobs.service import ClaimedJob, JobSubjectGoneError, create_job
 from app.providers.base.capabilities import Capability
 from app.providers.base.errors import ProviderError
-from app.providers.base.interfaces import CommerceProvider, PlatformProvider
+from app.providers.base.interfaces import (
+    BulkExportProvider,
+    CommerceProvider,
+    PagedImportProvider,
+    PlatformProvider,
+)
 from app.providers.base.types import (
     BulkKind,
     BulkStatus,
@@ -79,10 +89,12 @@ PROGRESS_AFTER_CATALOGUE = 40
 
 
 def commerce_provider(provider: PlatformProvider) -> CommerceProvider | None:
-    """The provider as a commerce importer, if it declares ``BULK_IMPORT``."""
-    if provider.capabilities.supports(Capability.BULK_IMPORT) and isinstance(
-        provider, CommerceProvider
-    ):
+    """The provider as a commerce importer: bulk exports (``BULK_IMPORT``) or pages
+    (``PAGED_IMPORT``), whichever it declares and implements."""
+    caps = provider.capabilities
+    if caps.supports(Capability.BULK_IMPORT) and isinstance(provider, BulkExportProvider):
+        return provider
+    if caps.supports(Capability.PAGED_IMPORT) and isinstance(provider, PagedImportProvider):
         return provider
     return None
 
@@ -166,6 +178,7 @@ def start_sync(
         state.import_progress = 0
     state.sync_mode, state.sync_started_at = mode.value, now
     state.bulk_operation_id, state.bulk_operation_kind = None, BulkKind.CATALOGUE.value
+    state.import_cursor, state.import_counts = None, None
     state.last_error_code, state.last_error_at = None, None
     job = _schedule(session, rt, store, state, delay=0, requested_by=requested_by)
     if mode is SyncMode.INITIAL or requested_by is not None:
@@ -230,6 +243,8 @@ class _Context:
     mode: SyncMode = SyncMode.INITIAL
     started_at: datetime | None = None
     last_reconciled_at: datetime | None = None
+    cursor: str | None = None  # paged imports: the next page of ``kind``
+    counts: dict[str, int] = field(default_factory=dict)  # paged imports: applied so far
 
 
 def import_step(rt: Runtime, job: ClaimedJob) -> None:
@@ -295,6 +310,8 @@ def _load(rt: Runtime, job: ClaimedJob, org_id: uuid.UUID, store_id: uuid.UUID):
             mode=SyncMode(state.sync_mode or SyncMode.INITIAL.value),
             started_at=state.sync_started_at,
             last_reconciled_at=state.last_reconciled_at,
+            cursor=state.import_cursor,
+            counts=dict(state.import_counts or {}),
         )
         return ctx, provider
 
@@ -318,6 +335,63 @@ def _step(rt: Runtime, job: ClaimedJob, org_id: uuid.UUID, store_id: uuid.UUID) 
 
 
 def _run(rt: Runtime, ctx: _Context, provider: CommerceProvider) -> int | None:
+    if isinstance(provider, BulkExportProvider) and provider.capabilities.supports(
+        Capability.BULK_IMPORT
+    ):
+        return _run_bulk(rt, ctx, provider)
+    return _run_paged(rt, ctx, cast(PagedImportProvider, provider))
+
+
+def _run_paged(rt: Runtime, ctx: _Context, provider: PagedImportProvider) -> int | None:
+    """Read one page of the current kind, apply it and move the cursor (2B-02)."""
+    org_id, store_id = ctx.org_id, ctx.store_id
+    secrets = usable_secrets(rt, org_id, ctx.connection_id)
+    created, updated = _filters(rt, ctx)
+    page = call_provider(
+        rt,
+        provider,
+        org_id,
+        ctx.connection_id,
+        lambda: provider.read_page(
+            secrets, ctx.kind, ctx.cursor, created_since=created, updated_since=updated
+        ),
+    )
+    counts = _apply(rt, ctx, page.records)
+    total = {k: ctx.counts.get(k, 0) + counts.get(k, 0) for k in {*ctx.counts, *counts}}
+    delay = int(rt.settings.COMMERCE_PAGE_INTERVAL.total_seconds())
+    if page.next_cursor is not None:
+        with rt.db.transaction(org_id=org_id) as session:
+            state = session.get(CommerceSyncState, store_id, with_for_update=True)
+            assert state is not None
+            state.import_cursor, state.import_counts = page.next_cursor, total
+            if ctx.mode is SyncMode.INITIAL and page.progress is not None:
+                state.import_progress = _paged_progress(ctx.kind, page.progress)
+            state.updated_at = rt.clock.now()
+        return delay
+    if ctx.kind is BulkKind.CATALOGUE:
+        with rt.db.transaction(org_id=org_id) as session:
+            state = session.get(CommerceSyncState, store_id, with_for_update=True)
+            assert state is not None
+            state.bulk_operation_kind, state.import_cursor = BulkKind.ORDERS.value, None
+            state.import_counts = total
+            if ctx.mode is SyncMode.INITIAL:
+                state.import_progress = PROGRESS_AFTER_CATALOGUE
+                _audit_counts(session, ctx, "store.catalogue_imported", total)
+            state.updated_at = rt.clock.now()
+        return delay
+    _finish(rt, ctx, total)
+    return None
+
+
+def _paged_progress(kind: BulkKind, within: int) -> int:
+    """Overall first-import progress from a provider's estimate within the current kind."""
+    within = max(0, min(100, within))
+    if kind is BulkKind.CATALOGUE:
+        return PROGRESS_AFTER_CATALOGUE * within // 100
+    return PROGRESS_AFTER_CATALOGUE + (99 - PROGRESS_AFTER_CATALOGUE) * within // 100
+
+
+def _run_bulk(rt: Runtime, ctx: _Context, provider: BulkExportProvider) -> int | None:
     org_id, store_id = ctx.org_id, ctx.store_id
     poll = int(rt.settings.COMMERCE_BULK_POLL_INTERVAL.total_seconds())
     secrets = usable_secrets(rt, org_id, ctx.connection_id)
@@ -395,6 +469,7 @@ def _fail(rt: Runtime, ctx: _Context, code: str) -> None:
         assert state is not None
         assert store is not None
         state.bulk_operation_id, state.import_job_id = None, None
+        state.import_cursor, state.import_counts = None, None
         state.last_error_code, state.last_error_at = code[:64], rt.clock.now()
         if ctx.first_import:
             store.status = "error"
@@ -425,6 +500,7 @@ def _finish(rt: Runtime, ctx: _Context, counts: dict[str, int]) -> None:
         assert store is not None
         started = ctx.started_at or now
         state.bulk_operation_id, state.bulk_operation_kind = None, None
+        state.import_cursor, state.import_counts = None, None
         state.import_job_id, state.import_progress = None, 100
         state.sync_mode, state.updated_at = None, now
         # The next hourly run starts from when this one began (plus an overlap).
