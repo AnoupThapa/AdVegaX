@@ -33,7 +33,14 @@ Tests: `tests/api/test_auth.py` (`test_idle_and_absolute_expiry_use_settings`, `
 
 - **Signed double-submit token bound to the session.** `GET /auth/csrf` (and login/logout/password responses) return a token `nonce.HMAC(SECRET_KEY, nonce|session-binding)` and set the same value in an HttpOnly cookie. The web app keeps the token in memory (never `localStorage`) and sends it as `X-CSRF-Token`. Because the app (`app.`) and API (`api.`) are different hosts, the app cannot read API cookies, so the token is delivered in the response body.
 - A state-changing request passes only if: Origin (or Referer) is in `CORS_ALLOWED_ORIGINS`, the header equals the cookie, and the signature matches the request's current session (or "anonymous" before login). Login and registration are protected (login CSRF).
-- **One exemption (2A-05):** `POST /api/v1/webhooks/{provider}` (exact path shape, matched with a full regular expression) skips only the Origin and CSRF checks, because platforms call it server-to-server. It is authenticated by the platform's signature over the raw body instead; size and content-type limits still apply. Tests prove look-alike paths and every other POST are still checked.
+- **Two exemptions:** `POST /api/v1/webhooks/{provider}` (2A-05) and `POST /api/v1/connections/{provider}/credentials` (2B-04). Both are exact path shapes, matched with a full regular expression, and skip only the Origin and CSRF checks, because platforms call them server to server. Size and content-type limits still apply, and tests prove that look-alike paths and every other POST are still checked.
+  - **Webhooks** are authenticated by the platform's signature over the raw body.
+  - **Key delivery** is authenticated by the single-use connect state echoed back (consumed at once). Further safeguards:
+    - the request is rate-limited per address, limited to 4 KB, and nothing is echoed;
+    - only `read` keys are accepted;
+    - the key is verified **against the store recorded when the person started**, never an address from the posted body;
+    - the membership and role are re-checked;
+    - the outcome is shown only to the same signed-in person on their return.
 - Unsafe requests with a body must be `application/json` (415 otherwise) and at most `MAX_REQUEST_BYTES` (413).
 - CORS: explicit allowlist with credentials; `*` and non-https origins are rejected at startup in staging/production.
 

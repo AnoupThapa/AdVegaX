@@ -7,6 +7,7 @@ relinking create new link rows, so history is kept for audit.
 
 from __future__ import annotations
 
+import json
 import logging
 import uuid
 from contextlib import nullcontext
@@ -18,11 +19,19 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.errors import Conflict, Forbidden, NotFound, ValidationFailed
+from app.core.security.throttle import Limit
 from app.core.security.tokens import generate_token
 from app.domains.audit.service import Actor, record_audit
 from app.domains.identity.principal import Principal
 from app.domains.integrations import tokens
-from app.domains.integrations.connect_state import ConnectState, consume_state, create_state
+from app.domains.integrations.connect_state import (
+    ConnectOutcome,
+    ConnectState,
+    consume_state,
+    create_state,
+    pop_outcome,
+    save_outcome,
+)
 from app.domains.integrations.credentials import erase_secrets, load_secrets, store_secrets
 from app.domains.integrations.models import (
     ExternalConnection,
@@ -81,6 +90,19 @@ class AccountInUse(Conflict):
 class InvalidConnectParams(ValidationFailed):
     code = "INVALID_CONNECT_PARAMS"
     message = "Check the details you entered for this platform (for example the store address)."
+
+
+class StoreNotReachable(ValidationFailed):
+    code = "STORE_NOT_REACHABLE"
+    message = (
+        "AdVegaX could not reach the store's WooCommerce API at this address. Check the "
+        "address and that the store is online."
+    )
+
+
+class InvalidKeyDelivery(ValidationFailed):
+    code = "INVALID_KEY_DELIVERY"
+    message = "The credentials could not be accepted."
 
 
 class InstallNotSupported(NotFound):
@@ -142,6 +164,10 @@ class IntegrationService:
     def _redirect_uri(self, provider: str) -> str:
         return f"{self.rt.settings.API_BASE_URL.rstrip('/')}/api/v1/connections/{provider}/callback"
 
+    def _delivery_uri(self, provider: str) -> str:
+        base = self.rt.settings.API_BASE_URL.rstrip("/")
+        return f"{base}/api/v1/connections/{provider}/credentials"
+
     def list_providers(self) -> list[ProviderOut]:
         """Platforms available in this environment (empty in staging/production until 2A)."""
         return [
@@ -202,14 +228,20 @@ class IntegrationService:
             ),
             ttl,
         )
-        url = provider.authorization_url(
-            AuthorizationRequest(
-                state=state,
-                redirect_uri=self._redirect_uri(provider.code),
-                code_challenge=pkce_challenge(verifier) if verifier else None,
-                provider_params=dict(prepared.params),
+        delivers = provider.capabilities.supports(Capability.KEY_DELIVERY)
+        try:
+            url = provider.authorization_url(
+                AuthorizationRequest(
+                    state=state,
+                    redirect_uri=self._redirect_uri(provider.code),
+                    code_challenge=pkce_challenge(verifier) if verifier else None,
+                    provider_params=dict(prepared.params),
+                    delivery_uri=self._delivery_uri(provider.code) if delivers else None,
+                )
             )
-        )
+        except ProviderError as exc:  # e.g. a self-hosted store that cannot be reached
+            consume_state(self.rt.redis, state)
+            raise StoreNotReachable(details=[{"reason": exc.code}]) from None
         with self.rt.db.transaction(org_id=ctx.organization_id, user_id=ctx.user_id) as session:
             record_audit(
                 session,
@@ -226,6 +258,12 @@ class IntegrationService:
         self, principal: Principal | None, provider_code: str, params: dict[str, str]
     ) -> str:
         """Handle the provider callback; always returns a redirect URL into the web app."""
+        try:
+            delivering = self.rt.providers.get(provider_code)
+        except NotFound:
+            delivering = None
+        if delivering is not None and delivering.capabilities.supports(Capability.KEY_DELIVERY):
+            return self._return_from_delivery(principal, params)
         state = consume_state(self.rt.redis, params.get("state"))
         if state is None or state.provider != provider_code:
             return self._app_redirect(status="error", code="invalid_state")
@@ -293,6 +331,124 @@ class IntegrationService:
             return self._app_redirect(status="error", code=exc.code, organization_id=org_param)
         return self._app_redirect(
             status="connected", organization_id=org_param, connection_id=str(connection_id)
+        )
+
+    # ----------------------------------------------------------- delivered credentials (2B-04)
+    def deliver_credentials(self, provider_code: str, body: bytes, *, ip: str) -> None:
+        """A platform posts the credentials it generated (e.g. WooCommerce), server to server.
+
+        Authenticated only by the single-use connect state it echoes back (``user_id``), which
+        is consumed at once. The credentials are verified **against the store recorded in that
+        state** — the posted body never chooses what AdVegaX calls — and only then stored.
+        The outcome is kept briefly for the browser's return. Raises ``InvalidKeyDelivery``
+        (400, nothing echoed) on any failure, so the platform shows the merchant an error.
+        """
+        self.rt.throttler.hit(
+            Limit(
+                "key_delivery_ip", self.rt.settings.THROTTLE_KEY_DELIVERY_PER_IP_PER_MINUTE, MINUTE
+            ),
+            ip,
+        )
+        try:
+            provider = self.rt.providers.get(provider_code)
+        except NotFound:
+            raise InvalidKeyDelivery() from None
+        if not provider.capabilities.supports(Capability.KEY_DELIVERY):
+            raise InvalidKeyDelivery()
+        fields = _delivered_fields(body)
+        if fields is None:
+            raise InvalidKeyDelivery()
+        token = fields.get("user_id")
+        state = consume_state(self.rt.redis, token)
+        if state is None or state.provider != provider.code or token is None:
+            raise InvalidKeyDelivery()
+        outcome = self._accept_delivery(provider, state, fields)
+        save_outcome(self.rt.redis, token, outcome, self.rt.settings.CONNECT_STATE_TTL)
+        if outcome.status != "connected":
+            logger.warning(
+                "key_delivery_refused",
+                extra={"provider": provider.code, "error_code": outcome.code},
+            )
+            raise InvalidKeyDelivery()
+
+    def _accept_delivery(
+        self, provider: PlatformProvider, state: ConnectState, fields: dict[str, str]
+    ) -> ConnectOutcome:
+        def failed(code: str) -> ConnectOutcome:
+            return ConnectOutcome(state.user_id, state.organization_id, "error", code=code)
+
+        try:
+            ctx = self.organizations.tenant_for_user(state.user_id, state.organization_id)
+            authorize(ctx, Permission.CONNECTIONS_MANAGE)
+        except (NotFound, Forbidden):  # membership or role changed since the flow started
+            return failed("not_permitted")
+        try:
+            prepared = provider.prepare_connect(state.provider_params)
+        except InvalidConnectParamsError:
+            return failed("invalid_connect_params")
+        if prepared.account_id is not None:
+            owner = self._live_account_owner(provider.code, prepared.account_id)
+            if owner is not None and owner != ctx.organization_id:
+                return failed(ACCOUNT_IN_USE_CODE)
+        lock = (
+            account_lock(
+                self.rt.redis,
+                lock_key(provider.code, prepared.account_id, ctx.organization_id),
+                wait_seconds=tokens.LOCK_WAIT_SECONDS,
+            )
+            if prepared.account_id is not None
+            else nullcontext()
+        )
+        try:
+            with lock:
+                try:
+                    result = provider.complete_authorization(
+                        fields,
+                        redirect_uri=self._redirect_uri(provider.code),
+                        code_verifier=None,
+                        provider_params=prepared.params,
+                    )
+                except ProviderError as exc:
+                    return failed(exc.code)
+                if (
+                    prepared.account_id is not None
+                    and result.external_account_id != prepared.account_id
+                ):
+                    return failed("account_mismatch")
+                try:
+                    connection_id = self._save_connection(ctx, provider, result)
+                except IntegrityError:
+                    return failed(ACCOUNT_IN_USE_CODE)
+        except AccountBusy as exc:
+            return failed(exc.code)
+        return ConnectOutcome(
+            state.user_id, state.organization_id, "connected", connection_id=connection_id
+        )
+
+    def _return_from_delivery(self, principal: Principal | None, params: dict[str, str]) -> str:
+        """The browser's way back after the platform delivered (or did not deliver) the
+        credentials. Shows the stored outcome to the same signed-in person, once."""
+        token = params.get("user_id")
+        outcome = pop_outcome(self.rt.redis, token)
+        if outcome is None:
+            state = consume_state(self.rt.redis, token)  # never delivered: retire the state
+            if state is None:
+                return self._app_redirect(status="error", code="invalid_state")
+            if principal is None or principal.user_id != state.user_id:
+                return self._app_redirect(status="error", code="session_mismatch")
+            org = str(state.organization_id)
+            if params.get("success") == "0":
+                return self._app_redirect(status="cancelled", organization_id=org)
+            return self._app_redirect(status="error", code="key_not_delivered", organization_id=org)
+        if principal is None or principal.user_id != outcome.user_id:
+            return self._app_redirect(status="error", code="session_mismatch")
+        org = str(outcome.organization_id)
+        if outcome.status == "connected" and outcome.connection_id is not None:
+            return self._app_redirect(
+                status="connected", organization_id=org, connection_id=str(outcome.connection_id)
+            )
+        return self._app_redirect(
+            status="error", code=outcome.code or "connect_failed", organization_id=org
         )
 
     def _save_connection(
@@ -774,3 +930,29 @@ def revoke_by_platform(
             )
             changed += 1
     return changed
+
+
+MAX_DELIVERY_FIELD = 512
+MINUTE = 60
+
+
+def _delivered_fields(body: bytes) -> dict[str, str] | None:
+    """The posted credentials as plain strings, or ``None`` when the body is not a small,
+    flat JSON object (nothing from it is ever logged or echoed)."""
+    try:
+        data = json.loads(body)
+    except (ValueError, UnicodeDecodeError):
+        return None
+    if not isinstance(data, dict) or len(data) > 20:
+        return None
+    fields: dict[str, str] = {}
+    for key, value in data.items():
+        if not isinstance(key, str) or len(key) > 64:
+            return None
+        if isinstance(value, bool) or not isinstance(value, (str, int)):
+            continue
+        text = str(value)
+        if len(text) > MAX_DELIVERY_FIELD:
+            return None
+        fields[key] = text
+    return fields

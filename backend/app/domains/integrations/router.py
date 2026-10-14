@@ -7,9 +7,11 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, status
 from fastapi.responses import RedirectResponse
+from starlette.concurrency import run_in_threadpool
 
 from app.api.deps import (
     IntegrationsDep,
+    MetaDep,
     PrincipalDep,
     RuntimeDep,
     TenantDep,
@@ -26,11 +28,13 @@ from app.domains.integrations.schemas import (
     ProviderOut,
     ResourceOut,
 )
+from app.domains.integrations.service import InvalidKeyDelivery
 from app.domains.jobs.service import get_job
 
 router = APIRouter(tags=["connections"])
 ORG = "/organizations/{organization_id}"
 _MAX_PARAM = 2048
+MAX_DELIVERY_BYTES = 4096  # a key delivery is a few short fields
 
 
 @router.get("/providers", response_model=Envelope[list[ProviderOut]])
@@ -67,6 +71,20 @@ def connection_callback(
     return RedirectResponse(
         svc.complete(principal, provider, params), status_code=status.HTTP_303_SEE_OTHER
     )
+
+
+@router.post("/connections/{provider}/credentials", include_in_schema=False)
+async def connection_credentials(
+    provider: str, request: Request, svc: IntegrationsDep, meta: MetaDep
+) -> Envelope[dict[str, str]]:
+    """A platform posts the credentials it generated (WooCommerce, 2B-04). Server to server:
+    no session or CSRF; authenticated by the single-use connect state it echoes. Nothing is
+    echoed back (PHASE_02B_PLAN §6.2)."""
+    body = await request.body()
+    if len(body) > MAX_DELIVERY_BYTES:
+        raise InvalidKeyDelivery()
+    await run_in_threadpool(svc.deliver_credentials, provider, body, ip=meta.ip)
+    return ok({"status": "accepted"})
 
 
 @router.get("/connections/{provider}/install", include_in_schema=False)

@@ -92,22 +92,25 @@ class OrganizationService:
     # -------------------------------------------------------------- tenancy
     def resolve_tenant(self, principal: Principal, organization_id: uuid.UUID) -> TenantContext:
         """Membership check for an organization claimed in the URL. Non-members get 404."""
-        with self.rt.db.transaction(user_id=principal.user_id) as session:
+        return self.tenant_for_user(principal.user_id, organization_id)
+
+    def tenant_for_user(self, user_id: uuid.UUID, organization_id: uuid.UUID) -> TenantContext:
+        """The same check for a user named by server-side state (e.g. a connect flow whose
+        last step arrives server to server, without the person's session — 2B-04)."""
+        with self.rt.db.transaction(user_id=user_id) as session:
             membership = session.execute(
                 select(Membership)
                 .join(Organization, Organization.id == Membership.organization_id)
                 .where(
                     Membership.organization_id == organization_id,
-                    Membership.user_id == principal.user_id,
+                    Membership.user_id == user_id,
                     Membership.status == "active",
                     Organization.status == "active",
                 )
             ).scalar_one_or_none()
         if membership is None:
             raise NotFound()
-        return TenantContext(
-            organization_id=organization_id, user_id=principal.user_id, role=membership.role
-        )
+        return TenantContext(organization_id=organization_id, user_id=user_id, role=membership.role)
 
     # -------------------------------------------------------------- organizations
     def create(self, principal: Principal, body: OrganizationCreate) -> OrganizationOut:

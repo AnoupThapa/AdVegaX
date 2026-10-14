@@ -95,6 +95,10 @@ const MESSAGES: Readonly<Record<string, string>> = {
   UNKNOWN_PROVIDER: "This platform is not available.",
   ACCOUNT_IN_USE:
     "This account is already connected to another AdVegaX organization. Ask its owner to disconnect it first.",
+  STORE_NOT_REACHABLE:
+    "AdVegaX could not reach the store's WooCommerce API at this address. Check the address and that the store is online.",
+  INVALID_KEY_DELIVERY:
+    "The store's credentials could not be accepted. Please try connecting again.",
   INVALID_CONNECT_PARAMS:
     "Check the details you entered for this platform (for example the store address).",
   CONNECTION_NOT_ACTIVE: "This connection is not active. Reconnect the platform first.",

@@ -86,6 +86,8 @@ class Settings(BaseSettings):
     # Platform webhooks (2A-05): per source IP. Shopify delivers from many addresses, so this
     # only bounds abuse; unsigned requests are rejected before any database work.
     THROTTLE_WEBHOOK_PER_IP_PER_MINUTE: int = Field(default=600, ge=1)
+    # Platforms posting generated credentials (WooCommerce key delivery, 2B-04).
+    THROTTLE_KEY_DELIVERY_PER_IP_PER_MINUTE: int = Field(default=30, ge=1)
     # "Sync now" on a store (2A-09): each run is a full deep check, so it is limited per store.
     THROTTLE_STORE_RESYNC_PER_HOUR: int = Field(default=6, ge=1)
 
@@ -150,6 +152,12 @@ class Settings(BaseSettings):
     SHOPIFY_BULK_DOWNLOAD_HOSTS: str = "storage.googleapis.com"
     # Order history Shopify allows without the ``read_all_orders`` approval (verified).
     SHOPIFY_DEFAULT_ORDER_HISTORY: timedelta = timedelta(days=60)
+
+    # --- WooCommerce (Phase 2B; PHASE_02B_PLAN) ------------------------------------------
+    # Offered only when switched on (off until Phase 2B is complete and approved for use).
+    WOOCOMMERCE_ENABLED: bool = False
+    WOOCOMMERCE_MIN_VERSION: str = Field(default="9.0", pattern=r"^\d{1,3}\.\d{1,3}$")  # Q10a
+    WOOCOMMERCE_APP_NAME: str = Field(default="AdVegaX", min_length=1, max_length=64)
 
     # --- Commerce import (Phase 2A, 2A-06; PHASE_02A_PLAN §9) ----------------------------
     # Longest order history imported (13 months, Q9); the platform may allow less (Shopify:

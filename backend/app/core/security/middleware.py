@@ -18,7 +18,10 @@ SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 # Server-to-server endpoints authenticated by the platform's own signature over the raw body
 # (PHASE_02A_PLAN §7). They skip only the browser checks (Origin + CSRF); the size and
 # content-type limits still apply. Keep this list short and explicit.
-CSRF_EXEMPT_PATH = re.compile(r"/api/v1/webhooks/[a-z0-9_]{1,32}")
+CSRF_EXEMPT_PATH = re.compile(
+    r"/api/v1/webhooks/[a-z0-9_]{1,32}"  # platform webhooks (2A-05)
+    r"|/api/v1/connections/[a-z0-9_]{1,32}/credentials"  # platform-posted keys (2B-04)
+)
 Next = Callable[[Request], Awaitable[Response]]
 
 

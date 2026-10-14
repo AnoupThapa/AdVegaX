@@ -6,8 +6,8 @@ Plan: `PHASE_02B_PLAN.md` (approved 2026-10-14, A19, all recommendations). One r
 |---|---|
 | 2B-01 Step 0 on a local WooCommerce test store | ⏸ Waiting — `wordpress.org` / `downloads.wordpress.org` / `api.wordpress.org` are still blocked by the network settings (checked 2026-10-14) |
 | 2B-02 Paged-import framework + migration 0010 | ✅ Done |
-| 2B-03 Store URL rules, SSRF hardening, REST client | ✅ Done — awaiting review |
-| 2B-04 Connect, key delivery, discovery | Not started |
+| 2B-03 Store URL rules, SSRF hardening, REST client | ✅ Done |
+| 2B-04 Connect, key delivery, discovery | ✅ Done — awaiting review |
 | 2B-05 Mapping and initial import | Not started |
 | 2B-06 Scheduled checks, deletions, Sync now, store health | Not started |
 | 2B-07 Finance mapping, status and currency rules, parity tests | Not started |
@@ -132,3 +132,61 @@ Plan: `PHASE_02B_PLAN.md` (approved 2026-10-14, A19, all recommendations). One r
 **Blocked:** Step 0 (2B-01) still waits for the WordPress downloads.
 
 **Next task:** 2B-04 — connect: the authorize redirect, the key-delivery route (single-use, nonce-bound, verified against the stored address), discovery with the version check, the one-store rule and reconnect.
+
+---
+
+## 2B-04 — Connect, key delivery, discovery (2026-10-14)
+
+**Completed**
+- **Start:**
+  - a manager enters the store address;
+  - AdVegaX checks that it answers with a WooCommerce REST API (public index, no credentials);
+  - the person is sent to the store's own `/wc-auth/v1/authorize` page asking for **read** access.
+
+  An address that is invalid, unreachable or not WooCommerce is reported before anyone leaves AdVegaX (`STORE_NOT_REACHABLE` with a reason).
+- **Key delivery** (new generic route `POST /connections/{provider}/credentials`, server to server):
+  - The store posts the generated key. The request needs no session or CSRF; instead it must echo the **single-use connect state**, which is consumed at once.
+  - AdVegaX accepts only a **read** key, and only if it works **on the store recorded when the person started**. Nothing in the posted body decides which address is called.
+  - WooCommerce must be 9.0 or newer.
+  - The person must still be an owner, admin or manager of the organization, and the store must not be connected to another organization.
+  - The key is then stored encrypted, and discovery starts.
+  - Any failure answers 422 with nothing echoed, so WooCommerce shows the merchant an error.
+  - The route is rate-limited per address, limited to 4 KB and exempt from CSRF only for that exact path.
+- **The browser's return** goes through the existing callback route. It shows the outcome **once and only to the same signed-in person**: connected, cancelled (the merchant declined; the state is retired so a late delivery fails), or a plain error such as key refused, login header stripped, too old, not read-only, store connected elsewhere, or key never delivered. The web app's existing result handling is reused.
+- **Discovery:** one store with its WordPress name, currency and time zone (a named zone, or a whole-hour UTC offset; a fractional offset is left empty rather than guessed).
+- **One store, one organization** (the same store under another spelling is recognised); **reconnect reuses** the connection.
+- **Disconnect** deletes AdVegaX's copy of the key and calls nothing (a read key cannot revoke itself).
+- **WooCommerce is offered only when switched on** (`WOOCOMMERCE_ENABLED`, off by default until Phase 2B is complete).
+- **WooCommerce simulator** (`tests/woocommerce_sim.py`): public index, `system_status` with Basic auth, key generation and posting (the merchant's side of the authorize page), and hosting quirks (header stripping, store down, not WooCommerce).
+
+**Files changed** (20)
+- New (5): `app/providers/woocommerce/provider.py`, `tests/woocommerce_sim.py`, `tests/api/test_woocommerce_connect.py` (41 tests), `tests/providers/test_woocommerce_provider.py` (20 tests), this report.
+- Modified (15):
+  - `app/domains/integrations/{service,router,connect_state}.py`, `app/domains/organizations/service.py` (membership check by user id for the server-to-server step);
+  - `app/core/security/middleware.py` (second exact exemption), `app/core/settings.py`;
+  - `app/providers/base/{capabilities,types,registry}.py`;
+  - frontend `lib/api/errors.ts` (messages for the two new error codes);
+  - docs `API_SPECIFICATION.md` §5, `SECURITY.md`, `INTEGRATION_GUIDES.md`, status documents.
+- Deleted: none. No migration.
+
+**Tests**
+- **61 new.** They cover:
+  - the full connect with discovery; the key never stored or logged in plain text and verified with Basic auth on the recorded store;
+  - invalid and unsafe addresses refused before any call; unreachable and non-WooCommerce stores reported at start; viewers cannot start;
+  - a read-write key refused and nothing stored; **a key from another store refused**; too-old versions and header stripping explained;
+  - single use, with replays refused; malformed, unknown and oversized deliveries refused with nothing echoed; platforms without key delivery refuse it;
+  - the CSRF exemption limited to the exact path; per-address rate limit;
+  - declined approvals retire the state; a return without delivery; **another browser cannot read the result**; unknown tokens;
+  - one store, one organization (also when another organization finishes first); reconnect reuse; a role lost meanwhile;
+  - disconnect deletes the key without calling the store; WooCommerce offered only when switched on; time-zone mapping; provider details.
+- **Backend `make check`: 723 passed**, coverage 97 % (WooCommerce provider 97 %, client 98 %, addresses 100 %).
+- **Frontend `npm run check`: 290 passed**, build passes. **E2E: 10 passed** (the Phase 1 journey still connects the test platform through the changed callback route).
+
+**Deviations**
+1. **The browser returns through the existing API callback**, not a new web-app return page. That reuses the tested result handling, and the single-use state is the same token in both steps. The plan's `/connect/woocommerce/return` page is not needed.
+2. **The store's time zone may stay empty** for stores set to a fractional manual UTC offset (e.g. UTC+5:30 without a city). Such a store is connected but not imported until a named time zone is set in WordPress. The store page will say so (2B-06).
+3. **`system_status` with a read key** and the exact WooCommerce error identifiers are from the documentation, to be confirmed on the test store (Step 0).
+
+**Blocked:** Step 0 (2B-01) still waits for the WordPress downloads.
+
+**Next task:** 2B-05 — mapping and initial import: products, variations, stock, cost, orders (lines, shipping, fees, taxes, discounts, order-time cost) and refunds, page by page; customer details dropped.

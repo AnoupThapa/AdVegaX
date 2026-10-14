@@ -23,6 +23,9 @@ class Capability(StrEnum):
     BULK_IMPORT = "bulk_import"  # catalogue and order history through bulk exports (2A-06)
     PAGED_IMPORT = "paged_import"  # catalogue and order history read page by page (2B-02)
     APP_INSTALL = "app_install"  # the platform can start the connection (e.g. Shopify install)
+    # The platform posts the credentials to AdVegaX (server to server) instead of handing the
+    # browser a code to exchange (e.g. WooCommerce key generation, 2B-04).
+    KEY_DELIVERY = "key_delivery"
 
 
 @dataclass(frozen=True)

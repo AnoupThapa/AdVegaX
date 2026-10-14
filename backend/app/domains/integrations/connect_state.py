@@ -18,6 +18,7 @@ from app.core.errors import ServiceUnavailable
 from app.core.security.tokens import generate_token, hash_token
 
 _PREFIX = "connect-state:"
+_OUTCOME_PREFIX = "connect-outcome:"
 
 
 @dataclass(frozen=True)
@@ -64,4 +65,52 @@ def consume_state(client: redis.Redis, token: str | None) -> ConnectState | None
         provider=data["provider"],
         code_verifier=data["code_verifier"],
         provider_params=dict(data.get("provider_params") or {}),
+    )
+
+
+# ----------------------------------------------------------------- delivered credentials (2B-04)
+@dataclass(frozen=True)
+class ConnectOutcome:
+    """What happened when a platform delivered credentials server to server. The browser's
+    return to AdVegaX (carrying the same state token) reads it once to show the result."""
+
+    user_id: uuid.UUID
+    organization_id: uuid.UUID
+    status: str  # "connected" | "error"
+    connection_id: uuid.UUID | None = None
+    code: str | None = None
+
+
+def save_outcome(client: redis.Redis, token: str, outcome: ConnectOutcome, ttl: timedelta) -> None:
+    payload = json.dumps(
+        {
+            "user_id": str(outcome.user_id),
+            "organization_id": str(outcome.organization_id),
+            "status": outcome.status,
+            "connection_id": str(outcome.connection_id) if outcome.connection_id else None,
+            "code": outcome.code,
+        }
+    )
+    try:
+        client.set(_OUTCOME_PREFIX + hash_token(token), payload, ex=int(ttl.total_seconds()))
+    except redis.RedisError:
+        raise ServiceUnavailable() from None
+
+
+def pop_outcome(client: redis.Redis, token: str | None) -> ConnectOutcome | None:
+    if not token or len(token) > 256:
+        return None
+    try:
+        raw = client.getdel(_OUTCOME_PREFIX + hash_token(token))
+    except redis.RedisError:
+        raise ServiceUnavailable() from None
+    if raw is None:
+        return None
+    data = json.loads(raw)
+    return ConnectOutcome(
+        user_id=uuid.UUID(data["user_id"]),
+        organization_id=uuid.UUID(data["organization_id"]),
+        status=data["status"],
+        connection_id=uuid.UUID(data["connection_id"]) if data["connection_id"] else None,
+        code=data["code"],
     )

@@ -54,7 +54,22 @@ def build_registry(
         registry.register(FakeProvider())
     if settings.SHOPIFY_APPS is not None and outbound is not None:
         registry.register(build_shopify(settings, clock or SystemClock(), outbound))
+    if settings.WOOCOMMERCE_ENABLED and outbound is not None:
+        registry.register(build_woocommerce(settings, outbound))
     return registry
+
+
+def build_woocommerce(settings: Settings, outbound: OutboundPolicy) -> PlatformProvider:
+    """WooCommerce needs no platform app: merchants approve a key on their own store."""
+    from app.providers.http.client import SafeHttpClient
+    from app.providers.woocommerce.provider import WooCommerceProvider
+
+    major, minor = (int(p) for p in settings.WOOCOMMERCE_MIN_VERSION.split("."))
+    return WooCommerceProvider(
+        http_factory=lambda: SafeHttpClient(outbound),
+        app_name=settings.WOOCOMMERCE_APP_NAME,
+        min_version=(major, minor),
+    )
 
 
 def build_shopify(settings: Settings, clock: Clock, outbound: OutboundPolicy) -> PlatformProvider:

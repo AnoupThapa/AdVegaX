@@ -69,6 +69,9 @@ class AuthorizationRequest:
     redirect_uri: str
     code_challenge: str | None = None
     provider_params: Mapping[str, str] = field(default_factory=dict)
+    # Where the platform posts credentials server to server (``Capability.KEY_DELIVERY``);
+    # ``redirect_uri`` is then only the browser's way back to AdVegaX.
+    delivery_uri: str | None = None
 
 
 @dataclass(frozen=True)

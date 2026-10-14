@@ -88,6 +88,13 @@ Add one section per provider when its phase is implemented.
 ### WooCommerce (`woocommerce`) — Phase 2B, in progress
 - **Category / auth scheme:** commerce / API keys created by the store's `/wc-auth/v1/authorize` page (scope `read`), delivered to AdVegaX by the store (server to server). HTTP Basic auth over HTTPS; keys never in URLs.
 - **API:** REST `wc/v3` under `{store}/wp-json`; public WordPress index `/wp-json/` for the site name and time zone. Facts verified against WooCommerce docs on 2026-10-14 (`PHASE_02B_PLAN.md §4.1`).
+- **Connect (2B-04):** `start` with `{"store_url"}` → address checked (public index, `wc/v3` namespace) → the store's `/wc-auth/v1/authorize?app_name=AdVegaX&scope=read&user_id=<single-use state>&return_url=<API callback>&callback_url=<API …/credentials>`. The store posts `{key_id, user_id, consumer_key, consumer_secret, key_permissions}`. AdVegaX accepts it only if:
+  - the permissions are `read`;
+  - the key works on the recorded store (`system_status`);
+  - WooCommerce is ≥ `WOOCOMMERCE_MIN_VERSION` (9.0).
+
+  The browser then returns to the API callback and sees the outcome. One live connection per store (host + lower-cased path); reconnect reuses the connection. Disconnect deletes AdVegaX's copy only (a read key cannot revoke itself). Offered only when `WOOCOMMERCE_ENABLED=true`.
+- **Discovery:** one `store` resource with its name (WordPress), currency (`system_status.settings.currency`) and time zone. The time zone comes from WordPress `timezone_string`, or from a whole-hour `gmt_offset` mapped to `Etc/GMT±N`. A fractional offset leaves it empty, so the store cannot be imported until a named zone is set (to show on the store page in 2B-06).
 - **Store address (2B-03):** HTTPS, public DNS name, port 443, optional sub-folder; normalized as described in SECURITY §9. Identity across organizations: host + lower-cased path.
 - **Errors (2B-03):**
   - 401 with `woocommerce_rest_authentication_error` → `key_rejected` (Needs reconnecting);
