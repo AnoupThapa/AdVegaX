@@ -143,7 +143,7 @@ test("the full Phase 1 journey works for an owner and an invited member", async 
 
   await test.step("the Stores tab explains how to add a store", async () => {
     await a.goto(orgUrl);
-    await a.getByRole("link", { name: "Stores" }).click();
+    await a.getByRole("link", { name: "Stores", exact: true }).click();
     await expect(a).toHaveURL(`${orgUrl}/stores`);
     await expect(a.getByText("No stores yet.")).toBeVisible();
     await expectAccessible(a, "stores (empty)");

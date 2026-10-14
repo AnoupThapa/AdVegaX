@@ -17,6 +17,7 @@ test("an outsider cannot open another organization's pages", async ({ newPerson 
     `${orgUrl}/members`,
     `${orgUrl}/settings`,
     `${orgUrl}/connections`,
+    `${orgUrl}/stores`,
     connectionUrl,
   ]) {
     await outsider.goto(url);

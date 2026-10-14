@@ -13,8 +13,8 @@ Plan: `PHASE_02A_PLAN.md` (approved 2026-10-13, A18, option C: live Shopify chec
 | 2A-07 Webhook processing, incremental sync, reconciliation | ✅ Done — awaiting review |
 | 2A-08 Finance core v1 | ✅ Done — awaiting review |
 | 2A-09 Read API | ✅ Done |
-| 2A-10 Web app | ✅ Done — awaiting review |
-| 2A-11 Simulator, e2e, docs, report | Not started |
+| 2A-10 Web app | ✅ Done |
+| 2A-11 Simulator, e2e, docs, report | ✅ Done — awaiting review · phase report: `PHASE_02A_REPORT.md` |
 
 ---
 
@@ -609,3 +609,61 @@ Shopify's schema was re-checked against shopify.dev (Admin GraphQL `2026-10`) be
 **Blocked:** none. Live Shopify checks remain deferred (A18 option C).
 
 **Next task:** 2A-11 — the simulator end-to-end run (connect → import → webhooks → figures), documentation, and the Phase 2A report.
+
+---
+
+## 2A-11 — Simulator journey, browser tests, docs and phase report (2026-10-14)
+
+**Completed**
+- **Whole-journey test against the Shopify simulator** (`tests/api/test_shopify_journey.py`). One store goes from start to finish through the real API, database and job runner:
+  1. connect from AdVegaX, link the store, first import, figures;
+  2. a new order arrives by webhook and appears in today's figures;
+  3. a product change that no webhook announced is picked up by the hourly check, after the expired access token is rotated;
+  4. "Sync now" works for the owner; viewers can read but not sync;
+  5. uninstall: access ends, the data stays readable, "Sync now" is refused;
+  6. reinstall from Shopify's install link: the same connection and store are reused, nothing is duplicated;
+  7. uninstall again, then Shopify's store-erasure request deletes the store's data.
+
+  Throughout, no token or authorization code appears in any response, the audit log, the webhook records or the logs.
+- **Stricter simulator:** an optional mode in which only the most recently issued access token works and an uninstall invalidates all tokens, as Shopify does. The journey proves every Admin API call used a valid token. Also new: an `add_order` helper.
+- **Browser test with a real imported store** (`e2e/stores.spec.ts`). A helper (`tests/e2e_shopify_store.py`) runs the real connect → import path against the in-process simulator, so CI still never calls Shopify. The browser then checks:
+  - the Stores tab, the revenue view (net sales $29.91, "Some products have no cost", no $0.00 for missing values) and the products page (stock, cost, search);
+  - accessibility (axe) on each page;
+  - that no token reaches the page.
+- **The tenant-boundary browser test** now also checks that an outsider cannot open another organization's Stores page.
+- **Defect found and fixed: a date time bomb in the tests.**
+  - The sample store's orders are dated 5 and 8 October 2026, and the test clock started at the real date. From about 4 December 2026, those orders would have fallen outside Shopify's 60-day history window, and several commerce tests would have failed for no code reason.
+  - Found by running the whole suite with the clock moved 75 days forward and back.
+  - The test clock now starts at a fixed moment (14 Oct 2026). The same experiment showed nothing else depends on the real date: session cookies use Max-Age, and jobs compare database times on both sides.
+- **Packaging:** `backend/tests` (simulator with a fixed test secret, e2e helper) is excluded from the Docker image (`.dockerignore`). The helper also refuses to run in staging or production.
+- **Docs:**
+  - README: how the store test works and what it needs.
+  - A stale reference to a missing `docs/TESTING.md` is corrected.
+  - INTEGRATION_GUIDES (Shopify entry status and testing note), PROJECT_STATUS, ROADMAP, AI_CONTEXT.
+  - `PHASE_02A_REPORT.md`.
+
+**Files changed** (17)
+- New (5): `backend/tests/api/test_shopify_journey.py`, `backend/tests/api/test_e2e_seed.py`, `backend/tests/e2e_shopify_store.py`, `frontend/e2e/stores.spec.ts`, `frontend/e2e/support/shopify.ts`; plus `docs/phases/PHASE_02A_REPORT.md`.
+- Modified (11):
+  - `backend/tests/conftest.py`, `backend/tests/shopify_sim.py`;
+  - `frontend/e2e/journey.spec.ts`, `frontend/e2e/tenant-boundary.spec.ts`, `frontend/playwright.config.ts` (comment only);
+  - `.dockerignore`, `README.md`;
+  - docs `INTEGRATION_GUIDES.md`, `PROJECT_STATUS.md`, `ROADMAP.md`, `AI_CONTEXT.md`, this file.
+- Deleted: none. No app code change, no migration.
+
+**Tests**
+- **5 new backend tests:** the whole journey (1) and the e2e store helper (4: connects and imports; wrong password fails cleanly; refuses deployed settings; sample dates moved to recent days).
+- **1 new browser test** (stores) and one more page in the tenant-boundary test.
+- **Backend `make check`: 582 passed**, coverage 97 %.
+- **Frontend `npm run check`: 290 passed**, build passes.
+- **E2E: 10 passed** (was 9), axe with no serious or critical issues on every checked page.
+
+**Deviations**
+1. **The browser test uses a helper that runs the import in its own process**, not the running worker. The API and worker in CI have no Shopify app configured, and CI must never call Shopify. Everything the browser sees still comes from the running API and web app.
+2. **"Sync now" is not clicked in the browser test.** It would hand the job to the real worker, which would try to reach the store's real Shopify address. "Sync now" is covered by the API, journey and component tests.
+
+**Not verified here:** the Docker image build (no Docker daemon in this environment; CI builds it) and the CI run on GitHub (needs a pull request).
+
+**Blocked:** live Shopify checks (2A-01) remain deferred (option C).
+
+**Next:** product-owner review of `PHASE_02A_REPORT.md`; then the live checks on a development store when access exists, or the Phase 2B plan.

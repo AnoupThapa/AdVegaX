@@ -68,6 +68,11 @@ class ShopifySim:
     fetches: list[tuple[str, str]] = field(default_factory=list)
     throttle_next: int = 0  # answer the next N GraphQL calls with THROTTLED
     operations: dict[str, dict[str, Any]] = field(default_factory=dict)
+    # Strict tokens (2A-11): only the most recently issued access token works, as after a
+    # rotation at Shopify; ``uninstall()`` invalidates every token.
+    strict_tokens: bool = False
+    installed: bool = True
+    rejected_tokens: int = 0
 
     def add_shop(self, domain: str, **kw: Any) -> Shop:
         shop = Shop(domain, **kw)
@@ -104,11 +109,14 @@ class ShopifySim:
             return httpx.Response(400, json={"error": "invalid_request"})
         if form.get("grant_type") == "refresh_token":
             # Rotation: only the most recently issued refresh token is accepted.
-            if form.get("refresh_token") != f"shprt_sim_refresh_{self.issued}":
+            current = f"shprt_sim_refresh_{self.issued}"
+            if form.get("refresh_token") != current or not self.installed:
                 return httpx.Response(400, json={"error": "invalid_grant"})
             form["expiring"] = "1"
         elif not form.get("code"):
             return httpx.Response(400, json={"error": "invalid_request"})
+        else:
+            self.installed = True  # a new authorization code means the app is installed again
         self.issued += 1
         body: dict[str, Any] = {
             "access_token": f"shpat_sim_access_{self.issued}",
@@ -122,8 +130,20 @@ class ShopifySim:
             )
         return httpx.Response(200, json=body)
 
+    def uninstall(self) -> None:
+        """The merchant removed the app: Shopify invalidates its tokens."""
+        self.installed = False
+
+    def _token_ok(self, token: str) -> bool:
+        if not token.startswith("shpat_sim_"):
+            return False
+        if self.strict_tokens:
+            return self.installed and token == f"shpat_sim_access_{self.issued}"
+        return True
+
     def _graphql(self, request: httpx.Request, shop: Shop) -> httpx.Response:
-        if request.headers.get("x-shopify-access-token", "").startswith("shpat_sim_") is False:
+        if not self._token_ok(request.headers.get("x-shopify-access-token", "")):
+            self.rejected_tokens += 1
             return httpx.Response(401, json={"errors": "[API] Invalid API key or access token"})
         if self.graphql_status != 200:
             headers = {"Retry-After": "2.0"} if self.graphql_status == 429 else {}
@@ -565,3 +585,55 @@ def sample_orders() -> list[dict[str, Any]]:
             "__parentId": "gid://shopify/SalesAgreement/799",
         },
     ]
+
+
+def add_order(shop: Shop, number: int = 600, processed: str = "2026-10-12T02:00:00Z") -> str:
+    """Adds a paid order (2 x Nitrile Gloves Medium, 39.80 incl. 3.62 tax) to the store."""
+    oid = f"gid://shopify/Order/{number}"
+    template = next(n for n in shop.orders if n["id"] == "gid://shopify/Order/500")
+    order = {
+        **template,
+        "id": oid,
+        "name": f"#{number}",
+        "processedAt": processed,
+        "updatedAt": processed,
+        "displayFinancialStatus": "PAID",
+        "totalDiscountsSet": money("0.00"),
+        "totalShippingPriceSet": money("0.00"),
+        "totalTaxSet": money("3.62"),
+        "totalRefundedSet": money("0.00"),
+        "totalPriceSet": money("39.80"),
+        "refunds": [],
+    }
+    shop.orders.extend(
+        [
+            order,
+            {
+                "id": f"gid://shopify/LineItem/{number}1",
+                "title": "Nitrile Gloves - Medium",
+                "sku": "NG-M",
+                "quantity": 2,
+                "variant": {"id": "gid://shopify/ProductVariant/11"},
+                "originalUnitPriceSet": money("19.90"),
+                "__parentId": oid,
+            },
+            {
+                "id": f"gid://shopify/SalesAgreement/{number}2",
+                "happenedAt": processed,
+                "reason": "ORDER",
+                "__parentId": oid,
+            },
+            {
+                "id": f"gid://shopify/Sale/{number}3",
+                "actionType": "ORDER",
+                "lineType": "PRODUCT",
+                "quantity": 2,
+                "totalAmount": money("39.80"),
+                "totalDiscountAmountBeforeTaxes": money("0.00"),
+                "totalTaxAmount": money("3.62"),
+                "lineItem": {"id": f"gid://shopify/LineItem/{number}1"},
+                "__parentId": f"gid://shopify/SalesAgreement/{number}2",
+            },
+        ]
+    )
+    return oid

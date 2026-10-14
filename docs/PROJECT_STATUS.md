@@ -16,7 +16,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | 1A | Platform core & identity | ✅ **Implemented — awaiting review** | 141 tests, 98.5 % coverage; `phases/PHASE_01A_REPORT.md` |
 | 1B | Integration foundation | ✅ **Implemented — awaiting review** | 277 tests, 98.4 % coverage; `phases/PHASE_01B_REPORT.md` |
 | 1C | Frontend shell | ✅ **Implemented — awaiting review** | 251 unit + 9 end-to-end tests, axe 0 violations; `phases/PHASE_01C_REPORT.md` |
-| 2A | Shopify (read-only) + finance core | **Approved (A18) — in progress** (live checks deferred, option C) | `phases/PHASE_02A_PLAN.md`, `phases/PHASE_02A_PROGRESS.md` |
+| 2A | Shopify (read-only) + finance core | ✅ **Implemented against the Shopify simulator — awaiting review**; live checks on a development store (2A-01) pending | 582 backend + 290 frontend + 10 end-to-end tests; `phases/PHASE_02A_REPORT.md` |
 | 2B | WooCommerce (read-only) | Not started | Needs Q10 |
 | 3 | Google Ads (read-only) | Not started | Start developer-token application early |
 | 4 | Meta (read-only) | Not started | Start App Review / Business Verification early |
@@ -80,6 +80,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | 2026-10-14 | **2A-08** Finance core v1: daily store figures from sales records (Shopify report dating, store time zone, exact decimals), COGS unknown when any cost is missing, coverage, derived figures with availability, display rounding; rebuilt after imports, reconciliations and webhooks; 26 golden + integration tests | `phases/PHASE_02A_PROGRESS.md`, `finance/definitions.py` |
 | 2026-10-14 | **2A-09** Read API: stores (sync status, history limit), products (cursor, search, cost and stock availability), daily figures with availability and totals, "Sync now" (rate-limited, 409 when busy/unlinked); new store permissions; 19 tests | `phases/PHASE_02A_PROGRESS.md`, `API_SPECIFICATION.md §19A` |
 | 2026-10-14 | **2A-10** Web app: Shopify connect form and install-link organization chooser, Stores tab with sync status, store page with revenue view (availability, never 0 for missing data) and "Sync now", products page with stock and cost availability; 39 tests + e2e step | `phases/PHASE_02A_PROGRESS.md` |
+| 2026-10-14 | **2A-11** Whole-journey test against a strict-token Shopify simulator (connect → import → webhook → hourly check with token rotation → Sync now → uninstall → reinstall → store erasure, no token anywhere); browser test with an imported store + axe; fixed a test date time bomb (would have failed from December 2026); test code excluded from the Docker image. **Phase 2A implemented** (live checks pending) | `phases/PHASE_02A_REPORT.md`, `phases/PHASE_02A_PROGRESS.md` |
 | 2026-10-08 | **Phase 1B implemented**: connections/resources/links, encrypted credentials, SSRF-safe client, rate limiter, provider framework + fake platform, jobs with retry/dead-letter, single scheduler, audited denials | `backend/`, `phases/PHASE_01B_REPORT.md`, `SECURITY.md`, `INTEGRATION_GUIDES.md` |
 
 ## 3. Decision log
@@ -104,13 +105,14 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | A15 | Phase 1A plan and §22 defaults; configurable security settings | Approved |
 | A16 | Phase 1B plan and §20 defaults; organization owns connections, user authorizes; credentials never exposed; SSRF mandatory | Approved — implemented |
 | A17 | Phase 1C plan with all §15 recommendations; task-by-task delivery | Approved — implemented, awaiting review |
-| A18 | Phase 2A plan v2 with all §2 recommendations (Q5–Q9, D-2A-1…3); live-testing option C | Approved 2026-10-13 — in progress |
+| A18 | Phase 2A plan v2 with all §2 recommendations (Q5–Q9, D-2A-1…3); live-testing option C | Approved 2026-10-13 — implemented, awaiting review (live checks pending) |
 
 ## 4. Open items
 
 **Awaiting product owner now**
 - Start the external approvals that take weeks (see `ROADMAP.md §7`): Google Ads developer token, Meta developer app + Business Verification, Shopify Partner account with a development store.
 - Review of Phase 1: `phases/PHASE_01A_REPORT.md`, `phases/PHASE_01B_REPORT.md` (incl. deviations §10), `phases/PHASE_01C_REPORT.md` (incl. review follow-up §13).
+- Review of Phase 2A: `phases/PHASE_02A_REPORT.md` (deviations §8, not verified §9, risks §10).
 - When convenient: allow Shopify domains in Claude network settings (or decide a staging server) so the live Shopify checks can run; create a Shopify Partner account + development store (instructions on request).
 - Run CI on GitHub: CI runs on pull requests and on pushes to `main` only — a push to `feature/phase-1a` does not start it. Open a pull request `feature/phase-1a → main` to run every job (backend, frontend, end-to-end, Docker, gitleaks).
 
@@ -121,7 +123,9 @@ Q5 Shopify public-app approach (2A production) · Q6 same store/account in two o
 
 ## 5. Next actions
 
-1. Product owner reviews Phase 1: `PHASE_01A_REPORT.md`, `PHASE_01B_REPORT.md`, `PHASE_01C_REPORT.md`.
+1. Product owner reviews Phase 1 (`PHASE_01A_REPORT.md`, `PHASE_01B_REPORT.md`, `PHASE_01C_REPORT.md`) and Phase 2A (`PHASE_02A_REPORT.md`).
 2. Open a pull request `feature/phase-1a → main` so GitHub CI runs every job (CI does not run on pushes to the feature branch alone).
-3. Start the external approvals now: Shopify Partner account + development store, Google Ads developer token, Meta app review.
-4. No real platform integration (Shopify, WooCommerce, Google Ads, Meta, GA4) before its own approved phase; Phase 2A starts after its plan is approved.
+3. Live Shopify checks (2A-01): Shopify Partner account + development store + app in the Dev Dashboard, and a reachable public HTTPS address (Shopify domains allowed in Claude network settings plus a tunnel, or a staging server).
+4. Start the other external approvals: Google Ads developer token, Meta app review; ask Shopify Partner Support in writing about billing for the production distribution (Q5).
+5. Privacy policy and merchant data-protection agreement before any other merchant connects.
+6. Phase 2B (WooCommerce) starts only after its plan is approved.

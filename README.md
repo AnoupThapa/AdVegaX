@@ -82,7 +82,9 @@ npm run e2e                                 # or: make e2e
 
 Addresses can be changed with `E2E_WEB_URL`, `E2E_API_URL`, `E2E_MAILPIT_URL`; a pre-installed Chromium with `PLAYWRIGHT_CHROMIUM_EXECUTABLE`.
 
-The local test platform's sign-in page (`fake-platform.invalid`) does not exist; the suite answers it the way an approving user would. Real platforms are not connected in Phase 1.
+The local test platform's sign-in page (`fake-platform.invalid`) does not exist; the suite answers it the way an approving user would.
+
+Shopify is never called by the tests. The store test (`e2e/stores.spec.ts`) connects a **simulated** Shopify store by running `uv run python -m tests.e2e_shopify_store` in `backend/`. That helper runs the real connect → import path against the in-process Shopify simulator. It therefore needs `uv` and the same database and Redis settings the API uses, in the environment of the machine running Playwright. With Docker Compose, export the `DATABASE_URL_*`, `REDIS_URL`, `SECRET_KEY` and `ENCRYPTION_KEYS` values the containers use, pointing at the published ports. Set `E2E_BACKEND_DIR` if `backend/` is not next to `frontend/`. The helper refuses to run in staging or production, and `backend/tests` is excluded from the Docker image.
 
 API types: after changing the backend API, run `uv run python -m app.api.openapi_export` (in `backend/`) and `npm run api:generate` (in `frontend/`). Tests on both sides fail while the committed schema or types are out of date.
 

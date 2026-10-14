@@ -2,8 +2,8 @@ import { defineConfig, devices } from "@playwright/test";
 
 /**
  * End-to-end suite (PHASE_01C_PLAN §9). Runs against a real stack: built web app, API, worker,
- * PostgreSQL, Redis and Mailpit. Start the stack first (see docs/TESTING.md); nothing here starts
- * servers. Tests share one backend, so they run one at a time.
+ * PostgreSQL, Redis and Mailpit. Start the stack first (README, "End-to-end and accessibility
+ * tests"); nothing here starts servers. Tests share one backend, so they run one at a time.
  */
 const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE;
 

@@ -66,11 +66,19 @@ TABLES = (
 )
 
 
+# The simulator's sample store has orders on fixed dates (5 and 8 October 2026). Starting the
+# test clock at a fixed moment keeps them inside Shopify's 60-day history window whatever the
+# real date is; otherwise the commerce tests would start failing in December 2026 (found in
+# 2A-11 by running the suite with the clock moved forward). Nothing compares this clock with
+# real time: session cookies use Max-Age and jobs use the database clock on both sides.
+TEST_CLOCK_START = datetime(2026, 10, 14, tzinfo=UTC)
+
+
 class FrozenClock:
-    """Starts at the real current time; tests move it forward explicitly."""
+    """Starts at a fixed moment (``TEST_CLOCK_START``); tests move it forward explicitly."""
 
     def __init__(self) -> None:
-        self.current = datetime.now(UTC)
+        self.current = TEST_CLOCK_START
 
     def now(self) -> datetime:
         return self.current

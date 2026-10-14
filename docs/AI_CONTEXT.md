@@ -5,14 +5,14 @@ Read this first. Then `PROJECT_STATUS.md`, then the current phase plan, then onl
 ## Project
 AdVegaX — independent, multi-tenant e-commerce advertising and growth SaaS.
 
-## Current state (2026-10-12)
+## Current state (2026-10-14)
 | Phase | Status |
 |---|---|
 | 0 | Complete |
 | 1A — Platform core & identity | Implemented, pushed — awaiting review |
 | 1B — Integration foundation | Implemented, pushed — awaiting review |
 | 1C — Frontend shell | Implemented, awaiting review (`phases/PHASE_01C_REPORT.md`) |
-| 2A — Shopify + finance core | **Approved (A18) — in progress**; next task in `phases/PHASE_02A_PROGRESS.md` (live Shopify checks deferred, option C) |
+| 2A — Shopify + finance core | Implemented against the Shopify simulator — awaiting review (`phases/PHASE_02A_REPORT.md`); live checks on a development store (2A-01) pending |
 | 2B onward | Not started |
 
 Repository: https://github.com/AnoupThapa/AdVegaX · working branch `feature/phase-1a`.
