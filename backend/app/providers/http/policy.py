@@ -86,6 +86,11 @@ def is_blocked_address(address: IPAddress) -> bool:
     )
 
 
+def normalize_host(raw: str) -> str:
+    """Validate and normalize a host name (no IP literals, no internal names); IDNA-encoded."""
+    return _normalize_host(raw)
+
+
 def _normalize_host(raw: str) -> str:
     host = raw.strip().rstrip(".").lower()
     if not host or host.startswith("[") or ":" in host:

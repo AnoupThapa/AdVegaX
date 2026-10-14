@@ -43,6 +43,9 @@ class OutboundPolicy:
     # Streaming downloads (2A-06): overall size and wall-clock limits.
     max_download_bytes: int = 2 * 1024 * 1024 * 1024
     download_timeout: float = 3600.0
+    # Whole-request wall-clock limit (2B-03): a server dripping a body slowly cannot hold a
+    # worker longer than this, even when every single read stays under ``read_timeout``.
+    request_timeout: float = 60.0
 
 
 @dataclass(frozen=True)
@@ -90,7 +93,10 @@ class SafeHttpClient:
         headers: dict[str, str] | None = None,
         json: Any = None,
         data: dict[str, str] | None = None,
+        follow_redirects: bool = True,
     ) -> SafeResponse:
+        """Send a request. With ``follow_redirects=False`` a redirect is returned to the caller
+        as is (2B-03: merchant stores must be addressed exactly; credentials never follow)."""
         current_url, current_method = url, method.upper()
         current_headers = dict(headers or {})
         original_host: str | None = None
@@ -103,7 +109,7 @@ class SafeHttpClient:
             elif dest.host != original_host:
                 raise BlockedDestinationError("cross_host_redirect")
             response = self._send(dest, current_method, current_headers, json, data)
-            if response.status_code not in REDIRECT_STATUSES:
+            if response.status_code not in REDIRECT_STATUSES or not follow_redirects:
                 return response
             location = response.headers.get("location")
             if not location:
@@ -193,6 +199,7 @@ class SafeHttpClient:
         data: dict[str, str] | None,
     ) -> SafeResponse:
         request_headers = {**headers, "Host": _host_header(dest)}
+        deadline = time.monotonic() + self._policy.request_timeout
         try:
             with self._client.stream(
                 method,
@@ -215,6 +222,8 @@ class SafeHttpClient:
                     size += len(chunk)
                     if size > self._policy.max_response_bytes:
                         raise ResponseTooLargeError()
+                    if time.monotonic() > deadline:
+                        raise OutboundTimeoutError()
                     chunks.append(chunk)
                 logger.info(
                     "outbound_request", extra={"host": dest.host, "status": response.status_code}

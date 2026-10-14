@@ -5,8 +5,8 @@ Plan: `PHASE_02B_PLAN.md` (approved 2026-10-14, A19, all recommendations). One r
 | Task | Status |
 |---|---|
 | 2B-01 Step 0 on a local WooCommerce test store | ⏸ Waiting — `wordpress.org` / `downloads.wordpress.org` / `api.wordpress.org` are still blocked by the network settings (checked 2026-10-14) |
-| 2B-02 Paged-import framework + migration 0010 | ✅ Done — awaiting review |
-| 2B-03 Store URL rules, SSRF hardening, REST client | Not started |
+| 2B-02 Paged-import framework + migration 0010 | ✅ Done |
+| 2B-03 Store URL rules, SSRF hardening, REST client | ✅ Done — awaiting review |
 | 2B-04 Connect, key delivery, discovery | Not started |
 | 2B-05 Mapping and initial import | Not started |
 | 2B-06 Scheduled checks, deletions, Sync now, store health | Not started |
@@ -70,3 +70,65 @@ Plan: `PHASE_02B_PLAN.md` (approved 2026-10-14, A19, all recommendations). One r
 **Blocked:** Step 0 (2B-01) still waits for the WordPress downloads.
 
 **Next task:** 2B-03 — store-address rules, SSRF hardening for merchant hosts, and the WooCommerce REST client (Basic auth, paging, errors, per-store request limit).
+
+---
+
+## 2B-03 — Store addresses, SSRF hardening, WooCommerce REST client (2026-10-14)
+
+**Completed**
+- **Store addresses** (`providers/woocommerce/stores.py`). What merchants paste is normalized to `https://host[/sub-folder]`: lower-case host, IDNA, trailing slash and pasted `/wp-admin`, `/wp-json`, `/wp-login.php` tails removed, query and fragment dropped. The following are refused, each with a plain code for the web app:
+  - `http://` (`https_required`);
+  - user name or password in the address (`credentials_in_url`);
+  - any port other than 443;
+  - IP addresses in any notation (decimal, octal, hex, IPv6);
+  - internal names (`localhost`, `.local`, metadata names);
+  - `..` and unsafe path characters;
+  - more than 5 path segments;
+  - over-long input.
+- **REST client** (`providers/woocommerce/client.py`):
+  - **HTTP Basic auth only**; the key never goes into a URL;
+  - **redirects are never followed** (the store must be addressed exactly, and the key can only reach the stored address);
+  - the public WordPress index is read **without** credentials;
+  - routes are fixed paths;
+  - paging uses `page`/`per_page` (≤ 100) and the `X-WP-Total` / `X-WP-TotalPages` headers.
+- **Errors become plain codes:**
+  - key refused (`key_rejected` → "Needs reconnecting");
+  - host strips the login header (`auth_header_stripped` → fix guide);
+  - `permission_denied`, `woocommerce_api_not_found`, `not_found`;
+  - `rate_limited` (Retry-After, capped at 5 minutes), retryable server errors;
+  - `store_redirected` and `unexpected_response` (e.g. a security plugin's challenge page).
+
+  Response bodies are only read for WooCommerce's fixed error identifier and are never logged or put in errors.
+- **Shared outbound client hardening** (all platforms):
+  - a **whole-request deadline** (`OUTBOUND_REQUEST_TIMEOUT`, 60 s), so a server dripping its answer slowly cannot hold a worker;
+  - callers can choose not to follow redirects.
+
+**Files changed** (12)
+- New (4): `app/providers/woocommerce/{__init__,stores,client}.py`; `tests/providers/test_woocommerce_client.py` (74 tests).
+- Modified (8):
+  - `app/providers/http/{client,policy}.py`, `app/core/settings.py`, `app/runtime.py`;
+  - docs `SECURITY.md` §9, `INTEGRATION_GUIDES.md` (new WooCommerce entry), status documents.
+- Deleted: none. No migration.
+
+**Tests**
+- **74 new.** They cover:
+  - address normalization (8 valid forms) and 23 refused forms;
+  - Basic auth with the key never in the URL, and requests pinned to the checked address;
+  - the index read without credentials;
+  - every error mapping, with no body content in errors;
+  - Retry-After bounds;
+  - redirects to `www.`, another domain or a sub-path: none followed, nothing sent onwards;
+  - paging header bounds and fixed routes;
+  - **DNS rebinding** (public first, internal on the next request → refused before connecting);
+  - store names resolving to loopback, metadata, IPv6 local or CGNAT addresses → never contacted;
+  - huge bodies cut off, and a slowly dripping body stopped by the whole-request deadline.
+- **Backend `make check`: 658 passed**, coverage 97 % (WooCommerce client 98 %, store addresses 100 %).
+- **Frontend `npm run check`: 290 passed** (no frontend change).
+
+**Deviations**
+1. **WooCommerce's error identifiers** that tell a rejected key from a stripped header come from its documentation and source naming. They are to be confirmed on the test store (Step 0), and any difference would only change which plain message is shown.
+2. **No request limiter inside the client:** the existing per-connection limiter in the job framework applies (each WooCommerce connection is one store). The provider sets a gentle rate (2 requests per second) when it is added in 2B-04.
+
+**Blocked:** Step 0 (2B-01) still waits for the WordPress downloads.
+
+**Next task:** 2B-04 — connect: the authorize redirect, the key-delivery route (single-use, nonce-bound, verified against the stored address), discovery with the version check, the one-store rule and reconnect.

@@ -85,6 +85,23 @@ Add one section per provider when its phase is implemented.
 - **Testing without Shopify (2A-11):** `backend/tests/shopify_sim.py` answers the token endpoint, the GraphQL Admin API (bulk exports, single-object fetches, throttling) and the bulk download host in Shopify's documented formats, behind the real `SafeHttpClient`. It can also enforce rotation (`strict_tokens`: only the latest access token works; `uninstall()` invalidates all). `tests/api/test_shopify_journey.py` runs the whole lifecycle. The browser suite connects a simulated store with `tests/e2e_shopify_store.py`. CI never calls Shopify.
 - **To confirm live (development store):** exact scope behaviour incl. whether `Order.customer.id` needs `read_customers`; bulk query shapes; app-initiated revocation; bulk-download host; `read_all_orders` and expiring tokens for custom-distribution apps; Sales-report reproduction (Step 0, plan §4.2); webhook headers on privacy topics (`X-Shopify-Webhook-Id`, `-Triggered-At`) as documented; bulk-export download host (`storage.googleapis.com` in the docs' examples); the orders search filter `created_at:>=` and `Order.updatedAt`; inline fragment `... on ProductSale { lineItem { id } }` inside a bulk query.
 
+### WooCommerce (`woocommerce`) — Phase 2B, in progress
+- **Category / auth scheme:** commerce / API keys created by the store's `/wc-auth/v1/authorize` page (scope `read`), delivered to AdVegaX by the store (server to server). HTTP Basic auth over HTTPS; keys never in URLs.
+- **API:** REST `wc/v3` under `{store}/wp-json`; public WordPress index `/wp-json/` for the site name and time zone. Facts verified against WooCommerce docs on 2026-10-14 (`PHASE_02B_PLAN.md §4.1`).
+- **Store address (2B-03):** HTTPS, public DNS name, port 443, optional sub-folder; normalized as described in SECURITY §9. Identity across organizations: host + lower-cased path.
+- **Errors (2B-03):**
+  - 401 with `woocommerce_rest_authentication_error` → `key_rejected` (Needs reconnecting);
+  - any other 401 to an authenticated request → `auth_header_stripped` (the host removes the `Authorization` header; fix guide);
+  - 403 → `permission_denied`;
+  - 404 `rest_no_route` → `woocommerce_api_not_found`;
+  - other 404 → `not_found`;
+  - 429 → `rate_limited` (Retry-After honoured, at most 300 s);
+  - 5xx → retried;
+  - redirects → `store_redirected`;
+  - non-JSON answers (e.g. security-plugin pages) → `unexpected_response`.
+- **Paging:** `page` / `per_page` (≤ 100) with `X-WP-Total` / `X-WP-TotalPages`; history is read through the paged-import framework (2B-02).
+- **To confirm live (Step 0, plan §4.2):** see the plan's list. It includes the error identifiers above, whether `_fields` stops customer details from being sent, the maximum `per_page`, and line-total tax treatment.
+
 ### Fake provider (`fake`) — test/local only
 - **Category / auth scheme:** advertising / OAuth 2 with PKCE.
 - **Resources:** two ad accounts (AUD, USD) and one store (NPR) by default; configurable.

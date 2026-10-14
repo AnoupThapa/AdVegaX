@@ -112,12 +112,28 @@ Tests: `tests/security/test_tenant_isolation.py` (route sweep generated from Ope
 | DNS | Resolved by the client; **every** returned address must be public — loopback, private, link-local (incl. 169.254.169.254 metadata), CGNAT, multicast, reserved, unspecified, IPv6 ULA/link-local, and IPv4 embedded in IPv6 (mapped, NAT64, 6to4, Teredo) are blocked |
 | DNS rebinding | Connection pinned to the validated IP; TLS SNI and `Host` keep the original name, so certificate validation still applies |
 | Redirects | Not followed automatically; each `Location` re-validated (including DNS); cross-host redirects refused; maximum `OUTBOUND_MAX_REDIRECTS` (3); `Authorization`, `Cookie` and API-key headers stripped on redirect |
-| Limits | `OUTBOUND_CONNECT_TIMEOUT`, `OUTBOUND_READ_TIMEOUT`, streamed `OUTBOUND_MAX_RESPONSE_BYTES` cap (also checks `Content-Length`) |
+| Limits | `OUTBOUND_CONNECT_TIMEOUT`, `OUTBOUND_READ_TIMEOUT`, streamed `OUTBOUND_MAX_RESPONSE_BYTES` cap (also checks `Content-Length`); **whole-request deadline `OUTBOUND_REQUEST_TIMEOUT`** (60 s, 2B-03) so a server dripping its body slowly cannot hold a worker |
 | Streaming downloads (2A-06) | `stream_lines` for platform bulk exports: **per-provider host allowlist** checked before connecting (Shopify: `SHOPIFY_BULK_DOWNLOAD_HOSTS`) on top of SSRF validation and pinning; no redirects; no credentials sent (pre-signed URL); limits `OUTBOUND_MAX_DOWNLOAD_BYTES`, `OUTBOUND_DOWNLOAD_TIMEOUT` and 16 MiB per line; memory stays at about one line. Signed result URLs are treated as secrets: never logged, stored or put in errors |
 | Environment | `trust_env=False` — ambient proxy variables cannot redirect traffic |
 | Errors | Blocked destinations raise `BlockedDestinationError` with a reason code only; timeouts/transport errors map to retryable provider errors |
 
 Tests: `tests/security/test_ssrf.py` (81 cases).
+
+**Merchant-supplied store addresses (WooCommerce, 2B-03, CRITICAL risk 6).** These rules sit on top of the controls above:
+- **Address normalization** (`providers/woocommerce/stores.py`):
+  - HTTPS only; a pasted `http://` address is refused, never silently upgraded;
+  - no user name or password; port 443 only;
+  - the host must pass the same public-name rules (IP literals in any notation and internal names are refused);
+  - sub-folder paths limited to safe characters and 5 segments, with `..` refused; pasted `/wp-admin`, `/wp-json` and `/wp-login.php` tails are removed.
+- **REST client** (`providers/woocommerce/client.py`):
+  - HTTP Basic auth only; credentials are **never put in a URL** (WooCommerce's query-string fallback is not used, Q-2B-6);
+  - **redirects are never followed** (`follow_redirects=False`), so credentials can only ever reach the stored address;
+  - the public WordPress index is read without credentials;
+  - routes are fixed paths built from the stored address;
+  - errors carry codes only — response bodies are read solely for WooCommerce's fixed error identifier (bounded length) and never logged.
+- DNS is re-validated on **every** request, so a store name that later resolves to an internal address is refused before any connection.
+
+Tests: `tests/providers/test_woocommerce_client.py` (74 cases: addresses, auth, errors, paging, rebinding, internal resolution, redirects, huge and slowly dripping bodies).
 
 ## 10. Connect flow, provider calls and jobs (Phase 1B)
 

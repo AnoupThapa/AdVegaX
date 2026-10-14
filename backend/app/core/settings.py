@@ -130,6 +130,8 @@ class Settings(BaseSettings):
     OUTBOUND_READ_TIMEOUT: timedelta = timedelta(seconds=20)
     OUTBOUND_MAX_RESPONSE_BYTES: int = Field(default=10_485_760, ge=1024)
     OUTBOUND_MAX_REDIRECTS: int = Field(default=3, ge=0, le=10)
+    # Whole-request wall-clock limit (2B-03), on top of the per-read timeout.
+    OUTBOUND_REQUEST_TIMEOUT: timedelta = timedelta(seconds=60)
     # Streaming downloads of platform bulk exports (2A-06): overall size and time limits.
     OUTBOUND_MAX_DOWNLOAD_BYTES: int = Field(default=2_147_483_648, ge=1024)
     OUTBOUND_DOWNLOAD_TIMEOUT: timedelta = timedelta(hours=1)
@@ -204,6 +206,7 @@ class Settings(BaseSettings):
             "CONNECT_STATE_TTL": self.CONNECT_STATE_TTL,
             "OUTBOUND_CONNECT_TIMEOUT": self.OUTBOUND_CONNECT_TIMEOUT,
             "OUTBOUND_READ_TIMEOUT": self.OUTBOUND_READ_TIMEOUT,
+            "OUTBOUND_REQUEST_TIMEOUT": self.OUTBOUND_REQUEST_TIMEOUT,
             "SHOPIFY_INSTALL_MAX_AGE": self.SHOPIFY_INSTALL_MAX_AGE,
             "TOKEN_REFRESH_MARGIN": self.TOKEN_REFRESH_MARGIN,
             "TOKEN_KEEPALIVE_INTERVAL": self.TOKEN_KEEPALIVE_INTERVAL,
