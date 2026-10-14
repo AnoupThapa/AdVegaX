@@ -490,6 +490,7 @@ def test_shop_redact_erases_all_store_data_after_uninstall(owner, client, clock,
         "sales_entries",
         "refunds",
         "commerce_sync_state",
+        "financial_daily",
     ):
         assert _one(admin_engine, f"SELECT count(*) AS n FROM {table}")["n"] == 0, table
     event = _last_event(admin_engine)

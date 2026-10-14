@@ -11,7 +11,7 @@ Plan: `PHASE_02A_PLAN.md` (approved 2026-10-13, A18, option C: live Shopify chec
 | 2A-05 Webhook intake | ✅ Done — awaiting review |
 | 2A-06 HTTP client extensions, GraphQL client, initial import | ✅ Done — awaiting review |
 | 2A-07 Webhook processing, incremental sync, reconciliation | ✅ Done — awaiting review |
-| 2A-08 Finance core v1 | Not started |
+| 2A-08 Finance core v1 | ✅ Done — awaiting review |
 | 2A-09 Read API | Not started |
 | 2A-10 Web app | Not started |
 | 2A-11 Simulator, e2e, docs, report | Not started |
@@ -415,3 +415,69 @@ Shopify's schema was re-checked against shopify.dev (Admin GraphQL `2026-10`) be
 **Blocked:** none for the code. Live checks on a development store are still pending (2A-01).
 
 **Next task:** 2A-08 — Finance core v1: the daily store figures (gross sales, discounts, sales reversals, net sales, shipping, taxes, cost of goods with coverage) built from the sales records, matching Shopify's report dating, never showing unknown values as 0.
+
+---
+
+## 2A-08 — Finance core v1 (2026-10-14)
+
+**Completed**
+- **One place where store figures are defined:** `app/domains/finance/definitions.py`, version `finance-v1`. Every stored row records that version. Screens and AI never redefine a figure.
+- **Built from Shopify's sales records,** each sale or reversal with its own date, dated the way Shopify's Sales report dates them:
+  - an order counts on its order date;
+  - a return, cancellation, edit or refunded shipping counts on the day it was processed;
+  - days follow the **store's time zone**, including daylight-saving changes;
+  - amounts are exact decimals in the store currency, rounded half-even to the currency's cents only when shown.
+
+| Figure | v1 definition (per day) |
+|---|---|
+| Gross sales | Product lines sold: price × quantity before discounts, excluding tax |
+| Discounts | Discounts on those lines (line and order-level shares) |
+| Sales reversals | Returns, cancellations, edits and price adjustments (positive = money given back) |
+| Net sales | Gross − discounts − reversals |
+| Shipping | Shipping charged − shipping discounts − refunded shipping |
+| Taxes / duties / fees | As recorded on the sales |
+| Total sales | Net + taxes + duties + shipping + fees (Shopify's "Total sales") |
+| Orders | Orders placed that day (test orders never imported) |
+| Cost of goods | Units × cost valid at order time, minus returned units on the return day. **Empty when any product line of the day has no cost** |
+| Cost coverage | Share of net sales whose cost is known |
+| Gross profit, margin | Calculated on read, only when every line has a cost; otherwise "Not available" with the reason |
+| Shipping cost, payment fees | "Not provided by Shopify": not available, never 0 |
+| New vs returning customers | Not available (no customer key yet; see 2A-06 deviation 2) |
+
+- Gift cards (a liability, not a sale) and tips are not counted. Line types Shopify may add in future are not counted but are logged, so they get noticed.
+- **The figures stay current:**
+  - after an import or the nightly check, the whole window is rebuilt;
+  - after the hourly check, only its window;
+  - after a webhook, only the days of that order: its order day and every refund/edit day;
+  - a deleted order's days are rebuilt without it;
+  - store erasure removes the figures along with everything else.
+  - Rebuilding is idempotent.
+
+**Found and fixed while testing:** the import built the figures before linking sales to their order lines, so costs looked missing. The order is now link first, then figures, and a test guards it.
+
+**Files changed** (11)
+- New (4): `app/domains/finance/{definitions,service}.py`; tests `tests/unit/test_finance_definitions.py` (24), `tests/api/test_finance_daily.py` (8).
+- Modified (7): `app/domains/commerce/{importer,incremental}.py`; `tests/api/test_commerce_sync.py` (erasure also removes daily figures); docs `DATABASE_SCHEMA.md`; status documents.
+- Deleted: none. No migration (uses `financial_daily` from 0007). No frontend change.
+
+**Tests**
+- **32 new.** The **golden tests are hand-calculated to the cent:**
+  - line and order discounts; tax-inclusive vs tax-exclusive stores;
+  - a partial refund in a later month; a cancelled order; an order edit; a discount removed in an edit;
+  - refunded shipping; duties, fees and adjustments; gift cards and tips;
+  - missing cost; a cost change mid-period;
+  - time-zone day boundaries; Sydney's daylight-saving day (a 23-hour day);
+  - orders count; the period summary with availability; display rounding (AUD, USD, JPY, KWD).
+- End to end: the imported sample store's two days; idempotent rebuild; refund, new-order and delete webhooks; reconciliation refresh; helpers.
+- **Backend `make check`: 558 passed**, coverage 96.5 % (finance code 97–100 %); ruff, mypy --strict: pass.
+- Frontend unchanged (251); **e2e 9 passed**.
+
+**Deviations**
+1. **Multi-currency presentment:** figures use Shopify's shop-currency amounts only (`shopMoney`). This is covered by the import mapping tests rather than a separate finance fixture.
+2. **The "match Shopify's own Sales report" fixture** needs the development store (Step 0, item 5) and stays pending with 2A-01.
+3. **Tips and gift cards are excluded** from total sales, and "adjustment" lines count as reversals. Both are to be confirmed against the live Sales report.
+4. **Cost of goods for an order-edit price change** (action "update") moves money but not units, so it does not change cost of goods.
+
+**Blocked:** none for the code. Live report comparison is pending (2A-01).
+
+**Next task:** 2A-09 — Read API: stores (sync status, history limit), products (cost and stock availability), daily figures with derived metrics and availability, and "Sync now" (rate-limited).

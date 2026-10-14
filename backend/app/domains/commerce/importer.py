@@ -43,6 +43,7 @@ from app.domains.commerce.models import (
     SalesEntry,
     Store,
 )
+from app.domains.finance.service import order_days, recompute_days, recompute_since
 from app.domains.integrations.jobs import call_provider
 from app.domains.integrations.models import (
     ExternalConnection,
@@ -409,9 +410,15 @@ def _fail(rt: Runtime, ctx: _Context, code: str) -> None:
 
 
 def _finish(rt: Runtime, ctx: _Context, counts: dict[str, int]) -> None:
+    created, updated = _filters(rt, ctx)
+    since = updated or created or ctx.history_from
+    with rt.db.transaction(org_id=ctx.org_id) as session:
+        _resolve_links(session, ctx)  # before the figures: sales need their order lines' costs
+    if since is not None:
+        # Rebuild the daily figures the orders export can have changed (2A-08).
+        counts = {**counts, "finance_days": recompute_since(rt, ctx.org_id, ctx.store_id, since)}
     now = rt.clock.now()
     with rt.db.transaction(org_id=ctx.org_id) as session:
-        _resolve_links(session, ctx)
         state = session.get(CommerceSyncState, ctx.store_id, with_for_update=True)
         store = session.get(Store, ctx.store_id)
         assert state is not None
@@ -1087,4 +1094,7 @@ def apply_records(
     with rt.db.transaction(org_id=store.org_id) as session:
         ids = list(_order_ids(session, ctx, order_refs).values())
         _resolve_links(session, ctx, ids)
+        store_row = session.get(Store, store.store_id)
+        if store_row is not None and ids:
+            recompute_days(session, rt, store_row, order_days(session, store_row, ids))
     return counts

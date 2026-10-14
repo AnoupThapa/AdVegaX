@@ -28,6 +28,7 @@ from app.domains.commerce.importer import (
     request_reconcile,
 )
 from app.domains.commerce.models import Order, Product, ProductVariant, Store
+from app.domains.finance.service import order_days, recompute_days
 from app.domains.integrations.jobs import call_provider
 from app.domains.integrations.models import (
     ExternalConnection,
@@ -223,9 +224,16 @@ def _delete(rt: Runtime, store: StoreRef, kind: ChangedObject, object_id: str) -
                 )
         elif kind is ChangedObject.ORDER:
             # A deleted order no longer exists in the store's reports: remove it with its
-            # lines, sales and refunds (they cascade).
-            session.execute(
-                delete(Order).where(
-                    Order.store_id == store.store_id, Order.external_order_id == object_id
-                )
+            # lines, sales and refunds (they cascade), then rebuild the days it touched.
+            store_row = session.get(Store, store.store_id)
+            order_ids = list(
+                session.execute(
+                    select(Order.id).where(
+                        Order.store_id == store.store_id, Order.external_order_id == object_id
+                    )
+                ).scalars()
             )
+            days = order_days(session, store_row, order_ids) if store_row else set()
+            session.execute(delete(Order).where(Order.id.in_(order_ids)))
+            if store_row is not None:
+                recompute_days(session, rt, store_row, days)
