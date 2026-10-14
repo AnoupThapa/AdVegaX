@@ -101,6 +101,12 @@ const MESSAGES: Readonly<Record<string, string>> = {
   RESOURCE_NOT_LINKABLE: "This account is no longer accessible through its connection.",
   ALREADY_LINKED: "This account is already linked to the organization.",
   NOT_LINKED: "This account is not linked to the organization.",
+  SYNC_IN_PROGRESS: "This store is already being updated. Please wait until it finishes.",
+  STORE_NOT_SYNCING:
+    "This store is not linked to an active connection. Link or reconnect it first.",
+  // Platform-to-AdVegaX webhook answers; a person should never see these, but keep them friendly.
+  INVALID_SIGNATURE: "The request could not be verified.",
+  INVALID_WEBHOOK: "The request could not be processed.",
   [NETWORK_ERROR]: "We could not reach AdVegaX. Check your connection and try again.",
   [UNEXPECTED_RESPONSE]: "Something went wrong. Please try again.",
 };

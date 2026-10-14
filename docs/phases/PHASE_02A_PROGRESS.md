@@ -12,7 +12,7 @@ Plan: `PHASE_02A_PLAN.md` (approved 2026-10-13, A18, option C: live Shopify chec
 | 2A-06 HTTP client extensions, GraphQL client, initial import | ✅ Done — awaiting review |
 | 2A-07 Webhook processing, incremental sync, reconciliation | ✅ Done — awaiting review |
 | 2A-08 Finance core v1 | ✅ Done — awaiting review |
-| 2A-09 Read API | Not started |
+| 2A-09 Read API | ✅ Done — awaiting review |
 | 2A-10 Web app | Not started |
 | 2A-11 Simulator, e2e, docs, report | Not started |
 
@@ -481,3 +481,62 @@ Shopify's schema was re-checked against shopify.dev (Admin GraphQL `2026-10`) be
 **Blocked:** none for the code. Live report comparison is pending (2A-01).
 
 **Next task:** 2A-09 — Read API: stores (sync status, history limit), products (cost and stock availability), daily figures with derived metrics and availability, and "Sync now" (rate-limited).
+
+---
+
+## 2A-09 — Read API (2026-10-14)
+
+**Completed** (documented in API_SPECIFICATION §19A)
+- **Stores:**
+  - `GET /stores` and `GET /stores/{id}`;
+  - status (importing / active / error), linked, connection status;
+  - the oldest history Shopify allows;
+  - sync state: running, mode, first-import progress, last hourly and nightly checks, last error.
+- **Products:**
+  - `GET /stores/{id}/products` (title order, cursor paging, search by title or SKU, status filter; deleted products hidden unless asked);
+  - `GET …/products/{id}`;
+  - every variant shows **stock availability** (untracked is "not available", never 0; tracked 0 is a real 0) and **cost availability** (current cost and source, or why there is none).
+- **Daily figures:**
+  - `GET /stores/{id}/metrics/daily?from&to`, defaulting to the last 30 store-local days, at most 400;
+  - the `finance-v1` components per day, plus cost of goods, gross profit and cost coverage with their availability;
+  - totals add margin, shipping cost / payment fees ("not provided by the platform") and new vs returning ("not available");
+  - **days without data are "not synchronized", never 0:** before the history start, before the first import has finished, or in the future;
+  - when any day of a period is not synchronized, the totals are too, because a partial total would understate.
+- **"Sync now":**
+  - `POST /stores/{id}/resync` runs a nightly-style check;
+  - owner, admin and manager only;
+  - limited to 6 per store per hour;
+  - "already updating" (409 `SYNC_IN_PROGRESS`) and "not linked / connection inactive" (409 `STORE_NOT_SYNCING`).
+- Money is returned as **exact decimal strings** with the currency's minor units, so the web app rounds only for display.
+- New permissions: `stores.view` (all members) and `stores.manage` (owner/admin/manager).
+- Web app: API types regenerated; friendly messages for the new error codes.
+
+**Files changed** (14)
+- New (4): `app/domains/commerce/{router,schemas,read_service}.py`; tests `tests/api/test_commerce_api.py` (19).
+- Modified (10):
+  - `app/api/router.py`, `app/core/settings.py`, `app/domains/organizations/permissions.py`;
+  - `tests/security/test_tenant_isolation.py` (the sweep fills the new `{store_id}` / `{product_id}`);
+  - frontend `lib/api/openapi.json`, `lib/api/schema.d.ts` (regenerated), `lib/api/errors.ts`;
+  - docs `API_SPECIFICATION.md`; status documents.
+- Deleted: none. No migration.
+
+**Tests**
+- **19 new:**
+  - store list and detail;
+  - another organization gets 404 everywhere;
+  - products with cost and stock availability; paging, search (a typed `%` is literal), status filter, validation, detail, deleted hidden;
+  - daily figures and totals with availability; not-synchronized days and totals; a store still importing; range validation;
+  - "Sync now": deep check, rate limit, busy, unlinked; viewers can read but not sync.
+- The generated route sweeps cover the new routes: login required, CSRF, malformed ids, other organizations.
+- **Backend `make check`: 577 passed**, coverage 96.7 % (new code 98–100 %).
+- **Frontend `npm run check`: 251 passed**, build passes; **e2e 9 passed**.
+
+**Correction to earlier reports:** the reports for 2A-05 to 2A-08 said "frontend unchanged (251)" without running the frontend checks. Running them now showed that the web app had no message for two webhook error codes added in 2A-05 (`INVALID_SIGNATURE`, `INVALID_WEBHOOK`). They are added here. I now run the frontend checks for every task.
+
+**Deviations**
+1. **Errors use 409 for "busy" / "not syncing"** and 429 for the rate limit, following the existing conventions. The plan named no codes.
+2. **"Sync now" is limited per store, not per person**, because each run is a full check of the store.
+
+**Blocked:** none.
+
+**Next task:** 2A-10 — Web app: Shopify connect form and "Choose organization" page for install links, stores list with sync status, products page, store revenue view with availability, and "Sync now".

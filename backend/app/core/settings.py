@@ -86,6 +86,8 @@ class Settings(BaseSettings):
     # Platform webhooks (2A-05): per source IP. Shopify delivers from many addresses, so this
     # only bounds abuse; unsigned requests are rejected before any database work.
     THROTTLE_WEBHOOK_PER_IP_PER_MINUTE: int = Field(default=600, ge=1)
+    # "Sync now" on a store (2A-09): each run is a full deep check, so it is limited per store.
+    THROTTLE_STORE_RESYNC_PER_HOUR: int = Field(default=6, ge=1)
 
     # --- Passwords ------------------------------------------------------------------
     PASSWORD_MIN_LENGTH: int = Field(default=12, ge=8)
@@ -163,6 +165,8 @@ class Settings(BaseSettings):
     COMMERCE_CHAIN_STALE_AFTER: timedelta = timedelta(hours=6)
     # Webhook bursts for one object are coalesced into one fetch within this window.
     COMMERCE_FETCH_COALESCE: timedelta = timedelta(minutes=5)
+    # Longest period one daily-figures request may cover (2A-09).
+    METRICS_MAX_DAYS: int = Field(default=400, ge=1, le=1000)
 
     # --- Webhook intake (Phase 2A, 2A-05; PHASE_02A_PLAN §7) ----------------------------
     # Deliveries triggered longer ago than this are refused (replay limit). Shopify retries

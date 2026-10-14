@@ -45,6 +45,8 @@ class Permission(StrEnum):
     CONNECTIONS_VIEW = "connections.view"
     CONNECTIONS_MANAGE = "connections.manage"
     JOBS_VIEW = "jobs.view"
+    STORES_VIEW = "stores.view"  # stores, products and their figures (2A-09)
+    STORES_MANAGE = "stores.manage"  # "Sync now"
 
 
 _ALL = frozenset(Role)
@@ -61,6 +63,8 @@ PERMISSION_MATRIX: dict[Permission, frozenset[Role]] = {
     Permission.CONNECTIONS_VIEW: _ALL,
     Permission.CONNECTIONS_MANAGE: _OWNER_ADMIN_MANAGER,
     Permission.JOBS_VIEW: _ALL,
+    Permission.STORES_VIEW: _ALL,
+    Permission.STORES_MANAGE: _OWNER_ADMIN_MANAGER,
 }
 
 

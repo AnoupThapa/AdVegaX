@@ -586,6 +586,117 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/{organization_id}/stores": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Stores
+         * @description Stores of this organization with their sync status and history limit.
+         */
+        get: operations["list_stores_api_v1_organizations__organization_id__stores_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/stores/{store_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Store */
+        get: operations["get_store_api_v1_organizations__organization_id__stores__store_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/stores/{store_id}/metrics/daily": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Daily Metrics
+         * @description Daily figures (store time zone, finance-v1) with availability; defaults to 30 days.
+         */
+        get: operations["daily_metrics_api_v1_organizations__organization_id__stores__store_id__metrics_daily_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/stores/{store_id}/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Products */
+        get: operations["list_products_api_v1_organizations__organization_id__stores__store_id__products_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/stores/{store_id}/products/{product_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Product */
+        get: operations["get_product_api_v1_organizations__organization_id__stores__store_id__products__product_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/stores/{store_id}/resync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resync Store
+         * @description "Sync now": a full check of the catalogue and recent orders (rate-limited per store).
+         */
+        post: operations["resync_store_api_v1_organizations__organization_id__stores__store_id__resync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/providers": {
         parameters: {
             query?: never;
@@ -704,6 +815,22 @@ export interface components {
             /** Status */
             status: string;
         };
+        /** CostOut */
+        CostOut: {
+            /**
+             * Availability
+             * @enum {string}
+             */
+            availability: "available" | "unavailable" | "unsupported" | "not_synchronized";
+            /** Effective From */
+            effective_from: string | null;
+            /** Reason */
+            reason?: string | null;
+            /** Source */
+            source: string | null;
+            /** Unit Cost */
+            unit_cost: string | null;
+        };
         /** CsrfOut */
         CsrfOut: {
             /** Csrf Token */
@@ -715,6 +842,73 @@ export interface components {
             csrf_token: string;
             /** Status */
             status: string;
+        };
+        /** DailyMetricsOut */
+        DailyMetricsOut: {
+            /** Currency */
+            currency: string;
+            /** Currency Minor Units */
+            currency_minor_units: number;
+            /** Days */
+            days: components["schemas"]["DayOut"][];
+            /** Definition Version */
+            definition_version: string;
+            /**
+             * From Day
+             * Format: date
+             */
+            from_day: string;
+            /**
+             * Store Id
+             * Format: uuid
+             */
+            store_id: string;
+            /** Synced From */
+            synced_from: string | null;
+            /** Timezone */
+            timezone: string;
+            /**
+             * To Day
+             * Format: date
+             */
+            to_day: string;
+            totals: components["schemas"]["TotalsOut"];
+        };
+        /** DayOut */
+        DayOut: {
+            /**
+             * Availability
+             * @enum {string}
+             */
+            availability: "available" | "unavailable" | "unsupported" | "not_synchronized";
+            cogs: components["schemas"]["FigureOut"];
+            cost_coverage: components["schemas"]["FigureOut"];
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Discounts */
+            discounts: string | null;
+            /** Duties */
+            duties: string | null;
+            /** Fees */
+            fees: string | null;
+            gross_profit: components["schemas"]["FigureOut"];
+            /** Gross Sales */
+            gross_sales: string | null;
+            /** Net Sales */
+            net_sales: string | null;
+            /** Orders Count */
+            orders_count: number | null;
+            /** Sales Reversals */
+            sales_reversals: string | null;
+            /** Shipping */
+            shipping: string | null;
+            /** Taxes */
+            taxes: string | null;
+            /** Total Sales */
+            total_sales: string | null;
         };
         /** Envelope[AuthorizationStartOut] */
         Envelope_AuthorizationStartOut_: {
@@ -734,6 +928,11 @@ export interface components {
         /** Envelope[CsrfStatusOut] */
         Envelope_CsrfStatusOut_: {
             data: components["schemas"]["CsrfStatusOut"];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[DailyMetricsOut] */
+        Envelope_DailyMetricsOut_: {
+            data: components["schemas"]["DailyMetricsOut"];
             meta: components["schemas"]["Meta"];
         };
         /** Envelope[InvitationOut] */
@@ -766,9 +965,29 @@ export interface components {
             data: components["schemas"]["OrganizationOut"];
             meta: components["schemas"]["Meta"];
         };
+        /** Envelope[ProductOut] */
+        Envelope_ProductOut_: {
+            data: components["schemas"]["ProductOut"];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[ProductPage] */
+        Envelope_ProductPage_: {
+            data: components["schemas"]["ProductPage"];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[ResyncOut] */
+        Envelope_ResyncOut_: {
+            data: components["schemas"]["ResyncOut"];
+            meta: components["schemas"]["Meta"];
+        };
         /** Envelope[StatusOut] */
         Envelope_StatusOut_: {
             data: components["schemas"]["StatusOut"];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[StoreOut] */
+        Envelope_StoreOut_: {
+            data: components["schemas"]["StoreOut"];
             meta: components["schemas"]["Meta"];
         };
         /** Envelope[UserOut] */
@@ -824,6 +1043,24 @@ export interface components {
             data: components["schemas"]["SessionOut"][];
             meta: components["schemas"]["Meta"];
         };
+        /** Envelope[list[StoreOut]] */
+        Envelope_list_StoreOut__: {
+            /** Data */
+            data: components["schemas"]["StoreOut"][];
+            meta: components["schemas"]["Meta"];
+        };
+        /** FigureOut */
+        FigureOut: {
+            /**
+             * Availability
+             * @enum {string}
+             */
+            availability: "available" | "unavailable" | "unsupported" | "not_synchronized";
+            /** Reason */
+            reason?: string | null;
+            /** Value */
+            value: string | null;
+        };
         /** ForgotPasswordRequest */
         ForgotPasswordRequest: {
             /** Email */
@@ -833,6 +1070,20 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** InventoryOut */
+        InventoryOut: {
+            /**
+             * Availability
+             * @enum {string}
+             */
+            availability: "available" | "unavailable" | "unsupported" | "not_synchronized";
+            /** Available */
+            available: number | null;
+            /** Synced At */
+            synced_at: string | null;
+            /** Tracked */
+            tracked: boolean | null;
         };
         /** InvitationAccept */
         InvitationAccept: {
@@ -1042,6 +1293,37 @@ export interface components {
             /** Name */
             name?: string | null;
         };
+        /** ProductOut */
+        ProductOut: {
+            /** External Id */
+            external_id: string;
+            /** Handle */
+            handle: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Product Type */
+            product_type: string | null;
+            /** Status */
+            status: string;
+            /** Title */
+            title: string;
+            /** Updated At */
+            updated_at: string | null;
+            /** Variants */
+            variants: components["schemas"]["VariantOut"][];
+            /** Vendor */
+            vendor: string | null;
+        };
+        /** ProductPage */
+        ProductPage: {
+            /** Items */
+            items: components["schemas"]["ProductOut"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
         /**
          * ProviderOut
          * @description A platform the web app may offer for connection. Public metadata only — never secrets.
@@ -1120,6 +1402,21 @@ export interface components {
             /** Timezone */
             timezone: string | null;
         };
+        /** ResyncOut */
+        ResyncOut: {
+            /**
+             * Job Id
+             * Format: uuid
+             */
+            job_id: string;
+            /** Mode */
+            mode: string;
+            /**
+             * Store Id
+             * Format: uuid
+             */
+            store_id: string;
+        };
         /** SessionOut */
         SessionOut: {
             /** Auth Method */
@@ -1149,10 +1446,103 @@ export interface components {
             /** Status */
             status: string;
         };
+        /** StoreOut */
+        StoreOut: {
+            /** Connection Status */
+            connection_status: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Currency */
+            currency: string;
+            /** Currency Minor Units */
+            currency_minor_units: number;
+            /** Domain */
+            domain: string;
+            /** First Import Completed At */
+            first_import_completed_at: string | null;
+            /** History From */
+            history_from: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Linked */
+            linked: boolean;
+            /** Name */
+            name: string | null;
+            /** Provider */
+            provider: string;
+            /**
+             * Resource Id
+             * Format: uuid
+             */
+            resource_id: string;
+            /** Status */
+            status: string;
+            sync: components["schemas"]["SyncOut"];
+            /** Timezone */
+            timezone: string;
+        };
+        /** SyncOut */
+        SyncOut: {
+            /** Last Deep Reconciled At */
+            last_deep_reconciled_at: string | null;
+            /** Last Error At */
+            last_error_at: string | null;
+            /** Last Error Code */
+            last_error_code: string | null;
+            /** Last Reconciled At */
+            last_reconciled_at: string | null;
+            /** Mode */
+            mode: string | null;
+            /** Progress */
+            progress: number | null;
+            /** Running */
+            running: boolean;
+        };
         /** TokenRequest */
         TokenRequest: {
             /** Token */
             token: string;
+        };
+        /** TotalsOut */
+        TotalsOut: {
+            /**
+             * Availability
+             * @enum {string}
+             */
+            availability: "available" | "unavailable" | "unsupported" | "not_synchronized";
+            cogs: components["schemas"]["FigureOut"];
+            cost_coverage: components["schemas"]["FigureOut"];
+            /** Discounts */
+            discounts: string | null;
+            /** Duties */
+            duties: string | null;
+            /** Fees */
+            fees: string | null;
+            gross_margin: components["schemas"]["FigureOut"];
+            gross_profit: components["schemas"]["FigureOut"];
+            /** Gross Sales */
+            gross_sales: string | null;
+            /** Net Sales */
+            net_sales: string | null;
+            new_vs_returning: components["schemas"]["FigureOut"];
+            /** Orders Count */
+            orders_count: number | null;
+            payment_fees: components["schemas"]["FigureOut"];
+            /** Sales Reversals */
+            sales_reversals: string | null;
+            /** Shipping */
+            shipping: string | null;
+            shipping_cost: components["schemas"]["FigureOut"];
+            /** Taxes */
+            taxes: string | null;
+            /** Total Sales */
+            total_sales: string | null;
         };
         /** UserOut */
         UserOut: {
@@ -1185,6 +1575,26 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /** VariantOut */
+        VariantOut: {
+            cost: components["schemas"]["CostOut"];
+            /** Deleted */
+            deleted: boolean;
+            /** External Id */
+            external_id: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            inventory: components["schemas"]["InventoryOut"];
+            /** Price */
+            price: string | null;
+            /** Sku */
+            sku: string | null;
+            /** Title */
+            title: string | null;
         };
     };
     responses: never;
@@ -2317,6 +2727,206 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Envelope_LinkOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_stores_api_v1_organizations__organization_id__stores_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_list_StoreOut__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_store_api_v1_organizations__organization_id__stores__store_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                store_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_StoreOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    daily_metrics_api_v1_organizations__organization_id__stores__store_id__metrics_daily_get: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path: {
+                store_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_DailyMetricsOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_products_api_v1_organizations__organization_id__stores__store_id__products_get: {
+        parameters: {
+            query?: {
+                cursor?: string | null;
+                page_size?: number;
+                q?: string | null;
+                status?: string | null;
+            };
+            header?: never;
+            path: {
+                store_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ProductPage_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_product_api_v1_organizations__organization_id__stores__store_id__products__product_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                store_id: string;
+                product_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ProductOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resync_store_api_v1_organizations__organization_id__stores__store_id__resync_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                store_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ResyncOut_"];
                 };
             };
             /** @description Validation Error */

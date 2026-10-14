@@ -442,6 +442,19 @@ Never expose secret fields.
 
 Billing webhooks must be signature-verified and idempotent.
 
+## 19A. Stores, products and daily figures — as built (2A-09)
+
+All under `/organizations/{organization_id}`; membership resolved server-side, RLS + explicit organization filters; another organization's store/product → 404. Money is an exact decimal **string** in the store currency (`currency_minor_units` says how to round for display); anything missing has an `availability` (`available` / `unavailable` / `unsupported` / `not_synchronized`) and a `reason`, never a 0.
+
+| Method & path | Who | Notes |
+|---|---|---|
+| `GET /stores` | all members | Stores with `status`, `linked`, `connection_status`, `history_from`, `first_import_completed_at`, `sync {running, mode, progress, last_reconciled_at, last_deep_reconciled_at, last_error_code, last_error_at}` |
+| `GET /stores/{store_id}` | all members | One store (same shape) |
+| `POST /stores/{store_id}/resync` | owner, admin, manager | "Sync now": a deep check (whole catalogue + recent orders). 202 `{store_id, job_id, mode}`; 409 `SYNC_IN_PROGRESS` (import or sync running), 409 `STORE_NOT_SYNCING` (unlinked / connection not active); 429 above `THROTTLE_STORE_RESYNC_PER_HOUR` per store |
+| `GET /stores/{store_id}/products?cursor&page_size(1–100, 50)&q&status` | all members | Ordered by title; cursor pagination (`next_cursor`); `q` matches title or SKU (literal text, no wildcards); `status` one of `active/draft/archived/unlisted/deleted` (deleted hidden by default). Each variant has `inventory {availability, tracked, available, synced_at}` and `cost {availability, unit_cost, source, effective_from, reason}` |
+| `GET /stores/{store_id}/products/{product_id}` | all members | One product with variants |
+| `GET /stores/{store_id}/metrics/daily?from&to` | all members | Default the last 30 store-local days; at most `METRICS_MAX_DAYS`. `definition_version` (`finance-v1`), `synced_from` (first fully covered day), per-day components and `cogs` / `gross_profit` / `cost_coverage` figures; days before `synced_from`, before the first import or in the future are `not_synchronized` (values null). `totals` adds `gross_margin`, `shipping_cost`, `payment_fees`, `new_vs_returning`; totals are `not_synchronized` if any day in the period is |
+
 ## 20. Webhooks
 
 Provider webhooks must:

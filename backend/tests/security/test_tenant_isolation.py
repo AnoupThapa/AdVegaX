@@ -7,6 +7,7 @@ route is covered automatically.
 from __future__ import annotations
 
 import re
+import uuid
 
 import pytest
 
@@ -79,6 +80,9 @@ def test_every_org_route_returns_404_for_non_members(app, tenants):
             .replace("{connection_id}", tenants["conn_b"])
             .replace("{resource_id}", tenants["resource_b"])
             .replace("{job_id}", tenants["job_b"])
+            # 2A-09: tenant B has no store; any id under another tenant's org is a 404 anyway.
+            .replace("{store_id}", str(uuid.uuid4()))
+            .replace("{product_id}", str(uuid.uuid4()))
         )
         assert not re.search(r"\{\w+\}", path), f"unhandled path parameter in {template}"
         response = _call(tenants["a"], method, path, BODIES.get((method, template), {}))
