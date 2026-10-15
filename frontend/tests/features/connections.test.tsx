@@ -392,6 +392,19 @@ describe("Connection detail", () => {
     await waitFor(() => expect(router.push).toHaveBeenCalledWith(`/orgs/${ORG_ID}/connections`));
   });
 
+  it("asks WooCommerce merchants to revoke the key in WordPress too", async () => {
+    detail("owner", {
+      [`GET ${ORG_PATH}/connections/${CONN}`]: ok(connection({ provider: "woocommerce" })),
+      [`GET ${ORG_PATH}/connections/${CONN}/resources`]: ok([]),
+      "GET /api/v1/providers": ok([
+        { ...provider, code: "woocommerce", display_name: "WooCommerce", test_only: false },
+      ]),
+    });
+    click(await screen.findByRole("button", { name: "Disconnect WooCommerce" }));
+    const dialog = screen.getByRole("dialog", { name: "Disconnect WooCommerce?" });
+    expect(within(dialog).getByText(/revoke the\s+AdVegaX key in WordPress/)).toBeInTheDocument();
+  });
+
   it("expired connections explain what to do and offer no link/sync", async () => {
     detail("owner", {
       [`GET ${ORG_PATH}/connections/${CONN}`]: ok(

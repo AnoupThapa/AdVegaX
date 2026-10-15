@@ -10,8 +10,8 @@ Plan: `PHASE_02B_PLAN.md` (approved 2026-10-14, A19, all recommendations). One r
 | 2B-04 Connect, key delivery, discovery | ✅ Done |
 | 2B-05 Mapping and initial import | ✅ Done |
 | 2B-06 Scheduled checks, deletions, Sync now, store health | ✅ Done |
-| 2B-07 Finance mapping, status and currency rules, parity tests | ✅ Done — awaiting review |
-| 2B-08 API additions and web app | Not started |
+| 2B-07 Finance mapping, status and currency rules, parity tests | ✅ Done |
+| 2B-08 API additions and web app | ✅ Done — awaiting review |
 | 2B-09 Simulator journey, browser test, docs, report | Not started |
 
 ---
@@ -386,4 +386,89 @@ Plan: `PHASE_02B_PLAN.md` (approved 2026-10-14, A19, all recommendations). One r
 - connect error messages;
 - the store health panel;
 - the counted-statuses text and the cost hint.
+
+---
+
+## 2B-08 — Web app for WooCommerce (2026-10-15)
+
+**Completed**
+- **Connect form.**
+  - WooCommerce asks for the store address, in the same form as Shopify.
+  - What people paste is tidied up. For example, `Shop.Example.com/wp-admin/` becomes `https://shop.example.com`, and a sub-folder such as `example.com/shop` is kept.
+  - Plain reasons are given before anything is sent:
+    - not HTTPS;
+    - a user name or password in the address;
+    - a port number;
+    - not a public web address.
+  - The server checks the address again.
+- **Before leaving for the store,** the page explains it in one sentence: the store opens its own WordPress page, and the merchant approves read-only access there.
+- **When the store cannot be used at start,** the page says why: WooCommerce's API not found, or the store not answering.
+- **After approval**, the page explains each way connecting can fail:
+  - the key was not delivered;
+  - more than read-only access was offered;
+  - WooCommerce is older than 9.0;
+  - the key was refused;
+  - the host strips the login header;
+  - the store redirects;
+  - temporary problems.
+- **Store page:**
+  - a **health panel** names the problem and its fix in plain words:
+    - "Cost not available — switch on Cost of Goods Sold in WooCommerce";
+    - "WooCommerce needs updating";
+    - "The store's time zone is not set";
+    - "Your web host blocks the login details";
+    - "Needs reconnecting".
+  - A daily check that could not finish says so calmly; codes are never shown.
+  - It shows the store's address, its WooCommerce version, and **which orders are counted**: processing, on hold, completed and refunded. Orders pending payment, failed, cancelled, drafts and trash are not counted.
+- **Products page:** a hint explains why costs are missing when Cost of Goods Sold is off.
+- **Sync problems after import** are explained in plain words: key refused, header stripped, API gone, address moved.
+- **Disconnect:** the dialog asks WooCommerce merchants to revoke the AdVegaX key in WordPress as well (Q-2B-7).
+- Shopify pages are unchanged: no version line and no counted-orders note.
+
+**Files changed** (12)
+- New (1): `tests/features/woocommerce-connect.test.tsx`.
+- Modified (11):
+  - `features/connections/{connect-fields.ts,ConnectionsPage.tsx,ConnectionDetailPage.tsx,labels.ts}`;
+  - `features/stores/{StorePage.tsx,ProductsPage.tsx,labels.ts,stores.module.css}`;
+  - `lib/api/errors.ts`;
+  - `tests/features/{stores,connections}.test.tsx`;
+  - this report.
+- Deleted: none. No backend change and no migration: the API additions for this task came with 2B-04 and 2B-06.
+
+**Tests**
+- **52 new web app tests** (counted as cases). They cover:
+  - 22 address cases, accepted and refused;
+  - the connect form refusing HTTP and sending only the normalized address;
+  - the approval note;
+  - three "store cannot be used" answers;
+  - the return message after approval;
+  - each WooCommerce connect message;
+  - six health warnings, each with its fix and no code shown;
+  - a healthy store's address, version and counted orders;
+  - Shopify showing none of the WooCommerce extras;
+  - the products cost hint;
+  - a refused key after import;
+  - the disconnect note.
+- **Frontend `npm run check`: 343 passed**, build passes. **E2E: 10 passed.**
+- **Backend `make check`: 794 passed**, coverage 97 %, unchanged.
+
+**Security:**
+- Addresses are checked twice: in the browser, to help people type them, and on the server, which is the actual rule.
+- No key or secret ever reaches the web app.
+- Error codes are always turned into plain text and never shown raw.
+
+**Deviations**
+1. **No separate return page.** The plan named `/connect/woocommerce/return`. Since 2B-04, the store returns the person through AdVegaX's existing connect callback, which shows the result once on the Connections page, as for Shopify. This was safer (the result is read on the server, never from the address bar) and needs no new page.
+2. **The WordPress menu paths in the hints** are taken from WooCommerce's documentation. They will be checked on the Step 0 test store:
+   - Settings → Advanced → Features (Cost of Goods Sold);
+   - Settings → Advanced → REST API (keys);
+   - Settings → General (time zone).
+
+**Blocked:** Step 0 (2B-01) still waits for the WordPress downloads.
+
+**Next task:** 2B-09, to finish Phase 2B:
+- the full simulator journey (connect → import → 15-minute change → refund → key revoked → reconnect → disconnect);
+- the browser test of a WooCommerce store on the Stores pages, with accessibility checks;
+- the remaining docs;
+- `PHASE_02B_REPORT.md`.
 

@@ -13,7 +13,7 @@ import { ApiError, messageFor } from "@/lib/api/errors";
 import { formatSyncedAt } from "@/lib/format/availability";
 
 import { useResync, useStore } from "./api";
-import { storeStatus } from "./labels";
+import { countedStatuses, storeHealth, storeStatus } from "./labels";
 import { RevenueView } from "./RevenueView";
 import { SyncSummary } from "./StoresPage";
 import styles from "./stores.module.css";
@@ -49,6 +49,8 @@ function Detail({ storeId }: { storeId: string }) {
   const s = store.data;
   if (!s) return <p role="status">Loading store…</p>;
   const status = storeStatus(s);
+  const health = storeHealth(s.health?.code);
+  const counted = countedStatuses(s.counted_statuses);
   const canSync = manage && s.linked && s.connection_status === "active";
 
   function syncNow() {
@@ -79,6 +81,15 @@ function Detail({ storeId }: { storeId: string }) {
           {notice.text}
         </Alert>
       ) : null}
+      {health ? (
+        <section aria-labelledby="store-health" className={styles.health}>
+          <h2 id="store-health">{health.title}</h2>
+          <p>{health.fix}</p>
+          {s.health?.checked_at ? (
+            <p className={styles.muted}>Checked {formatSyncedAt(s.health.checked_at)}.</p>
+          ) : null}
+        </section>
+      ) : null}
       <div className={styles.panel}>
         <p>
           <span className={`${styles.status} ${styles[status.tone]}`}>{status.label}</span>
@@ -88,7 +99,13 @@ function Detail({ storeId }: { storeId: string }) {
         </p>
         <dl className={styles.facts}>
           <dt>Store address</dt>
-          <dd>{s.domain}</dd>
+          <dd>{s.site_url ?? s.domain}</dd>
+          {s.provider === "woocommerce" && s.platform_version ? (
+            <>
+              <dt>WooCommerce version</dt>
+              <dd>{s.platform_version}</dd>
+            </>
+          ) : null}
           <dt>Currency</dt>
           <dd>{s.currency}</dd>
           <dt>Time zone</dt>
@@ -98,6 +115,7 @@ function Detail({ storeId }: { storeId: string }) {
           <dt>Last full check</dt>
           <dd>{formatSyncedAt(s.sync.last_deep_reconciled_at)}</dd>
         </dl>
+        {counted ? <p className={styles.muted}>{counted}</p> : null}
         {!s.linked ? (
           <p className={styles.muted}>
             This store is not linked, so it is not being updated. Link it again on its{" "}

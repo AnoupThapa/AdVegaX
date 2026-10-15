@@ -14,9 +14,9 @@ import { ApiError, messageFor } from "@/lib/api/errors";
 import { goToExternal } from "@/lib/navigation/external";
 
 import { useConnections, useProviders, useStartConnection, type Provider } from "./api";
-import { CONNECT_FIELDS, normalizeShopDomain } from "./connect-fields";
+import { CONNECT_FIELDS, CONNECT_NOTES } from "./connect-fields";
 import styles from "./connections.module.css";
-import { connectError, connectionStatus } from "./labels";
+import { connectError, connectionStatus, storeUnreachable } from "./labels";
 
 type Notice = { tone: "success" | "error" | "info"; text: string; requestId: string | null };
 
@@ -49,6 +49,14 @@ function useCallbackNotice(): Notice | null {
   return notice;
 }
 
+/** A failed start, in plain words — with the store's own answer when it could not be used. */
+function startError(error: unknown): string {
+  if (error instanceof ApiError && error.code === "STORE_NOT_REACHABLE") {
+    return storeUnreachable(error.details[0]?.reason);
+  }
+  return messageFor(error);
+}
+
 function ConnectSection({ orgId, onNotice }: { orgId: string; onNotice: (n: Notice) => void }) {
   const providers = useProviders();
   const start = useStartConnection(orgId);
@@ -63,7 +71,7 @@ function ConnectSection({ orgId, onNotice }: { orgId: string; onNotice: (n: Noti
       onError: (error) =>
         onNotice({
           tone: "error",
-          text: messageFor(error),
+          text: startError(error),
           requestId: error instanceof ApiError ? error.requestId : null,
         }),
     });
@@ -88,6 +96,9 @@ function ConnectSection({ orgId, onNotice }: { orgId: string; onNotice: (n: Noti
                 <p className={styles.cardTitle}>{p.display_name}</p>
                 {p.test_only ? (
                   <p className={styles.muted}>For testing only — not a real platform.</p>
+                ) : null}
+                {CONNECT_NOTES[p.code] ? (
+                  <p className={styles.muted}>{CONNECT_NOTES[p.code]}</p>
                 ) : null}
               </div>
               {CONNECT_FIELDS[p.code] ? (
@@ -137,13 +148,15 @@ function ConnectForm({
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    const shop = normalizeShopDomain(values.shop_domain ?? "");
-    if (fields.some((f) => f.name === "shop_domain") && !shop) {
-      setErrors({ shop_domain: "Enter a store address like your-store.myshopify.com." });
-      return;
+    const params: Record<string, string> = {};
+    const found: Record<string, string> = {};
+    for (const field of fields) {
+      const result = field.check(values[field.name] ?? "");
+      if ("error" in result) found[field.name] = result.error;
+      else params[field.name] = result.value;
     }
-    setErrors({});
-    onConnect(shop ? { shop_domain: shop } : {});
+    setErrors(found);
+    if (Object.keys(found).length === 0) onConnect(params);
   }
 
   return (
@@ -162,7 +175,7 @@ function ConnectForm({
           required
           autoComplete="off"
           spellCheck={false}
-          maxLength={255}
+          maxLength={field.name === "store_url" ? 2048 : 255}
           value={values[field.name] ?? ""}
           errors={errors[field.name] ? [errors[field.name] as string] : []}
           onChange={(event) => setValues({ ...values, [field.name]: event.target.value })}

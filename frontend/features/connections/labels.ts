@@ -54,7 +54,40 @@ const CONNECT_ERRORS: Readonly<Record<string, string>> = {
     "AdVegaX was updating this connection at the same moment. Please wait a few seconds and try again.",
   app_uninstalled: "The AdVegaX app was uninstalled from this store. Reconnect to continue.",
   unknown_provider: "This platform is not available.",
+  // WooCommerce (2B): the store's answer while connecting.
+  key_not_delivered:
+    "The store did not send AdVegaX its access key. If you approved access, check that the store can reach the internet, then connect again.",
+  connect_failed: "The store's access could not be set up. Please connect again.",
+  not_read_only:
+    "The store offered more than read-only access, so nothing was saved. Please connect again and approve read access only.",
+  woocommerce_too_old: "Please update WooCommerce to version 9.0 or newer, then connect again.",
+  key_rejected:
+    "The store did not accept its new access key. Check that the WordPress user who approved it is an administrator, then connect again.",
+  auth_header_stripped:
+    "Your web host removes the login details AdVegaX sends with each request. Ask your host to pass the Authorization header through to WordPress, then connect again.",
+  woocommerce_api_not_found:
+    "WooCommerce's API was not found at this address. Check that WooCommerce is installed and active and that the address is your WordPress site's.",
+  store_redirected:
+    "The store sent AdVegaX to a different address. Enter the address the store finally opens at (with https://), then connect again.",
+  unexpected_response: "The store gave an answer AdVegaX could not understand. Please try again.",
+  server_error: "The store had a temporary problem. Please try again in a few minutes.",
+  timeout: "The store took too long to answer. Please try again in a few minutes.",
 };
+
+const STORE_UNREACHABLE: Readonly<Record<string, string>> = {
+  woocommerce_api_not_found: CONNECT_ERRORS.woocommerce_api_not_found as string,
+  store_redirected: CONNECT_ERRORS.store_redirected as string,
+  auth_header_stripped: CONNECT_ERRORS.auth_header_stripped as string,
+  retryable: "The store did not answer. Check that it is online, then try again.",
+};
+
+/** Why AdVegaX could not use a store's address when starting to connect (STORE_NOT_REACHABLE). */
+export function storeUnreachable(reason: string | null | undefined): string {
+  return (
+    (reason && STORE_UNREACHABLE[reason]) ||
+    "AdVegaX could not reach the store's WooCommerce API at this address. Check the address and that the store is online."
+  );
+}
 
 export function connectError(code: string | null | undefined): string {
   return (

@@ -205,6 +205,12 @@ function Detail({ storeId }: { storeId: string }) {
         </Link>
       </p>
       <PageHeading id="products-title">Products</PageHeading>
+      {store.data.health?.code === "cost_of_goods_off" ? (
+        <Alert tone="info">
+          Costs are not available because Cost of Goods Sold is switched off in WooCommerce. Switch
+          it on (Settings → Advanced → Features) and enter your product costs.
+        </Alert>
+      ) : null}
       <Products store={store.data} />
     </section>
   );

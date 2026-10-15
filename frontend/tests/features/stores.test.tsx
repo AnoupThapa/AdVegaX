@@ -516,3 +516,92 @@ describe("Products", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(/Something went wrong/);
   });
 });
+
+describe("WooCommerce stores (2B-08)", () => {
+  const woo = (health: Record<string, unknown> | null = null) =>
+    store({
+      provider: "woocommerce",
+      domain: "shop.example.com",
+      name: "Eve Zone Woo",
+      site_url: "https://shop.example.com",
+      platform_version: "10.4.1",
+      counted_statuses: ["processing", "on-hold", "completed", "refunded"],
+      health: health ?? { code: null, checked_at: "2026-10-14T00:00:00Z" },
+    });
+
+  function render(s: unknown) {
+    baseApi("manager", {
+      [`GET ${STORE_PATH}`]: ok(s),
+      [`GET ${STORE_PATH}/metrics/daily`]: ok(metrics()),
+    });
+    renderWithProviders(
+      inShell(<StorePage />, `/orgs/${ORG_ID}/stores/${STORE}`, { storeId: STORE }),
+      { session: me },
+    );
+  }
+
+  it("shows the address, version and which orders are counted; no warning when healthy", async () => {
+    render(woo());
+    expect(await screen.findByText("https://shop.example.com")).toBeInTheDocument();
+    expect(screen.getByText("WooCommerce version")).toBeInTheDocument();
+    expect(screen.getByText("10.4.1")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Counted in the figures: processing, on hold, completed and refunded orders\. Orders pending payment, failed, cancelled/,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("region", { name: /needs updating|not set|Cost not available/ }),
+    ).toBeNull();
+  });
+
+  it.each([
+    [
+      "cost_of_goods_off",
+      "Cost not available — switch on Cost of Goods Sold in WooCommerce",
+      /Settings → Advanced → Features/,
+    ],
+    ["woocommerce_too_old", "WooCommerce needs updating", /version 9\.0 or newer/],
+    ["timezone_unknown", "The store's time zone is not set", /choose a city/],
+    ["auth_header_stripped", "Your web host blocks the login details", /Authorization header/],
+    ["key_rejected", "Needs reconnecting", /no longer accepts/],
+    ["retryable", "The daily check could not finish", /try again tomorrow/],
+  ])("explains the %s health warning with its fix, never as a code", async (code, title, fix) => {
+    render(woo({ code, checked_at: "2026-10-14T00:00:00Z" }));
+    const panel = await screen.findByRole("region", { name: title });
+    expect(within(panel).getByText(fix)).toBeInTheDocument();
+    expect(within(panel).getByText(/^Checked /)).toBeInTheDocument();
+    expect(screen.queryByText(code)).toBeNull();
+  });
+
+  it("Shopify stores show neither a version nor a counted-status note", async () => {
+    render(store());
+    expect(await screen.findByText("eve-zone.myshopify.com")).toBeInTheDocument();
+    expect(screen.queryByText("WooCommerce version")).toBeNull();
+    expect(screen.queryByText(/Counted in the figures/)).toBeNull();
+  });
+
+  it("the products page says why costs are missing when Cost of Goods is off", async () => {
+    baseApi("viewer", {
+      [`GET ${STORE_PATH}`]: ok(woo({ code: "cost_of_goods_off", checked_at: null })),
+      [`GET ${STORE_PATH}/products`]: ok({ items: [], next_cursor: null }),
+    });
+    renderWithProviders(
+      inShell(<ProductsPage />, `/orgs/${ORG_ID}/stores/${STORE}/products`, { storeId: STORE }),
+      { session: me },
+    );
+    expect(
+      await screen.findByText(/Cost of Goods Sold is switched off in WooCommerce/),
+    ).toBeInTheDocument();
+  });
+
+  it("explains WooCommerce access problems after import in plain words", async () => {
+    render(
+      store(
+        { provider: "woocommerce", connection_status: "expired" },
+        { last_error_code: "key_rejected", last_error_at: "2026-10-14T00:00:00Z" },
+      ),
+    );
+    expect(await screen.findByText(/no longer accepts AdVegaX's access key/)).toBeInTheDocument();
+  });
+});

@@ -260,6 +260,12 @@ function Detail({ connectionId }: { connectionId: string }) {
             Shopify admin (Settings → Apps).
           </p>
         ) : null}
+        {c.provider === "woocommerce" ? (
+          <p>
+            AdVegaX deletes its access key here. To remove it from your store too, revoke the
+            AdVegaX key in WordPress (WooCommerce → Settings → Advanced → REST API).
+          </p>
+        ) : null}
       </ConfirmDialog>
     </section>
   );

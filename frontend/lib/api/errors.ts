@@ -7,6 +7,8 @@ export type ApiErrorDetail = {
   readonly location?: readonly string[];
   readonly message?: string;
   readonly type?: string;
+  /** A plain code saying why, e.g. why a store could not be reached (2B). */
+  readonly reason?: string;
 };
 
 export type ApiErrorBody = {
