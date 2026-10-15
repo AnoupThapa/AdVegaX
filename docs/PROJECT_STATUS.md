@@ -1,8 +1,8 @@
 # AdVegaX — Project Status & Progress Log
 
 **Last updated:** 2026-10-15
-**Current phase:** Phase 2A approved (A18) and in progress · Phase 1 (1A, 1B, 1C) implemented — awaiting product-owner review
-**Code written:** Phase 1A + 1B backend, Phase 1C web application · **Migrations:** 0001–0011 · **Integrations:** Shopify connector in progress (2A, simulator-tested; not yet tried on a live store) · test (fake) platform
+**Current phase:** Phase 2B implemented against the simulator — awaiting review (live Step 0 pending) · Phase 2A implemented against the Shopify simulator — awaiting review · Phase 1 (1A, 1B, 1C) implemented — awaiting product-owner review
+**Code written:** Phase 1A + 1B backend, Phase 1C web application, Phase 2A (Shopify) and 2B (WooCommerce) · **Migrations:** 0001–0011 · **Integrations:** Shopify and WooCommerce connectors (simulator-tested; not yet tried on a live store) · test (fake) platform
 
 Update this file at the end of every phase and every approved sub-phase (ROADMAP §5, step 13).
 
@@ -17,7 +17,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | 1B | Integration foundation | ✅ **Implemented — awaiting review** | 277 tests, 98.4 % coverage; `phases/PHASE_01B_REPORT.md` |
 | 1C | Frontend shell | ✅ **Implemented — awaiting review** | 251 unit + 9 end-to-end tests, axe 0 violations; `phases/PHASE_01C_REPORT.md` |
 | 2A | Shopify (read-only) + finance core | ✅ **Implemented against the Shopify simulator — awaiting review**; live checks on a development store (2A-01) pending | 582 backend + 290 frontend + 10 end-to-end tests; `phases/PHASE_02A_REPORT.md` |
-| 2B | WooCommerce (read-only) | **Approved (A19) — in progress** (Step 0 waits for WordPress downloads to be allowed) | `phases/PHASE_02B_PLAN.md`, `phases/PHASE_02B_PROGRESS.md` |
+| 2B | WooCommerce (read-only) | ✅ **Implemented against the WooCommerce simulator — awaiting review**; live Step 0 (2B-01) waits for WordPress downloads to be allowed | 799 backend + 343 frontend + 11 end-to-end tests; `phases/PHASE_02B_REPORT.md` |
 | 3 | Google Ads (read-only) | Not started | Start developer-token application early |
 | 4 | Meta (read-only) | Not started | Start App Review / Business Verification early |
 | 5 | GA4 (read-only) | Not started | Needs Q11 |
@@ -90,6 +90,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | 2026-10-15 | **2B-06** Each store checked at its platform's pace (WooCommerce every 15 min, Shopify hourly); nightly full check marks deleted products/variations (history kept); daily store health (version, time zone, cost of goods); stores waiting for a time zone start after rediscovery; store API health fields; 13 tests | `phases/PHASE_02B_PROGRESS.md`, `INTEGRATION_GUIDES.md` |
 | 2026-10-15 | **2B-07** Finance rules: only counted WooCommerce orders in the figures (status changes rebuild the order day); orders in another currency never summed, their days and the period totals shown as "Not available — orders in other currencies"; Shopify/WooCommerce parity to the cent (API and stored rows); migration 0011; 14 tests | `phases/PHASE_02B_PROGRESS.md`, `DATABASE_SCHEMA.md §4A`, `API_SPECIFICATION.md` |
 | 2026-10-15 | **2B-08** Web app for WooCommerce: store-address form (HTTPS, sub-folders, plain reasons), approval note, plain connect and sync messages, store health panel with fixes, counted-orders note, version and address, cost hint on products, revoke-key note on disconnect; 52 tests | `phases/PHASE_02B_PROGRESS.md` |
+| 2026-10-15 | **2B-09 / Phase 2B implemented** against the WooCommerce simulator: whole-journey test (connect → import → changes → refund → key revoked → reconnect → disconnect, with key and customer-detail scans), browser test with accessibility checks, browser-test helper, phase report | `phases/PHASE_02B_REPORT.md`, `INTEGRATION_GUIDES.md` |
 | 2026-10-08 | **Phase 1B implemented**: connections/resources/links, encrypted credentials, SSRF-safe client, rate limiter, provider framework + fake platform, jobs with retry/dead-letter, single scheduler, audited denials | `backend/`, `phases/PHASE_01B_REPORT.md`, `SECURITY.md`, `INTEGRATION_GUIDES.md` |
 
 ## 3. Decision log

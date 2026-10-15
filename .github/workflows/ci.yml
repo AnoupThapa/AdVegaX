@@ -108,6 +108,9 @@ jobs:
       THROTTLE_LOGIN_PER_IP_PER_MINUTE: "100"
       THROTTLE_LOGIN_PER_ACCOUNT_IP_PER_MINUTE: "30"
       THROTTLE_EMAIL_ACTION_PER_IP_PER_HOUR: "100"
+      # Offer WooCommerce on the Connections page so its form can be checked (2B-09). The
+      # browser test never submits a usable address, so no real store is ever called.
+      WOOCOMMERCE_ENABLED: "true"
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6

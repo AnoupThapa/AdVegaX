@@ -11,8 +11,8 @@ Plan: `PHASE_02B_PLAN.md` (approved 2026-10-14, A19, all recommendations). One r
 | 2B-05 Mapping and initial import | ✅ Done |
 | 2B-06 Scheduled checks, deletions, Sync now, store health | ✅ Done |
 | 2B-07 Finance mapping, status and currency rules, parity tests | ✅ Done |
-| 2B-08 API additions and web app | ✅ Done — awaiting review |
-| 2B-09 Simulator journey, browser test, docs, report | Not started |
+| 2B-08 API additions and web app | ✅ Done |
+| 2B-09 Simulator journey, browser test, docs, report | ✅ Done — Phase 2B report: `PHASE_02B_REPORT.md` |
 
 ---
 
@@ -471,4 +471,46 @@ Plan: `PHASE_02B_PLAN.md` (approved 2026-10-14, A19, all recommendations). One r
 - the browser test of a WooCommerce store on the Stores pages, with accessibility checks;
 - the remaining docs;
 - `PHASE_02B_REPORT.md`.
+
+---
+
+## 2B-09 — Whole journey, browser test, docs, phase report (2026-10-15)
+
+**Completed**
+- **Whole-journey test** against the WooCommerce simulator, through the real API, database and job runner:
+  - connect (address with `/wp-admin/` tidied; key delivered server to server) → link → first import (figures equal to the Shopify sample);
+  - a new order and a renamed product found by the 15-minute check;
+  - a refund on the next check;
+  - a pending order counted only once paid;
+  - the merchant revokes the key → "Needs reconnecting", data still readable, no more calls with the refused key;
+  - reconnect → same connection and store, nothing duplicated, updates resume;
+  - the nightly check with the daily health check (cost of goods switched off found);
+  - disconnect → key deleted, store not called, data kept, "Sync now" refused.
+  - Throughout, the key, its secret and the customer details never appear in any response, the audit log, the stored orders or the logs.
+- **Browser test** (`e2e/woocommerce.spec.ts`), with accessibility checks on every page:
+  - the connect form refuses an `http://` address before anything is sent;
+  - a simulated WooCommerce store (cost of goods off) appears on the Stores tab;
+  - its store page shows the health panel with the fix, the address, the version, the counted orders and the figures (no $0.00);
+  - its products page shows the cost hint;
+  - no store key appears on any page.
+- **Browser-test helper** `tests/e2e_woocommerce_store.py`, like Shopify's: it uses the simulator, moves the sample orders to recent days, refuses deployed environments and is not in the Docker image.
+- **CI:** the browser job switches WooCommerce on, so its connect form is shown. No usable address is submitted, so no real store is called.
+- **Docs:** `PHASE_02B_REPORT.md` (new), `INTEGRATION_GUIDES.md` (figures, web app, tests), `ROADMAP.md`, `AI_CONTEXT.md`, `PROJECT_STATUS.md`.
+
+**Files changed** (12)
+- New (5): `tests/api/test_woocommerce_journey.py`, `tests/e2e_woocommerce_store.py`, frontend `e2e/woocommerce.spec.ts`, `e2e/support/woocommerce.ts`, `PHASE_02B_REPORT.md`.
+- Modified (7): `tests/api/test_e2e_seed.py` (4 tests added), `.github/workflows/ci.yml`, docs `INTEGRATION_GUIDES.md`, `ROADMAP.md`, `AI_CONTEXT.md`, `PROJECT_STATUS.md`, this report.
+- Deleted: none. No application code change and no migration.
+
+**Tests**
+- **6 new:** the journey, four helper tests (connects and imports, replaces the real provider when WooCommerce is switched on, refuses deployed environments, moves the sample to recent days) and the browser test.
+- **Backend `make check`: 799 passed**, coverage 97 %.
+- **Frontend `npm run check`: 343 passed**, build passes. **E2E: 11 passed.**
+
+**Deviations**
+1. **The CI browser job switches WooCommerce on** (`WOOCOMMERCE_ENABLED=true`) so the connect form can be checked. The default stays off everywhere else.
+
+**Blocked:** Step 0 (2B-01) still waits for the WordPress downloads. Everything else in Phase 2B is done.
+
+**Next:** your review of `PHASE_02B_REPORT.md`. Then Step 0 once the WordPress sites are allowed, and the plan for Phase 3 (Google Ads, read-only).
 

@@ -85,7 +85,7 @@ Add one section per provider when its phase is implemented.
 - **Testing without Shopify (2A-11):** `backend/tests/shopify_sim.py` answers the token endpoint, the GraphQL Admin API (bulk exports, single-object fetches, throttling) and the bulk download host in Shopify's documented formats, behind the real `SafeHttpClient`. It can also enforce rotation (`strict_tokens`: only the latest access token works; `uninstall()` invalidates all). `tests/api/test_shopify_journey.py` runs the whole lifecycle. The browser suite connects a simulated store with `tests/e2e_shopify_store.py`. CI never calls Shopify.
 - **To confirm live (development store):** exact scope behaviour incl. whether `Order.customer.id` needs `read_customers`; bulk query shapes; app-initiated revocation; bulk-download host; `read_all_orders` and expiring tokens for custom-distribution apps; Sales-report reproduction (Step 0, plan §4.2); webhook headers on privacy topics (`X-Shopify-Webhook-Id`, `-Triggered-At`) as documented; bulk-export download host (`storage.googleapis.com` in the docs' examples); the orders search filter `created_at:>=` and `Order.updatedAt`; inline fragment `... on ProductSale { lineItem { id } }` inside a bulk query.
 
-### WooCommerce (`woocommerce`) — Phase 2B, in progress
+### WooCommerce (`woocommerce`) — Phase 2B, implemented against the simulator (live Step 0 pending)
 - **Category / auth scheme:** commerce / API keys created by the store's `/wc-auth/v1/authorize` page (scope `read`), delivered to AdVegaX by the store (server to server). HTTP Basic auth over HTTPS; keys never in URLs.
 - **API:** REST `wc/v3` under `{store}/wp-json`; public WordPress index `/wp-json/` for the site name and time zone. Facts verified against WooCommerce docs on 2026-10-14 (`PHASE_02B_PLAN.md §4.1`).
 - **Connect (2B-04):** `start` with `{"store_url"}` → address checked (public index, `wc/v3` namespace) → the store's `/wc-auth/v1/authorize?app_name=AdVegaX&scope=read&user_id=<single-use state>&return_url=<API callback>&callback_url=<API …/credentials>`. The store posts `{key_id, user_id, consumer_key, consumer_secret, key_permissions}`. AdVegaX accepts it only if:
@@ -115,6 +115,14 @@ Add one section per provider when its phase is implemented.
   - **Access problems** use the connection's existing health: a refused key → "Needs reconnecting"; a stripped header → error with `auth_header_stripped`.
   - **A store whose time zone was unknown** starts importing after a rediscovery finds a named zone.
   - **Counted order statuses** (processing, on-hold, completed, refunded; custom statuses count too) are shown on the store.
+- **Figures (2B-07):** the same `finance-v1` definitions as Shopify; the Shopify and WooCommerce sample stores give identical daily figures to the cent. Only counted orders contribute (`excluded_reason` IS NULL). A status change on an older order rebuilds its order day at the next check. Orders in another currency are never summed: their placement and refund days are "not available — orders in other currencies" (`financial_daily.other_currency_orders`), and so are the totals of a period containing one.
+- **Web app (2B-08):**
+  - the connect form takes the store address (HTTPS only, sub-folder allowed) and explains a refused address before anything is sent;
+  - every connect and sync code has a plain message;
+  - the store page shows a health panel with the fix, the address, the WooCommerce version and the counted statuses;
+  - the products page explains missing costs when cost of goods is off;
+  - the disconnect dialog asks the merchant to revoke the key in WordPress.
+- **Tests (2B-09):** `tests/woocommerce_sim.py` (simulator); `test_woocommerce_journey.py` (connect → import → 15-minute changes → refund → paid order → key revoked → reconnect → health → disconnect, with key, secret and customer-detail scans); browser test `e2e/woocommerce.spec.ts` through the helper `tests/e2e_woocommerce_store.py` (refuses deployed environments). CI switches WooCommerce on for the browser job only to show the form; no usable address is ever submitted, so no real store is called.
 - **Store address (2B-03):** HTTPS, public DNS name, port 443, optional sub-folder; normalized as described in SECURITY §9. Identity across organizations: host + lower-cased path.
 - **Errors (2B-03):**
   - 401 with `woocommerce_rest_authentication_error` → `key_rejected` (Needs reconnecting);
