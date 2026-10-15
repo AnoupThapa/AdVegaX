@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import uuid
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 
 from sqlalchemy import String, select
+from sqlalchemy.orm import Session
 
 from app.domains.audit.service import Actor, record_audit
 from app.domains.integrations.models import (
@@ -143,6 +144,7 @@ def discover(rt: Runtime, job: ClaimedJob) -> None:
         connection = session.get(ExternalConnection, connection_id)
         if connection is not None:
             connection.last_error_code, connection.last_error_at = None, None
+            _start_waiting_stores(session, rt, connection, existing.values())
         record_audit(
             session,
             organization_id=org_id,
@@ -158,6 +160,40 @@ def discover(rt: Runtime, job: ClaimedJob) -> None:
                 "job_id": str(job.id),
             },
         )
+
+
+def _start_waiting_stores(
+    session: Session,
+    rt: Runtime,
+    connection: ExternalConnection,
+    resources: Iterable[ExternalResource],
+) -> None:
+    """A linked store that could not be imported (e.g. its time zone was unknown) starts
+    importing once discovery finds what was missing (2B-06)."""
+    from app.domains.commerce import importer
+    from app.domains.commerce.models import Store
+
+    provider = rt.providers.get(connection.provider)
+    if importer.commerce_provider(provider) is None:
+        return
+    for resource in resources:
+        if resource.kind != ResourceKind.STORE.value or not resource.accessible:
+            continue
+        if resource.currency is None or resource.timezone is None:
+            continue
+        linked = session.execute(
+            select(OrganizationResourceLink.id).where(
+                OrganizationResourceLink.external_resource_id == resource.id,
+                OrganizationResourceLink.status == "active",
+            )
+        ).first()
+        has_store = session.execute(
+            select(Store.id).where(Store.external_resource_id == resource.id)
+        ).first()
+        if linked is not None and has_store is None:
+            importer.on_store_linked(
+                session, rt, resource=resource, connection=connection, user_id=None
+            )
 
 
 def sync(rt: Runtime, job: ClaimedJob) -> None:

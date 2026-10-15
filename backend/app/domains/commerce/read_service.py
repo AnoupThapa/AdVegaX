@@ -34,6 +34,7 @@ from app.domains.commerce.schemas import (
     DailyMetricsOut,
     DayOut,
     FigureOut,
+    HealthOut,
     InventoryOut,
     ProductOut,
     ProductPage,
@@ -150,6 +151,14 @@ class CommerceReadService:
                 last_error_at=state.last_error_at if state else None,
             ),
             created_at=store.created_at,
+            site_url=store.site_url,
+            platform_version=store.platform_version,
+            health=(
+                HealthOut(code=store.health_code, checked_at=store.health_checked_at)
+                if store.health_checked_at is not None
+                else None
+            ),
+            counted_statuses=list(store.counted_statuses) if store.counted_statuses else None,
         )
 
     def list_stores(self, ctx: TenantContext) -> list[StoreOut]:

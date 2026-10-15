@@ -82,7 +82,7 @@ def webhook_purge_task() -> int | None:
 @celery_app.task(name="advegax.schedule.commerce_reconcile")  # type: ignore[untyped-decorator]
 def commerce_reconcile_task() -> int | None:
     rt = worker_runtime()
-    ttl = int(rt.settings.SCHEDULE_COMMERCE_RECONCILE_INTERVAL.total_seconds() * 0.9)
+    ttl = int(rt.settings.SCHEDULE_COMMERCE_RECONCILE_TICK.total_seconds() * 0.9)
     return run_singleton(
         rt.redis,
         "commerce_reconcile",

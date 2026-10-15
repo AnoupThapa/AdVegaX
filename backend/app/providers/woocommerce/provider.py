@@ -50,6 +50,7 @@ from app.providers.base.types import (
     ProviderCategory,
     ResourceDescriptor,
     ResourceKind,
+    StoreHealth,
     SyncSummary,
     WebhookDelivery,
     WebhookTarget,
@@ -96,6 +97,8 @@ class WooCommerceProvider:
             {
                 Capability.KEY_DELIVERY,
                 Capability.PAGED_IMPORT,
+                Capability.COMPLETE_CATALOGUE,
+                Capability.STORE_HEALTH,
                 Capability.PRODUCT_COST,
                 Capability.INVENTORY,
                 Capability.REFUND_LINES,
@@ -104,6 +107,9 @@ class WooCommerceProvider:
     )
     test_only = False
     rate_limit = (2.0, 4)  # per connection = per store: gentle on small shared hosts
+    # Q-2B-2: what the figures count (WooCommerce Analytics' defaults leave out pending
+    # payment, failed and cancelled; custom statuses are counted too).
+    counted_order_statuses = ("processing", "on-hold", "completed", "refunded")
 
     def __init__(
         self,
@@ -111,10 +117,13 @@ class WooCommerceProvider:
         http_factory: HttpFactory,
         app_name: str = "AdVegaX",
         min_version: tuple[int, int] = (9, 0),
+        reconcile_interval: timedelta | None = None,
     ) -> None:
         self._http_factory = http_factory
         self._app_name = app_name
         self._min_version = min_version
+        # No webhooks (Q-2B-3): checked for changes this often (the core's scheduler).
+        self.reconcile_interval = reconcile_interval
 
     # ------------------------------------------------------------------ connect
     def prepare_connect(self, params: Mapping[str, str]) -> PreparedConnect:
@@ -333,6 +342,33 @@ class WooCommerceProvider:
             records=tuple(records),
             next_cursor=json.dumps(following, separators=(",", ":")) if following else None,
             progress=progress,
+        )
+
+    # ------------------------------------------------------------------ store health (2B-06)
+    def store_health(self, secrets: Secrets) -> StoreHealth:
+        """Daily configuration check. Warnings, most important first:
+
+        * ``woocommerce_too_old`` — below the supported minimum (Q10a);
+        * ``timezone_unknown`` — WordPress is set to a manual offset with no IANA zone;
+        * ``cost_of_goods_off`` — WooCommerce's cost of goods is not switched on (the API only
+          sends ``cost_of_goods_sold`` when it is), so costs show as "not available".
+        """
+        store, client = self._client(secrets)
+        environment = _object(_object(client.get("/system_status").data).get("environment"))
+        version = environment.get("version")
+        index = client.index()
+        warnings: list[str] = []
+        if not self._supported(version):
+            warnings.append("woocommerce_too_old")
+        if store_timezone(index.get("timezone_string"), index.get("gmt_offset")) is None:
+            warnings.append("timezone_unknown")
+        sample = client.get_page("/products", 1, 1, {"_fields": "id,cost_of_goods_sold"}).data
+        if sample and isinstance(sample[0], dict) and "cost_of_goods_sold" not in sample[0]:
+            warnings.append("cost_of_goods_off")
+        return StoreHealth(
+            platform_version=version[:32] if isinstance(version, str) else None,
+            site_url=store.base_url,
+            warnings=tuple(warnings),
         )
 
     def webhook_target(self, topic: str) -> WebhookTarget:  # noqa: ARG002

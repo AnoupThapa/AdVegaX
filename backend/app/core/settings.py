@@ -158,6 +158,7 @@ class Settings(BaseSettings):
     WOOCOMMERCE_ENABLED: bool = False
     WOOCOMMERCE_MIN_VERSION: str = Field(default="9.0", pattern=r"^\d{1,3}\.\d{1,3}$")  # Q10a
     WOOCOMMERCE_APP_NAME: str = Field(default="AdVegaX", min_length=1, max_length=64)
+    WOOCOMMERCE_RECONCILE_INTERVAL: timedelta = timedelta(minutes=15)  # Q-2B-3
 
     # --- Commerce import (Phase 2A, 2A-06; PHASE_02A_PLAN §9) ----------------------------
     # Longest order history imported (13 months, Q9); the platform may allow less (Shopify:
@@ -172,6 +173,10 @@ class Settings(BaseSettings):
     # deeper check of the catalogue and recent orders. A chain silent for longer than
     # COMMERCE_CHAIN_STALE_AFTER is considered dead and may be restarted.
     SCHEDULE_COMMERCE_RECONCILE_INTERVAL: timedelta = timedelta(hours=1)
+    # How often the scheduler looks for stores due a check (2B-06). Each store is checked at
+    # its platform's interval: the default above, WooCommerce every
+    # WOOCOMMERCE_RECONCILE_INTERVAL (no webhooks, Q-2B-3).
+    SCHEDULE_COMMERCE_RECONCILE_TICK: timedelta = timedelta(minutes=5)
     SCHEDULE_COMMERCE_DEEP_INTERVAL: timedelta = timedelta(hours=24)
     COMMERCE_RECONCILE_OVERLAP: timedelta = timedelta(minutes=10)
     COMMERCE_DEEP_WINDOW: timedelta = timedelta(days=30)
@@ -224,6 +229,8 @@ class Settings(BaseSettings):
             "SHOPIFY_DEFAULT_ORDER_HISTORY": self.SHOPIFY_DEFAULT_ORDER_HISTORY,
             "SCHEDULE_COMMERCE_RECONCILE_INTERVAL": self.SCHEDULE_COMMERCE_RECONCILE_INTERVAL,
             "SCHEDULE_COMMERCE_DEEP_INTERVAL": self.SCHEDULE_COMMERCE_DEEP_INTERVAL,
+            "SCHEDULE_COMMERCE_RECONCILE_TICK": self.SCHEDULE_COMMERCE_RECONCILE_TICK,
+            "WOOCOMMERCE_RECONCILE_INTERVAL": self.WOOCOMMERCE_RECONCILE_INTERVAL,
             "COMMERCE_RECONCILE_OVERLAP": self.COMMERCE_RECONCILE_OVERLAP,
             "COMMERCE_DEEP_WINDOW": self.COMMERCE_DEEP_WINDOW,
             "COMMERCE_CHAIN_STALE_AFTER": self.COMMERCE_CHAIN_STALE_AFTER,

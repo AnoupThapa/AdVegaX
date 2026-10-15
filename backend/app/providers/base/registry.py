@@ -69,6 +69,7 @@ def build_woocommerce(settings: Settings, outbound: OutboundPolicy) -> PlatformP
         http_factory=lambda: SafeHttpClient(outbound),
         app_name=settings.WOOCOMMERCE_APP_NAME,
         min_version=(major, minor),
+        reconcile_interval=settings.WOOCOMMERCE_RECONCILE_INTERVAL,
     )
 
 

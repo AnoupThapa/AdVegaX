@@ -40,7 +40,7 @@ celery_app.conf.update(
         },
         "commerce-reconcile": {
             "task": "advegax.schedule.commerce_reconcile",
-            "schedule": _settings.SCHEDULE_COMMERCE_RECONCILE_INTERVAL.total_seconds(),
+            "schedule": _settings.SCHEDULE_COMMERCE_RECONCILE_TICK.total_seconds(),
         },
         "commerce-deep": {
             "task": "advegax.schedule.commerce_deep",

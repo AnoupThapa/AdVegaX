@@ -108,6 +108,13 @@ Add one section per provider when its phase is implemented.
   - **Sales records** use the same definitions as Shopify's: amount including tax, tax, and discount = subtotal − total.
   - **Changes:** `modified_after` on products, variable products and orders, and refunds created since the last check.
   - **Pace:** 2 requests per second per store; when the limit is reached the import pauses and resumes.
+- **Keeping up to date (2B-06):**
+  - **Change checks:** the scheduler looks every 5 minutes (`SCHEDULE_COMMERCE_RECONCILE_TICK`), and each store is checked at its platform's interval — WooCommerce every `WOOCOMMERCE_RECONCILE_INTERVAL` (15 minutes), Shopify hourly as before.
+  - **Nightly full check / "Sync now":** reads the whole catalogue. Products and variations it does not list are marked deleted (`COMPLETE_CATALOGUE`); order history is kept, and an empty answer deletes nothing.
+  - **Daily health check** (first import and nightly check) records `platform_version` and `site_url`, plus one plain warning: `woocommerce_too_old`, `timezone_unknown` or `cost_of_goods_off` (cost of goods is detected as off when products carry no `cost_of_goods_sold` field). A failed check never fails the sync.
+  - **Access problems** use the connection's existing health: a refused key → "Needs reconnecting"; a stripped header → error with `auth_header_stripped`.
+  - **A store whose time zone was unknown** starts importing after a rediscovery finds a named zone.
+  - **Counted order statuses** (processing, on-hold, completed, refunded; custom statuses count too) are shown on the store.
 - **Store address (2B-03):** HTTPS, public DNS name, port 443, optional sub-folder; normalized as described in SECURITY §9. Identity across organizations: host + lower-cased path.
 - **Errors (2B-03):**
   - 401 with `woocommerce_rest_authentication_error` → `key_rejected` (Needs reconnecting);

@@ -1119,6 +1119,40 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "HealthOut": {
+        "description": "Store configuration found by the daily check (2B-06): a plain message key for the web\napp (e.g. ``cost_of_goods_off``, ``woocommerce_too_old``, ``timezone_unknown``), or None.",
+        "properties": {
+          "checked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checked At"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          }
+        },
+        "required": [
+          "code",
+          "checked_at"
+        ],
+        "title": "HealthOut",
+        "type": "object"
+      },
       "InventoryOut": {
         "properties": {
           "availability": {
@@ -2166,6 +2200,20 @@
             "title": "Connection Status",
             "type": "string"
           },
+          "counted_statuses": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counted Statuses"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -2194,6 +2242,16 @@
               }
             ],
             "title": "First Import Completed At"
+          },
+          "health": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HealthOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "history_from": {
             "anyOf": [
@@ -2227,6 +2285,17 @@
             ],
             "title": "Name"
           },
+          "platform_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform Version"
+          },
           "provider": {
             "title": "Provider",
             "type": "string"
@@ -2235,6 +2304,17 @@
             "format": "uuid",
             "title": "Resource Id",
             "type": "string"
+          },
+          "site_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Url"
           },
           "status": {
             "title": "Status",

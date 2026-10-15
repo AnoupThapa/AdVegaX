@@ -293,3 +293,13 @@ class CommercePage:
     records: tuple[CommerceRecord, ...]
     next_cursor: str | None = None
     progress: int | None = None
+
+
+@dataclass(frozen=True)
+class StoreHealth:
+    """Configuration of a (self-hosted) store, checked daily (2B-06). ``warnings`` are plain
+    codes for the web app, most important first; empty when nothing needs the merchant."""
+
+    platform_version: str | None = None
+    site_url: str | None = None
+    warnings: tuple[str, ...] = ()

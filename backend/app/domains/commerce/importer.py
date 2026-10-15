@@ -27,7 +27,7 @@ import logging
 import uuid
 from collections.abc import Callable, Iterable, Iterator
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 from enum import StrEnum
 from typing import Any, cast
@@ -36,6 +36,7 @@ from sqlalchemy import BindParameter, Table, bindparam, select, text
 from sqlalchemy.dialects.postgresql import distinct_on, insert
 from sqlalchemy.orm import Session
 
+from app.core.errors import NotFound
 from app.domains.audit.service import Actor, record_audit
 from app.domains.commerce.models import (
     CommerceSyncState,
@@ -76,6 +77,7 @@ from app.providers.base.types import (
     CommerceSaleRecord,
     CommerceVariantRecord,
     ResourceKind,
+    StoreHealth,
 )
 from app.providers.http.client import DownloadExpiredError
 from app.runtime import Runtime
@@ -85,6 +87,7 @@ logger = logging.getLogger("advegax.commerce.import")
 JOB_IMPORT_STEP = "commerce.import_step"
 WORKER = Actor("worker", None)
 IMPORT_LOCK_TTL_SECONDS = 2 * 3600  # covers the longest download (OUTBOUND_DOWNLOAD_TIMEOUT)
+SEEN_TTL_SECONDS = 48 * 3600  # a full catalogue read of a very large store
 PROGRESS_AFTER_CATALOGUE = 40
 
 
@@ -136,6 +139,7 @@ def on_store_linked(
             timezone=resource.timezone,
             status="importing",
             history_from=now - window,
+            counted_statuses=_counted_statuses(provider),
         )
         session.add(store)
         session.flush()
@@ -357,6 +361,15 @@ def _run_paged(rt: Runtime, ctx: _Context, provider: PagedImportProvider) -> int
         ),
     )
     counts = _apply(rt, ctx, page.records)
+    complete = (
+        ctx.kind is BulkKind.CATALOGUE
+        and ctx.mode is SyncMode.DEEP
+        and provider.capabilities.supports(Capability.COMPLETE_CATALOGUE)
+    )
+    if complete:
+        _remember_seen(rt, ctx, page.records)
+    if complete and page.next_cursor is None:
+        counts = {**counts, "deleted": _mark_unseen_deleted(rt, ctx)}
     total = {k: ctx.counts.get(k, 0) + counts.get(k, 0) for k in {*ctx.counts, *counts}}
     delay = int(rt.settings.COMMERCE_PAGE_INTERVAL.total_seconds())
     if page.next_cursor is not None:
@@ -379,8 +392,69 @@ def _run_paged(rt: Runtime, ctx: _Context, provider: PagedImportProvider) -> int
                 _audit_counts(session, ctx, "store.catalogue_imported", total)
             state.updated_at = rt.clock.now()
         return delay
-    _finish(rt, ctx, total)
+    _finish(rt, ctx, total, provider)
     return None
+
+
+def _counted_statuses(provider: CommerceProvider) -> list[str] | None:
+    statuses = getattr(provider, "counted_order_statuses", None)
+    return list(statuses) if statuses else None
+
+
+def _seen_key(ctx: _Context) -> str:
+    started = ctx.started_at.isoformat() if ctx.started_at else "none"
+    return f"catalogue-seen:{ctx.store_id}:{started}"
+
+
+def _remember_seen(rt: Runtime, ctx: _Context, records: Iterable[CommerceRecord]) -> None:
+    """Note every product and variant a full catalogue read lists (2B-06)."""
+    members = [
+        f"p:{r.external_id}" if isinstance(r, CommerceProductRecord) else f"v:{r.external_id}"
+        for r in records
+        if isinstance(r, (CommerceProductRecord, CommerceVariantRecord))
+    ]
+    key = _seen_key(ctx)
+    pipe = rt.redis.pipeline()
+    pipe.sadd(key, "started")  # the set exists even for a page without products
+    if members:
+        pipe.sadd(key, *members)
+    pipe.expire(key, SEEN_TTL_SECONDS)
+    pipe.execute()
+
+
+def _mark_unseen_deleted(rt: Runtime, ctx: _Context) -> int:
+    """After a complete full catalogue read: products and variants it did not list were
+    deleted on the platform. They are marked deleted (order history keeps them). Nothing is
+    marked when the read listed no product at all — that is more likely a fault than an
+    empty store."""
+    key = _seen_key(ctx)
+    seen = {m.decode() if isinstance(m, bytes) else str(m) for m in rt.redis.smembers(key)}
+    rt.redis.delete(key)
+    products = {m[2:] for m in seen if m.startswith("p:")}
+    variants = {m[2:] for m in seen if m.startswith("v:")}
+    if not products:
+        logger.warning("catalogue_empty_not_pruned", extra={"store_id": str(ctx.store_id)})
+        return 0
+    marked = 0
+    with rt.db.transaction(org_id=ctx.org_id) as session:
+        for product in session.execute(
+            select(Product).where(Product.store_id == ctx.store_id, Product.status != "deleted")
+        ).scalars():
+            if product.external_product_id not in products:
+                product.status = "deleted"
+                marked += 1
+        for variant in session.execute(
+            select(ProductVariant).where(
+                ProductVariant.store_id == ctx.store_id, ProductVariant.deleted.is_(False)
+            )
+        ).scalars():
+            if variant.external_variant_id not in variants:
+                variant.deleted = True
+    if marked:
+        logger.info(
+            "products_marked_deleted", extra={"store_id": str(ctx.store_id), "count": marked}
+        )
+    return marked
 
 
 def _paged_progress(kind: BulkKind, within: int) -> int:
@@ -444,7 +518,7 @@ def _run_bulk(rt: Runtime, ctx: _Context, provider: BulkExportProvider) -> int |
                 _audit_counts(session, ctx, "store.catalogue_imported", counts)
             state.updated_at = rt.clock.now()
         return 0
-    _finish(rt, ctx, counts)
+    _finish(rt, ctx, counts, provider)
     return None
 
 
@@ -484,7 +558,7 @@ def _fail(rt: Runtime, ctx: _Context, code: str) -> None:
         )
 
 
-def _finish(rt: Runtime, ctx: _Context, counts: dict[str, int]) -> None:
+def _finish(rt: Runtime, ctx: _Context, counts: dict[str, int], provider: CommerceProvider) -> None:
     created, updated = _filters(rt, ctx)
     since = updated or created or ctx.history_from
     with rt.db.transaction(org_id=ctx.org_id) as session:
@@ -492,6 +566,7 @@ def _finish(rt: Runtime, ctx: _Context, counts: dict[str, int]) -> None:
     if since is not None:
         # Rebuild the daily figures the orders export can have changed (2A-08).
         counts = {**counts, "finance_days": recompute_since(rt, ctx.org_id, ctx.store_id, since)}
+    health = _check_health(rt, ctx, provider)
     now = rt.clock.now()
     with rt.db.transaction(org_id=ctx.org_id) as session:
         state = session.get(CommerceSyncState, ctx.store_id, with_for_update=True)
@@ -510,12 +585,38 @@ def _finish(rt: Runtime, ctx: _Context, counts: dict[str, int]) -> None:
         store.status = "active"
         if store.first_import_completed_at is None:
             store.first_import_completed_at = now
+        if health is not None:
+            store.platform_version = health.platform_version
+            store.site_url = health.site_url
+            store.health_code = health.warnings[0] if health.warnings else None
+            store.health_checked_at = now
         if ctx.mode is SyncMode.INITIAL:
             _audit_counts(session, ctx, "store.import_completed", counts)
     logger.info(
         "store_sync_finished",
         extra={"store_id": str(ctx.store_id), "mode": ctx.mode.value, "counts": counts},
     )
+
+
+def _check_health(rt: Runtime, ctx: _Context, provider: CommerceProvider) -> StoreHealth | None:
+    """The daily store-configuration check (first import and nightly check, 2B-06). A failed
+    check never fails the sync; its error code becomes the store's health code."""
+    if ctx.mode is SyncMode.RECONCILE or not provider.capabilities.supports(
+        Capability.STORE_HEALTH
+    ):
+        return None
+    check = getattr(provider, "store_health", None)
+    if check is None:
+        return None
+    secrets = usable_secrets(rt, ctx.org_id, ctx.connection_id)
+    try:
+        result = call_provider(rt, provider, ctx.org_id, ctx.connection_id, lambda: check(secrets))
+    except ProviderError as exc:
+        logger.warning(
+            "store_health_failed", extra={"store_id": str(ctx.store_id), "error_code": exc.code}
+        )
+        return StoreHealth(warnings=(exc.code,))
+    return result if isinstance(result, StoreHealth) else None
 
 
 def _audit_counts(session: Session, ctx: _Context, action: str, counts: dict[str, int]) -> None:
@@ -1109,23 +1210,41 @@ def enqueue_reconciliations(rt: Runtime, mode: SyncMode) -> int:
     """
     with rt.db.transaction(system=True) as session:
         stores = session.execute(
-            select(Store.id, Store.organization_id).where(
+            select(Store.id, Store.organization_id, Store.provider).where(
                 Store.first_import_completed_at.is_not(None),
                 Store.status.in_(("active", "error")),
             )
         ).all()
     started = 0
-    for store_id, org_id in stores:
+    now = rt.clock.now()
+    for store_id, org_id, provider_code in stores:
+        interval = _reconcile_interval(rt, provider_code)
         with rt.db.transaction(org_id=org_id) as session:
             store = session.get(Store, store_id)
             state = session.get(CommerceSyncState, store_id, with_for_update=True)
             if store is None or (state is not None and chain_running(rt, state)):
                 continue
+            last = state.last_reconciled_at if state is not None else None
+            if mode is SyncMode.RECONCILE and last is not None and last > now - interval:
+                continue  # checked recently enough for its platform (2B-06)
             start_sync(session, rt, store, mode)
             started += 1
     if started:
         logger.info("reconciliations_started", extra={"mode": mode.value, "count": started})
     return started
+
+
+def _reconcile_interval(rt: Runtime, provider_code: str) -> timedelta:
+    """How often a store of this platform is checked for changes: the platform's own interval
+    (WooCommerce has no webhooks: every 15 minutes) or the default (hourly)."""
+    try:
+        provider = rt.providers.get(provider_code)
+    except NotFound:
+        return rt.settings.SCHEDULE_COMMERCE_RECONCILE_INTERVAL
+    interval = getattr(provider, "reconcile_interval", None)
+    if isinstance(interval, timedelta) and interval.total_seconds() > 0:
+        return interval
+    return rt.settings.SCHEDULE_COMMERCE_RECONCILE_INTERVAL
 
 
 def request_reconcile(rt: Runtime, org_id: uuid.UUID, store_id: uuid.UUID) -> bool:

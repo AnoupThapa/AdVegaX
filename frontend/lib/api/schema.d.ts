@@ -1071,6 +1071,17 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /**
+         * HealthOut
+         * @description Store configuration found by the daily check (2B-06): a plain message key for the web
+         *     app (e.g. ``cost_of_goods_off``, ``woocommerce_too_old``, ``timezone_unknown``), or None.
+         */
+        HealthOut: {
+            /** Checked At */
+            checked_at: string | null;
+            /** Code */
+            code: string | null;
+        };
         /** InventoryOut */
         InventoryOut: {
             /**
@@ -1450,6 +1461,8 @@ export interface components {
         StoreOut: {
             /** Connection Status */
             connection_status: string;
+            /** Counted Statuses */
+            counted_statuses?: string[] | null;
             /**
              * Created At
              * Format: date-time
@@ -1463,6 +1476,7 @@ export interface components {
             domain: string;
             /** First Import Completed At */
             first_import_completed_at: string | null;
+            health?: components["schemas"]["HealthOut"] | null;
             /** History From */
             history_from: string | null;
             /**
@@ -1474,6 +1488,8 @@ export interface components {
             linked: boolean;
             /** Name */
             name: string | null;
+            /** Platform Version */
+            platform_version?: string | null;
             /** Provider */
             provider: string;
             /**
@@ -1481,6 +1497,8 @@ export interface components {
              * Format: uuid
              */
             resource_id: string;
+            /** Site Url */
+            site_url?: string | null;
             /** Status */
             status: string;
             sync: components["schemas"]["SyncOut"];

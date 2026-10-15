@@ -33,6 +33,14 @@ class SyncOut(BaseModel):
     last_error_at: datetime | None
 
 
+class HealthOut(BaseModel):
+    """Store configuration found by the daily check (2B-06): a plain message key for the web
+    app (e.g. ``cost_of_goods_off``, ``woocommerce_too_old``, ``timezone_unknown``), or None."""
+
+    code: str | None
+    checked_at: datetime | None
+
+
 class StoreOut(BaseModel):
     id: uuid.UUID
     resource_id: uuid.UUID
@@ -49,6 +57,11 @@ class StoreOut(BaseModel):
     first_import_completed_at: datetime | None
     sync: SyncOut
     created_at: datetime
+    # Self-hosted platforms (2B-06); empty for Shopify.
+    site_url: str | None = None
+    platform_version: str | None = None
+    health: HealthOut | None = None
+    counted_statuses: list[str] | None = None  # order statuses the figures count (Q-2B-2)
 
 
 class InventoryOut(BaseModel):

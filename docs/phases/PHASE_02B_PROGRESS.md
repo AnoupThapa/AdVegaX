@@ -8,8 +8,8 @@ Plan: `PHASE_02B_PLAN.md` (approved 2026-10-14, A19, all recommendations). One r
 | 2B-02 Paged-import framework + migration 0010 | ✅ Done |
 | 2B-03 Store URL rules, SSRF hardening, REST client | ✅ Done |
 | 2B-04 Connect, key delivery, discovery | ✅ Done |
-| 2B-05 Mapping and initial import | ✅ Done — awaiting review |
-| 2B-06 Scheduled checks, deletions, Sync now, store health | Not started |
+| 2B-05 Mapping and initial import | ✅ Done |
+| 2B-06 Scheduled checks, deletions, Sync now, store health | ✅ Done — awaiting review |
 | 2B-07 Finance mapping, status and currency rules, parity tests | Not started |
 | 2B-08 API additions and web app | Not started |
 | 2B-09 Simulator journey, browser test, docs, report | Not started |
@@ -267,3 +267,64 @@ Plan: `PHASE_02B_PLAN.md` (approved 2026-10-14, A19, all recommendations). One r
 **Blocked:** Step 0 (2B-01) still waits for the WordPress downloads.
 
 **Next task:** 2B-06 — the 15-minute and nightly checks for WooCommerce stores, deletions, "Sync now", and store health (unreachable, key refused, header stripped, version, cost of goods off, time zone unknown).
+
+---
+
+## 2B-06 — Scheduled checks, deletions, Sync now, store health (2026-10-15)
+
+**Completed**
+- **Checks at each platform's own pace:**
+  - the scheduler now looks every 5 minutes and checks each store when it is due;
+  - **WooCommerce every 15 minutes** (no webhooks, Q-2B-3);
+  - **Shopify hourly as before** (it also has webhooks).
+- **Deleted products:**
+  - the nightly full check (and "Sync now") reads the whole catalogue;
+  - products and variations it no longer lists are **marked deleted** and leave the products page; their order history is kept;
+  - the 15-minute checks never delete anything, and an empty catalogue answer (more likely a fault) deletes nothing.
+- **"Sync now"** runs that full check for WooCommerce stores, as for Shopify.
+- **Daily store health** (with the first import and each nightly check):
+  - records the WooCommerce version and the store address;
+  - gives one plain warning when something needs the merchant: WooCommerce too old, time zone unknown, or cost of goods switched off;
+  - a failed health check never fails the sync.
+- **Access problems** use the connection's existing health:
+  - a refused key → "Needs reconnecting";
+  - a host stripping the login header → an error with that reason;
+  - imported data stays readable.
+- **A store waiting for a time zone** (2B-04 deviation) starts importing once a rediscovery finds a named time zone. No unlink or relink is needed.
+- **Store API:** new optional fields `site_url`, `platform_version`, `health` and `counted_statuses` (processing, on hold, completed, refunded); empty for Shopify. API types regenerated.
+- **Undefined costs:** a WooCommerce product with cost of goods on but no cost entered is read as **no cost**, never as a cost of 0 (to confirm live).
+
+**Files changed** (17)
+- New (2): `tests/api/test_woocommerce_sync.py` (13 tests), this report.
+- Modified (15):
+  - `app/domains/commerce/{importer,schemas,read_service}.py`, `app/domains/integrations/jobs.py`;
+  - `app/providers/woocommerce/{provider,mapping}.py`, `app/providers/base/{capabilities,types,registry}.py`;
+  - `app/core/settings.py`, `app/workers/{celery_app,job_tasks}.py`;
+  - `tests/woocommerce_sim.py`, `tests/api/test_commerce_sync.py` (see deviation 1);
+  - frontend `lib/api/openapi.json`, `lib/api/schema.d.ts` (regenerated);
+  - docs `INTEGRATION_GUIDES.md`, `API_SPECIFICATION.md`, status documents.
+- Deleted: none. No migration (the columns came with 0010).
+
+**Tests**
+- **13 new.** They cover:
+  - WooCommerce due after 15 minutes and Shopify after an hour, side by side;
+  - the nightly check marking a deleted product and a deleted variation, with history kept and the 15-minute check never pruning;
+  - an empty answer deleting nothing;
+  - "Sync now" running the full check;
+  - a healthy store's version, address and counted statuses;
+  - each configuration warning found by the daily check, with the store still active;
+  - change checks not repeating the health check;
+  - a failed health check not failing the sync;
+  - a revoked key and a stripped header after import;
+  - a store waiting for its time zone importing after rediscovery.
+- **Backend `make check`: 781 passed**, coverage 97 %.
+- **Frontend `npm run check`: 290 passed**, build passes. **E2E: 10 passed.**
+
+**Deviations**
+1. **Two existing scheduling tests were updated, not removed.** Before, the scheduler checked every store on every run. Now each store is checked only when its platform's interval has passed. The tests therefore move the clock forward first, and one test now also asserts the new 5-minute scheduler tick.
+2. **Configuration warnings are separate from access problems.** The store's health shows only configuration (version, time zone, cost of goods); an unreachable store or refused key shows through the existing connection and sync status, so nothing is reported twice.
+3. **Cost of goods "off" is detected from the product data:** WooCommerce sends the cost field only when the feature is on. To confirm live.
+
+**Blocked:** Step 0 (2B-01) still waits for the WordPress downloads.
+
+**Next task:** 2B-07 — finance mapping rules (counting only the counted statuses; other-currency days "not available") and the full parity tests against the Shopify sample.

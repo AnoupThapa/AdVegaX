@@ -355,6 +355,7 @@ def test_nightly_deep_check_reads_the_whole_catalogue_and_recent_orders(
 def test_reconciliation_skips_a_running_chain_but_restarts_a_stale_one(
     owner, sim, clock, runtime, admin_engine
 ):
+    clock.advance(timedelta(hours=1))  # each store is checked at its platform's interval
     original = runtime.enqueue_job
     runtime.enqueue_job = lambda job_id, delay=0: None
     try:
@@ -381,12 +382,17 @@ def test_reconciliation_schedules(runtime):
     schedule = celery_app.conf.beat_schedule
     assert schedule["commerce-reconcile"]["task"] == "advegax.schedule.commerce_reconcile"
     assert schedule["commerce-deep"]["schedule"] == 24 * 3600
+    # The scheduler looks every 5 minutes; each store is checked at its platform's interval.
+    assert schedule["commerce-reconcile"]["schedule"] == 5 * 60
 
 
-def test_scheduled_tasks_run_once_per_tick(owner, runtime):
+def test_scheduled_tasks_run_once_per_tick(owner, runtime, clock):
     from app.workers import job_tasks
 
     runtime.redis.delete("schedule-lock:commerce_reconcile", "schedule-lock:commerce_deep")
+    assert job_tasks.commerce_reconcile_task() == 0  # imported just now: not due yet
+    runtime.redis.delete("schedule-lock:commerce_reconcile")
+    clock.advance(timedelta(hours=1))
     assert job_tasks.commerce_reconcile_task() == 1
     assert job_tasks.commerce_reconcile_task() is None
     assert job_tasks.commerce_deep_task() == 1

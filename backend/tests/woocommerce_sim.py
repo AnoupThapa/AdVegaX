@@ -45,6 +45,7 @@ class WooStore:
     orders: list[dict[str, Any]] = field(default_factory=list)
     refunds: list[dict[str, Any]] = field(default_factory=list)
     max_per_page: int = 100
+    cogs_enabled: bool = True  # off: WooCommerce sends no cost_of_goods_sold fields at all
 
 
 @dataclass
@@ -155,6 +156,8 @@ class WooSim:
         total = len(selected)
         pages = max(1, -(-total // per_page))
         chunk = selected[(page - 1) * per_page : page * per_page]
+        if not store.cogs_enabled:
+            chunk = [_without_costs(i) for i in chunk]
         fields = params.get("_fields")
         if fields:  # the store honours _fields (to confirm live, Step 0 item 3)
             wanted = set(fields.split(","))
@@ -195,6 +198,16 @@ class WooSim:
             resolver=lambda host, port: [PUBLIC_IP],
             transport=httpx.MockTransport(self.handler),
         )
+
+
+def _without_costs(item: dict[str, Any]) -> dict[str, Any]:
+    item = {k: v for k, v in item.items() if k != "cost_of_goods_sold"}
+    if isinstance(item.get("line_items"), list):
+        item["line_items"] = [
+            {k: v for k, v in line.items() if k != "cost_of_goods_sold"}
+            for line in item["line_items"]
+        ]
+    return item
 
 
 def _error(status: int, code: str) -> httpx.Response:
@@ -290,6 +303,7 @@ def sample_store(store: WooStore) -> WooStore:
             "stock_quantity": None,
             "date_modified_gmt": "2026-10-01T00:00:00",
             "categories": [{"id": 3, "name": "Gloves"}],
+            "cost_of_goods_sold": {"values": [], "total_value": 0},  # on, nothing defined
         },
         {
             "id": 20,
@@ -328,6 +342,7 @@ def sample_store(store: WooStore) -> WooStore:
                 "stock_quantity": 0,
                 "date_modified_gmt": "2026-10-01T00:00:00",
                 "attributes": [{"name": "Size", "option": "Large"}],
+                "cost_of_goods_sold": {"values": [], "total_value": 0},
             },
         ]
     }

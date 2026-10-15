@@ -119,8 +119,16 @@ def external_id(value: Any) -> str:
 
 
 def _cost_total(node: dict[str, Any]) -> Decimal | None:
+    """A product's cost. With cost of goods on, WooCommerce sends the field for every product;
+    one without a defined cost has no ``values`` (and a total of 0) — that is "no cost", not a
+    cost of 0 (to confirm live, Step 0)."""
     cogs = node.get("cost_of_goods_sold")
-    return money(cogs.get("total_value")) if isinstance(cogs, dict) else None
+    if not isinstance(cogs, dict):
+        return None
+    values = cogs.get("values")
+    if isinstance(values, list) and not values:
+        return None
+    return money(cogs.get("total_value"))
 
 
 # ------------------------------------------------------------------ catalogue

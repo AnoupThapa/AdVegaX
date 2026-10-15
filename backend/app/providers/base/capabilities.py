@@ -26,6 +26,11 @@ class Capability(StrEnum):
     # The platform posts the credentials to AdVegaX (server to server) instead of handing the
     # browser a code to exchange (e.g. WooCommerce key generation, 2B-04).
     KEY_DELIVERY = "key_delivery"
+    # A full catalogue read lists every live product, so a product missing from the nightly
+    # full check was deleted on the platform (2B-06).
+    COMPLETE_CATALOGUE = "complete_catalogue"
+    # The provider can report store configuration problems (version, cost tracking, …).
+    STORE_HEALTH = "store_health"
 
 
 @dataclass(frozen=True)
