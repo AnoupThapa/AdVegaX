@@ -4,6 +4,7 @@ Only **additive** components are stored; ratios such as margin are calculated on
 Every row records the definition version that produced it (``finance-v1``) so figures stay
 reproducible when definitions change. Cost of goods is NULL — not 0 — when any sold line in the
 day has no known cost; ``costed_net_sales`` and ``uncosted_lines`` let the UI show coverage.
+``other_currency_orders`` marks days whose figures cannot be given yet (Q-2B-5).
 """
 
 from __future__ import annotations
@@ -47,6 +48,7 @@ class FinancialDaily(UUIDPrimaryKey, Base):
         ),
         CheckConstraint("orders_count >= 0", name="orders_count"),
         CheckConstraint("uncosted_lines >= 0", name="uncosted_lines"),
+        CheckConstraint("other_currency_orders >= 0", name="other_currency_orders"),
         CheckConstraint("(cogs IS NULL) = (uncosted_lines > 0)", name="cogs_availability"),
         Index(
             "ix_financial_daily_organization_id_store_id_day", "organization_id", "store_id", "day"
@@ -72,4 +74,7 @@ class FinancialDaily(UUIDPrimaryKey, Base):
     cogs: Mapped[Decimal | None] = mapped_column(MONEY)
     costed_net_sales: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
     uncosted_lines: Mapped[int] = mapped_column(Integer, nullable=False)
+    # Orders in another currency with activity this day (2B, Q-2B-5): never summed; the day's
+    # figures are shown as not available while this is above 0.
+    other_currency_orders: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
     computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

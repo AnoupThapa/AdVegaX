@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Alert } from "@/components/ui/Alert";
 import { SelectField } from "@/components/ui/SelectField";
 import { messageFor } from "@/lib/api/errors";
-import { AVAILABILITY_LABELS, type Availability } from "@/lib/format/availability";
+import type { Availability } from "@/lib/format/availability";
 import {
   figureReason,
   formatFigureMoney,
@@ -27,11 +27,15 @@ const PERIODS = [
 type Totals = DailyMetrics["totals"];
 type Money = (value: string | null | undefined) => string;
 
-/** A plain total as a figure carrying the totals' availability. */
-const plain = (value: string | null | undefined, availability: Availability): Figure => ({
+/** A plain total as a figure carrying the availability (and reason) of its day or period. */
+const plain = (
+  value: string | null | undefined,
+  availability: Availability,
+  reason?: string | null,
+): Figure => ({
   value: value ?? null,
   availability,
-  reason: availability === "not_synchronized" ? "not_synchronized" : null,
+  reason: reason ?? (availability === "not_synchronized" ? "not_synchronized" : null),
 });
 
 function Tile({ label, value, note }: { label: string; value: string; note?: string | undefined }) {
@@ -46,16 +50,17 @@ function Tile({ label, value, note }: { label: string; value: string; note?: str
 
 function Totals({ totals, money }: { totals: Totals; money: (f: Figure) => string }) {
   const a = totals.availability as Availability;
+  const reason = totals.reason ?? null;
   const orders =
     totals.orders_count === null || totals.orders_count === undefined
-      ? AVAILABILITY_LABELS.not_synchronized
+      ? figureReason(plain(null, a === "available" ? "not_synchronized" : a, reason))
       : new Intl.NumberFormat().format(totals.orders_count);
   const coverage = totals.cost_coverage as Figure;
   return (
     <>
       <ul className={styles.tiles} aria-label="Totals for the period">
-        <Tile label="Net sales" value={money(plain(totals.net_sales, a))} />
-        <Tile label="Total sales" value={money(plain(totals.total_sales, a))} />
+        <Tile label="Net sales" value={money(plain(totals.net_sales, a, reason))} />
+        <Tile label="Total sales" value={money(plain(totals.total_sales, a, reason))} />
         <Tile label="Orders" value={orders} />
         <Tile
           label="Gross profit"
@@ -71,19 +76,19 @@ function Totals({ totals, money }: { totals: Totals; money: (f: Figure) => strin
       </ul>
       <dl className={styles.facts} aria-label="Breakdown">
         <dt>Gross sales</dt>
-        <dd>{money(plain(totals.gross_sales, a))}</dd>
+        <dd>{money(plain(totals.gross_sales, a, reason))}</dd>
         <dt>Discounts</dt>
-        <dd>{money(plain(totals.discounts, a))}</dd>
+        <dd>{money(plain(totals.discounts, a, reason))}</dd>
         <dt>Returns and adjustments</dt>
-        <dd>{money(plain(totals.sales_reversals, a))}</dd>
+        <dd>{money(plain(totals.sales_reversals, a, reason))}</dd>
         <dt>Shipping charged</dt>
-        <dd>{money(plain(totals.shipping, a))}</dd>
+        <dd>{money(plain(totals.shipping, a, reason))}</dd>
         <dt>Taxes</dt>
-        <dd>{money(plain(totals.taxes, a))}</dd>
+        <dd>{money(plain(totals.taxes, a, reason))}</dd>
         <dt>Duties</dt>
-        <dd>{money(plain(totals.duties, a))}</dd>
+        <dd>{money(plain(totals.duties, a, reason))}</dd>
         <dt>Fees</dt>
-        <dd>{money(plain(totals.fees, a))}</dd>
+        <dd>{money(plain(totals.fees, a, reason))}</dd>
         <dt>Cost of goods</dt>
         <dd>{money(totals.cogs as Figure)}</dd>
         <dt>Shipping costs</dt>
@@ -98,8 +103,11 @@ function Totals({ totals, money }: { totals: Totals; money: (f: Figure) => strin
 }
 
 function DailyTable({ data, money }: { data: DailyMetrics; money: Money }) {
-  const cell = (value: string | null | undefined, synced: boolean) =>
-    synced ? money(value) : AVAILABILITY_LABELS.not_synchronized;
+  // A day without figures says why: not synced yet, or orders in other currencies.
+  const missing = (day: DailyMetrics["days"][number]) =>
+    figureReason(plain(null, day.availability as Availability, day.reason));
+  const cell = (value: string | null | undefined, day: DailyMetrics["days"][number]) =>
+    day.availability === "available" ? money(value) : missing(day);
   return (
     <div className={styles.tableWrap}>
       <table className={styles.table}>
@@ -132,13 +140,13 @@ function DailyTable({ data, money }: { data: DailyMetrics; money: Money }) {
               <tr key={day.day}>
                 <th scope="row">{formatDay(day.day)}</th>
                 <td className={`${styles.num} ${synced ? "" : styles.missing}`}>
-                  {synced ? day.orders_count : AVAILABILITY_LABELS.not_synchronized}
+                  {synced ? day.orders_count : missing(day)}
                 </td>
                 <td className={`${styles.num} ${synced ? "" : styles.missing}`}>
-                  {cell(day.net_sales, synced)}
+                  {cell(day.net_sales, day)}
                 </td>
                 <td className={`${styles.num} ${synced ? "" : styles.missing}`}>
-                  {cell(day.total_sales, synced)}
+                  {cell(day.total_sales, day)}
                 </td>
                 <td
                   className={`${styles.num} ${cogs.availability === "available" ? "" : styles.missing}`}
@@ -180,9 +188,11 @@ export function RevenueView({ orgId, store }: { orgId: string; store: Store }) {
         <>
           {metrics.data.totals.availability !== "available" ? (
             <Alert tone="info">
-              {metrics.data.synced_from
-                ? `Part of this period is before ${formatDay(metrics.data.synced_from)}, the first day AdVegaX has complete data for, so period totals are not shown. Choose a shorter period.`
-                : "This store's history is still being imported. Figures appear when the import finishes."}
+              {metrics.data.totals.reason === "other_currency_orders"
+                ? `Some days in this period have orders in another currency. They cannot be added to ${store.currency} amounts yet, so those days and the period totals are not shown.`
+                : metrics.data.synced_from
+                  ? `Part of this period is before ${formatDay(metrics.data.synced_from)}, the first day AdVegaX has complete data for, so period totals are not shown. Choose a shorter period.`
+                  : "This store's history is still being imported. Figures appear when the import finishes."}
             </Alert>
           ) : null}
           <p className={styles.muted}>

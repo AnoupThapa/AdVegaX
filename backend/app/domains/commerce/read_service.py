@@ -81,7 +81,9 @@ def _figure(figure: Figure) -> FigureOut:
     return FigureOut(value=figure.value, availability=figure.availability, reason=figure.reason)
 
 
-NOT_SYNCED = FigureOut(value=None, availability="not_synchronized", reason="not_synchronized")
+NOT_SYNCHRONIZED = "not_synchronized"
+# A day with orders in another currency (Q-2B-5) until currency conversion (Phase 6).
+OTHER_CURRENCY = "other_currency_orders"
 
 
 @dataclass(frozen=True)
@@ -343,17 +345,27 @@ class CommerceReadService:
             synced_from = _synced_from(store, tz)
             days: list[DayOut] = []
             components: list[DayComponents] = []
-            all_synced = True
+            all_synced, foreign = True, False
             for ordinal in range(first.toordinal(), last.toordinal() + 1):
                 day = date.fromordinal(ordinal)
                 if synced_from is None or day < synced_from or day > today:
                     all_synced = False
-                    days.append(_unsynced_day(day))
+                    days.append(_missing_day(day, NOT_SYNCHRONIZED, NOT_SYNCHRONIZED))
                     continue
-                c = _components(rows.get(day))
+                row = rows.get(day)
+                if row is not None and row.other_currency_orders:
+                    foreign = True  # Q-2B-5: never summed with the store currency
+                    days.append(_missing_day(day, "unavailable", OTHER_CURRENCY))
+                    continue
+                c = _components(row)
                 components.append(c)
                 days.append(_day_out(day, c))
-            totals = _totals(components) if all_synced else _unsynced_totals()
+            if not all_synced:
+                totals = _missing_totals(NOT_SYNCHRONIZED, NOT_SYNCHRONIZED)
+            elif foreign:
+                totals = _missing_totals("unavailable", OTHER_CURRENCY)
+            else:
+                totals = _totals(components)
             return DailyMetricsOut(
                 store_id=store.id,
                 definition_version=DEFINITION_VERSION,
@@ -489,10 +501,13 @@ def _day_out(day: date, c: DayComponents) -> DayOut:
     )
 
 
-def _unsynced_day(day: date) -> DayOut:
+def _missing_day(day: date, availability: str, reason: str) -> DayOut:
+    """A day whose figures cannot be given: none are shown, never 0 (A10)."""
+    missing = FigureOut(value=None, availability=availability, reason=reason)
     return DayOut(
         day=day,
-        availability="not_synchronized",
+        availability=availability,
+        reason=reason,
         gross_sales=None,
         discounts=None,
         sales_reversals=None,
@@ -503,9 +518,9 @@ def _unsynced_day(day: date) -> DayOut:
         fees=None,
         total_sales=None,
         orders_count=None,
-        cogs=NOT_SYNCED,
-        gross_profit=NOT_SYNCED,
-        cost_coverage=NOT_SYNCED,
+        cogs=missing,
+        gross_profit=missing,
+        cost_coverage=missing,
     )
 
 
@@ -533,10 +548,13 @@ def _totals(components: list[DayComponents]) -> TotalsOut:
     )
 
 
-def _unsynced_totals() -> TotalsOut:
-    """Part of the period has no data yet: totals would understate it, so none are given."""
+def _missing_totals(availability: str, reason: str) -> TotalsOut:
+    """Part of the period has no data yet, or has days in another currency: totals would be
+    wrong, so none are given."""
+    missing = FigureOut(value=None, availability=availability, reason=reason)
     return TotalsOut(
-        availability="not_synchronized",
+        availability=availability,
+        reason=reason,
         gross_sales=None,
         discounts=None,
         sales_reversals=None,
@@ -547,11 +565,11 @@ def _unsynced_totals() -> TotalsOut:
         fees=None,
         total_sales=None,
         orders_count=None,
-        cogs=NOT_SYNCED,
-        gross_profit=NOT_SYNCED,
-        gross_margin=NOT_SYNCED,
-        cost_coverage=NOT_SYNCED,
-        shipping_cost=NOT_SYNCED,
-        payment_fees=NOT_SYNCED,
-        new_vs_returning=NOT_SYNCED,
+        cogs=missing,
+        gross_profit=missing,
+        gross_margin=missing,
+        cost_coverage=missing,
+        shipping_cost=missing,
+        payment_fees=missing,
+        new_vs_returning=missing,
     )

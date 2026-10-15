@@ -49,7 +49,8 @@ from app.domains.commerce.models import (
     SalesEntry,
     Store,
 )
-from app.domains.finance.service import order_days, recompute_days, recompute_since
+from app.domains.finance.definitions import local_day
+from app.domains.finance.service import order_days, recompute_days, recompute_since, store_zone
 from app.domains.integrations.jobs import call_provider
 from app.domains.integrations.models import (
     ExternalConnection,
@@ -558,14 +559,38 @@ def _fail(rt: Runtime, ctx: _Context, code: str) -> None:
         )
 
 
+def _recompute_older_orders(rt: Runtime, ctx: _Context, since: datetime) -> int:
+    if ctx.started_at is None:
+        return 0
+    with rt.db.transaction(org_id=ctx.org_id) as session:
+        store = session.get(Store, ctx.store_id)
+        ids = session.execute(
+            select(Order.id).where(
+                Order.store_id == ctx.store_id,
+                Order.updated_at >= ctx.started_at,  # written by this chain
+                Order.ordered_at < since,
+            )
+        ).scalars()
+        if store is None:
+            return 0
+        tz = store_zone(store)
+        first = local_day(since, tz)
+        days = {d for d in order_days(session, store, ids) if d < first}
+        return recompute_days(session, rt, store, days)
+
+
 def _finish(rt: Runtime, ctx: _Context, counts: dict[str, int], provider: CommerceProvider) -> None:
     created, updated = _filters(rt, ctx)
     since = updated or created or ctx.history_from
     with rt.db.transaction(org_id=ctx.org_id) as session:
         _resolve_links(session, ctx)  # before the figures: sales need their order lines' costs
     if since is not None:
-        # Rebuild the daily figures the orders export can have changed (2A-08).
-        counts = {**counts, "finance_days": recompute_since(rt, ctx.org_id, ctx.store_id, since)}
+        # Rebuild the daily figures the orders export can have changed (2A-08) …
+        days = recompute_since(rt, ctx.org_id, ctx.store_id, since)
+        # … and the earlier days of older orders this chain changed: a WooCommerce order that
+        # becomes counted (or is cancelled) moves money on its order date (2B-07, Q-2B-2).
+        days += _recompute_older_orders(rt, ctx, since)
+        counts = {**counts, "finance_days": days}
     health = _check_health(rt, ctx, provider)
     now = rt.clock.now()
     with rt.db.transaction(org_id=ctx.org_id) as session:

@@ -901,6 +901,8 @@ export interface components {
             net_sales: string | null;
             /** Orders Count */
             orders_count: number | null;
+            /** Reason */
+            reason?: string | null;
             /** Sales Reversals */
             sales_reversals: string | null;
             /** Shipping */
@@ -1552,6 +1554,8 @@ export interface components {
             /** Orders Count */
             orders_count: number | null;
             payment_fees: components["schemas"]["FigureOut"];
+            /** Reason */
+            reason?: string | null;
             /** Sales Reversals */
             sales_reversals: string | null;
             /** Shipping */

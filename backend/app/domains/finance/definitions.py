@@ -28,11 +28,17 @@ duties, fees           duty lines / fee + additional-fee lines: sum  net
 taxes                  sum  tax of every counted line
 total_sales            net_sales + taxes + duties + shipping + fees  (Shopify "Total sales")
 orders_count           orders whose order date is the day (test orders are never imported)
+other_currency_orders  orders in another currency placed or refunded that day — never summed;
+                       the day is "not available" while above 0 (Q-2B-5)
 cogs                   sum  quantity x unit cost for product lines: + on the order day, - on the
                        return day; **NULL when any of the day's product lines has no cost**
 costed_net_sales       net sales of product lines whose cost is known (cost coverage)
 uncosted_lines         product order/return lines without a known cost
 =====================  =======================================================================
+
+Only **counted** orders contribute: orders the platform keeps but that do not count (a
+WooCommerce order that is pending, failed or cancelled — Q-2B-2) are left out by the caller,
+and orders in another currency are only counted per day (Q-2B-5).
 
 Gift-card sales (a liability, not revenue) and tips are not counted; nor are line types the
 platform adds in future ("other") — they are logged so a new type is noticed.
@@ -80,6 +86,7 @@ class DayComponents:
     known_cogs: Decimal = ZERO
     costed_net_sales: Decimal = ZERO
     uncosted_lines: int = 0
+    other_currency_orders: int = 0
     skipped_lines: int = field(default=0, compare=False)
 
     @property
@@ -100,8 +107,13 @@ def local_day(moment: datetime, tz: ZoneInfo) -> date:
 
 
 def compute_days(
-    sales: Iterable[SaleRow], order_times: Iterable[datetime], tz: ZoneInfo
+    sales: Iterable[SaleRow],
+    order_times: Iterable[datetime],
+    tz: ZoneInfo,
+    other_currency: Iterable[tuple[object, datetime]] = (),
 ) -> dict[date, DayComponents]:
+    """``other_currency``: (order id, moment) for every placement or sale of an order in
+    another currency; each order is counted once per day."""
     days: dict[date, DayComponents] = {}
 
     def day(moment: datetime) -> DayComponents:
@@ -109,6 +121,13 @@ def compute_days(
 
     for ordered_at in order_times:
         day(ordered_at).orders_count += 1
+
+    seen: set[tuple[object, date]] = set()
+    for order_id, moment in other_currency:
+        key = (order_id, local_day(moment, tz))
+        if key not in seen:
+            seen.add(key)
+            day(moment).other_currency_orders += 1
 
     for sale in sales:
         target = day(sale.happened_at)

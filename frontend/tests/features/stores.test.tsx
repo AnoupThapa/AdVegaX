@@ -278,6 +278,57 @@ describe("Store page and revenue", () => {
     expect(screen.queryByRole("button", { name: "Sync now" })).toBeNull();
   });
 
+  it("shows days with orders in other currencies as not available, never as 0", async () => {
+    const other = "other_currency_orders";
+    const foreign = day("2026-10-06", {
+      ...unsynced("2026-10-06"),
+      availability: "unavailable",
+      reason: other,
+      cogs: figure(null, "unavailable", other),
+      gross_profit: figure(null, "unavailable", other),
+      cost_coverage: figure(null, "unavailable", other),
+    });
+    storeApi("viewer", {
+      [`GET ${STORE_PATH}/metrics/daily`]: ok(
+        metrics(
+          {
+            availability: "unavailable",
+            reason: other,
+            gross_sales: null,
+            discounts: null,
+            sales_reversals: null,
+            net_sales: null,
+            shipping: null,
+            taxes: null,
+            duties: null,
+            fees: null,
+            total_sales: null,
+            orders_count: null,
+            cogs: figure(null, "unavailable", other),
+            gross_profit: figure(null, "unavailable", other),
+            gross_margin: figure(null, "unavailable", other),
+            cost_coverage: figure(null, "unavailable", other),
+          },
+          [day("2026-10-05"), foreign],
+        ),
+      ),
+    });
+    renderWithProviders(
+      inShell(<StorePage />, `/orgs/${ORG_ID}/stores/${STORE}`, { storeId: STORE }),
+      { session: me },
+    );
+    expect(await screen.findByText(/orders in another currency/)).toBeInTheDocument();
+    const label = "Not available — orders in other currencies";
+    const totals = screen.getByRole("list", { name: "Totals for the period" });
+    expect(within(totals).queryByText(/\$0\.00/)).toBeNull();
+    expect(within(totals).queryByText("Not synced yet")).toBeNull();
+    expect(within(totals).getAllByText(label).length).toBeGreaterThanOrEqual(3);
+    const row = screen.getByRole("row", { name: new RegExp(formatDay("2026-10-06")) });
+    expect(within(row).getAllByText(label)).toHaveLength(4);
+    const counted = screen.getByRole("row", { name: new RegExp(formatDay("2026-10-05")) });
+    expect(within(counted).getByText(/\$63\.69$/)).toBeInTheDocument();
+  });
+
   it("changes the period", async () => {
     const api = storeApi();
     renderWithProviders(

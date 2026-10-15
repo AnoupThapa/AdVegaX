@@ -9,8 +9,8 @@ Plan: `PHASE_02B_PLAN.md` (approved 2026-10-14, A19, all recommendations). One r
 | 2B-03 Store URL rules, SSRF hardening, REST client | ✅ Done |
 | 2B-04 Connect, key delivery, discovery | ✅ Done |
 | 2B-05 Mapping and initial import | ✅ Done |
-| 2B-06 Scheduled checks, deletions, Sync now, store health | ✅ Done — awaiting review |
-| 2B-07 Finance mapping, status and currency rules, parity tests | Not started |
+| 2B-06 Scheduled checks, deletions, Sync now, store health | ✅ Done |
+| 2B-07 Finance mapping, status and currency rules, parity tests | ✅ Done — awaiting review |
 | 2B-08 API additions and web app | Not started |
 | 2B-09 Simulator journey, browser test, docs, report | Not started |
 
@@ -328,3 +328,62 @@ Plan: `PHASE_02B_PLAN.md` (approved 2026-10-14, A19, all recommendations). One r
 **Blocked:** Step 0 (2B-01) still waits for the WordPress downloads.
 
 **Next task:** 2B-07 — finance mapping rules (counting only the counted statuses; other-currency days "not available") and the full parity tests against the Shopify sample.
+
+---
+
+## 2B-07 — Finance rules for WooCommerce and parity with Shopify (2026-10-15)
+
+**Completed**
+- **Parity proven.** The same sample store on Shopify and on WooCommerce now gives **identical daily figures to the cent**: every day, the period totals and the stored daily rows (sales, discounts, returns, shipping, taxes, orders, cost of goods, cost coverage).
+- **Only counted orders are in the figures (Q-2B-2):**
+  - pending, failed, cancelled, draft and trashed orders are kept but never counted (not in sales, not in the order count);
+  - an order that later becomes paid is added to its order day at the next 15-minute check;
+  - an order that is cancelled afterwards is taken out of its order day again.
+- **Orders in another currency (Q-2B-5):**
+  - they are never added to the store's amounts;
+  - every day such an order was placed or refunded on shows **"Not available — orders in other currencies"**, with all values empty, never 0 or a partial figure;
+  - the period totals are not shown while the period contains such a day, with a plain explanation;
+  - "Not synced yet" takes precedence when part of the period has no data.
+- **Web app:** the revenue page now says why a day or total is missing (not synced, or orders in other currencies) instead of always "Not synced yet".
+- **Fix found by the new tests:** a change check only rebuilt figures from its own start time. An older order whose status changed (for example pending → processing) left its order day stale. Each check now also rebuilds the earlier days of the orders it changed. This applies to Shopify too and is harmless there.
+
+**Files changed** (16)
+- New (2): migration `0011_finance_other_currency.py`, `tests/api/test_woocommerce_finance.py` (12 tests).
+- Modified (14):
+  - `app/domains/finance/{definitions,service,models}.py`;
+  - `app/domains/commerce/{importer,read_service,schemas}.py`;
+  - `tests/unit/test_finance_definitions.py` (1 test added);
+  - frontend `features/stores/RevenueView.tsx`, `lib/format/money.ts`, `tests/features/stores.test.tsx` (1 test added), `lib/api/openapi.json`, `lib/api/schema.d.ts` (regenerated);
+  - docs `DATABASE_SCHEMA.md`, `API_SPECIFICATION.md`, this report.
+- Deleted: none.
+
+**Tests**
+- **14 new:** 12 backend API tests, 1 finance unit test and 1 web app test. They cover:
+  - the Shopify/WooCommerce side-by-side comparison (API figures and stored rows);
+  - the golden values reached through WooCommerce;
+  - each uncounted status left out, and on-hold counted;
+  - an order counted once paid and removed when cancelled;
+  - an other-currency order's day, its refund day and a mixed day all "not available", with other days untouched and period totals withheld;
+  - "not synced" taking precedence;
+  - each other-currency order counted once per day;
+  - the web app showing the reason and no $0.00.
+- **Backend `make check`: 794 passed**, coverage 97 %.
+- **Frontend `npm run check`: 291 passed**, build passes. **E2E: 10 passed.**
+
+**Security:** no new endpoint, input or secret. Tenant isolation is unchanged: every new query is store-scoped and runs inside the organization's row-level security.
+
+**Migration:** `0011_finance_other_currency`. It is additive: `financial_daily.other_currency_orders` (default 0). Downgrade to 0010.
+
+**Deviations**
+1. **One extra migration (0011).** The plan listed only migration 0010. The daily figures table needed a marker for other-currency days, so those days are known wherever the figures are reused later (Phase 3 onwards), not only on this page. The migration is additive and reversible.
+2. **A small web app change ahead of 2B-08.** Without it, the revenue page would have shown other-currency days as "Not synced yet", which is wrong. The rest of the web app work stays in 2B-08.
+3. **Wider rebuild after change checks** (the fix above): a change check now also rebuilds the earlier days of the orders it changed.
+
+**Blocked:** Step 0 (2B-01) still waits for the WordPress downloads.
+
+**Next task:** 2B-08 — web app:
+- the WooCommerce connect form (store address);
+- connect error messages;
+- the store health panel;
+- the counted-statuses text and the cost hint.
+

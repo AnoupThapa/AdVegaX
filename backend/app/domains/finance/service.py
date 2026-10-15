@@ -2,7 +2,9 @@
 
 ``recompute_days`` rebuilds the rows for a span of store-local days from ``sales_entries`` and
 ``orders`` — idempotent, so it can run after every import, reconciliation or webhook. Days with
-no activity get no row. Everything runs in the store's tenant context (RLS).
+no activity get no row. Orders that do not count (``excluded_reason``, Phase 2B) are left out;
+orders in another currency are only counted per day (``other_currency_orders``). Everything
+runs in the store's tenant context (RLS).
 """
 
 from __future__ import annotations
@@ -49,6 +51,34 @@ def _bounds(first: date, last: date, tz: ZoneInfo) -> tuple[datetime, datetime]:
     return start, end
 
 
+def _other_currency(
+    session: Session, store: Store, start: datetime, end: datetime
+) -> list[tuple[uuid.UUID, datetime]]:
+    """Placements and sales of orders in another currency (Q-2B-5): counted per day, never
+    summed. Orders left out for their status (Q-2B-2) are ignored entirely."""
+    foreign = Order.excluded_reason == "other_currency"
+    placed = session.execute(
+        select(Order.id, Order.ordered_at).where(
+            Order.store_id == store.id, foreign, Order.ordered_at >= start, Order.ordered_at < end
+        )
+    ).all()
+    sold = session.execute(
+        select(SalesEntry.order_id, SalesEntry.happened_at)
+        .join(
+            Order,
+            (Order.id == SalesEntry.order_id)
+            & (Order.organization_id == SalesEntry.organization_id),
+        )
+        .where(
+            SalesEntry.store_id == store.id,
+            foreign,
+            SalesEntry.happened_at >= start,
+            SalesEntry.happened_at < end,
+        )
+    ).all()
+    return [(order_id, moment) for order_id, moment in [*placed, *sold] if moment is not None]
+
+
 def recompute_span(session: Session, rt: Runtime, store: Store, first: date, last: date) -> int:
     """Rebuild every day from ``first`` to ``last`` (store-local, inclusive). Returns rows."""
     if last < first:
@@ -77,6 +107,11 @@ def recompute_span(session: Session, rt: Runtime, store: Store, first: date, las
                 SalesEntry.quantity,
                 OrderItem.unit_cost,
             )
+            .join(
+                Order,
+                (Order.id == SalesEntry.order_id)
+                & (Order.organization_id == SalesEntry.organization_id),
+            )
             .outerjoin(
                 OrderItem,
                 (OrderItem.id == SalesEntry.order_item_id)
@@ -86,15 +121,19 @@ def recompute_span(session: Session, rt: Runtime, store: Store, first: date, las
                 SalesEntry.store_id == store.id,
                 SalesEntry.happened_at >= start,
                 SalesEntry.happened_at < end,
+                Order.excluded_reason.is_(None),
             )
         )
     ]
     order_times = session.execute(
         select(Order.ordered_at).where(
-            Order.store_id == store.id, Order.ordered_at >= start, Order.ordered_at < end
+            Order.store_id == store.id,
+            Order.ordered_at >= start,
+            Order.ordered_at < end,
+            Order.excluded_reason.is_(None),
         )
     ).scalars()
-    days = compute_days(sales, order_times, tz)
+    days = compute_days(sales, order_times, tz, _other_currency(session, store, start, end))
     skipped = sum(d.skipped_lines for d in days.values())
     if skipped:
         logger.warning(
@@ -131,6 +170,7 @@ def recompute_span(session: Session, rt: Runtime, store: Store, first: date, las
             "cogs": c.cogs,
             "costed_net_sales": c.costed_net_sales,
             "uncosted_lines": c.uncosted_lines,
+            "other_currency_orders": c.other_currency_orders,
             "computed_at": now,
         }
         for day, c in sorted(days.items())

@@ -238,6 +238,22 @@ def test_orders_are_counted_on_their_order_day_only():
     }
 
 
+def test_other_currency_orders_are_counted_once_per_day_and_never_summed():
+    """Q-2B-5: each order once per store-local day it was placed or refunded on."""
+    days = compute_days(
+        [sale(at(5), "10.00")],
+        [at(5)],
+        SYDNEY,
+        other_currency=[("a", at(5)), ("a", at(5, hour=1)), ("b", at(5)), ("a", at(8))],
+    )
+    assert {d: v.other_currency_orders for d, v in days.items()} == {
+        date(2026, 10, 5): 2,
+        date(2026, 10, 8): 1,
+    }
+    assert days[date(2026, 10, 5)].net_sales == D("10.00")  # only the store-currency sale
+    assert days[date(2026, 10, 8)].total_sales == D(0)
+
+
 def test_period_summary_and_unsupported_figures():
     days = compute_days(
         [

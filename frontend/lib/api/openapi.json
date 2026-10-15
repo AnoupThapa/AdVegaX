@@ -526,6 +526,17 @@
             ],
             "title": "Orders Count"
           },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
           "sales_reversals": {
             "anyOf": [
               {
@@ -2552,6 +2563,17 @@
           },
           "payment_fees": {
             "$ref": "#/components/schemas/FigureOut"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
           },
           "sales_reversals": {
             "anyOf": [

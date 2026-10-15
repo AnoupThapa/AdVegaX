@@ -110,6 +110,8 @@ class ProductPage(BaseModel):
 class DayOut(BaseModel):
     day: date
     availability: Availability  # not_synchronized before the history start or the import
+    # Why the figures are missing: not_synchronized | other_currency_orders (Q-2B-5).
+    reason: str | None = None
     gross_sales: Decimal | None
     discounts: Decimal | None
     sales_reversals: Decimal | None
@@ -127,6 +129,9 @@ class DayOut(BaseModel):
 
 class TotalsOut(BaseModel):
     availability: Availability  # not_synchronized when part of the period is not synced
+    # not_synchronized | other_currency_orders (a day of the period has orders in another
+    # currency, which are never added to the store currency).
+    reason: str | None = None
     gross_sales: Decimal | None
     discounts: Decimal | None
     sales_reversals: Decimal | None

@@ -1,8 +1,8 @@
 # AdVegaX — Project Status & Progress Log
 
-**Last updated:** 2026-10-13
+**Last updated:** 2026-10-15
 **Current phase:** Phase 2A approved (A18) and in progress · Phase 1 (1A, 1B, 1C) implemented — awaiting product-owner review
-**Code written:** Phase 1A + 1B backend, Phase 1C web application · **Migrations:** 0001–0007 · **Integrations:** Shopify connector in progress (2A, simulator-tested; not yet tried on a live store) · test (fake) platform
+**Code written:** Phase 1A + 1B backend, Phase 1C web application · **Migrations:** 0001–0011 · **Integrations:** Shopify connector in progress (2A, simulator-tested; not yet tried on a live store) · test (fake) platform
 
 Update this file at the end of every phase and every approved sub-phase (ROADMAP §5, step 13).
 
@@ -88,6 +88,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | 2026-10-14 | **2B-04** WooCommerce connect: address check, store's own read-only approval page, server-to-server key delivery (single-use state, read keys only, verified on the recorded store, version ≥ 9.0), browser return shows the outcome once to the same person; discovery; one store one organization; offered only when switched on; WooCommerce simulator; 61 tests | `phases/PHASE_02B_PROGRESS.md`, `API_SPECIFICATION.md §5`, `SECURITY.md` |
 | 2026-10-15 | **2B-05** WooCommerce paged import: products, variations, stock, costs, orders (lines, shipping, fees, order-time cost), refunds; same sales records as Shopify (sample store gives identical daily figures); uncounted orders kept with the reason; customer details never stored; import pauses at the request limit; 45 tests | `phases/PHASE_02B_PROGRESS.md`, `INTEGRATION_GUIDES.md` |
 | 2026-10-15 | **2B-06** Each store checked at its platform's pace (WooCommerce every 15 min, Shopify hourly); nightly full check marks deleted products/variations (history kept); daily store health (version, time zone, cost of goods); stores waiting for a time zone start after rediscovery; store API health fields; 13 tests | `phases/PHASE_02B_PROGRESS.md`, `INTEGRATION_GUIDES.md` |
+| 2026-10-15 | **2B-07** Finance rules: only counted WooCommerce orders in the figures (status changes rebuild the order day); orders in another currency never summed, their days and the period totals shown as "Not available — orders in other currencies"; Shopify/WooCommerce parity to the cent (API and stored rows); migration 0011; 14 tests | `phases/PHASE_02B_PROGRESS.md`, `DATABASE_SCHEMA.md §4A`, `API_SPECIFICATION.md` |
 | 2026-10-08 | **Phase 1B implemented**: connections/resources/links, encrypted credentials, SSRF-safe client, rate limiter, provider framework + fake platform, jobs with retry/dead-letter, single scheduler, audited denials | `backend/`, `phases/PHASE_01B_REPORT.md`, `SECURITY.md`, `INTEGRATION_GUIDES.md` |
 
 ## 3. Decision log

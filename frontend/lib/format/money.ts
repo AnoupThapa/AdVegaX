@@ -70,6 +70,8 @@ const REASONS: Readonly<Record<string, string>> = {
   not_provided_by_platform: "Not provided by the platform",
   customer_key_not_collected: "Not collected yet",
   not_synchronized: "Not synced yet",
+  // Q-2B-5: never added to the store currency until currency conversion (Phase 6).
+  other_currency_orders: "Not available — orders in other currencies",
 };
 
 /** Why a figure is not shown, in plain words. */
