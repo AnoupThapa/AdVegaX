@@ -20,9 +20,11 @@ deletes AdVegaX's copy and the web app asks the merchant to revoke the key in Wo
 
 from __future__ import annotations
 
+import json
+import logging
 import re
 from collections.abc import Mapping
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from urllib.parse import urlencode
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -38,7 +40,10 @@ from app.providers.base.interfaces import Secrets
 from app.providers.base.types import (
     AuthorizationRequest,
     AuthScheme,
+    BulkKind,
     ChangedObject,
+    CommercePage,
+    CommerceRecord,
     ConnectResult,
     FetchResult,
     PreparedConnect,
@@ -49,6 +54,7 @@ from app.providers.base.types import (
     WebhookDelivery,
     WebhookTarget,
 )
+from app.providers.woocommerce import mapping
 from app.providers.woocommerce.client import (
     HttpFactory,
     UnexpectedResponseError,
@@ -56,6 +62,10 @@ from app.providers.woocommerce.client import (
     WooCommerceApiNotFoundError,
 )
 from app.providers.woocommerce.stores import StoreAddress, normalize_store_url
+
+logger = logging.getLogger("advegax.woocommerce")
+PER_PAGE = 100
+VARIABLE_PER_PAGE = 20  # variable products per step while reading their variations
 
 READ_SCOPE = "read"
 _KEY = re.compile(r"^ck_[A-Za-z0-9]{20,64}$")
@@ -85,6 +95,7 @@ class WooCommerceProvider:
         frozenset(
             {
                 Capability.KEY_DELIVERY,
+                Capability.PAGED_IMPORT,
                 Capability.PRODUCT_COST,
                 Capability.INVENTORY,
                 Capability.REFUND_LINES,
@@ -207,6 +218,123 @@ class WooCommerceProvider:
     def history_limit(self, granted_scopes: tuple[str, ...]) -> timedelta | None:  # noqa: ARG002
         return None  # WooCommerce allows the whole history; the core applies 13 months
 
+    def read_page(
+        self,
+        secrets: Secrets,
+        kind: BulkKind,
+        cursor: str | None,
+        *,
+        created_since: datetime | None = None,
+        updated_since: datetime | None = None,
+    ) -> CommercePage:
+        """One page of the paged import (2B-05). The cursor walks:
+
+        * catalogue: products (all types, id order) → for each variable product (20 per step)
+          its variations;
+        * orders: orders created since ``created_since`` → refunds created since then.
+
+        ``updated_since`` (the 15-minute and hourly checks) limits products, variable products
+        and orders to those modified since then, and refunds to those created since then.
+        The store's currency is read once (system status) and travels in the cursor.
+        """
+        _, client = self._client(secrets)
+        state = _decode(cursor)
+        if "c" not in state:
+            settings = _object(_object(client.get("/system_status").data).get("settings"))
+            currency = settings.get("currency")
+            if not isinstance(currency, str) or not _CURRENCY.fullmatch(currency):
+                raise UnexpectedResponseError()
+            first = "p" if kind is BulkKind.CATALOGUE else "o"
+            state = {"s": first, "pg": 1, "c": currency}
+        currency = str(state["c"])
+        modified = _when(updated_since)
+        stage = state.get("s")
+        if stage == "p":
+            params = _filters(
+                {"orderby": "id", "order": "asc", "_fields": mapping.PRODUCT_FIELDS},
+                modified_after=modified,
+            )
+            page = client.get_page("/products", int(state["pg"]), PER_PAGE, params)
+            records, skipped = mapping.safe_map(page.data, mapping.product_records, currency)
+            following = _next(state, page.total_pages, {"s": "v", "pg": 1, "i": 0, "vp": 1})
+            return self._page(
+                records, skipped, following, _progress(state, page.total_pages, 0, 60)
+            )
+        if stage == "v":
+            return self._variations(client, state, currency, modified)
+        if stage == "o":
+            params = _filters(
+                {"orderby": "id", "order": "asc", "_fields": mapping.ORDER_FIELDS},
+                after=_when(created_since),
+                modified_after=modified,
+            )
+            page = client.get_page("/orders", int(state["pg"]), PER_PAGE, params)
+            records, skipped = mapping.safe_map(page.data, mapping.order_records, currency)
+            following = _next(state, page.total_pages, {"s": "r", "pg": 1})
+            return self._page(
+                records, skipped, following, _progress(state, page.total_pages, 0, 80)
+            )
+        if stage == "r":
+            since = _when(updated_since) or _when(created_since)
+            params = _filters(
+                {"orderby": "id", "order": "asc", "_fields": mapping.REFUND_FIELDS}, after=since
+            )
+            page = client.get_page("/refunds", int(state["pg"]), PER_PAGE, params)
+            records, skipped = mapping.safe_map(page.data, mapping.refund_records, currency)
+            following = _next(state, page.total_pages, None)
+            return self._page(
+                records, skipped, following, _progress(state, page.total_pages, 80, 100)
+            )
+        raise UnexpectedResponseError()
+
+    def _variations(
+        self, client: WooClient, state: dict[str, Any], currency: str, modified: str | None
+    ) -> CommercePage:
+        params = _filters(
+            {"type": "variable", "orderby": "id", "order": "asc", "_fields": "id"},
+            modified_after=modified,
+        )
+        parents = client.get_page("/products", int(state["pg"]), VARIABLE_PER_PAGE, params)
+        ids = [p.get("id") for p in parents.data if isinstance(p, dict)]
+        index = int(state["i"])
+        if index >= len(ids):  # this page of variable products is done
+            if parents.total_pages is not None and int(state["pg"]) < parents.total_pages:
+                following = {**state, "pg": int(state["pg"]) + 1, "i": 0, "vp": 1}
+                return self._page([], 0, following, _progress(state, parents.total_pages, 60, 100))
+            return self._page([], 0, None, 100)
+        parent = mapping.external_id(ids[index])
+        page = client.get_page(
+            f"/products/{parent}/variations",
+            int(state["vp"]),
+            PER_PAGE,
+            {"orderby": "id", "order": "asc", "_fields": mapping.VARIATION_FIELDS},
+        )
+        records, skipped = mapping.safe_map(
+            page.data, lambda v, cur: [mapping.variation_record(v, parent, cur)], currency
+        )
+        if page.total_pages is not None and int(state["vp"]) < page.total_pages:
+            following = {**state, "vp": int(state["vp"]) + 1}
+        else:
+            following = {**state, "i": index + 1, "vp": 1}
+        return self._page(
+            records, skipped, following, _progress(state, parents.total_pages, 60, 100)
+        )
+
+    def _page(
+        self,
+        records: list[CommerceRecord],
+        skipped: int,
+        following: dict[str, Any] | None,
+        progress: int,
+    ) -> CommercePage:
+        if skipped:
+            logger.warning("woocommerce_records_skipped", extra={"count": skipped})
+        return CommercePage(
+            records=tuple(records),
+            next_cursor=json.dumps(following, separators=(",", ":")) if following else None,
+            progress=progress,
+        )
+
     def webhook_target(self, topic: str) -> WebhookTarget:  # noqa: ARG002
         return WebhookTarget(ChangedObject.NONE)
 
@@ -271,3 +399,50 @@ def store_timezone(timezone_string: object, gmt_offset: object) -> str | None:
     if hours == 0:
         return "UTC"
     return f"Etc/GMT{'-' if hours > 0 else '+'}{abs(hours)}"
+
+
+# ------------------------------------------------------------------ paged-import helpers
+def _decode(cursor: str | None) -> dict[str, Any]:
+    if not cursor:
+        return {}
+    try:
+        state = json.loads(cursor)
+    except ValueError:
+        raise UnexpectedResponseError() from None
+    if not isinstance(state, dict) or state.get("s") not in ("p", "v", "o", "r"):
+        raise UnexpectedResponseError()
+    for key in ("pg", "i", "vp"):
+        value = state.get(key, 1)
+        if not isinstance(value, int) or not 0 <= value <= 1_000_000:
+            raise UnexpectedResponseError()
+    return state
+
+
+def _when(moment: datetime | None) -> str | None:
+    return moment.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S") if moment else None
+
+
+def _filters(base: dict[str, str | int], **dates: str | None) -> dict[str, str | int]:
+    params = dict(base)
+    chosen = {k: v for k, v in dates.items() if v}
+    if chosen:
+        params.update(chosen)
+        params["dates_are_gmt"] = "true"
+    return params
+
+
+def _next(
+    state: dict[str, Any], total_pages: int | None, after: dict[str, Any] | None
+) -> dict[str, Any] | None:
+    """The next page of this stage, or the first of the following stage."""
+    page = int(state["pg"])
+    if total_pages is not None and page < total_pages:
+        return {**state, "pg": page + 1}
+    return {**after, "c": state["c"]} if after is not None else None
+
+
+def _progress(state: dict[str, Any], total_pages: int | None, low: int, high: int) -> int:
+    if not total_pages:
+        return high
+    done = min(int(state["pg"]), total_pages) / total_pages
+    return int(low + (high - low) * done)

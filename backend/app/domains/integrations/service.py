@@ -803,7 +803,11 @@ class IntegrationService:
                 session.execute(
                     select(OrganizationResourceLink)
                     .where(OrganizationResourceLink.external_resource_id == resource_id)
-                    .order_by(OrganizationResourceLink.linked_at)
+                    # Equal link times (same moment): ended links before the current one.
+                    .order_by(
+                        OrganizationResourceLink.linked_at,
+                        OrganizationResourceLink.unlinked_at.asc().nulls_last(),
+                    )
                 )
                 .scalars()
                 .all()

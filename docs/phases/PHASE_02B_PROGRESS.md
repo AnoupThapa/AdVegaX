@@ -7,8 +7,8 @@ Plan: `PHASE_02B_PLAN.md` (approved 2026-10-14, A19, all recommendations). One r
 | 2B-01 Step 0 on a local WooCommerce test store | ⏸ Waiting — `wordpress.org` / `downloads.wordpress.org` / `api.wordpress.org` are still blocked by the network settings (checked 2026-10-14) |
 | 2B-02 Paged-import framework + migration 0010 | ✅ Done |
 | 2B-03 Store URL rules, SSRF hardening, REST client | ✅ Done |
-| 2B-04 Connect, key delivery, discovery | ✅ Done — awaiting review |
-| 2B-05 Mapping and initial import | Not started |
+| 2B-04 Connect, key delivery, discovery | ✅ Done |
+| 2B-05 Mapping and initial import | ✅ Done — awaiting review |
 | 2B-06 Scheduled checks, deletions, Sync now, store health | Not started |
 | 2B-07 Finance mapping, status and currency rules, parity tests | Not started |
 | 2B-08 API additions and web app | Not started |
@@ -190,3 +190,80 @@ Plan: `PHASE_02B_PLAN.md` (approved 2026-10-14, A19, all recommendations). One r
 **Blocked:** Step 0 (2B-01) still waits for the WordPress downloads.
 
 **Next task:** 2B-05 — mapping and initial import: products, variations, stock, cost, orders (lines, shipping, fees, taxes, discounts, order-time cost) and refunds, page by page; customer details dropped.
+
+---
+
+## 2B-05 — Mapping and initial import (2026-10-15)
+
+**Completed**
+- **WooCommerce is imported page by page** through the 2B-02 framework. Linking a connected store starts the import:
+  1. products (all types, by id);
+  2. the variations of each variable product;
+  3. orders created in the last 13 months (Q-2B-4);
+  4. refunds in the same window.
+
+  The cursor, which also carries the store currency read once from the system status, is saved after every page.
+- **Catalogue:**
+  - a simple product is its own variant;
+  - product statuses mapped to the shared ones;
+  - stock only when WooCommerce manages it (otherwise "not tracked", never 0);
+  - product cost from WooCommerce's cost of goods;
+  - the first category as product type.
+- **Orders and refunds.** These become the **same kind of sales records as Shopify's**: amount including tax, the tax, and the discount (subtotal − total). The finance core therefore needs nothing WooCommerce-specific, and the sample store produces **the same daily figures as the Shopify sample** (net sales 48.81, total 63.69 on 5 Oct; cost of goods "not available" because the engraving line has no cost).
+  - Lines, shipping and fee lines are all mapped.
+  - Each refund line is linked to the line it returns.
+  - The part of a refund that no line explains becomes a reversal ("adjustment").
+- **Costs recorded with the sale:** each order line takes the cost WooCommerce recorded when it was sold. A line without one (sold before cost of goods was switched on) stays **without cost**; it is never given today's product cost (Q-2B-1).
+- **Uncounted orders are kept with the reason:** pending payment, failed, cancelled, drafts and trash (Q-2B-2), or another currency (Q-2B-5). Counting them out of the figures is part of 2B-07.
+- **Customer details are never stored:**
+  - the mapper does not read billing, shipping, email, phone, names or notes;
+  - requests ask the store to leave them out (`_fields`);
+  - a store that ignores that still leaks nothing.
+- **Robustness:**
+  - an unreadable record is skipped and counted, never half-stored;
+  - the check for changes reads only what was modified;
+  - when the per-store request limit is reached, the import **pauses and resumes** instead of failing.
+- **Shared framework, small additions:**
+  - orders can carry `excluded_reason`;
+  - order lines can carry a platform-recorded cost that later product costs never replace.
+
+  Shopify is unchanged.
+- **Unrelated fix:** link history ordering had a tie when two links were made at the same moment (an ended link could be listed after the current one). Ended links now come first; this showed up as a flaky test.
+
+**Files changed** (13)
+- New (4): `app/providers/woocommerce/mapping.py`, `tests/api/test_woocommerce_import.py` (12 tests), `tests/providers/test_woocommerce_mapping.py` (33 tests), this report.
+- Modified (9):
+  - `app/providers/woocommerce/provider.py` (paged reader);
+  - `app/providers/base/types.py`, `app/domains/commerce/importer.py`, `app/domains/integrations/service.py` (link history order);
+  - `tests/woocommerce_sim.py` (paged collections and the sample store);
+  - docs `INTEGRATION_GUIDES.md`, status documents.
+- Deleted: none. No migration (the columns came with 0010).
+
+**Tests**
+- **45 new.** They cover:
+  - the full import: products, variants, stock, costs, the order, lines and links, every sales record, the refund, and the daily figures equal to the Shopify sample's;
+  - customer details neither requested nor stored, even when the store ignores the field list;
+  - many 1-record pages giving the same store (including several variable products and variation pages);
+  - the history window with GMT dates;
+  - uncounted orders kept with the reason;
+  - no cost without cost of goods, even when the product has one;
+  - amount-only refunds as reversals;
+  - unreadable records skipped and the rest imported;
+  - the check for changes reading only modified records;
+  - a bad cursor ending the chain;
+  - the request limit pausing, not failing;
+  - mapping edge cases (money, dates, product types, inherited stock, fees, per-unit cost, which orders count, partly explained refunds).
+- **Backend `make check`: 768 passed**, coverage 97 % (WooCommerce provider 97 %, mapping 98 %).
+- **Frontend `npm run check`: 290 passed. E2E: 10 passed.**
+
+**Deviations**
+1. **Variations changed without their product** (e.g. stock sold) are picked up by the nightly full check, not the 15-minute check. WooCommerce 9.x has no cross-product "changed variations" list. The 10.3+ `/variations` endpoint can speed this up later.
+2. **The hashed customer key stays empty** (new vs returning customers "not available"), as for Shopify. It can come later without storing anything personal.
+3. **To confirm on the test store (Step 0):**
+   - that `cost_of_goods_sold.value` on an order line is the line total (taken as total ÷ quantity);
+   - the `/refunds` endpoint and `_refunded_item_id`;
+   - that `_fields` is honoured.
+
+**Blocked:** Step 0 (2B-01) still waits for the WordPress downloads.
+
+**Next task:** 2B-06 — the 15-minute and nightly checks for WooCommerce stores, deletions, "Sync now", and store health (unreachable, key refused, header stripped, version, cost of goods off, time zone unknown).

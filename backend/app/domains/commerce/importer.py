@@ -815,6 +815,7 @@ def _upsert_orders(
                 "refund_amount": r.refund_amount,
                 "total_amount": r.total_amount,
                 "external_updated_at": r.updated_at,
+                "excluded_reason": r.excluded_reason,
                 "created_at": now,
                 "updated_at": now,
             }
@@ -839,6 +840,7 @@ def _upsert_orders(
                     "refund_amount",
                     "total_amount",
                     "external_updated_at",
+                    "excluded_reason",
                     "updated_at",
                 )
             },
@@ -901,18 +903,21 @@ def _upsert_lines(session: Session, ctx: _Context, records: list[CommerceOrderLi
     )
     history = _cost_history(session, list(variants.values()))
     ordered = _order_times(session, list(orders.values()))
-    rows = []
+    rows: list[dict[str, Any]] = []
+    platform_rows: list[dict[str, Any]] = []
     for r in _dedupe(records):
         order_id = orders.get(r.order_external_id)
         if order_id is None:
             continue
         variant_id = variants.get(r.variant_external_id or "")
-        cost, source = (
-            _cost_for(history.get(variant_id, []), ordered[order_id])
-            if variant_id
-            else (None, None)
-        )
-        rows.append(
+        if r.cost_from_platform:
+            # The platform recorded the cost with the sale (WooCommerce COGS): use it as is.
+            cost, source = (r.unit_cost, "order_time") if r.unit_cost is not None else (None, None)
+        elif variant_id:
+            cost, source = _cost_for(history.get(variant_id, []), ordered[order_id])
+        else:
+            cost, source = None, None
+        (platform_rows if r.cost_from_platform else rows).append(
             {
                 "id": uuid.uuid4(),
                 "organization_id": ctx.org_id,
@@ -927,20 +932,23 @@ def _upsert_lines(session: Session, ctx: _Context, records: list[CommerceOrderLi
                 "cost_source": source,
             }
         )
-    if not rows:
-        return 0
-    stmt = insert(_table(OrderItem)).values(rows)
-    excluded = stmt.excluded
-    session.execute(
-        stmt.on_conflict_do_update(
-            constraint="uq_order_items_order_id_external_line_item_id",
-            set_={
-                c: getattr(excluded, c)
-                for c in ("variant_id", "title", "sku", "quantity", "unit_price")
-            },
+    updated = ("variant_id", "title", "sku", "quantity", "unit_price")
+    for batch, columns in (
+        (rows, updated),
+        # A platform-recorded cost is the truth for that sale: refreshed with the line.
+        (platform_rows, (*updated, "unit_cost", "cost_source")),
+    ):
+        if not batch:
+            continue
+        stmt = insert(_table(OrderItem)).values(batch)
+        excluded = stmt.excluded
+        session.execute(
+            stmt.on_conflict_do_update(
+                constraint="uq_order_items_order_id_external_line_item_id",
+                set_={c: getattr(excluded, c) for c in columns},
+            )
         )
-    )
-    return len(rows)
+    return len(rows) + len(platform_rows)
 
 
 def _order_times(session: Session, order_ids: list[uuid.UUID]) -> dict[uuid.UUID, datetime]:

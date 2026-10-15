@@ -196,6 +196,9 @@ class CommerceOrderRecord:
     refund_amount: Decimal | None = None
     total_amount: Decimal | None = None
     updated_at: datetime | None = None
+    # Kept but not counted in the figures (2B): "status" (e.g. pending payment, cancelled) or
+    # "other_currency". None = counted.
+    excluded_reason: str | None = None
 
 
 @dataclass(frozen=True)
@@ -207,6 +210,11 @@ class CommerceOrderLineRecord:
     title: str | None = None
     sku: str | None = None
     unit_price: Decimal | None = None
+    # Platforms that record cost on the order itself (WooCommerce COGS, 2B-05): the unit cost
+    # at the time of sale, or None when the platform recorded none — then the line has no
+    # cost (never a later product cost, never 0).
+    unit_cost: Decimal | None = None
+    cost_from_platform: bool = False
 
 
 @dataclass(frozen=True)

@@ -95,6 +95,19 @@ Add one section per provider when its phase is implemented.
 
   The browser then returns to the API callback and sees the outcome. One live connection per store (host + lower-cased path); reconnect reuses the connection. Disconnect deletes AdVegaX's copy only (a read key cannot revoke itself). Offered only when `WOOCOMMERCE_ENABLED=true`.
 - **Discovery:** one `store` resource with its name (WordPress), currency (`system_status.settings.currency`) and time zone. The time zone comes from WordPress `timezone_string`, or from a whole-hour `gmt_offset` mapped to `Etc/GMT±N`. A fractional offset leaves it empty, so the store cannot be imported until a named zone is set (to show on the store page in 2B-06).
+- **Data synchronized (2B-05, paged import):**
+  - **Catalogue:** products (all types, by id), then the variations of each variable product.
+    - A simple product is its own single variant.
+    - Statuses map as publish → active, draft/pending → draft, private → unlisted, trash → deleted.
+    - Stock is read only when managed (`manage_stock`, or `parent` for variations); otherwise it is "not tracked".
+    - Product cost comes from `cost_of_goods_sold.total_value`.
+  - **Orders:** created in the last 13 months (`after`, `dates_are_gmt=true`), with lines, shipping and fee lines, and the order-time cost per line from `line_items[].cost_of_goods_sold.value` (taken as the line total ÷ quantity, to confirm live). A line without a recorded cost has **no cost**: it is never given a later product cost.
+  - **Refunds:** from `/refunds`, with their lines linked to the original line through `_refunded_item_id`. Any refunded amount not covered by lines becomes an `adjustment` reversal.
+  - **Customer details:** never read or stored. Requests also send `_fields` so the store need not send them.
+  - **Uncounted orders** are kept with a reason: `excluded_reason = status` (pending, failed, cancelled, drafts, trash) or `other_currency`.
+  - **Sales records** use the same definitions as Shopify's: amount including tax, tax, and discount = subtotal − total.
+  - **Changes:** `modified_after` on products, variable products and orders, and refunds created since the last check.
+  - **Pace:** 2 requests per second per store; when the limit is reached the import pauses and resumes.
 - **Store address (2B-03):** HTTPS, public DNS name, port 443, optional sub-folder; normalized as described in SECURITY §9. Identity across organizations: host + lower-cased path.
 - **Errors (2B-03):**
   - 401 with `woocommerce_rest_authentication_error` → `key_rejected` (Needs reconnecting);
