@@ -5,8 +5,8 @@ Plan: `PHASE_03_PLAN.md` (approved 2026-10-15, A21, all recommendations). One re
 | Task | Status |
 |---|---|
 | 3-01 Step 0 on the test manager account | ⏸ Waiting — needs the developer token, the Google Cloud OAuth client and network access to Google's API (Q-3-10, option C) |
-| 3-02 Advertising model + migration 0012; read interface; read-only guard | ✅ Done — awaiting review |
-| 3-03 Google sign-in, token refresh and revocation, REST client, simulator | Not started |
+| 3-02 Advertising model + migration 0012; read interface; read-only guard | ✅ Done |
+| 3-03 Google sign-in, token refresh and revocation, REST client, simulator | ✅ Done — awaiting review |
 | 3-04 Discovery and linking rules | Not started |
 | 3-05 Structure import | Not started |
 | 3-06 Performance import | Not started |
@@ -92,3 +92,84 @@ Until then, work follows option C: build against Google's documentation and a si
 - token refresh and revocation;
 - the REST client (fixed Google hosts, headers, error codes, paging);
 - the Google Ads simulator.
+
+---
+
+## 3-03 — Google sign-in, tokens, Google Ads client, simulator (2026-10-16)
+
+**Completed**
+- **Connect Google Ads:**
+  - a manager clicks Connect and is sent to Google's own sign-in and consent page. AdVegaX asks for **Google Ads access only** (plus Google's account id, see deviation 1), with PKCE and offline access, so syncs can run while nobody is signed in;
+  - after approval, the code is exchanged for tokens, which are stored encrypted. If the person unticks Google Ads on the consent page, nothing is connected and the reason is shown.
+- **Keeping access fresh:**
+  - Google's access token lasts about an hour and is renewed before it expires;
+  - if Google refuses the renewal (permission removed, password or testing-mode limits), the connection shows **"Needs reconnecting"**.
+- **Reconnect and sharing:**
+  - reconnecting with the same Google account reuses the same connection, so linked accounts and data are kept;
+  - another Google account becomes a second connection;
+  - the same Google account can also be connected by another organization, such as an agency (Q-3-11).
+- **Disconnect** removes AdVegaX's permission at Google and always deletes our copy, even if Google cannot be reached.
+- **Google Ads client**, read-only:
+  - lists the accounts a person can reach directly, and runs reports with `search` (all pages) and `searchStream`;
+  - sends the developer token and, for accounts under a manager, the manager's id;
+  - checks account ids before use;
+  - calls only Google's fixed addresses, through the existing safe client.
+- **Plain error codes** for every situation the plan lists:
+  - no access to the account;
+  - account cancelled or not enabled;
+  - developer token not approved for real accounts (Test access);
+  - wrong developer token;
+  - person has no Google Ads account;
+  - Google's limit reached, with Google's suggested wait;
+  - bad query, temporary problems.
+- **Google Ads simulator:**
+  - Google's sign-in (consent, PKCE check, refresh, revoke);
+  - manager hierarchies and Google's access rules;
+  - test vs real accounts and Test vs Explorer tokens;
+  - paged and streamed reports;
+  - errors in Google's own format.
+- **Settings:** `GOOGLE_ADS_ENABLED` (off), client id, client secret, developer token (secrets only from the secret store or the local untracked settings file), API version `v25`. Google Ads is offered only when all of them are set.
+
+**Files changed** (16)
+- New (7): `app/providers/google_ads/{__init__,client,provider}.py`, `tests/google_ads_sim.py`, `tests/providers/test_google_ads_client.py` (35 tests), `tests/providers/test_google_ads_provider.py` (50 tests), `tests/api/test_google_ads_connect.py` (18 tests).
+- Modified (9):
+  - `app/providers/base/{types,registry}.py`;
+  - `app/core/settings.py`;
+  - `app/domains/integrations/service.py` (connections whose platform account may serve several organizations);
+  - docs `INTEGRATION_GUIDES.md` (Google Ads entry), `SECURITY.md` (Google sign-in), `PROJECT_STATUS.md`, this report.
+- Deleted: none. No migration. No web-app change (Google Ads is off and its pages come in 3-09).
+
+**Tests**
+- **103 new.** They cover:
+  - sign-in address, scopes, PKCE, offline access and consent;
+  - stored tokens never appearing in responses, the audit log, the logs or the encrypted row in plain text;
+  - declining, unticking Google Ads, a refused code, and single-use state;
+  - renewal before expiry, a new refresh token from Google being saved, and a refused renewal → "Needs reconnecting";
+  - reconnect reuse, a second Google account, and the same Google account in another organization;
+  - disconnect revoking at Google, including when Google is unreachable;
+  - ID-token rules (issuer, audience, expiry, account id);
+  - headers, manager access, paging and streaming;
+  - account-id checks and every error code;
+  - Test token vs real accounts;
+  - calls to private addresses refused;
+  - offered only when fully configured.
+- Google Ads code coverage: client 97 %, provider 100 %.
+- **Backend `make check`: 923 passed**, coverage 97 %. **Frontend `npm run check`: 343 passed** (unchanged). **E2E: 11 passed.**
+
+**Security**
+- No secret ever leaves the server; the tests scan for the tokens, the client secret and the developer token.
+- Only Google's fixed addresses are called. Read-only is enforced by the static guard (three read calls only).
+- The Google account's email and name are never requested.
+
+**Deviations**
+1. **`openid` is requested alongside Google Ads.** It gives only Google's stable account id, which is how AdVegaX recognises a reconnect by the same person and keeps the connection and its data. No email, name or picture is requested or stored. The consent page may mention "associate you with your personal info on Google"; to confirm in Step 0.
+2. **A connection can be marked "per organization".** The same Google account can be connected in two organizations without the store rule ("one live connection per account", Q6) blocking it. Stores keep that rule.
+3. **Discovery is not part of this task.** A connection made now finds no accounts until 3-04; Google Ads stays switched off until the phase is done.
+
+**Blocked:** Step 0 (3-01), as before.
+
+**Next task:** 3-04 — discovery:
+- direct accounts and each manager's hierarchy;
+- one linkable entry per advertiser account, with its name, currency, time zone and manager path;
+- manager and cancelled accounts shown but not linkable (Q-3-3).
+

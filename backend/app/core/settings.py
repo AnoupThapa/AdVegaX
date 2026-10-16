@@ -160,6 +160,17 @@ class Settings(BaseSettings):
     WOOCOMMERCE_APP_NAME: str = Field(default="AdVegaX", min_length=1, max_length=64)
     WOOCOMMERCE_RECONCILE_INTERVAL: timedelta = timedelta(minutes=15)  # Q-2B-3
 
+    # --- Google Ads (Phase 3; PHASE_03_PLAN) ---------------------------------------------
+    # Offered only when switched on AND the Google Cloud OAuth client and the developer token
+    # are configured. The secrets come from the environment / secret store only (D15); in
+    # development from the local, untracked settings file — never chat or the repository.
+    GOOGLE_ADS_ENABLED: bool = False
+    GOOGLE_ADS_CLIENT_ID: str | None = None
+    GOOGLE_ADS_CLIENT_SECRET: SecretStr | None = None
+    GOOGLE_ADS_DEVELOPER_TOKEN: SecretStr | None = None
+    # The newest major version when coding started (Q-3-1); upgraded yearly.
+    GOOGLE_ADS_API_VERSION: str = Field(default="v25", pattern=r"^v[0-9]{2,3}$")
+
     # --- Commerce import (Phase 2A, 2A-06; PHASE_02A_PLAN §9) ----------------------------
     # Longest order history imported (13 months, Q9); the platform may allow less (Shopify:
     # 60 days without ``read_all_orders``).

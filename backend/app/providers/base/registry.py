@@ -56,7 +56,38 @@ def build_registry(
         registry.register(build_shopify(settings, clock or SystemClock(), outbound))
     if settings.WOOCOMMERCE_ENABLED and outbound is not None:
         registry.register(build_woocommerce(settings, outbound))
+    if google_ads_configured(settings) and outbound is not None:
+        registry.register(build_google_ads(settings, clock or SystemClock(), outbound))
     return registry
+
+
+def google_ads_configured(settings: Settings) -> bool:
+    return bool(
+        settings.GOOGLE_ADS_ENABLED
+        and settings.GOOGLE_ADS_CLIENT_ID
+        and settings.GOOGLE_ADS_CLIENT_SECRET is not None
+        and settings.GOOGLE_ADS_DEVELOPER_TOKEN is not None
+    )
+
+
+def build_google_ads(
+    settings: Settings, clock: Clock, outbound: OutboundPolicy
+) -> PlatformProvider:
+    """Google Ads, read-only (Phase 3): fixed Google hosts through the SSRF-safe client."""
+    from app.providers.google_ads.provider import GoogleAdsProvider
+    from app.providers.http.client import SafeHttpClient
+
+    assert settings.GOOGLE_ADS_CLIENT_ID is not None
+    assert settings.GOOGLE_ADS_CLIENT_SECRET is not None
+    assert settings.GOOGLE_ADS_DEVELOPER_TOKEN is not None
+    return GoogleAdsProvider(
+        client_id=settings.GOOGLE_ADS_CLIENT_ID,
+        client_secret=settings.GOOGLE_ADS_CLIENT_SECRET.get_secret_value(),
+        developer_token=settings.GOOGLE_ADS_DEVELOPER_TOKEN.get_secret_value(),
+        api_version=settings.GOOGLE_ADS_API_VERSION,
+        http_factory=lambda: SafeHttpClient(outbound),
+        clock=clock,
+    )
 
 
 def build_woocommerce(settings: Settings, outbound: OutboundPolicy) -> PlatformProvider:

@@ -137,6 +137,27 @@ Add one section per provider when its phase is implemented.
 - **Paging:** `page` / `per_page` (≤ 100) with `X-WP-Total` / `X-WP-TotalPages`; history is read through the paged-import framework (2B-02).
 - **To confirm live (Step 0, plan §4.2):** see the plan's list. It includes the error identifiers above, whether `_fields` stops customer details from being sent, the maximum `per_page`, and line-total tax treatment.
 
+### Google Ads (`google_ads`) — Phase 3, in progress (simulator; live Step 0 pending)
+- **Category / auth scheme:** advertising / OAuth 2.0 web-server flow with **PKCE (S256)** and **offline access** (refresh token). Scopes: `https://www.googleapis.com/auth/adwords` and `openid`. `openid` is used only for the stable Google account id (`sub`) in the ID token, so a reconnect by the same person reuses the connection; no email, name or picture is requested or stored. The `adwords` scope covers read and write, so read-only is enforced in code (static guard: only `customers:listAccessibleCustomers`, `googleAds:search`, `googleAds:searchStream`).
+- **Configuration:** offered only when `GOOGLE_ADS_ENABLED=true` **and** `GOOGLE_ADS_CLIENT_ID`, `GOOGLE_ADS_CLIENT_SECRET` and `GOOGLE_ADS_DEVELOPER_TOKEN` are set (secret store / local untracked settings only). The API version is `GOOGLE_ADS_API_VERSION` (`v25`, Q-3-1).
+- **Hosts:** browser → `accounts.google.com/o/oauth2/v2/auth`. Server → `oauth2.googleapis.com/token`, `oauth2.googleapis.com/revoke`, `googleads.googleapis.com/{version}`. All go through the SSRF-safe client; redirects are not followed.
+- **Connect (3-03):** `start` takes no parameters and returns Google's consent address with `access_type=offline`, `prompt=consent`, `include_granted_scopes=false`, single-use state and a PKCE challenge.
+  - Callback checks: the `adwords` scope was granted (a person can untick it); the code is exchanged with the verifier; the ID token's issuer, audience and expiry are checked (claims read without a signature check, because the token comes straight from Google's token endpoint over TLS).
+  - Connection identity is `"{organization}:{sub}"`: a reconnect within the organization reuses the connection, and another organization can connect the same Google account (Q-3-11).
+- **Tokens:** the access token lasts about 1 hour and is refreshed before expiry under the per-connection lock. A new refresh token from Google is saved; otherwise the old one is kept. `invalid_grant` → `google_sign_in_rejected` → "Needs reconnecting". Disconnect revokes the refresh token at Google (`/revoke`; a 400 means it is already invalid) and always deletes our copy.
+- **Requests:** headers `Authorization: Bearer`, `developer-token`, and `login-customer-id` when an account is reached through a manager. Customer ids are digits only (dashes removed) before use. `search` follows `nextPageToken` (10,000 rows a page; follow-up pages cost no operation); `searchStream` reads all batches of one answer.
+- **Errors (GoogleAdsFailure `errorCode` values → plain codes):**
+  - token expired or invalid → `auth_expired`; revoked → `google_sign_in_rejected`;
+  - `NOT_ADS_USER` → `not_ads_user`;
+  - `USER_PERMISSION_DENIED` / `CUSTOMER_NOT_FOUND` → `no_account_access`;
+  - `CUSTOMER_NOT_ENABLED` → `account_not_enabled`;
+  - `DEVELOPER_TOKEN_NOT_APPROVED` / `_PROHIBITED` → `developer_token_not_approved`; `DEVELOPER_TOKEN_INVALID` → `developer_token_invalid`;
+  - `RESOURCE_EXHAUSTED` / `RESOURCE_TEMPORARILY_EXHAUSTED` → `quota_exhausted` (with Google's `retryDelay` when given);
+  - query errors → `bad_query`; 5xx → retried; redirects and non-JSON answers → `unexpected_response`.
+
+  Google's messages are never kept.
+- **To confirm live (Step 0, PHASE_03_PLAN §4.2):** int64 JSON encoding; the error values above for each situation; PKCE and `prompt=consent` giving a new refresh token on reconnect; the revocation answer; refresh-token rules in testing mode; that `adwords` is classed as a sensitive scope.
+
 ### Fake provider (`fake`) — test/local only
 - **Category / auth scheme:** advertising / OAuth 2 with PKCE.
 - **Resources:** two ad accounts (AUD, USD) and one store (NPR) by default; configurable.

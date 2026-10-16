@@ -457,16 +457,20 @@ class IntegrationService:
         """Create the connection — or, when this organization reconnects the same platform
         account, reuse its existing connection so stores and imported data are kept (§6.4a)."""
         now = self.rt.clock.now()
+        account_id = result.external_account_id
+        if account_id is not None and result.account_per_organization:
+            # Unique per organization only: the live-account rule (Q6) does not apply.
+            account_id = f"{ctx.organization_id}:{account_id}"
         with self.rt.db.transaction(org_id=ctx.organization_id, user_id=ctx.user_id) as session:
             existing = None
-            if result.external_account_id is not None:
+            if account_id is not None:
                 existing = (
                     session.execute(
                         select(ExternalConnection)
                         .where(
                             ExternalConnection.organization_id == ctx.organization_id,
                             ExternalConnection.provider == provider.code,
-                            ExternalConnection.external_account_id == result.external_account_id,
+                            ExternalConnection.external_account_id == account_id,
                         )
                         .order_by(ExternalConnection.created_at.desc())
                         .limit(1)
@@ -494,7 +498,7 @@ class IntegrationService:
                     authorized_by_user_id=ctx.user_id,
                     granted_scopes=list(result.granted_scopes),
                     external_account_label=result.account_label,
-                    external_account_id=result.external_account_id,
+                    external_account_id=account_id,
                 )
                 session.add(connection)
                 before = None

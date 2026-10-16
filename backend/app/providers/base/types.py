@@ -92,6 +92,10 @@ class ConnectResult:
     refresh_expires_in_seconds: int | None = None
     # Stable platform account identifier (e.g. shop domain); see ``PreparedConnect``.
     external_account_id: str | None = None
+    # True when the same platform account may be connected in several organizations (e.g. one
+    # Google sign-in used by a business and its agency, Q-3-11): the id then only recognises a
+    # reconnect within the organization and never blocks another organization.
+    account_per_organization: bool = False
 
 
 @dataclass(frozen=True)
