@@ -1,6 +1,15 @@
 """Import every model so Alembic and tests see the full metadata."""
 
 from app.db.base import Base
+from app.domains.advertising.models import (
+    Ad,
+    AdAccount,
+    AdBudget,
+    AdCampaign,
+    AdGroup,
+    AdPerformanceDaily,
+    AdSyncState,
+)
 from app.domains.audit.models import AuditLog, SecurityEvent
 from app.domains.commerce.models import (
     CommerceSyncState,
@@ -28,6 +37,13 @@ from app.domains.organizations.models import Invitation, Membership, Organizatio
 from app.domains.webhooks.models import WebhookEvent
 
 __all__ = [
+    "Ad",
+    "AdAccount",
+    "AdBudget",
+    "AdCampaign",
+    "AdGroup",
+    "AdPerformanceDaily",
+    "AdSyncState",
     "AuditLog",
     "Base",
     "CommerceSyncState",

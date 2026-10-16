@@ -1,6 +1,8 @@
 # Phase 3 — Google Ads (read-only): Implementation Plan
 
-**Status:** ⏳ **Draft — awaiting product-owner approval.** No Phase 3 code is written until it is approved. · **Date:** 2026-10-15
+**Status:** ✅ **Approved by the product owner (2026-10-15, A21: "Approve all") with all §2 recommendations (Q-3-1 … Q-3-11).** Implementation authorized for Phase 3 only. · **Date:** 2026-10-15
+
+> **Live tests (Q-3-10, option C):** build against Google's documentation and a simulator; Step 0 (3-01) runs when the developer token, the Google Cloud OAuth client and network access to Google's API are available.
 **Depends on:** Phase 1 (connections, credentials, jobs, SSRF-safe client). Phases 2A and 2B are reviewed (A20) but not required. · **Followed by:** Phase 4 (Meta Ads), which reuses the advertising model built here.
 **Governing documents:** MASTER_SPECIFICATION §7, §20 (D4, D5, D14, D19, D22), A2, A10, A13; ARCHITECTURE §9–§10; DATABASE_SCHEMA §8–§11 (target model); DISCOVERY_REPORT §5.5, §6; `phases/PHASE_03_GOOGLE_ADS.md` (outline); INTEGRATION_GUIDES §2.
 

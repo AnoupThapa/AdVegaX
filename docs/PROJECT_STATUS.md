@@ -1,8 +1,8 @@
 # AdVegaX — Project Status & Progress Log
 
 **Last updated:** 2026-10-15
-**Current phase:** Phase 3 (Google Ads) plan drafted — awaiting approval · Phases 2A and 2B implemented against simulators and reviewed (A20; live checks pending) · Phase 1 (1A, 1B, 1C) implemented — awaiting product-owner review
-**Code written:** Phase 1A + 1B backend, Phase 1C web application, Phase 2A (Shopify) and 2B (WooCommerce) · **Migrations:** 0001–0011 · **Integrations:** Shopify and WooCommerce connectors (simulator-tested; not yet tried on a live store) · test (fake) platform
+**Current phase:** Phase 3 (Google Ads) approved (A21) and in progress · Phases 2A and 2B implemented against simulators and reviewed (A20; live checks pending) · Phase 1 (1A, 1B, 1C) implemented — awaiting product-owner review
+**Code written:** Phase 1A + 1B backend, Phase 1C web application, Phase 2A (Shopify) and 2B (WooCommerce) · **Migrations:** 0001–0012 · **Integrations:** Shopify and WooCommerce connectors (simulator-tested; not yet tried on a live store) · test (fake) platform
 
 Update this file at the end of every phase and every approved sub-phase (ROADMAP §5, step 13).
 
@@ -18,7 +18,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | 1C | Frontend shell | ✅ **Implemented — awaiting review** | 251 unit + 9 end-to-end tests, axe 0 violations; `phases/PHASE_01C_REPORT.md` |
 | 2A | Shopify (read-only) + finance core | ✅ **Implemented against the Shopify simulator — reviewed (A20)**; live checks on a development store (2A-01) pending | 582 backend + 290 frontend + 10 end-to-end tests; `phases/PHASE_02A_REPORT.md` |
 | 2B | WooCommerce (read-only) | ✅ **Implemented against the WooCommerce simulator — reviewed (A20)**; live Step 0 (2B-01) waits for WordPress downloads to be allowed | 799 backend + 343 frontend + 11 end-to-end tests; `phases/PHASE_02B_REPORT.md` |
-| 3 | Google Ads (read-only) | **Plan drafted — awaiting approval** | `phases/PHASE_03_PLAN.md`; start the developer-token and Google Cloud set-up now (§2A) |
+| 3 | Google Ads (read-only) | **Approved (A21) — in progress** (Step 0 waits for Google credentials and network access) | `phases/PHASE_03_PLAN.md`, `phases/PHASE_03_PROGRESS.md` |
 | 4 | Meta (read-only) | Not started | Start App Review / Business Verification early |
 | 5 | GA4 (read-only) | Not started | Needs Q11 |
 | 6 | Unified analytics & financial engine | Not started | Needs signed-off metric definitions (Q7) |
@@ -92,6 +92,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | 2026-10-15 | **2B-08** Web app for WooCommerce: store-address form (HTTPS, sub-folders, plain reasons), approval note, plain connect and sync messages, store health panel with fixes, counted-orders note, version and address, cost hint on products, revoke-key note on disconnect; 52 tests | `phases/PHASE_02B_PROGRESS.md` |
 | 2026-10-15 | **2B-09 / Phase 2B implemented** against the WooCommerce simulator: whole-journey test (connect → import → changes → refund → key revoked → reconnect → disconnect, with key and customer-detail scans), browser test with accessibility checks, browser-test helper, phase report | `phases/PHASE_02B_REPORT.md`, `INTEGRATION_GUIDES.md` |
 | 2026-10-15 | **Phase 3 plan drafted** (Google Ads read-only): 11 decisions with recommendations, advertising model for Google and Meta, read-only guarantee, sync pace within the shared developer-token allowance; Google facts verified 2026-10-15 | `phases/PHASE_03_PLAN.md` |
+| 2026-10-16 | **3-02** Advertising model (migration 0012: ad accounts, budgets, campaigns, ad groups, ads, daily performance, sync state; forced RLS), discovery details on resources, `AdvertisingProvider` read interface, read-only static guard; 21 tests | `phases/PHASE_03_PROGRESS.md`, `DATABASE_SCHEMA.md §4B` |
 | 2026-10-08 | **Phase 1B implemented**: connections/resources/links, encrypted credentials, SSRF-safe client, rate limiter, provider framework + fake platform, jobs with retry/dead-letter, single scheduler, audited denials | `backend/`, `phases/PHASE_01B_REPORT.md`, `SECURITY.md`, `INTEGRATION_GUIDES.md` |
 
 ## 3. Decision log
@@ -117,6 +118,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | A16 | Phase 1B plan and §20 defaults; organization owns connections, user authorizes; credentials never exposed; SSRF mandatory | Approved — implemented |
 | A17 | Phase 1C plan with all §15 recommendations; task-by-task delivery | Approved — implemented, awaiting review |
 | A19 | Phase 2B plan with all §2 recommendations (Q10a, Q10b, Q-2B-1…7); test environment A recommended, C-style until WordPress downloads are allowed | Approved 2026-10-14 ("go ahead") — in progress |
+| A21 | Phase 3 plan with all §2 recommendations (Q-3-1 … Q-3-11); live-testing option C | Approved 2026-10-15 ("Approve all") — in progress |
 | A20 | Phase 2A and 2B reports reviewed by the product owner; continue to Phase 3 planning | Reviewed 2026-10-15 ("reviewed pls continue") |
 | A18 | Phase 2A plan v2 with all §2 recommendations (Q5–Q9, D-2A-1…3); live-testing option C | Approved 2026-10-13 — implemented, awaiting review (live checks pending) |
 

@@ -14,7 +14,7 @@ AdVegaX — independent, multi-tenant e-commerce advertising and growth SaaS.
 | 1C — Frontend shell | Implemented, awaiting review (`phases/PHASE_01C_REPORT.md`) |
 | 2A — Shopify + finance core | Implemented against the Shopify simulator — reviewed (A20) (`phases/PHASE_02A_REPORT.md`); live checks on a development store (2A-01) pending |
 | 2B — WooCommerce | **Implemented against the simulator — reviewed (A20)** (`phases/PHASE_02B_REPORT.md`); live Step 0 (2B-01) waits for the WordPress downloads to be allowed |
-| 3 — Google Ads | **Plan drafted — awaiting approval** (`phases/PHASE_03_PLAN.md`); do not implement before approval |
+| 3 — Google Ads | **Approved (A21) — in progress**; next task in `phases/PHASE_03_PROGRESS.md` (Step 0 waits for Google credentials and network access) |
 | 4 onward | Not started |
 
 Repository: https://github.com/AnoupThapa/AdVegaX · working branch `feature/phase-1a`.

@@ -86,3 +86,65 @@ def test_core_domains_do_not_import_platform_specific_code():
         if re.search(r"from app\.providers\.(?!base\b|http\.client\b|http\.ratelimit\b)", src):
             offenders.append(rel)
     assert offenders == []
+
+
+# ------------------------------------------------------------------ advertising is read-only
+# Phase 3 (PHASE_03_PLAN §3, §7, acceptance criterion 4): advertising providers may only read.
+# Google Ads REST methods are written as ``…/customers/{id}/googleAds:search``; every ``:verb``
+# a provider names must be one of these reads. Any change to an ad account goes only through
+# the Action Engine (Phase 10A), which does not exist yet.
+ADVERTISING_PROVIDER_DIRS = ("google_ads", "meta")
+ALLOWED_AD_METHODS = {"listAccessibleCustomers", "search", "searchStream"}
+_AD_METHOD = re.compile(r"""[\w}]:([a-zA-Z]+)\b""")
+_AD_WRITE_WORDS = re.compile(r"mutate|:upload|:apply|:remove|:create|:update", re.IGNORECASE)
+
+
+def advertising_write_calls(source: str) -> list[str]:
+    """Every platform method in ``source`` that is not an allowed read."""
+    found = []
+    for line in source.splitlines():
+        code = line.split("#", 1)[0]
+        if _AD_WRITE_WORDS.search(code):
+            found.append(code.strip())
+            continue
+        platform_path = "googleAds" in code or "customers" in code
+        for verb in _AD_METHOD.findall(code):
+            if verb not in ALLOWED_AD_METHODS and platform_path:
+                found.append(code.strip())
+    return found
+
+
+def test_the_read_only_check_catches_write_calls():
+    assert advertising_write_calls('URL = f"/customers/{cid}/googleAds:search"') == []
+    assert advertising_write_calls('"/customers:listAccessibleCustomers"') == []
+    assert advertising_write_calls('stream = f"{base}/googleAds:searchStream"') == []
+    for bad in (
+        'f"/customers/{cid}/campaigns:mutate"',
+        'f"/customers/{cid}/googleAds:mutate"',
+        'f"/customers/{cid}:uploadClickConversions"',
+        'f"/customers/{cid}/campaignBudgets:mutate"',
+        "MutateCampaignsRequest",
+    ):
+        assert advertising_write_calls(bad), bad
+
+
+def test_advertising_providers_only_read():
+    offenders = {}
+    for name in ADVERTISING_PROVIDER_DIRS:
+        folder = APP / "providers" / name
+        for path in folder.rglob("*.py") if folder.exists() else ():
+            calls = advertising_write_calls(path.read_text(encoding="utf-8"))
+            if calls:
+                offenders[path.relative_to(APP).as_posix()] = calls
+    assert offenders == {}
+
+
+def test_advertising_providers_declare_no_write_capability():
+    from app.providers.base.capabilities import Capability
+
+    writes = {Capability.CREATE_CAMPAIGN, Capability.VALIDATE_ONLY}
+    for path in (APP / "providers").rglob("*.py"):
+        rel = path.relative_to(APP).as_posix()
+        if rel.split("/")[1] in ADVERTISING_PROVIDER_DIRS:
+            src = path.read_text(encoding="utf-8")
+            assert not any(f"Capability.{c.name}" in src for c in writes), rel

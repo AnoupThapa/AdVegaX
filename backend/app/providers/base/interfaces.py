@@ -7,11 +7,16 @@ is implemented (Phase 2A+) so that the contract is shaped by two real platforms,
 from __future__ import annotations
 
 from collections.abc import Iterator, Mapping
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any, Protocol, runtime_checkable
 
 from app.providers.base.capabilities import ProviderCapabilities
 from app.providers.base.types import (
+    AdAccountRef,
+    AdAccountState,
+    AdLevel,
+    AdPerformanceRecord,
+    AdStructureRecord,
     AuthorizationRequest,
     AuthScheme,
     BulkKind,
@@ -150,7 +155,33 @@ class PagedImportProvider(CommerceProvider, Protocol):
 
 
 class AdvertisingProvider(PlatformProvider, Protocol):
-    """Google Ads, Meta, … — structure/performance reads in Phases 3-4; writes only via 10A."""
+    """Google Ads, Meta, … — read-only in Phases 3-4; any change goes only through the Action
+    Engine (10A). Ad accounts are discovered with ``discover_resources`` (kind ``ad_account``);
+    the methods below read one linked account, reached through its ``AdAccountRef``."""
+
+    def read_account(self, secrets: Secrets, account: AdAccountRef) -> AdAccountState:
+        """The account's current name, currency, time zone and platform status."""
+        ...
+
+    def read_structure(
+        self, secrets: Secrets, account: AdAccountRef
+    ) -> Iterator[AdStructureRecord]:
+        """Every budget, campaign, ad group and ad, removed ones included (history is kept).
+        Parents come before their children."""
+        ...
+
+    def read_performance(
+        self,
+        secrets: Secrets,
+        account: AdAccountRef,
+        level: AdLevel,
+        first_day: date,
+        last_day: date,
+    ) -> Iterator[AdPerformanceRecord]:
+        """Daily figures for ``level`` between two days (inclusive, account time zone).
+        Days and entities without activity may be absent: the caller writes real zeros for
+        the days it asked for, so a correction that removes activity is never left stale."""
+        ...
 
 
 class AnalyticsProvider(PlatformProvider, Protocol):

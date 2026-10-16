@@ -131,6 +131,13 @@ class ExternalResource(UUIDPrimaryKey, Base):
     currency: Mapped[str | None] = mapped_column(String(3))
     timezone: Mapped[str | None] = mapped_column(String(64))
     accessible: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("true"))
+    # Phase 3 (0012): why an account cannot be linked (plain message key such as
+    # ``account_cancelled`` or ``manager_account``), the groups it sits in for display (e.g. the
+    # Google Ads manager accounts above it) and an opaque provider value needed to reach it
+    # (Google Ads: the manager account to sign in through). None of these is a secret.
+    unavailable_reason: Mapped[str | None] = mapped_column(String(64))
+    group_path: Mapped[str | None] = mapped_column(String(1024))
+    access_hint: Mapped[str | None] = mapped_column(String(255))
     capabilities: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default="{}")
     discovered_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

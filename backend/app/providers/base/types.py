@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from enum import StrEnum
 from typing import Any
@@ -48,6 +48,13 @@ class ResourceDescriptor:
     display_name: str | None = None
     currency: str | None = None
     timezone: str | None = None
+    # Phase 3: a plain message key when the resource cannot be linked (e.g. ``manager_account``,
+    # ``account_cancelled``); the groups it sits in, for display (e.g. "Agency > Retail"); and an
+    # opaque, non-secret value the provider needs to reach it again (Google Ads: the manager
+    # account to sign in through). Never secrets.
+    unavailable_reason: str | None = None
+    group_path: str | None = None
+    access_hint: str | None = None
 
 
 @dataclass(frozen=True)
@@ -303,3 +310,106 @@ class StoreHealth:
     platform_version: str | None = None
     site_url: str | None = None
     warnings: tuple[str, ...] = ()
+
+
+# ---------------------------------------------------------------- advertising (Phase 3)
+class AdLevel(StrEnum):
+    """Levels of daily performance, stored as reported and never added into each other."""
+
+    ACCOUNT = "account"
+    CAMPAIGN = "campaign"
+    AD_GROUP = "ad_group"  # Google ad group / Meta ad set
+    AD = "ad"
+
+
+class AdEntityStatus(StrEnum):
+    ACTIVE = "active"
+    PAUSED = "paused"
+    ARCHIVED = "archived"  # Meta
+    REMOVED = "removed"
+
+
+@dataclass(frozen=True)
+class AdAccountRef:
+    """How a provider reaches a linked ad account: its id and the resource's ``access_hint``."""
+
+    external_id: str
+    access_hint: str | None = None
+
+
+@dataclass(frozen=True)
+class AdAccountState:
+    """The platform's view of an ad account (name, currency, time zone, status)."""
+
+    external_id: str
+    name: str | None
+    currency: str
+    timezone: str
+    platform_status: str  # active | not_enabled | cancelled | suspended | closed
+
+
+@dataclass(frozen=True)
+class AdBudgetRecord:
+    external_id: str
+    level: str  # campaign | ad_group
+    period: str  # daily | lifetime
+    amount: Decimal | None  # account currency; None when the platform gives none (never 0)
+    shared: bool = False
+    name: str | None = None
+
+
+@dataclass(frozen=True)
+class AdCampaignRecord:
+    external_id: str
+    name: str
+    status: AdEntityStatus
+    platform_type: str | None = None
+    bidding_strategy_type: str | None = None
+    start_date: date | None = None
+    end_date: date | None = None
+    budget_external_id: str | None = None
+    extensions: Mapping[str, Any] | None = None  # display only
+
+
+@dataclass(frozen=True)
+class AdGroupRecord:
+    external_id: str
+    campaign_external_id: str
+    name: str
+    status: AdEntityStatus
+    platform_type: str | None = None
+    budget_external_id: str | None = None
+    extensions: Mapping[str, Any] | None = None
+
+
+@dataclass(frozen=True)
+class AdRecord:
+    external_id: str
+    ad_group_external_id: str
+    status: AdEntityStatus
+    name: str | None = None
+    platform_type: str | None = None
+    extensions: Mapping[str, Any] | None = None
+
+
+AdStructureRecord = AdBudgetRecord | AdCampaignRecord | AdGroupRecord | AdRecord
+
+
+@dataclass(frozen=True)
+class AdPerformanceRecord:
+    """One entity's figures for one day (in the ad account's time zone), as reported.
+
+    ``entity_external_id`` is None at the account level. Measures the platform did not provide
+    are None, never 0 (A10). Money is exact, in the account currency.
+    """
+
+    level: AdLevel
+    day: date
+    entity_external_id: str | None = None
+    campaign_external_id: str | None = None
+    ad_group_external_id: str | None = None
+    impressions: int | None = None
+    clicks: int | None = None
+    cost: Decimal | None = None
+    conversions: Decimal | None = None
+    conversion_value: Decimal | None = None
