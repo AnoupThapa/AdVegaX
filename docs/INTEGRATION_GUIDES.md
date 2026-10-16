@@ -145,6 +145,17 @@ Add one section per provider when its phase is implemented.
   - Callback checks: the `adwords` scope was granted (a person can untick it); the code is exchanged with the verifier; the ID token's issuer, audience and expiry are checked (claims read without a signature check, because the token comes straight from Google's token endpoint over TLS).
   - Connection identity is `"{organization}:{sub}"`: a reconnect within the organization reuses the connection, and another organization can connect the same Google account (Q-3-11).
 - **Tokens:** the access token lasts about 1 hour and is refreshed before expiry under the per-connection lock. A new refresh token from Google is saved; otherwise the old one is kept. `invalid_grant` → `google_sign_in_rejected` → "Needs reconnecting". Disconnect revokes the refresh token at Google (`/revoke`; a 400 means it is already invalid) and always deletes our copy.
+- **Discovery (3-04):**
+  - `customers:listAccessibleCustomers` returns direct access only. Each account it returns is read with `customer_client … WHERE customer_client.level <= 1` (itself plus its direct children), with itself as `login-customer-id`.
+  - Each manager found is read the same way, with the **top** manager as `login-customer-id`, breadth first. Each manager is read once (loops are safe), with limits of 500 direct accounts, 200 managers and 5,000 accounts.
+  - **Advertiser accounts only** become `ad_account` resources (Q-3-3). Each has its name, currency, time zone (validated IANA name), `group_path` (the managers above it, e.g. "Agency > Retail clients") and `access_hint` (the top manager to sign in through; not exposed by the API).
+  - A directly accessible account is listed once, without a path.
+  - Not linkable (`unavailable_reason`):
+    - `account_not_enabled` (status not `ENABLED`, or the account refuses queries);
+    - `developer_token_not_approved` (a real account with a Test-access token);
+    - `no_account_access`;
+    - `account_details_missing` (no currency or a time zone Python does not know).
+  - A manager that cannot be read hides only its own accounts. A person with no Google Ads account finds none (the connection stays active). Rediscovery updates reasons and paths and keeps existing links.
 - **Requests:** headers `Authorization: Bearer`, `developer-token`, and `login-customer-id` when an account is reached through a manager. Customer ids are digits only (dashes removed) before use. `search` follows `nextPageToken` (10,000 rows a page; follow-up pages cost no operation); `searchStream` reads all batches of one answer.
 - **Errors (GoogleAdsFailure `errorCode` values → plain codes):**
   - token expired or invalid → `auth_expired`; revoked → `google_sign_in_rejected`;

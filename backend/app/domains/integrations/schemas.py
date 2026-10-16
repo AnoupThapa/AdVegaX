@@ -56,6 +56,10 @@ class ResourceOut(BaseModel):
     currency: str | None
     timezone: str | None
     accessible: bool
+    # Phase 3: why it cannot be linked (a plain message key, e.g. ``manager_account`` or
+    # ``account_not_enabled``) and the groups it sits in (e.g. "Agency > Retail clients").
+    unavailable_reason: str | None = None
+    group_path: str | None = None
     capabilities: dict[str, bool]
     linked: bool
     link_id: uuid.UUID | None

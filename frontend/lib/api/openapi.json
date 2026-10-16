@@ -2047,6 +2047,17 @@
             "title": "External Id",
             "type": "string"
           },
+          "group_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group Path"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -2098,6 +2109,17 @@
               }
             ],
             "title": "Timezone"
+          },
+          "unavailable_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unavailable Reason"
           }
         },
         "required": [

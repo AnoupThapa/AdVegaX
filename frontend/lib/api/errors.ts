@@ -105,6 +105,8 @@ const MESSAGES: Readonly<Record<string, string>> = {
     "Check the details you entered for this platform (for example the store address).",
   CONNECTION_NOT_ACTIVE: "This connection is not active. Reconnect the platform first.",
   RESOURCE_NOT_LINKABLE: "This account is no longer accessible through its connection.",
+  RESOURCE_UNAVAILABLE:
+    "This account cannot be linked. It may be a manager account or one that is cancelled or suspended on the platform.",
   ALREADY_LINKED: "This account is already linked to the organization.",
   NOT_LINKED: "This account is not linked to the organization.",
   SYNC_IN_PROGRESS: "This store is already being updated. Please wait until it finishes.",

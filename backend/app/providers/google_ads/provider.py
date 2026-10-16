@@ -18,9 +18,11 @@ from __future__ import annotations
 import base64
 import json
 from collections.abc import Iterator, Mapping
+from dataclasses import dataclass
 from datetime import date
 from typing import Any
 from urllib.parse import urlencode
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from app.core.clock import Clock
 from app.providers.base.capabilities import Capability, ProviderCapabilities
@@ -44,20 +46,106 @@ from app.providers.base.types import (
     PreparedConnect,
     ProviderCategory,
     ResourceDescriptor,
+    ResourceKind,
     SyncSummary,
     WebhookDelivery,
 )
 from app.providers.google_ads.client import (
     AUTHORIZE_URL,
+    AccountNotEnabledError,
+    DeveloperTokenNotApprovedError,
     GoogleAdsClient,
     GoogleSignIn,
     HttpFactory,
+    NoAccountAccessError,
+    NotAdsUserError,
     SignInRejectedError,
+    valid_customer_id,
 )
+from app.providers.google_ads.queries import HIERARCHY
 
 ADS_SCOPE = "https://www.googleapis.com/auth/adwords"
 SCOPES = (ADS_SCOPE, "openid")
 ISSUERS = frozenset({"accounts.google.com", "https://accounts.google.com"})
+# Discovery limits: each manager read costs one operation of the shared daily allowance.
+MAX_DIRECT_ACCOUNTS = 500
+MAX_MANAGERS = 200
+MAX_ACCOUNTS = 5000
+# Errors that make one account unusable without failing the whole discovery.
+_UNUSABLE = (AccountNotEnabledError, NoAccountAccessError, DeveloperTokenNotApprovedError)
+
+
+def _unusable(customer_id: str, reason: str) -> ResourceDescriptor:
+    return ResourceDescriptor(
+        kind=ResourceKind.AD_ACCOUNT, external_id=customer_id, unavailable_reason=reason
+    )
+
+
+def _zone(value: Any) -> str | None:
+    if not isinstance(value, str) or not value or len(value) > 64:
+        return None
+    try:
+        ZoneInfo(value)
+    except (ZoneInfoNotFoundError, ValueError):
+        return None
+    return value
+
+
+@dataclass(frozen=True)
+class _Client:
+    """One ``customer_client`` row (camelCase JSON; int64 values arrive as strings)."""
+
+    id: str
+    level: int
+    manager: bool
+    name: str | None
+    currency: str | None
+    timezone: str | None
+    status: str
+
+    @property
+    def label(self) -> str:
+        return self.name or self.id
+
+    @classmethod
+    def parse(cls, row: dict[str, Any]) -> _Client | None:
+        data = row.get("customerClient")
+        if not isinstance(data, dict):
+            return None
+        raw = data.get("id") or str(data.get("clientCustomer", "")).removeprefix("customers/")
+        try:
+            customer_id = valid_customer_id(str(raw))
+            level = int(data.get("level", -1))
+        except (InvalidRequestError, TypeError, ValueError):
+            return None
+        currency = data.get("currencyCode")
+        name = data.get("descriptiveName")
+        return cls(
+            id=customer_id,
+            level=level,
+            manager=data.get("manager") is True,
+            name=name[:255] if isinstance(name, str) and name else None,
+            currency=currency if isinstance(currency, str) and len(currency) == 3 else None,
+            timezone=_zone(data.get("timeZone")),
+            status=str(data.get("status", "")),
+        )
+
+    def descriptor(self, *, group_path: str | None, access_hint: str | None) -> ResourceDescriptor:
+        reason = None
+        if self.status != "ENABLED":
+            reason = "account_not_enabled"  # cancelled, suspended or closed
+        elif self.currency is None or self.timezone is None:
+            reason = "account_details_missing"
+        return ResourceDescriptor(
+            kind=ResourceKind.AD_ACCOUNT,
+            external_id=self.id,
+            display_name=self.name,
+            currency=self.currency,
+            timezone=self.timezone,
+            unavailable_reason=reason,
+            group_path=group_path[:1024] if group_path else None,
+            access_hint=access_hint,
+        )
 
 
 class GoogleAdsProvider:
@@ -225,8 +313,64 @@ class GoogleAdsProvider:
         raise UnsupportedOperationError()  # ad accounts are imported by the core (3-05, 3-06)
 
     # ------------------------------------------------------------------ reads (3-04 … 3-06)
-    def discover_resources(self, secrets: Secrets) -> list[ResourceDescriptor]:  # noqa: ARG002
-        raise UnsupportedOperationError()  # task 3-04
+    def discover_resources(self, secrets: Secrets) -> list[ResourceDescriptor]:
+        """Every advertiser account the signed-in person can reach (task 3-04, Q-3-3).
+
+        Google lists only accounts with **direct** access; accounts under a manager are found
+        by reading each manager's hierarchy with the top manager as ``login-customer-id``
+        (Google's account-hierarchy sample). Managers are not returned: they have no figures
+        of their own and appear as the ``group_path`` of the accounts below them. Accounts
+        that cannot be used are returned with a plain ``unavailable_reason``.
+        """
+        token = str(secrets.get("access_token", ""))
+        try:
+            direct = self.ads.list_accessible_customers(token)
+        except NotAdsUserError:
+            return []  # signed in with a Google account that has no Google Ads
+        found: dict[str, ResourceDescriptor] = {}
+        direct_ids = set(direct)
+        managers_read = 0
+        for root in direct[:MAX_DIRECT_ACCOUNTS]:
+            try:
+                rows = self._hierarchy(token, root, root)
+            except _UNUSABLE as exc:
+                found[root] = _unusable(root, exc.code)
+                continue
+            managers_read += 1
+            me = next((r for r in rows if r.level == 0), None)
+            if me is None or not me.manager:
+                if me is not None:
+                    found[root] = me.descriptor(group_path=None, access_hint=None)
+                continue
+            # Walk the manager's hierarchy breadth first (each manager read once).
+            queue: list[tuple[str, list[str], list[_Client]]] = [(root, [me.label], rows)]
+            seen_managers = {root}
+            while queue:
+                manager, path, children = queue.pop(0)
+                for child in children:
+                    if child.level != 1 or child.id == manager:
+                        continue
+                    if child.manager:
+                        if child.id in seen_managers or managers_read >= MAX_MANAGERS:
+                            continue
+                        seen_managers.add(child.id)
+                        try:
+                            below = self._hierarchy(token, child.id, root)
+                        except _UNUSABLE:
+                            continue  # a manager we cannot read: its accounts stay hidden
+                        managers_read += 1
+                        queue.append((child.id, [*path, child.label], below))
+                    elif child.id not in direct_ids and child.id not in found:
+                        found[child.id] = child.descriptor(
+                            group_path=" > ".join(path), access_hint=root
+                        )
+                    if len(found) >= MAX_ACCOUNTS:
+                        return list(found.values())
+        return list(found.values())
+
+    def _hierarchy(self, token: str, customer_id: str, login: str) -> list[_Client]:
+        rows = self.ads.search_stream(token, customer_id, HIERARCHY, login_customer_id=login)
+        return [c for c in (_Client.parse(r) for r in rows) if c is not None]
 
     def read_account(self, secrets: Secrets, account: AdAccountRef) -> AdAccountState:  # noqa: ARG002
         raise UnsupportedOperationError()  # task 3-05

@@ -74,6 +74,13 @@ class ResourceNotLinkable(Conflict):
     message = "This resource is no longer accessible through its connection."
 
 
+class ResourceUnavailable(Conflict):
+    """The platform says this account cannot be used (e.g. a manager or cancelled account)."""
+
+    code = "RESOURCE_UNAVAILABLE"
+    message = "This account cannot be linked."
+
+
 class AlreadyLinked(Conflict):
     code = "ALREADY_LINKED"
     message = "This resource is already linked to the organization."
@@ -698,6 +705,8 @@ class IntegrationService:
                     currency=r.currency,
                     timezone=r.timezone,
                     accessible=r.accessible,
+                    unavailable_reason=r.unavailable_reason,
+                    group_path=r.group_path,
                     capabilities=r.capabilities,
                     linked=link_id is not None,
                     link_id=link_id,
@@ -743,6 +752,8 @@ class IntegrationService:
                 raise ConnectionNotActive()
             if not resource.accessible:
                 raise ResourceNotLinkable()
+            if resource.unavailable_reason is not None:  # e.g. a cancelled ad account (Q-3-3)
+                raise ResourceUnavailable(details=[{"reason": resource.unavailable_reason}])
             if self._active_link(session, resource.id) is not None:
                 raise AlreadyLinked()
             link = OrganizationResourceLink(

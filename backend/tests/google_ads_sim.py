@@ -298,7 +298,10 @@ class GoogleAdsSim:
         query = str(body.get("query", ""))
         if not query.strip().upper().startswith("SELECT"):
             return self.failure(400, {"queryError": "UNEXPECTED_END_OF_QUERY"})
-        rows = self.query_handler(self, customer_id, query, login)
+        if "FROM customer_client" in query:
+            rows = self.hierarchy_rows(customer_id)
+        else:
+            rows = self.query_handler(self, customer_id, query, login)
         if method == "searchStream":
             size = max(1, self.stream_batch_size)
             batches = [rows[i : i + size] for i in range(0, len(rows), size)] or [[]]
@@ -312,6 +315,31 @@ class GoogleAdsSim:
         if start + self.page_size < len(rows):
             answer["nextPageToken"] = str(start + self.page_size)
         return httpx.Response(200, json=answer)
+
+    def client_row(self, customer: Customer, level: int) -> dict[str, Any]:
+        """A ``customer_client`` row as Google's REST API sends it (camelCase, int64 strings)."""
+        return {
+            "customerClient": {
+                "resourceName": f"customers/{customer.id}/customerClients/{customer.id}",
+                "clientCustomer": f"customers/{customer.id}",
+                "id": customer.id,
+                "level": str(level),
+                "manager": customer.manager,
+                "descriptiveName": customer.name,
+                "currencyCode": customer.currency,
+                "timeZone": customer.timezone,
+                "status": customer.status,
+            }
+        }
+
+    def hierarchy_rows(self, customer_id: str) -> list[dict[str, Any]]:
+        """``WHERE customer_client.level <= 1``: the account itself and its direct children."""
+        me = self.customers[customer_id]
+        rows = [self.client_row(me, 0)]
+        for child in me.children:
+            if child in self.customers:
+                rows.append(self.client_row(self.customers[child], 1))
+        return rows
 
     def http_factory(self) -> SafeHttpClient:
         return SafeHttpClient(

@@ -6,8 +6,8 @@ Plan: `PHASE_03_PLAN.md` (approved 2026-10-15, A21, all recommendations). One re
 |---|---|
 | 3-01 Step 0 on the test manager account | ⏸ Waiting — needs the developer token, the Google Cloud OAuth client and network access to Google's API (Q-3-10, option C) |
 | 3-02 Advertising model + migration 0012; read interface; read-only guard | ✅ Done |
-| 3-03 Google sign-in, token refresh and revocation, REST client, simulator | ✅ Done — awaiting review |
-| 3-04 Discovery and linking rules | Not started |
+| 3-03 Google sign-in, token refresh and revocation, REST client, simulator | ✅ Done |
+| 3-04 Discovery and linking rules | ✅ Done — awaiting review |
 | 3-05 Structure import | Not started |
 | 3-06 Performance import | Not started |
 | 3-07 Ongoing sync, corrections, shared quota, Sync now, health | Not started |
@@ -172,4 +172,73 @@ Until then, work follows option C: build against Google's documentation and a si
 - direct accounts and each manager's hierarchy;
 - one linkable entry per advertiser account, with its name, currency, time zone and manager path;
 - manager and cancelled accounts shown but not linkable (Q-3-3).
+
+---
+
+## 3-04 — Finding ad accounts and the linking rules (2026-10-16)
+
+**Completed**
+- **Every account the sign-in can reach is found:**
+  - the accounts the person was invited to directly;
+  - every account under a manager (MCC), however deep. Each manager's list is read through the top manager, as Google's access rules require.
+- **Advertiser accounts are listed** with their name, currency, time zone and the managers above them (for example "Agency > Retail clients").
+  - Manager accounts are not listed themselves; they appear only as that path (Q-3-3).
+  - An account the person can also reach directly is listed once.
+- **Accounts that cannot be used are listed with the reason, and cannot be linked:**
+  - cancelled, suspended or closed;
+  - a real account while AdVegaX's developer token still has Test access only;
+  - no access;
+  - missing currency or time zone.
+
+  Trying to link one gives a clear message (`RESOURCE_UNAVAILABLE`, with the reason).
+- **Checking again** ("Check for new accounts") updates reasons and paths. An already linked account that is later cancelled stays linked, so its data remains readable; its health message comes in 3-07.
+- **Robust:**
+  - a manager that cannot be read hides only its own accounts;
+  - loops in a hierarchy are read once;
+  - limits (500 direct accounts, 200 managers, 5,000 accounts) protect the shared daily allowance;
+  - unreadable rows are skipped;
+  - a person with no Google Ads account simply finds none.
+- **Cost:** one request to list accounts, plus one per account or manager read (4 for the sample hierarchy).
+
+**Files changed** (14)
+- New (2): `app/providers/google_ads/queries.py`, `tests/api/test_google_ads_discovery.py` (13 tests).
+- Modified (12):
+  - `app/providers/google_ads/provider.py`;
+  - `app/domains/integrations/{jobs,service,schemas}.py` (store and show the reasons and paths; refuse linking);
+  - `tests/google_ads_sim.py` (manager hierarchies answered like Google);
+  - `tests/api/test_google_ads_connect.py`, `tests/providers/test_google_ads_provider.py`;
+  - frontend `lib/api/errors.ts` (message for the new code), `lib/api/openapi.json`, `lib/api/schema.d.ts` (regenerated);
+  - docs `API_SPECIFICATION.md`, `INTEGRATION_GUIDES.md`, this report.
+- Deleted: none. No migration (the columns came with 0012).
+
+**Tests**
+- **13 new.** They cover:
+  - direct and manager accounts with their details and path;
+  - each manager read once through the top manager;
+  - an account reached two ways, listed once;
+  - linking available accounts, and refusing unavailable ones with the reason;
+  - rediscovery updating reasons and keeping links;
+  - a person without Google Ads;
+  - an unreadable manager;
+  - a Test token and a real account;
+  - missing time zone or currency;
+  - a loop in the hierarchy;
+  - the limits;
+  - unreadable rows.
+- Google Ads provider coverage 99 %.
+- **Backend `make check`: 936 passed**, coverage 97 %. **Frontend `npm run check`: 343 passed**, build passes. **E2E: 11 passed.**
+
+**Security**
+- The manager used to reach an account (`access_hint`) is kept internally and not shown by the API.
+- Discovery only reads, through the three allowed calls.
+
+**Deviations**
+1. **Cancelled or suspended accounts stay linked if they were linked before.** Their data stays readable, and the account page will say why it no longer updates (3-07). The plan only said such accounts cannot be linked.
+2. **A new reason, `account_details_missing`**, for an account Google returns without a currency or with a time zone AdVegaX cannot use. Figures could not be shown correctly for it.
+
+**Blocked:** Step 0 (3-01). The JSON shape of the hierarchy answers (camelCase keys, numbers as text) is to be confirmed there.
+
+**Next task:** 3-05 — structure import:
+- linking an ad account creates it in AdVegaX;
+- campaigns, budgets, ad groups and ads are imported, removed ones included so history stays readable.
 

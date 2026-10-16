@@ -39,7 +39,7 @@ SUB = "108000000000000000001"
 def sim(runtime, clock):
     s = sample_hierarchy(GoogleAdsSim(clock=clock))
     provider = build_provider(s)
-    provider.discover_resources = lambda secrets: []  # discovery is task 3-04
+    provider.discover_resources = lambda secrets: []  # discovery: test_google_ads_discovery
     runtime.providers.register(provider)
     return s
 

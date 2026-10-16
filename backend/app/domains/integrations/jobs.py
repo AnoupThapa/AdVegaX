@@ -108,6 +108,9 @@ def discover(rt: Runtime, job: ClaimedJob) -> None:
                         display_name=d.display_name,
                         currency=d.currency,
                         timezone=d.timezone,
+                        unavailable_reason=d.unavailable_reason,
+                        group_path=d.group_path,
+                        access_hint=d.access_hint,
                         accessible=True,
                         capabilities=provider.capabilities.as_dict(),
                         discovered_at=now,
@@ -120,6 +123,13 @@ def discover(rt: Runtime, job: ClaimedJob) -> None:
                     d.display_name,
                     d.currency,
                     d.timezone,
+                )
+                # Phase 3: an account can become unlinkable (e.g. cancelled) or move under
+                # another manager; an existing link is kept (its data stays readable).
+                row.unavailable_reason, row.group_path, row.access_hint = (
+                    d.unavailable_reason,
+                    d.group_path,
+                    d.access_hint,
                 )
                 row.accessible, row.last_seen_at = True, now
                 row.capabilities = provider.capabilities.as_dict()

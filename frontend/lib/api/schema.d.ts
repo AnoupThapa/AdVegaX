@@ -1397,6 +1397,8 @@ export interface components {
             display_name: string | null;
             /** External Id */
             external_id: string;
+            /** Group Path */
+            group_path?: string | null;
             /**
              * Id
              * Format: uuid
@@ -1414,6 +1416,8 @@ export interface components {
             provider: string;
             /** Timezone */
             timezone: string | null;
+            /** Unavailable Reason */
+            unavailable_reason?: string | null;
         };
         /** ResyncOut */
         ResyncOut: {

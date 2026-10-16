@@ -199,14 +199,14 @@ Permissions: `connections.view` (all roles) for reads; `connections.manage` (Own
 | `GET /organizations/{organization_id}/connections/{connection_id}` | 200 `ConnectionOut` | |
 | `POST /organizations/{organization_id}/connections/{connection_id}/disconnect` | 200 `ConnectionOut` | Revokes at the provider where supported (failure tolerated and recorded), erases ciphertext, ends active links (`connection_revoked`), status `revoked` |
 | `POST /organizations/{organization_id}/connections/{connection_id}/rediscover` | 202 `JobOut` | Queues a discovery job |
-| `GET /organizations/{organization_id}/connections/{connection_id}/resources` | 200 list `ResourceOut` | Includes capabilities, `linked`, `link_id`, `last_synced_at` |
-| `POST /organizations/{organization_id}/resources/{resource_id}/link` | 201 `LinkOut` | Explicit; audited |
+| `GET /organizations/{organization_id}/connections/{connection_id}/resources` | 200 list `ResourceOut` | Includes capabilities, `linked`, `link_id`, `last_synced_at`; (Phase 3) `unavailable_reason` (plain key such as `account_not_enabled`, `developer_token_not_approved`, `account_details_missing`) and `group_path` (e.g. the manager accounts above an ad account) |
+| `POST /organizations/{organization_id}/resources/{resource_id}/link` | 201 `LinkOut` | Explicit; audited; (Phase 3) refused with `RESOURCE_UNAVAILABLE` 409 and `details: [{reason}]` when the resource has an `unavailable_reason` |
 | `POST /organizations/{organization_id}/resources/{resource_id}/unlink` | 200 `LinkOut` | History kept (`unlink_reason=user`) |
 | `GET /organizations/{organization_id}/resources/{resource_id}/links` | 200 list `LinkOut` | Link history |
 | `POST /organizations/{organization_id}/resources/{resource_id}/sync` | 202 `JobOut` | Resource must be actively linked |
 | `GET /organizations/{organization_id}/jobs/{job_id}` | 200 `JobOut` | Status, attempts, last error code |
 
-**Error codes (Phase 1B):** `UNKNOWN_PROVIDER` 404 · (2B-04) `STORE_NOT_REACHABLE` 422 · `INVALID_KEY_DELIVERY` 422 · `CONNECTION_NOT_ACTIVE` 409 · `RESOURCE_NOT_LINKABLE` 409 · `ALREADY_LINKED` 409 · `NOT_LINKED` 409 (plus the Phase 1A codes, e.g. `FORBIDDEN`, `NOT_FOUND`, `SERVICE_UNAVAILABLE` when Redis is unavailable for connect state).
+**Error codes (Phase 1B):** `UNKNOWN_PROVIDER` 404 · (2B-04) `STORE_NOT_REACHABLE` 422 · `INVALID_KEY_DELIVERY` 422 · `CONNECTION_NOT_ACTIVE` 409 · `RESOURCE_NOT_LINKABLE` 409 · (3-04) `RESOURCE_UNAVAILABLE` 409 · `ALREADY_LINKED` 409 · `NOT_LINKED` 409 (plus the Phase 1A codes, e.g. `FORBIDDEN`, `NOT_FOUND`, `SERVICE_UNAVAILABLE` when Redis is unavailable for connect state).
 
 Third-party platform authorization is a separate security domain from AdVegaX login (Decisions D7, D10).
 
