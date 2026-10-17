@@ -7,8 +7,8 @@ Plan: `PHASE_03_PLAN.md` (approved 2026-10-15, A21, all recommendations). One re
 | 3-01 Step 0 on the test manager account | ⏸ Waiting — needs the developer token, the Google Cloud OAuth client and network access to Google's API (Q-3-10, option C) |
 | 3-02 Advertising model + migration 0012; read interface; read-only guard | ✅ Done |
 | 3-03 Google sign-in, token refresh and revocation, REST client, simulator | ✅ Done |
-| 3-04 Discovery and linking rules | ✅ Done — awaiting review |
-| 3-05 Structure import | Not started |
+| 3-04 Discovery and linking rules | ✅ Done |
+| 3-05 Structure import | ✅ Done — awaiting review |
 | 3-06 Performance import | Not started |
 | 3-07 Ongoing sync, corrections, shared quota, Sync now, health | Not started |
 | 3-08 Read API | Not started |
@@ -241,4 +241,72 @@ Until then, work follows option C: build against Google's documentation and a si
 **Next task:** 3-05 — structure import:
 - linking an ad account creates it in AdVegaX;
 - campaigns, budgets, ad groups and ads are imported, removed ones included so history stays readable.
+
+---
+
+## 3-05 — Importing campaigns, budgets, ad groups and ads (2026-10-18)
+
+**Completed**
+- **Linking an ad account creates it in AdVegaX** and starts its import, which runs as short background steps, one at a time:
+  - name, currency and time zone;
+  - Google's status for the account;
+  - 13 months of history to come.
+
+  Linking it again later reuses the same account; nothing is duplicated.
+- **Structure is imported:**
+  - **Budgets:** daily, or a total for the campaign's run; shared or not. The amount is exact, in the account's currency, and empty (never 0) when Google gives none.
+  - **Campaigns:** status, type (Search, Performance Max …), bidding strategy, start and end dates, and budget.
+  - **Ad groups and ads:** status and type.
+  - **Removed items are imported and kept**, so their history stays readable. Items Google stops listing are left as they are, never deleted.
+  - A row with a status AdVegaX does not recognise is skipped and counted, never guessed.
+- **Cost:** five requests to Google per account (the account and the four structure lists), each through the account's manager when it has one.
+- **Problems with one account stay with that account.** The connection is never marked:
+  - an account that is cancelled, suspended or closed shows **"account not enabled"** and is not imported;
+  - lost access to one account shows **"no account access"**;
+  - a permanent problem (for example, a query Google refuses) ends the import with its code and is not retried;
+  - temporary problems are retried.
+- **Safety:**
+  - a duplicated background step stops at once;
+  - a change of currency or time zone reported by Google is recorded as a warning, never applied silently.
+
+**Files changed** (19)
+- New (4): `app/domains/advertising/importer.py`, `app/providers/google_ads/mapping.py`, `tests/api/test_google_ads_structure.py` (10 tests), `tests/providers/test_google_ads_mapping.py` (22 tests).
+- Modified (15):
+  - `app/providers/google_ads/{provider,queries,client}.py`;
+  - `app/providers/base/errors.py`: a new kind of error for "one account cannot be used", which never marks the connection;
+  - `app/domains/integrations/service.py`: linking starts the import;
+  - `app/workers/job_tasks.py`, `app/core/settings.py` (`ADS_HISTORY_WINDOW`, 13 months);
+  - `tests/google_ads_sim.py` (accounts and structure answered like Google);
+  - `tests/providers/test_google_ads_{client,provider}.py`;
+  - docs `INTEGRATION_GUIDES.md`, `PROJECT_STATUS.md`, this report.
+- Deleted: none. No migration (the tables came with 0012).
+
+**Tests**
+- **32 new.** They cover:
+  - the full structure of a sample account (exact budgets, statuses, dates, removed items kept, an unknown status skipped);
+  - five requests through the manager, or none through a manager for a direct account;
+  - a new import updating and never deleting;
+  - a cancelled or closed account;
+  - lost access never marking the connection;
+  - a permanent error not retried;
+  - relinking reusing the account;
+  - a duplicated step;
+  - money, ids, dates and statuses read exactly;
+  - odd answers from Google.
+- **Backend `make check`: 968 passed**, coverage 97 %. **Frontend `npm run check`: 343 passed** (unchanged). **E2E: 11 passed.**
+
+**Security**
+- Only reads, through the allowed `searchStream` call.
+- Tenant isolation: every row is written in the organization's own context, with row-level security.
+
+**Deviations**
+1. **Campaign dates use Google's newer date fields** (`start_date_time` / `end_date_time`, since v23). The older ones the plan research assumed were removed. Only the date part is kept, in the account's time zone.
+2. **Per-account problems use a new error kind.** It never marks the connection: one cancelled or inaccessible account must not make the whole Google connection show a problem.
+3. **No ad texts or names beyond what Google stores on the ad**, as agreed (Q-3-4). Many Google ads have no name.
+
+**Blocked:** Step 0 (3-01). The answer shapes are to be confirmed there.
+
+**Next task:** 3-06 — daily figures:
+- 13 months of daily figures at account, campaign, ad group and ad level, read in monthly slices;
+- impressions, clicks, exact cost, conversions and conversion value, in the account's time zone.
 

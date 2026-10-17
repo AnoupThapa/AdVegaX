@@ -7,6 +7,7 @@ from collections.abc import Callable, Mapping
 
 import redis
 
+from app.domains.advertising import importer as ad_importer
 from app.domains.commerce import importer, incremental, privacy
 from app.domains.integrations import jobs as integration_jobs
 from app.domains.integrations.service import JOB_DISCOVER, JOB_SYNC
@@ -21,6 +22,7 @@ HANDLERS: Mapping[str, Handler] = {
     integration_jobs.JOB_REFRESH: integration_jobs.refresh_credentials,
     webhooks.JOB_PLATFORM_REVOKED: webhooks.platform_revoked,
     importer.JOB_IMPORT_STEP: importer.import_step,
+    ad_importer.JOB_AD_IMPORT_STEP: ad_importer.import_step,
     incremental.JOB_OBJECT_CHANGED: incremental.object_changed,
     privacy.JOB_CUSTOMER_DATA_REQUEST: privacy.customer_data_request,
     privacy.JOB_CUSTOMER_REDACT: privacy.customer_redact,

@@ -259,8 +259,6 @@ def test_operations_google_ads_does_not_support(provider):
         lambda: provider.verify_install({}),
         lambda: provider.parse_webhook({}, b""),
         lambda: provider.sync_resource({}, ResourceDescriptor(kind="ad_account", external_id="1")),
-        lambda: provider.read_account({}, ref),
-        lambda: provider.read_structure({}, ref),
         lambda: provider.read_performance(
             {}, ref, AdLevel.ACCOUNT, date(2026, 10, 1), date(2026, 10, 2)
         ),

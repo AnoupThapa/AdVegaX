@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import base64
 import json
+import logging
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 from datetime import date
@@ -50,6 +51,7 @@ from app.providers.base.types import (
     SyncSummary,
     WebhookDelivery,
 )
+from app.providers.google_ads import mapping
 from app.providers.google_ads.client import (
     AUTHORIZE_URL,
     AccountNotEnabledError,
@@ -60,9 +62,12 @@ from app.providers.google_ads.client import (
     NoAccountAccessError,
     NotAdsUserError,
     SignInRejectedError,
+    UnexpectedResponseError,
     valid_customer_id,
 )
-from app.providers.google_ads.queries import HIERARCHY
+from app.providers.google_ads.queries import ACCOUNT, AD_GROUPS, ADS, BUDGETS, CAMPAIGNS, HIERARCHY
+
+logger = logging.getLogger("advegax.providers.google_ads")
 
 ADS_SCOPE = "https://www.googleapis.com/auth/adwords"
 SCOPES = (ADS_SCOPE, "openid")
@@ -372,15 +377,56 @@ class GoogleAdsProvider:
         rows = self.ads.search_stream(token, customer_id, HIERARCHY, login_customer_id=login)
         return [c for c in (_Client.parse(r) for r in rows) if c is not None]
 
-    def read_account(self, secrets: Secrets, account: AdAccountRef) -> AdAccountState:  # noqa: ARG002
-        raise UnsupportedOperationError()  # task 3-05
+    def _rows(
+        self, secrets: Secrets, account: AdAccountRef, query: str
+    ) -> Iterator[dict[str, Any]]:
+        return self.ads.search_stream(
+            str(secrets.get("access_token", "")),
+            account.external_id,
+            query,
+            login_customer_id=account.access_hint,
+        )
+
+    def read_account(self, secrets: Secrets, account: AdAccountRef) -> AdAccountState:
+        """The account's name, currency, time zone and status (one operation)."""
+        for row in self._rows(secrets, account, ACCOUNT):
+            data = row.get("customer")
+            if not isinstance(data, dict):
+                continue
+            currency = data.get("currencyCode")
+            timezone = _zone(data.get("timeZone"))
+            if not isinstance(currency, str) or len(currency) != 3 or timezone is None:
+                raise UnexpectedResponseError()
+            name = data.get("descriptiveName")
+            return AdAccountState(
+                external_id=account.external_id,
+                name=name[:255] if isinstance(name, str) and name else None,
+                currency=currency,
+                timezone=timezone,
+                platform_status=mapping.ACCOUNT_STATUSES.get(str(data.get("status")), "closed"),
+            )
+        raise UnexpectedResponseError()
 
     def read_structure(
-        self,
-        secrets: Secrets,  # noqa: ARG002
-        account: AdAccountRef,  # noqa: ARG002
+        self, secrets: Secrets, account: AdAccountRef
     ) -> Iterator[AdStructureRecord]:
-        raise UnsupportedOperationError()  # task 3-05
+        """Budgets, campaigns, ad groups and ads — parents first, removed ones included
+        (four operations). Rows that cannot be read are skipped and logged by count."""
+        skipped = 0
+        for query, parse in (
+            (BUDGETS, mapping.budget),
+            (CAMPAIGNS, mapping.campaign),
+            (AD_GROUPS, mapping.ad_group),
+            (ADS, mapping.ad),
+        ):
+            for row in self._rows(secrets, account, query):
+                record = parse(row)
+                if record is None:
+                    skipped += 1
+                    continue
+                yield record
+        if skipped:
+            logger.warning("google_ads_rows_skipped", extra={"count": skipped})
 
     def read_performance(
         self,

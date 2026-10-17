@@ -156,6 +156,13 @@ Add one section per provider when its phase is implemented.
     - `no_account_access`;
     - `account_details_missing` (no currency or a time zone Python does not know).
   - A manager that cannot be read hides only its own accounts. A person with no Google Ads account finds none (the connection stays active). Rediscovery updates reasons and paths and keeps existing links.
+- **Structure import (3-05):** linking an advertiser account creates its `ad_accounts` row and starts the import chain (`advertising.import_step`, one step per job, per-account lock).
+  - Five operations: `customer` (name, currency, time zone, status), `campaign_budget`, `campaign`, `ad_group` and `ad_group_ad`, all through `searchStream` and through the account's manager when it has one.
+  - **Budgets:** `period` `DAILY` / `FIXED_DAILY` → daily `amount_micros`; `CUSTOM_PERIOD` → lifetime `total_amount_micros`; micros ÷ 1,000,000 → exact decimal in the account currency. No amount → empty, never 0.
+  - **Campaigns:** `advertising_channel_type` and `bidding_strategy_type` are kept as shown values. The dates are `start_date_time` / `end_date_time` (since v23; `"yyyy-MM-dd HH:mm:ss"` in the account time zone); no end date means it runs indefinitely.
+  - **Statuses** `ENABLED` / `PAUSED` / `REMOVED` → active / paused / removed. Removed items are imported and kept; an unknown status skips the row (counted, never guessed). Items Google stops listing are left as they are.
+  - **Account status:** anything but `ENABLED` → `account_not_enabled` on the account (no import). A changed currency or time zone is recorded as `account_details_changed`, never applied silently.
+  - **Per-account problems** (`no_account_access`, `account_not_enabled`, `developer_token_not_approved`) end the chain with that code on the account and **never** mark the connection. Permanent errors (e.g. `bad_query`) are not retried; temporary ones are.
 - **Requests:** headers `Authorization: Bearer`, `developer-token`, and `login-customer-id` when an account is reached through a manager. Customer ids are digits only (dashes removed) before use. `search` follows `nextPageToken` (10,000 rows a page; follow-up pages cost no operation); `searchStream` reads all batches of one answer.
 - **Errors (GoogleAdsFailure `errorCode` values → plain codes):**
   - token expired or invalid → `auth_expired`; revoked → `google_sign_in_rejected`;

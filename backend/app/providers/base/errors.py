@@ -36,6 +36,13 @@ class ResourceNotFoundError(ProviderError):
     code = "not_found"
 
 
+class ResourceUnavailableError(ProviderError):
+    """One platform account cannot be used (e.g. a cancelled ad account), while the
+    connection itself is fine — never marks the connection's health (Phase 3)."""
+
+    code = "resource_unavailable"
+
+
 class InvalidRequestError(ProviderError):
     code = "invalid_request"
 

@@ -26,6 +26,7 @@ from app.providers.base.errors import (
     PermissionDeniedError,
     RateLimitedError,
     ResourceNotFoundError,
+    ResourceUnavailableError,
     RetryableError,
 )
 from app.providers.http.client import SafeHttpClient, SafeResponse
@@ -48,17 +49,17 @@ class SignInRejectedError(AuthExpiredError):
     code = "google_sign_in_rejected"
 
 
-class NoAccountAccessError(PermissionDeniedError):
+class NoAccountAccessError(ResourceUnavailableError):
     code = "no_account_access"
 
 
-class AccountNotEnabledError(PermissionDeniedError):
+class AccountNotEnabledError(ResourceUnavailableError):
     """Cancelled, suspended or not yet set up in Google Ads."""
 
     code = "account_not_enabled"
 
 
-class DeveloperTokenNotApprovedError(PermissionDeniedError):
+class DeveloperTokenNotApprovedError(ResourceUnavailableError):
     """AdVegaX's developer token cannot reach this account (e.g. test access only)."""
 
     code = "developer_token_not_approved"

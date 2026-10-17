@@ -19,6 +19,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import re
 import secrets
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -39,6 +40,12 @@ PUBLIC_IP = "142.250.70.10"
 POLICY = OutboundPolicy(
     connect_timeout=1, read_timeout=1, max_response_bytes=5_000_000, max_redirects=0
 )
+STRUCTURE = {
+    "campaign_budget": "budgets",
+    "campaign": "campaigns",
+    "ad_group": "ad_groups",
+    "ad_group_ad": "ads",
+}
 FAILURE_TYPE = f"type.googleapis.com/google.ads.googleads.{API_VERSION}.errors.GoogleAdsFailure"
 
 
@@ -52,6 +59,11 @@ class Customer:
     status: str = "ENABLED"  # ENABLED | CANCELED | SUSPENDED | CLOSED
     test: bool = True
     children: list[str] = field(default_factory=list)  # for managers: directly linked ids
+    # Structure rows exactly as Google's REST API returns them (see ``sample_structure``).
+    budgets: list[dict[str, Any]] = field(default_factory=list)
+    campaigns: list[dict[str, Any]] = field(default_factory=list)
+    ad_groups: list[dict[str, Any]] = field(default_factory=list)
+    ads: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass
@@ -298,8 +310,14 @@ class GoogleAdsSim:
         query = str(body.get("query", ""))
         if not query.strip().upper().startswith("SELECT"):
             return self.failure(400, {"queryError": "UNEXPECTED_END_OF_QUERY"})
-        if "FROM customer_client" in query:
+        found = re.search(r"\bFROM\s+(\w+)", query)
+        resource = found.group(1) if found else ""
+        if resource == "customer_client":
             rows = self.hierarchy_rows(customer_id)
+        elif resource == "customer":
+            rows = [self.account_row(customer)]
+        elif resource in STRUCTURE:
+            rows = list(getattr(customer, STRUCTURE[resource]))
         else:
             rows = self.query_handler(self, customer_id, query, login)
         if method == "searchStream":
@@ -325,6 +343,19 @@ class GoogleAdsSim:
                 "id": customer.id,
                 "level": str(level),
                 "manager": customer.manager,
+                "descriptiveName": customer.name,
+                "currencyCode": customer.currency,
+                "timeZone": customer.timezone,
+                "status": customer.status,
+            }
+        }
+
+    @staticmethod
+    def account_row(customer: Customer) -> dict[str, Any]:
+        return {
+            "customer": {
+                "resourceName": f"customers/{customer.id}",
+                "id": customer.id,
                 "descriptiveName": customer.name,
                 "currencyCode": customer.currency,
                 "timeZone": customer.timezone,
@@ -373,3 +404,113 @@ def sample_hierarchy(sim: GoogleAdsSim) -> GoogleAdsSim:
     sim.add_customer("1000000004", name="Old account", status="CANCELED")
     sim.add_user("108000000000000000001", "9000000001", "1000000003", "1000000004")
     return sim
+
+
+def sample_structure(customer: Customer) -> Customer:
+    """Two campaigns in Google's REST format: a Search campaign with a shared daily budget of
+    AUD 50.00, one enabled and one removed ad group, and two ads; and a Performance Max
+    campaign (no ad groups) with a total budget of AUD 1,234.56 that has ended. Plus a paused
+    campaign that was removed, and one row Google might add that AdVegaX cannot read."""
+    cid = customer.id
+    base = f"customers/{cid}"
+    customer.budgets = [
+        {
+            "campaignBudget": {
+                "resourceName": f"{base}/campaignBudgets/501",
+                "id": "501",
+                "name": "Gloves daily",
+                "amountMicros": "50000000",
+                "period": "DAILY",
+                "explicitlyShared": True,
+            }
+        },
+        {
+            "campaignBudget": {
+                "resourceName": f"{base}/campaignBudgets/502",
+                "id": "502",
+                "name": "Spring push",
+                "totalAmountMicros": "1234560000",
+                "period": "CUSTOM_PERIOD",
+                "explicitlyShared": False,
+            }
+        },
+    ]
+    customer.campaigns = [
+        {
+            "campaign": {
+                "resourceName": f"{base}/campaigns/11",
+                "id": "11",
+                "name": "Gloves - Search",
+                "status": "ENABLED",
+                "advertisingChannelType": "SEARCH",
+                "biddingStrategyType": "MAXIMIZE_CONVERSIONS",
+                "startDateTime": "2026-01-15 00:00:00",
+                "campaignBudget": f"{base}/campaignBudgets/501",
+            }
+        },
+        {
+            "campaign": {
+                "resourceName": f"{base}/campaigns/12",
+                "id": "12",
+                "name": "Spring - PMax",
+                "status": "PAUSED",
+                "advertisingChannelType": "PERFORMANCE_MAX",
+                "biddingStrategyType": "MAXIMIZE_CONVERSION_VALUE",
+                "startDateTime": "2026-03-01 00:00:00",
+                "endDateTime": "2026-05-31 23:59:59",
+                "campaignBudget": f"{base}/campaignBudgets/502",
+            }
+        },
+        {
+            "campaign": {
+                "resourceName": f"{base}/campaigns/13",
+                "id": "13",
+                "name": "Old test",
+                "status": "REMOVED",
+                "advertisingChannelType": "DISPLAY",
+                "biddingStrategyType": "MANUAL_CPC",
+            }
+        },
+        {"campaign": {"id": "14", "name": "Future type", "status": "SOMETHING_NEW"}},
+    ]
+    customer.ad_groups = [
+        {
+            "adGroup": {
+                "resourceName": f"{base}/adGroups/2101",
+                "id": "2101",
+                "name": "Nitrile gloves",
+                "status": "ENABLED",
+                "type": "SEARCH_STANDARD",
+                "campaign": f"{base}/campaigns/11",
+            }
+        },
+        {
+            "adGroup": {
+                "resourceName": f"{base}/adGroups/2102",
+                "id": "2102",
+                "name": "Vinyl gloves",
+                "status": "REMOVED",
+                "type": "SEARCH_STANDARD",
+                "campaign": f"{base}/campaigns/11",
+            }
+        },
+    ]
+    customer.ads = [
+        {
+            "adGroupAd": {
+                "resourceName": f"{base}/adGroupAds/2101~90001",
+                "status": "ENABLED",
+                "adGroup": f"{base}/adGroups/2101",
+                "ad": {"id": "90001", "type": "RESPONSIVE_SEARCH_AD"},
+            }
+        },
+        {
+            "adGroupAd": {
+                "resourceName": f"{base}/adGroupAds/2102~90002",
+                "status": "PAUSED",
+                "adGroup": f"{base}/adGroups/2102",
+                "ad": {"id": "90002", "type": "RESPONSIVE_SEARCH_AD", "name": "Vinyl RSA"},
+            }
+        },
+    ]
+    return customer

@@ -783,6 +783,12 @@ class IntegrationService:
             on_store_linked(
                 session, self.rt, resource=resource, connection=connection, user_id=ctx.user_id
             )
+            # Ad accounts: create the account and start its import (3-05).
+            from app.domains.advertising.importer import on_ad_account_linked
+
+            on_ad_account_linked(
+                session, self.rt, resource=resource, connection=connection, user_id=ctx.user_id
+            )
             return _link_out(link)
 
     def unlink(self, ctx: TenantContext, resource_id: uuid.UUID) -> LinkOut:

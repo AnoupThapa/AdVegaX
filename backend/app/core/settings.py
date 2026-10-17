@@ -171,6 +171,9 @@ class Settings(BaseSettings):
     # The newest major version when coding started (Q-3-1); upgraded yearly.
     GOOGLE_ADS_API_VERSION: str = Field(default="v25", pattern=r"^v[0-9]{2,3}$")
 
+    # --- Advertising import (Phase 3; PHASE_03_PLAN §9) ---------------------------------
+    ADS_HISTORY_WINDOW: timedelta = timedelta(days=395)  # 13 months on first link (Q-3-6)
+
     # --- Commerce import (Phase 2A, 2A-06; PHASE_02A_PLAN §9) ----------------------------
     # Longest order history imported (13 months, Q9); the platform may allow less (Shopify:
     # 60 days without ``read_all_orders``).
@@ -237,6 +240,7 @@ class Settings(BaseSettings):
             "SCHEDULE_TOKEN_REFRESH_INTERVAL": self.SCHEDULE_TOKEN_REFRESH_INTERVAL,
             "OUTBOUND_DOWNLOAD_TIMEOUT": self.OUTBOUND_DOWNLOAD_TIMEOUT,
             "COMMERCE_HISTORY_WINDOW": self.COMMERCE_HISTORY_WINDOW,
+            "ADS_HISTORY_WINDOW": self.ADS_HISTORY_WINDOW,
             "SHOPIFY_DEFAULT_ORDER_HISTORY": self.SHOPIFY_DEFAULT_ORDER_HISTORY,
             "SCHEDULE_COMMERCE_RECONCILE_INTERVAL": self.SCHEDULE_COMMERCE_RECONCILE_INTERVAL,
             "SCHEDULE_COMMERCE_DEEP_INTERVAL": self.SCHEDULE_COMMERCE_DEEP_INTERVAL,

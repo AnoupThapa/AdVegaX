@@ -77,20 +77,32 @@ def test_search_reaches_accounts_through_a_manager(sim, ads, token):
     sim.query_handler = lambda s, cid, q, login: [{"customer": {"id": cid}}]
     found = list(
         ads.search(
-            token, "1000000001", "SELECT customer.id FROM customer", login_customer_id="9000000001"
+            token,
+            "1000000001",
+            "SELECT keyword_view.resource_name FROM keyword_view",
+            login_customer_id="9000000001",
         )
     )
     assert found == [{"customer": {"id": "1000000001"}}]
     (request,) = sim.calls("googleAds:search")
     assert request.headers["login-customer-id"] == "9000000001"
     with pytest.raises(NoAccountAccessError):  # not reachable without the manager
-        list(ads.search(token, "1000000001", "SELECT customer.id FROM customer"))
+        list(ads.search(token, "1000000001", "SELECT keyword_view.resource_name FROM keyword_view"))
 
 
 def test_search_follows_page_tokens(sim, ads, token):
     sim.page_size = 3
     sim.query_handler = lambda *a: rows(7)
-    assert len(list(ads.search(token, "1000000003", "SELECT customer.id FROM customer"))) == 7
+    assert (
+        len(
+            list(
+                ads.search(
+                    token, "1000000003", "SELECT keyword_view.resource_name FROM keyword_view"
+                )
+            )
+        )
+        == 7
+    )
     bodies = [r.content for r in sim.calls("googleAds:search")]
     assert len(bodies) == 3 and b'"pageToken"' not in bodies[0] and b'"pageToken":"3"' in bodies[1]
 
@@ -99,20 +111,37 @@ def test_search_stream_reads_every_batch_in_one_request(sim, ads, token):
     sim.stream_batch_size = 2
     sim.query_handler = lambda *a: rows(5)
     assert (
-        len(list(ads.search_stream(token, "1000000003", "SELECT customer.id FROM customer"))) == 5
+        len(
+            list(
+                ads.search_stream(
+                    token, "1000000003", "SELECT keyword_view.resource_name FROM keyword_view"
+                )
+            )
+        )
+        == 5
     )
     assert len(sim.calls("googleAds:searchStream")) == 1
 
 
 def test_empty_answers_are_empty(sim, ads, token):
-    assert list(ads.search(token, "1000000003", "SELECT customer.id FROM customer")) == []
-    assert list(ads.search_stream(token, "1000000003", "SELECT customer.id FROM customer")) == []
+    assert (
+        list(ads.search(token, "1000000003", "SELECT keyword_view.resource_name FROM keyword_view"))
+        == []
+    )
+    assert (
+        list(
+            ads.search_stream(
+                token, "1000000003", "SELECT keyword_view.resource_name FROM keyword_view"
+            )
+        )
+        == []
+    )
 
 
 @pytest.mark.parametrize("bad", ["", "12a", "../9000000001", "1" * 21, "123/googleAds:mutate"])
 def test_customer_ids_are_validated_before_use(ads, token, bad):
     with pytest.raises(InvalidRequestError):
-        list(ads.search(token, bad, "SELECT customer.id FROM customer"))
+        list(ads.search(token, bad, "SELECT keyword_view.resource_name FROM keyword_view"))
     with pytest.raises(InvalidRequestError):
         list(ads.search(token, "1000000003", "SELECT 1", login_customer_id=bad or "x"))
 
@@ -150,21 +179,24 @@ def test_the_api_version_is_validated(sim):
 def test_google_ads_errors_become_plain_codes(sim, ads, token, status, error_code, expected):
     sim.fail_next.append((status, error_code))
     with pytest.raises(expected) as raised:
-        list(ads.search(token, "1000000003", "SELECT customer.id FROM customer"))
+        list(ads.search(token, "1000000003", "SELECT keyword_view.resource_name FROM keyword_view"))
     assert "Simulated" not in str(raised.value)  # Google's message is never carried
 
 
 def test_a_test_token_cannot_reach_production_accounts(sim, ads, token):
     sim.customers["1000000003"].test = False
     with pytest.raises(DeveloperTokenNotApprovedError):
-        list(ads.search(token, "1000000003", "SELECT customer.id FROM customer"))
+        list(ads.search(token, "1000000003", "SELECT keyword_view.resource_name FROM keyword_view"))
     sim.token_access = "explorer"
-    assert list(ads.search(token, "1000000003", "SELECT customer.id FROM customer")) == []
+    assert (
+        list(ads.search(token, "1000000003", "SELECT keyword_view.resource_name FROM keyword_view"))
+        == []
+    )
 
 
 def test_a_cancelled_account_is_not_enabled(ads, token):
     with pytest.raises(AccountNotEnabledError):
-        list(ads.search(token, "1000000004", "SELECT customer.id FROM customer"))
+        list(ads.search(token, "1000000004", "SELECT keyword_view.resource_name FROM keyword_view"))
 
 
 def test_a_person_without_google_ads_is_told_so(sim, ads):
@@ -217,7 +249,7 @@ def test_non_json_answers_are_unexpected(sim, ads, token):
 
     sim.handler = broken
     with pytest.raises(UnexpectedResponseError):
-        list(ads.search(token, "1000000003", "SELECT customer.id FROM customer"))
+        list(ads.search(token, "1000000003", "SELECT keyword_view.resource_name FROM keyword_view"))
 
 
 def test_only_google_hosts_are_called(clock):
