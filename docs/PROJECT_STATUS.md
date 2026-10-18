@@ -1,7 +1,7 @@
 # AdVegaX — Project Status & Progress Log
 
 **Last updated:** 2026-10-15
-**Current phase:** Phase 3 (Google Ads, read-only) implemented against the simulator — awaiting product-owner review (`phases/PHASE_03_REPORT.md`; Step 0 live checks pending) · Phases 2A and 2B implemented against simulators and reviewed (A20; live checks pending) · Phase 1 (1A, 1B, 1C) implemented — awaiting product-owner review
+**Current phase:** Phase 3 (Google Ads, read-only) implemented against the simulator — awaiting product-owner review (`phases/PHASE_03_REPORT.md`; Step 0 live checks pending) · Phase 4 (Meta Ads) plan drafted — awaiting approval · Phases 2A and 2B implemented against simulators and reviewed (A20; live checks pending) · Phase 1 (1A, 1B, 1C) implemented — awaiting product-owner review
 **Code written:** Phase 1A + 1B backend, Phase 1C web application, Phase 2A (Shopify) and 2B (WooCommerce) · **Migrations:** 0001–0012 · **Integrations:** Shopify and WooCommerce connectors (simulator-tested; not yet tried on a live store) · test (fake) platform
 
 Update this file at the end of every phase and every approved sub-phase (ROADMAP §5, step 13).
@@ -101,6 +101,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | 2026-10-18 | **3-08** Ad account API: list/detail, daily figures with derived rates and "may still change" days, campaigns and one campaign with ad groups and ads, "Sync now" (`ads.view` / `ads.manage`); platform-reported labels, not-synchronized days never 0; 18 tests | `phases/PHASE_03_PROGRESS.md`, `API_SPECIFICATION.md` §19B |
 | 2026-10-18 | **3-09** Google Ads web app: Advertising tab, ad account page (health, facts, Sync now, performance with rates and "may still change" days, campaign table), campaign page (ad groups and ads), accounts grouped under managers on the connection page, plain Google error wording; "Reported by Google Ads" on every page; 15 web tests | `phases/PHASE_03_PROGRESS.md` |
 | 2026-10-18 | **3-10** Phase 3 journey test (connect → discover → link two → import → 3-hour run → nightly correction → allowance used up → permission removed → reconnect → Sync now → disconnect), browser test of the Google Ads pages with axe, browser-test helper, CI switch with placeholders; **Phase 3 report**. Backend 1,062, frontend 358, e2e 12 passed | `phases/PHASE_03_REPORT.md`, `phases/PHASE_03_PROGRESS.md` |
+| 2026-10-18 | **Phase 4 plan drafted** (Meta Ads read-only): 12 decisions with recommendations (v26.0, Login for Business with 60-day user tokens and expiry warnings, purchases with each ad set's attribution, currency offsets, usage-header pacing, async jobs for large reads), reuse of the Phase 3 model, schedule, API and pages; Meta facts checked 2026-10-18 | `phases/PHASE_04_PLAN.md` |
 | 2026-10-08 | **Phase 1B implemented**: connections/resources/links, encrypted credentials, SSRF-safe client, rate limiter, provider framework + fake platform, jobs with retry/dead-letter, single scheduler, audited denials | `backend/`, `phases/PHASE_01B_REPORT.md`, `SECURITY.md`, `INTEGRATION_GUIDES.md` |
 
 ## 3. Decision log
