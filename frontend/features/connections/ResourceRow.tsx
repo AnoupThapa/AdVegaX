@@ -17,7 +17,13 @@ import {
   type Resource,
 } from "./api";
 import styles from "./connections.module.css";
-import { JOB_STATUS, RESOURCE_KIND, UNLINK_REASON, connectError } from "./labels";
+import {
+  JOB_STATUS,
+  RESOURCE_KIND,
+  UNLINK_REASON,
+  connectError,
+  unavailableReason,
+} from "./labels";
 
 export type RowNotice = { tone: "success" | "error"; text: string; requestId: string | null };
 
@@ -50,6 +56,7 @@ export function ResourceRow({
   const [showHistory, setShowHistory] = useState(false);
   const history = useLinkHistory(orgId, resource.id, showHistory);
   const name = resource.display_name || resource.external_id;
+  const unavailable = unavailableReason(resource.unavailable_reason);
 
   // When a sync finishes, refresh the list so "Last synced" updates.
   const finished = jobFinished(job.data);
@@ -117,6 +124,13 @@ export function ResourceRow({
             <span className={`${styles.status} ${styles.warn}`}>No longer accessible</span>
           </>
         ) : null}
+        {unavailable ? (
+          <>
+            <br />
+            <span className={`${styles.status} ${styles.warn}`}>Cannot be linked</span>{" "}
+            <span className={styles.muted}>{unavailable}</span>
+          </>
+        ) : null}
       </td>
       <td>
         {[resource.currency, resource.timezone?.replaceAll("_", " ")]
@@ -140,7 +154,9 @@ export function ResourceRow({
       </td>
       <td>
         <div className={styles.actions}>
-          {canManage && connectionActive && (resource.accessible || resource.linked) ? (
+          {canManage &&
+          connectionActive &&
+          (resource.linked || (resource.accessible && !unavailable)) ? (
             <Button
               variant={resource.linked ? "secondary" : "primary"}
               busy={link.isPending}

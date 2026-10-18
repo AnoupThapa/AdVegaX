@@ -593,3 +593,31 @@ describe("Connection detail", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("not active. Reconnect");
   });
 });
+
+describe("Google Ads accounts on a connection (3-09)", () => {
+  it("groups accounts under the managers they are reached through, direct ones first", async () => {
+    detail("owner", {
+      [`GET ${ORG_PATH}/connections/${CONN}/resources`]: ok([
+        resource("au", { group_path: "Agency > Retail clients", display_name: "Eve Zone AU" }),
+        resource("nz", { group_path: "Agency > Retail clients", display_name: "Eve Zone NZ" }),
+        resource("own", { group_path: null, display_name: "Own account" }),
+        resource("old", {
+          group_path: null,
+          display_name: "Old account",
+          unavailable_reason: "account_not_enabled",
+        }),
+      ]),
+    });
+    const direct = await screen.findByRole("table", { name: "Directly accessible: 2 accounts" });
+    const managed = screen.getByRole("table", { name: "Through Agency › Retail clients" });
+    expect(within(managed).getByText("Eve Zone AU")).toBeInTheDocument();
+    expect(within(managed).getByText("Eve Zone NZ")).toBeInTheDocument();
+    const tables = screen.getAllByRole("table");
+    expect(tables.indexOf(direct)).toBeLessThan(tables.indexOf(managed));
+    const old = within(direct).getByRole("row", { name: /Old account/ });
+    expect(old).toHaveTextContent("Cannot be linked");
+    expect(old).toHaveTextContent("Cancelled, suspended or closed in Google Ads");
+    expect(within(old).queryByRole("button", { name: "Link Old account" })).toBeNull();
+    expect(within(direct).getByRole("button", { name: "Link Own account" })).toBeInTheDocument();
+  });
+});

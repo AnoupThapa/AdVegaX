@@ -148,7 +148,9 @@ class AdCampaignListOut(BaseModel):
 
 
 class AdCampaignDetailOut(AdCampaignOut):
+    provider: str
     source: str
+    synced_from: date | None  # first day read for the ad account
     currency: str
     currency_minor_units: int
     from_day: date

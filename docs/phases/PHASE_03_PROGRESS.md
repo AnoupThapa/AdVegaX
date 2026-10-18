@@ -12,7 +12,7 @@ Plan: `PHASE_03_PLAN.md` (approved 2026-10-15, A21, all recommendations). One re
 | 3-06 Performance import | ✅ Done — awaiting review |
 | 3-07 Ongoing sync | ✅ Done — awaiting review |
 | 3-08 Read API | ✅ Done — awaiting review |
-| 3-09 Web app | Not started |
+| 3-09 Web app | ✅ Done — awaiting review |
 | 3-10 Journey test, browser test, docs, report | Not started |
 
 ---
@@ -473,4 +473,55 @@ Until then, work follows option C: build against Google's documentation and a si
 - "Connect Google Ads", with discovered accounts grouped under their manager;
 - the Advertising tab, the account page (daily totals, rates, date range, campaign table, health, "Sync now") and the campaign page;
 - every page labelled "reported by Google Ads" and checked for accessibility.
+
+## 3-09 — Google Ads in the web app (2026-10-18)
+
+**Completed**
+- **Connecting Google Ads:** the Connections page explains that AdVegaX signs in with Google, finds the ad accounts, also through manager accounts, and only reads them.
+  - On the connection's page, accounts are **grouped under the manager accounts** they are reached through (for example "Through Agency › Retail clients"), with directly accessible ones first.
+  - Accounts that cannot be linked say why (for example "Cancelled, suspended or closed in Google Ads") and have no Link button.
+  - Google's own problems are explained in plain words (sign-in removed, no Google Ads account, not yet approved by Google, no access, Google's daily limit).
+- **New "Advertising" tab:** every ad account with its status, currency, time zone and where its figures stand: importing (with %), up to date, re-checking, or waiting for Google's daily limit.
+- **Ad account page:**
+  - a health panel with the fix in plain words (for example lost access, or not active in Google Ads);
+  - account facts (the managers it is reached through, currency, time zone, figures from, last re-checks);
+  - **Sync now** for owners, admins and managers;
+  - **Performance** for the last 7, 30 or 90 days: spend, clicks, impressions, conversions, conversion value, click-through rate, cost per click, cost per conversion, and conversion value per AUD spent;
+  - a day-by-day table where the last 3 days say **"may still change"**;
+  - a **campaign table** with status, type, budget ("$50.00 a day (shared)") and each campaign's own figures.
+- **Campaign page:** budget, bidding, dates, then each ad group with its figures and its ads. Performance Max campaigns explain why they have no ad groups.
+- **Honest labels everywhere:** every page says "Reported by Google Ads". Missing figures say why ("Not synced yet", "No clicks"…), never 0, and quiet days show real zeros.
+- Backend: one campaign's answer now also includes the platform and the first day read, so its page can say who reported the figures.
+
+**Files changed** (21)
+- New (10): `features/advertising/{api,labels,format}.ts`, `features/advertising/{AdAccountsPage,AdAccountPage,CampaignPage,Figures}.tsx`, `advertising.module.css`, the three `app/orgs/[organizationId]/advertising/…` pages, `tests/features/advertising.test.tsx` (14 tests).
+- Modified (11): `features/connections/{ConnectionDetailPage,ResourceRow}.tsx`, `{connect-fields,labels}.ts`, `features/organizations/OrganizationShell.tsx` (new tab), `lib/format/money.ts` (reasons for rates), `lib/api/{openapi.json,schema.d.ts}` (regenerated), `tests/features/connections.test.tsx` (grouping test), backend `advertising/{schemas,read_service}.py` and its test, docs.
+- Deleted: none. No migration.
+
+**Tests**
+- **15 new web tests** covering:
+  - the Advertising tab, the empty state, importing and waiting states;
+  - exact money and every rate with its reason, "may still change" days, never 0 for days not read;
+  - changing the period;
+  - health panel, Sync now (allowed, refused, hidden for viewers), unlinked accounts still readable, not found;
+  - the campaign page with ad groups and ads, Performance Max, not found;
+  - accounts grouped under managers, accounts that cannot be linked.
+- **Frontend `npm run check`: 358 passed.** **E2E: 11 passed** (the new tab and the connection page changes do not affect existing journeys).
+- **Backend `make check`: 1,056 passed**, coverage 97 %.
+
+**Security**
+- Pages only read; "Sync now" is the one action, sent with the CSRF token (tested), and the API decides who may use it. A hidden button is never the protection.
+- No tokens, secrets or Google error messages are shown; malformed ids are never sent to the API.
+
+**Deviations**
+1. **The automatic accessibility check (axe) for these pages runs in the browser journey test in 3-10**, as for stores. This step checks headings, labels, table captions and the tab order through the component tests.
+2. **The campaign page keeps the account page's period** through its address (from/to), and offers 7, 30 or 90 days ending on the same day.
+3. **"Conversion value per AUD spent"** is shown as a plain number (for example 7.28). It is not called ROAS, because it is Google's own conversion value and not store sales (Phase 6).
+
+**Blocked:** Step 0 (3-01) still needs network access to Google and your Google credentials.
+
+**Next task:** 3-10 — the full journey and the phase report:
+- a journey test: connect → discover (with a manager) → link two accounts → first import → 3-hour update → a correction picked up at night → Google's limit → permission removed → reconnect → disconnect;
+- a browser test of the new pages with the accessibility check;
+- `PHASE_03_REPORT.md`.
 

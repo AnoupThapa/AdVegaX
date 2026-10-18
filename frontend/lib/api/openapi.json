@@ -277,6 +277,10 @@
             ],
             "title": "Platform Type"
           },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
           "source": {
             "title": "Source",
             "type": "string"
@@ -297,6 +301,18 @@
             "title": "Status",
             "type": "string"
           },
+          "synced_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Synced From"
+          },
           "to_day": {
             "format": "date",
             "title": "To Day",
@@ -315,7 +331,9 @@
           "end_date",
           "budget",
           "figures",
+          "provider",
           "source",
+          "synced_from",
           "currency",
           "currency_minor_units",
           "from_day",

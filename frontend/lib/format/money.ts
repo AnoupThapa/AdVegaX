@@ -72,6 +72,12 @@ const REASONS: Readonly<Record<string, string>> = {
   not_synchronized: "Not synced yet",
   // Q-2B-5: never added to the store currency until currency conversion (Phase 6).
   other_currency_orders: "Not available — orders in other currencies",
+  // Advertising rates (3-09): the divisor was 0, so the rate does not exist.
+  no_impressions: "No impressions",
+  no_clicks: "No clicks",
+  no_conversions: "No conversions",
+  no_cost: "No spend",
+  not_provided: "Not provided by the platform",
 };
 
 /** Why a figure is not shown, in plain words. */

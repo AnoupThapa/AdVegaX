@@ -553,7 +553,9 @@ class AdvertisingReadService:
             )
             return AdCampaignDetailOut(
                 **base.model_dump(),
+                provider=account.provider,
                 source=SOURCE,
+                synced_from=period.synced_from,
                 currency=account.currency,
                 currency_minor_units=minor_units(account.currency),
                 from_day=period.first,

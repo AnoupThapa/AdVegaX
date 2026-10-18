@@ -934,12 +934,16 @@ export interface components {
             name: string;
             /** Platform Type */
             platform_type: string | null;
+            /** Provider */
+            provider: string;
             /** Source */
             source: string;
             /** Start Date */
             start_date: string | null;
             /** Status */
             status: string;
+            /** Synced From */
+            synced_from: string | null;
             /**
              * To Day
              * Format: date

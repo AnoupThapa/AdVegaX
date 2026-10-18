@@ -22,10 +22,32 @@ import {
   useProviders,
   useRediscover,
   useResources,
+  type Resource,
 } from "./api";
 import styles from "./connections.module.css";
 import { connectError, connectionStatus } from "./labels";
 import { ResourceRow, type RowNotice } from "./ResourceRow";
+
+/**
+ * Accounts grouped by the manager accounts they are reached through (Google Ads), direct
+ * ones first; platforms without groups get a single table, as before.
+ */
+export function groupByPath(resources: readonly Resource[]) {
+  const groups = new Map<string | null, Resource[]>();
+  for (const r of resources) {
+    const key = r.group_path ?? null;
+    groups.set(key, [...(groups.get(key) ?? []), r]);
+  }
+  return [...groups.entries()]
+    .sort(([a], [b]) => (a === null ? -1 : b === null ? 1 : a.localeCompare(b)))
+    .map(([path, items]) => ({ path, items }));
+}
+
+function groupCaption(all: readonly Resource[], count: number): string {
+  const grouped = all.some((r) => r.group_path);
+  const n = count === 1 ? "1 account" : `${count} accounts`;
+  return grouped ? `Directly accessible: ${n}` : n;
+}
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -158,39 +180,43 @@ function Detail({ connectionId }: { connectionId: string }) {
             Could not follow the check for new accounts — {messageFor(discovery.error)}
           </Alert>
         ) : null}
-        {resources.data?.length ? (
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
-              <caption>
-                {resources.data.length === 1 ? "1 account" : `${resources.data.length} accounts`}
-              </caption>
-              <thead>
-                <tr>
-                  <th scope="col">Account</th>
-                  <th scope="col">Currency · time zone</th>
-                  <th scope="col">Linked</th>
-                  <th scope="col">Last synced</th>
-                  <th scope="col">
-                    <span className="visually-hidden">Actions</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {resources.data.map((r) => (
-                  <ResourceRow
-                    key={r.id}
-                    orgId={org.id}
-                    connectionId={c.id}
-                    resource={r}
-                    canManage={manage}
-                    connectionActive={active}
-                    onNotice={setNotice}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : null}
+        {resources.data?.length
+          ? groupByPath(resources.data).map((group) => (
+              <div className={styles.tableWrap} key={group.path ?? ""}>
+                <table className={styles.table}>
+                  <caption>
+                    {group.path
+                      ? `Through ${group.path.replaceAll(" > ", " › ")}`
+                      : groupCaption(resources.data, group.items.length)}
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Account</th>
+                      <th scope="col">Currency · time zone</th>
+                      <th scope="col">Linked</th>
+                      <th scope="col">Last synced</th>
+                      <th scope="col">
+                        <span className="visually-hidden">Actions</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {group.items.map((r) => (
+                      <ResourceRow
+                        key={r.id}
+                        orgId={org.id}
+                        connectionId={c.id}
+                        resource={r}
+                        canManage={manage}
+                        connectionActive={active}
+                        onNotice={setNotice}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ))
+          : null}
         {manage && active ? (
           <p>
             <Button
@@ -258,6 +284,12 @@ function Detail({ connectionId }: { connectionId: string }) {
           <p>
             AdVegaX deletes its access here. To remove the app completely, also uninstall it in your
             Shopify admin (Settings → Apps).
+          </p>
+        ) : null}
+        {c.provider === "google_ads" ? (
+          <p>
+            AdVegaX also asks Google to remove its access. You can check this in your Google account
+            (Security → Third-party connections).
           </p>
         ) : null}
         {c.provider === "woocommerce" ? (

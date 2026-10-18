@@ -69,7 +69,24 @@ const CONNECT_ERRORS: Readonly<Record<string, string>> = {
     "WooCommerce's API was not found at this address. Check that WooCommerce is installed and active and that the address is your WordPress site's.",
   store_redirected:
     "The store sent AdVegaX to a different address. Enter the address the store finally opens at (with https://), then connect again.",
-  unexpected_response: "The store gave an answer AdVegaX could not understand. Please try again.",
+  unexpected_response:
+    "The platform gave an answer AdVegaX could not understand. Please try again.",
+  // Google Ads (3-09).
+  google_sign_in_rejected:
+    "Google no longer accepts AdVegaX's permission (it was removed or expired). Please reconnect Google Ads.",
+  not_ads_user:
+    "This Google account has no Google Ads account. Sign in with the Google account you use for Google Ads.",
+  developer_token_invalid:
+    "AdVegaX's access to Google Ads is not set up correctly. Please contact AdVegaX support.",
+  developer_token_not_approved:
+    "Google has not yet approved AdVegaX for real ad accounts. Only test accounts can be read for now.",
+  no_account_access:
+    "This Google account no longer has access to that ad account. Ask its administrator for access, then check again.",
+  account_not_enabled:
+    "The ad account is cancelled, suspended or closed in Google Ads, so it cannot be read.",
+  quota_exhausted:
+    "Google Ads is limiting how much AdVegaX can read right now. It continues by itself later.",
+  bad_query: "Google Ads did not accept AdVegaX's request. Please contact AdVegaX support.",
   server_error: "The store had a temporary problem. Please try again in a few minutes.",
   timeout: "The store took too long to answer. Please try again in a few minutes.",
 };
@@ -93,6 +110,19 @@ export function connectError(code: string | null | undefined): string {
   return (
     (code && CONNECT_ERRORS[code]) || "Something went wrong with the platform. Please try again."
   );
+}
+
+/** Why a discovered account cannot be linked (3-04), in plain words. */
+const UNAVAILABLE_REASONS: Readonly<Record<string, string>> = {
+  account_not_enabled: "Cancelled, suspended or closed in Google Ads",
+  account_details_missing: "Google did not give its currency or time zone",
+  no_account_access: "This Google account cannot read it",
+  developer_token_not_approved: "Google has not yet approved AdVegaX for real accounts",
+};
+
+export function unavailableReason(reason: string | null | undefined): string | null {
+  if (!reason) return null;
+  return UNAVAILABLE_REASONS[reason] ?? "This account cannot be linked";
 }
 
 export const JOB_STATUS: Readonly<Record<string, string>> = {

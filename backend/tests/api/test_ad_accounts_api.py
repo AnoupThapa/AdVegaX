@@ -309,6 +309,7 @@ def test_one_campaign_with_its_ad_groups_and_ads(owner):
         "platform_reported",
         "AUD",
     )
+    assert (body["provider"], body["synced_from"]) == ("google_ads", "2025-09-14")
     assert body["figures"]["cost"] == "12.345678"
     groups = {g["external_id"]: g for g in body["ad_groups"]}
     assert list(groups) == ["2101", "2102"]
