@@ -24,6 +24,7 @@ from app.providers.base.errors import (
     AuthExpiredError,
     InvalidRequestError,
     PermissionDeniedError,
+    PlatformQuotaError,
     RateLimitedError,
     ResourceNotFoundError,
     ResourceUnavailableError,
@@ -75,7 +76,7 @@ class NotAdsUserError(PermissionDeniedError):
     code = "not_ads_user"
 
 
-class QuotaExhaustedError(RateLimitedError):
+class QuotaExhaustedError(PlatformQuotaError):
     """Google's daily or per-second allowance for AdVegaX was reached."""
 
     code = "quota_exhausted"

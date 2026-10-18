@@ -157,7 +157,12 @@ class PagedImportProvider(CommerceProvider, Protocol):
 class AdvertisingProvider(PlatformProvider, Protocol):
     """Google Ads, Meta, … — read-only in Phases 3-4; any change goes only through the Action
     Engine (10A). Ad accounts are discovered with ``discover_resources`` (kind ``ad_account``);
-    the methods below read one linked account, reached through its ``AdAccountRef``."""
+    the methods below read one linked account, reached through its ``AdAccountRef``.
+
+    Optional attributes for a platform allowance shared by every customer (3-07):
+    ``shared_daily_operations`` (operations per sliding day; None = no shared allowance),
+    ``structure_operations`` (cost of ``read_account`` + ``read_structure``) and
+    ``level_operations`` (cost of one ``read_performance`` call)."""
 
     def read_account(self, secrets: Secrets, account: AdAccountRef) -> AdAccountState:
         """The account's current name, currency, time zone and platform status."""

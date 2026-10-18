@@ -11,7 +11,7 @@ This document is the **target data model**. Tables are created only in the phase
 | 1A | users, user_password_credentials, sessions, user_action_tokens, organizations, memberships, invitations, audit_logs, security_events, email_outbox |
 | 1B | external_connections, external_connection_credentials, external_resources, organization_resource_links, job_runs |
 | 2A / 2B | **as built (migrations 0007–0011):** stores, products, product_variants (incl. inventory), product_cost_history, orders (incl. hashed customer key), order_items, sales_entries, refunds, refund_items, commerce_sync_state, webhook_events, financial_daily (store components) — see §4A |
-| 3–4 | **as built (migration 0012):** ad_accounts (resource extension), ad_budgets, ad_campaigns, ad_groups, ads, ad_performance_daily, ad_sync_state — see §4B. Keywords and audience_targets come with the phases that use them |
+| 3–4 | **as built (migrations 0012–0013):** ad_accounts (resource extension), ad_budgets, ad_campaigns, ad_groups, ads, ad_performance_daily, ad_sync_state — see §4B. Keywords and audience_targets come with the phases that use them |
 | 5 | analytics_properties (resource extension), analytics table per decision Q11 |
 | 6 | fx_rates, metric_definitions, store_cost_rules; financial_daily gains ad-spend components |
 | 7 | funnel_daily |
@@ -253,7 +253,7 @@ Platform-neutral tables (D4, D19); providers map into them. **Tenant tables** (`
 
 System-role grants added in 0007 (narrow, read-only): `SELECT` on `stores` (route a webhook to its store before a tenant context exists) and on `external_connections` (cross-organization live-account check before a token exchange). The system role cannot read orders, products or figures.
 
-## 4B. Advertising (Phase 3 — migration 0012)
+## 4B. Advertising (Phase 3 — migrations 0012–0013)
 
 Platform-neutral, designed against Google Ads and Meta (PHASE_03_PLAN §8): Google "ad group" and Meta "ad set" are both `ad_groups`. Every table is tenant-owned with composite `(organization_id, parent_id)` keys, forced row-level security and `advegax_app` policies for SELECT/INSERT/UPDATE/DELETE. Money is `NUMERIC(20,6)` in the **ad account's** currency; days are in the ad account's time zone; a measure the platform did not provide is NULL, never 0 (A10).
 
@@ -270,6 +270,8 @@ Platform-neutral, designed against Google Ads and Meta (PHASE_03_PLAN §8): Goog
 Removed structure is kept (`status = removed`) so history stays readable. A day never read has no row ("not synced yet"); a day read with no activity has real zeros.
 
 **0012** also adds three discovery details to `external_resources` (any provider, never secrets): `unavailable_reason` (why it cannot be linked, e.g. a manager or cancelled account), `group_path` (the groups it sits in, for display) and `access_hint` (an opaque value the provider needs to reach it — Google Ads: the manager account to sign in through). Downgrade to 0011 removes all of the above.
+
+**0013** (3-07) lets the system role list imported ad accounts for the sync scheduler: `SELECT` on **four columns only** of `ad_accounts` (`id`, `organization_id`, `provider`, `first_import_completed_at`), with a system-role read policy. Names, figures and everything else stay readable only under the account's own tenant context. Downgrade to 0012 revokes it.
 
 ## 5. Stores
 

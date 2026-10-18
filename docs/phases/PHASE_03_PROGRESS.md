@@ -10,7 +10,7 @@ Plan: `PHASE_03_PLAN.md` (approved 2026-10-15, A21, all recommendations). One re
 | 3-04 Discovery and linking rules | ✅ Done |
 | 3-05 Structure import | ✅ Done — awaiting review |
 | 3-06 Performance import | ✅ Done — awaiting review |
-| 3-07 Ongoing sync, corrections, shared quota, Sync now, health | Not started |
+| 3-07 Ongoing sync | ✅ Done — awaiting review |
 | 3-08 Read API | Not started |
 | 3-09 Web app | Not started |
 | 3-10 Journey test, browser test, docs, report | Not started |
@@ -366,4 +366,62 @@ Until then, work follows option C: build against Google's documentation and a si
 - every 3 hours: today and yesterday, plus structure changes;
 - nightly: the last 30 days; weekly: the last 90 days;
 - "Sync now", the shared daily allowance, and account health.
+
+## 3-07 — Keeping ad accounts up to date (2026-10-18)
+
+**Completed**
+- **Linked accounts now stay up to date by themselves.** A scheduler checks every 5 minutes which run each account is due for:
+  - **every 3 hours:** campaigns, budgets, ad groups and ads (so new or renamed campaigns appear), plus today's and yesterday's figures: 9 requests;
+  - **every night:** the last 30 days are read again: 4 requests;
+  - **every week:** the last 90 days are read again: 4 requests.
+- **Corrections are picked up.** Google changes past days (late conversions, removed invalid clicks); each re-read replaces the days it covers and never touches older days.
+- **The shared Google allowance is protected.** One Google Ads developer token serves every AdVegaX customer, so every request is counted in one shared counter (last 24 hours):
+  - at 80 % used, the nightly and weekly re-reads wait, so first imports, 3-hour updates and "Sync now" keep working;
+  - at 100 %, every run waits 15 minutes and continues by itself; nothing is marked as broken and no retry is used up;
+  - if Google says "too many requests", every account waits for the time Google gives.
+- **"Sync now" is ready behind the scenes:** campaigns plus the last 30 days, at most 6 times an hour per account, never held back by the 80 % rule. It is refused while a run is going or when the account is not linked. If the first import had failed, it starts it again. The button and its web address come with 3-08 / 3-09.
+- **Health clears itself:** when an account that had lost access answers again, the warning disappears. A currency or time-zone change at Google stays flagged.
+- **Fix found while testing:** sign-in problems that appeared in the middle of reading campaigns or figures were not marking the connection. They now do.
+
+**Files changed** (20)
+- New (3): `app/domains/advertising/quota.py` (the shared counter), migration `0013_ad_sync_schedule.py`, `tests/api/test_google_ads_sync.py` (30 tests).
+- Modified (17):
+  - `app/domains/advertising/importer.py`: run modes, schedule, "Sync now", waiting for the allowance, health;
+  - `app/providers/base/{errors,interfaces,registry}.py`, `app/providers/google_ads/{client,provider}.py`: the allowance and its cost per request;
+  - `app/core/settings.py`, `app/workers/{celery_app,job_tasks}.py`: the schedule;
+  - `frontend/lib/api/errors.ts`: one new message; "already being updated" now fits stores and ad accounts;
+  - `tests/api/test_google_ads_performance.py`: a re-link now reads 30 days again, not 13 months;
+  - docs `INTEGRATION_GUIDES.md`, `DATABASE_SCHEMA.md`, `SECURITY.md`, `ARCHITECTURE.md`, `PROJECT_STATUS.md`, this report.
+- Deleted: none.
+
+**Tests**
+- **30 new.** They cover:
+  - nothing due right after the first import;
+  - the 3-hour run (structure changes, the account's own two days);
+  - a correction missed by the 3-hour run and picked up nightly; the weekly 90 days;
+  - which run comes first; unlinked accounts and stale runs;
+  - the 80 % and 100 % limits; Google's "too many requests" holding every account; Google's wait time;
+  - "Sync now": its window, the limit per account, a run already going, an unlinked account, a failed first import;
+  - health clearing; the scheduler reading only four columns of other organizations' accounts.
+- **Backend `make check`: 1,038 passed**, coverage 97 %. **Frontend `npm run check`: 343 passed.** E2E not rerun: no page changed.
+
+**Security**
+- The scheduler's system access is limited to **four columns** of the ad accounts table: id, organization, platform, and when the first import finished. It can never read names or figures (tested).
+- The counter's key names only the platform, never the developer token.
+- Everything else runs under each organization's own context with row-level security. Only reads to Google.
+
+**Migration:** `0013` adds that four-column read permission. It is additive; downgrade removes it.
+
+**Deviations**
+1. **The "Sync now" web address comes in 3-08** with the other ad account addresses, so permissions and errors are set up in one place. The logic, limits and tests are done here.
+2. **"Nightly" means 24 hours after the last nightly run**, not a fixed time of night; accounts therefore spread over the day.
+3. **Corrections remove an entity's row for a day instead of writing zeros** (the plan says zeros). Totals are the same, and it matches how the first import stores quiet days. The account level always has a row for every day.
+4. **The 3-hour run uses 9 requests, not 8**: the account's own details (status, name) are read with the structure, so health stays current.
+
+**Blocked:** Step 0 (3-01) still needs network access to Google and your Google credentials.
+
+**Next task:** 3-08 — the ad account API:
+- ad account list and detail, with sync status and health;
+- daily totals, campaigns with period figures, and one campaign with its ad groups and ads;
+- the "Sync now" address.
 

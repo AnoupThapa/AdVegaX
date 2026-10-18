@@ -87,6 +87,7 @@ def build_google_ads(
         api_version=settings.GOOGLE_ADS_API_VERSION,
         http_factory=lambda: SafeHttpClient(outbound),
         clock=clock,
+        daily_operations=settings.GOOGLE_ADS_DAILY_OPERATIONS,
     )
 
 

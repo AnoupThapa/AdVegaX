@@ -167,7 +167,20 @@ Add one section per provider when its phase is implemented.
   - Metrics: `impressions`, `clicks`, `cost_micros` (÷ 1,000,000 → exact decimal), `conversions`, `conversions_value` (doubles, kept as written; stored with 6 decimals). Selected metrics that are zero are **omitted** from Google's JSON (proto3), so a missing metric in a returned row is 0. A row with no valid date or id, a negative or non-numeric value, or a value too large to store is skipped and counted.
   - Each month **replaces** the stored rows of its days, per level, so corrections and removed activity never leave stale figures. Google sends no row for a day without activity: the account level gets a real 0 for each such day; other levels simply have no row.
   - Rows are linked to the stored campaign, ad group and ad where known; figures of entities not in the structure (e.g. a campaign with a status AdVegaX cannot read) are kept, unlinked. Ads are keyed `<ad group id>~<ad id>`. Performance Max campaigns have campaign rows but no ad-group rows; levels are never added into each other.
-  - The per-connection limit (5 calls a second, burst 10) can pause a step; it is queued again with the wait and repeats its month. Re-reads (3-hour, nightly 30 days, weekly 90 days) and the shared daily allowance come in 3-07.
+  - The per-connection limit (5 calls a second, burst 10) can pause a step; it is queued again with the wait and repeats its month.
+- **Ongoing sync (3-07):** a scheduler tick every 5 minutes (`advegax.schedule.ads_sync`) starts the run each imported, linked account is due for — the longest first:
+  - **weekly** (7 days after the last): the last 90 days, one step, 4 operations;
+  - **nightly** (24 hours after the last): the last 30 days, one step, 4 operations;
+  - **3-hour run:** the account and structure (5 operations) and today + yesterday (4 operations). Structure changes are picked up here; nightly and weekly runs read figures only.
+  - Every re-read replaces the stored days it covers (corrections, removed activity); days outside it are never touched. Days are the account's own (its time zone). Accounts come due at their own times, so runs spread over the day.
+  - A chain that has been silent for 6 hours (`ADS_CHAIN_STALE_AFTER`) is treated as dead and may be restarted.
+- **Shared allowance (Q-3-2):** one developer token serves every customer, so operations are counted in one Redis counter per platform over a sliding 24 hours (`GOOGLE_ADS_DAILY_OPERATIONS`, 2,880 for Explorer; raise it to 15,000 for Basic). Each step reserves its operations first:
+  - nightly and weekly re-reads stop at 80 % (`ADS_QUOTA_DEFER_SHARE`), so first imports, 3-hour runs and "Sync now" keep the rest; at 100 % every step waits;
+  - a step that does not fit waits 15 minutes (`ADS_QUOTA_WAIT`) as a new, delayed job — no attempt is used, nothing is marked — and the account shows `quota_waiting`;
+  - when Google answers `RESOURCE_EXHAUSTED` / `RESOURCE_TEMPORARILY_EXHAUSTED`, **every** account waits Google's `retryDelay` (or 15 minutes).
+  - The counter key names only the platform (`ads-quota:google_ads`); no token is ever part of it.
+- **"Sync now"** (route in 3-08): the structure and the last 30 days, never held back by the 80 % share; 6 an hour per account (`THROTTLE_AD_ACCOUNT_RESYNC_PER_HOUR`); refused while a run is going (`SYNC_IN_PROGRESS`) or when the account is not linked through an active connection (`AD_ACCOUNT_NOT_SYNCING`). An account whose first import failed starts it again.
+- **Health:** each 3-hour run reads the account; a run that reaches it clears earlier access problems (`no_account_access`, `account_not_enabled`, `developer_token_not_approved`). `account_details_changed` (currency or time zone changed at Google) stays as long as Google reports the different details; the stored ones are never replaced silently.
 - **Requests:** headers `Authorization: Bearer`, `developer-token`, and `login-customer-id` when an account is reached through a manager. Customer ids are digits only (dashes removed) before use. `search` follows `nextPageToken` (10,000 rows a page; follow-up pages cost no operation); `searchStream` reads all batches of one answer.
 - **Errors (GoogleAdsFailure `errorCode` values → plain codes):**
   - token expired or invalid → `auth_expired`; revoked → `google_sign_in_rejected`;

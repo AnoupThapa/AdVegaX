@@ -278,7 +278,7 @@ The client is built and tested in Phase 1B, before any provider exists (`backend
 - `app/providers/http/`: SSRF-safe client and a Redis token-bucket rate limiter per provider.
 - Core domains never import provider-specific code (source test); credentials are only decrypted inside the integrations domain (source test).
 - **Jobs:** `job_runs` is the source of truth. A job row is written in the business transaction and dispatched to Celery after commit; the worker claims it with `FOR UPDATE SKIP LOCKED` as the system role, then runs the handler under the job's tenant context. Retryable errors back off exponentially with jitter (respecting provider `Retry-After`) up to `JOB_MAX_ATTEMPTS`, then the job is **dead**-lettered; non-retryable errors fail immediately with a code. A periodic recovery task re-queues jobs stuck in `running` longer than `JOB_STUCK_AFTER`.
-- **Scheduler:** Celery beat defines the schedule (email sweep, job recovery); each scheduled run takes a Redis `SET NX EX` lock so only one instance executes per window even if several beat processes run.
+- **Scheduler:** Celery beat defines the schedule (email sweep, job recovery, token refresh, commerce reconcile and deep checks, webhook purge, and from 3-07 the ad account sync tick every 5 minutes); each scheduled run takes a Redis `SET NX EX` lock so only one instance executes per window even if several beat processes run.
 
 ## 10. Sync Architecture
 

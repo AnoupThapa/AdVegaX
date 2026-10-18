@@ -109,9 +109,11 @@ const MESSAGES: Readonly<Record<string, string>> = {
     "This account cannot be linked. It may be a manager account or one that is cancelled or suspended on the platform.",
   ALREADY_LINKED: "This account is already linked to the organization.",
   NOT_LINKED: "This account is not linked to the organization.",
-  SYNC_IN_PROGRESS: "This store is already being updated. Please wait until it finishes.",
+  SYNC_IN_PROGRESS: "This is already being updated. Please wait until it finishes.",
   STORE_NOT_SYNCING:
     "This store is not linked to an active connection. Link or reconnect it first.",
+  AD_ACCOUNT_NOT_SYNCING:
+    "This ad account is not linked to an active connection. Link or reconnect it first.",
   // Platform-to-AdVegaX webhook answers; a person should never see these, but keep them friendly.
   INVALID_SIGNATURE: "The request could not be verified.",
   INVALID_WEBHOOK: "The request could not be processed.",

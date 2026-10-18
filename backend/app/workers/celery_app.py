@@ -46,6 +46,10 @@ celery_app.conf.update(
             "task": "advegax.schedule.commerce_deep",
             "schedule": _settings.SCHEDULE_COMMERCE_DEEP_INTERVAL.total_seconds(),
         },
+        "ads-sync": {
+            "task": "advegax.schedule.ads_sync",
+            "schedule": _settings.SCHEDULE_ADS_SYNC_TICK.total_seconds(),
+        },
         "webhook-purge": {
             "task": "advegax.schedule.webhook_purge",
             "schedule": _settings.SCHEDULE_WEBHOOK_PURGE_INTERVAL.total_seconds(),

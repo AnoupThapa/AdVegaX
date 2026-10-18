@@ -24,6 +24,13 @@ class RateLimitedError(RetryableError):
         self.retry_after_seconds = retry_after_seconds
 
 
+class PlatformQuotaError(RateLimitedError):
+    """The platform allowance shared by every AdVegaX customer was reached (e.g. Google Ads
+    operations per developer token): every account waits; nothing is marked (Phase 3)."""
+
+    code = "quota_exhausted"
+
+
 class AuthExpiredError(ProviderError):
     code = "auth_expired"
 

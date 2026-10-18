@@ -162,7 +162,12 @@ class GoogleAdsProvider:
         frozenset({Capability.PKCE, Capability.TOKEN_REFRESH, Capability.TOKEN_REVOCATION})
     )
     test_only = False
-    rate_limit = (5.0, 10)  # per connection; the shared daily allowance is paced in 3-07
+    rate_limit = (5.0, 10)  # per connection
+    # Google's allowance is per developer token, shared by every AdVegaX customer (Q-3-2);
+    # the importer counts operations against it: the account and four structure lists, and
+    # one ``searchStream`` per level of daily figures.
+    structure_operations = 5
+    level_operations = 1
 
     def __init__(
         self,
@@ -173,10 +178,12 @@ class GoogleAdsProvider:
         api_version: str,
         http_factory: HttpFactory,
         clock: Clock,
+        daily_operations: int | None = None,
     ) -> None:
         if not client_id or not client_secret or not developer_token:
             raise ValueError("Google Ads needs a client id, client secret and developer token")
         self._client_id = client_id
+        self.shared_daily_operations = daily_operations
         self._client_secret = client_secret
         self._clock = clock
         self._sign_in = GoogleSignIn(http_factory)

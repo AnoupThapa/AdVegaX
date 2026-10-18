@@ -190,10 +190,11 @@ def test_days_are_the_accounts_own_days(make_client, sim, admin_engine):
 
 # ------------------------------------------------------------------ corrections
 def test_a_new_import_replaces_the_figures_of_the_days_it_reads(owner, sim, runtime, admin_engine):
+    """An imported account read again (3-07: the last 30 days) replaces those days only."""
     _link(owner)
     customer = sim.customers[AU]
-    # Google corrected the Search day (invalid clicks removed) and the PMax day's activity
-    # was removed entirely.
+    # Google corrected the Search day (invalid clicks removed) and its ad group and ad rows
+    # are gone; the PMax day in April is outside the 30 days read again.
     corrected = perf_row(
         SEARCH_DAY, campaign="11", impressions=1200, clicks=30, cost_micros=9_000_000
     )
@@ -211,8 +212,11 @@ def test_a_new_import_replaces_the_figures_of_the_days_it_reads(owner, sim, runt
         30,
         Decimal("9.000000"),
     )
-    assert by_day[date(2026, 4, 10)]["impressions"] == 0  # no stale 500 left behind
-    assert [(r["entity_key"], r["clicks"]) for r in _perf(admin_engine, "campaign")] == [("11", 30)]
+    assert by_day[date(2026, 4, 10)]["impressions"] == 500  # not read again: kept as it was
+    assert [(r["entity_key"], r["clicks"]) for r in _perf(admin_engine, "campaign")] == [
+        ("12", 0),
+        ("11", 30),
+    ]
     assert _perf(admin_engine, "ad_group") == [] and _perf(admin_engine, "ad") == []
 
 

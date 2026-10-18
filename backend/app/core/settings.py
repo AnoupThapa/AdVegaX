@@ -90,6 +90,7 @@ class Settings(BaseSettings):
     THROTTLE_KEY_DELIVERY_PER_IP_PER_MINUTE: int = Field(default=30, ge=1)
     # "Sync now" on a store (2A-09): each run is a full deep check, so it is limited per store.
     THROTTLE_STORE_RESYNC_PER_HOUR: int = Field(default=6, ge=1)
+    THROTTLE_AD_ACCOUNT_RESYNC_PER_HOUR: int = Field(default=6, ge=1)
 
     # --- Passwords ------------------------------------------------------------------
     PASSWORD_MIN_LENGTH: int = Field(default=12, ge=8)
@@ -173,6 +174,23 @@ class Settings(BaseSettings):
 
     # --- Advertising import (Phase 3; PHASE_03_PLAN §9) ---------------------------------
     ADS_HISTORY_WINDOW: timedelta = timedelta(days=395)  # 13 months on first link (Q-3-6)
+    # Ongoing sync (Q-3-5, task 3-07): every 3 hours structure + today and yesterday; nightly
+    # the last 30 days; weekly the last 90 days; each re-read replaces the days it covers.
+    ADS_QUICK_INTERVAL: timedelta = timedelta(hours=3)
+    ADS_QUICK_WINDOW: timedelta = timedelta(days=2)
+    ADS_NIGHTLY_INTERVAL: timedelta = timedelta(hours=24)
+    ADS_NIGHTLY_WINDOW: timedelta = timedelta(days=30)
+    ADS_WEEKLY_INTERVAL: timedelta = timedelta(days=7)
+    ADS_WEEKLY_WINDOW: timedelta = timedelta(days=90)
+    ADS_CHAIN_STALE_AFTER: timedelta = timedelta(hours=6)
+    SCHEDULE_ADS_SYNC_TICK: timedelta = timedelta(minutes=5)
+    # The platform allowance shared by every customer (Q-3-2): Google Ads operations a day per
+    # developer token (Explorer 2,880; Basic 15,000). At ADS_QUOTA_DEFER_SHARE of it the
+    # nightly and weekly re-reads wait; at 100 % every step waits ADS_QUOTA_WAIT and retries.
+    GOOGLE_ADS_DAILY_OPERATIONS: int = Field(default=2880, ge=1)
+    ADS_QUOTA_WINDOW: timedelta = timedelta(hours=24)
+    ADS_QUOTA_DEFER_SHARE: float = Field(default=0.8, gt=0, le=1)
+    ADS_QUOTA_WAIT: timedelta = timedelta(minutes=15)
 
     # --- Commerce import (Phase 2A, 2A-06; PHASE_02A_PLAN §9) ----------------------------
     # Longest order history imported (13 months, Q9); the platform may allow less (Shopify:
@@ -241,6 +259,16 @@ class Settings(BaseSettings):
             "OUTBOUND_DOWNLOAD_TIMEOUT": self.OUTBOUND_DOWNLOAD_TIMEOUT,
             "COMMERCE_HISTORY_WINDOW": self.COMMERCE_HISTORY_WINDOW,
             "ADS_HISTORY_WINDOW": self.ADS_HISTORY_WINDOW,
+            "ADS_QUICK_INTERVAL": self.ADS_QUICK_INTERVAL,
+            "ADS_QUICK_WINDOW": self.ADS_QUICK_WINDOW,
+            "ADS_NIGHTLY_INTERVAL": self.ADS_NIGHTLY_INTERVAL,
+            "ADS_NIGHTLY_WINDOW": self.ADS_NIGHTLY_WINDOW,
+            "ADS_WEEKLY_INTERVAL": self.ADS_WEEKLY_INTERVAL,
+            "ADS_WEEKLY_WINDOW": self.ADS_WEEKLY_WINDOW,
+            "ADS_CHAIN_STALE_AFTER": self.ADS_CHAIN_STALE_AFTER,
+            "SCHEDULE_ADS_SYNC_TICK": self.SCHEDULE_ADS_SYNC_TICK,
+            "ADS_QUOTA_WINDOW": self.ADS_QUOTA_WINDOW,
+            "ADS_QUOTA_WAIT": self.ADS_QUOTA_WAIT,
             "SHOPIFY_DEFAULT_ORDER_HISTORY": self.SHOPIFY_DEFAULT_ORDER_HISTORY,
             "SCHEDULE_COMMERCE_RECONCILE_INTERVAL": self.SCHEDULE_COMMERCE_RECONCILE_INTERVAL,
             "SCHEDULE_COMMERCE_DEEP_INTERVAL": self.SCHEDULE_COMMERCE_DEEP_INTERVAL,

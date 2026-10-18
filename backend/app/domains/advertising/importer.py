@@ -1,4 +1,4 @@
-"""Importing linked ad accounts (Phase 3, tasks 3-05 …; PHASE_03_PLAN §9).
+"""Importing and syncing linked ad accounts (Phase 3, tasks 3-05 … 3-07; PHASE_03_PLAN §9).
 
 Platform-neutral: the core asks an ``AdvertisingProvider`` for the account's state, its
 structure and (from 3-06) its daily figures, and stores them in the advertising tables. Like
@@ -11,9 +11,15 @@ step per calendar-month slice of daily figures, four levels each, so a 13-month 
 costs about 56 operations) → ``done``. Each slice **replaces** the stored figures of its days,
 so corrections and removed activity never leave stale numbers; the account level gets a real
 zero for every day Google reports nothing (A10: zero only where the platform says zero).
-Removed campaigns, ad groups and ads are kept (status
-``removed``) so their history stays readable; items the platform stops listing are left as
-they are, never deleted on absence.
+Removed campaigns, ad groups and ads are kept (status ``removed``) so their history stays
+readable; items the platform stops listing are left as they are, never deleted on absence.
+
+Modes (``ad_sync_state.sync_mode``, 3-07): ``initial`` (structure + 13 months in monthly
+slices); ``quick`` every 3 hours (structure + today and yesterday); ``nightly`` (the last 30
+days) and ``weekly`` (the last 90 days), each re-read in one step. "Sync now" is a nightly
+re-read with the structure. Every step first reserves its operations in the platform
+allowance shared by all customers (``quota``); a step that does not fit waits and retries,
+nightly and weekly re-reads waiting first.
 """
 
 from __future__ import annotations
@@ -21,14 +27,17 @@ from __future__ import annotations
 import logging
 import uuid
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
+from enum import StrEnum
 from typing import Any, cast
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
+from app.core.errors import Conflict
+from app.core.security.throttle import Limit
 from app.domains.advertising.models import (
     Ad,
     AdAccount,
@@ -38,6 +47,7 @@ from app.domains.advertising.models import (
     AdPerformanceDaily,
     AdSyncState,
 )
+from app.domains.advertising.quota import SharedQuota
 from app.domains.audit.service import Actor, record_audit
 from app.domains.integrations.jobs import call_provider
 from app.domains.integrations.models import (
@@ -47,8 +57,13 @@ from app.domains.integrations.models import (
 )
 from app.domains.integrations.tokens import AccountBusy, account_lock, usable_secrets
 from app.domains.jobs.service import ClaimedJob, JobSubjectGoneError, create_job
-from app.providers.base.errors import ProviderError, ResourceUnavailableError
+from app.providers.base.errors import (
+    PlatformQuotaError,
+    ProviderError,
+    ResourceUnavailableError,
+)
 from app.providers.base.interfaces import AdvertisingProvider, PlatformProvider
+from app.providers.base.registry import UnknownProvider
 from app.providers.base.types import (
     AdAccountRef,
     AdBudgetRecord,
@@ -72,6 +87,26 @@ STEP_STRUCTURE = "structure"
 STEP_DONE = "done"
 STEP_PERFORMANCE = "perf"
 ACCOUNT_KEY = "account"  # entity_key of account-level rows
+QUOTA_WAITING = "quota_waiting"  # last_error_code while a step waits for the allowance
+KEPT_HEALTH = frozenset({"account_details_changed"})  # re-checked by each structure read
+HOUR = 3600
+
+
+class SyncMode(StrEnum):
+    INITIAL = "initial"
+    QUICK = "quick"
+    NIGHTLY = "nightly"
+    WEEKLY = "weekly"
+
+
+class AdSyncInProgress(Conflict):
+    code = "SYNC_IN_PROGRESS"
+    message = "This ad account is already being synchronized."
+
+
+class AdAccountNotSyncing(Conflict):
+    code = "AD_ACCOUNT_NOT_SYNCING"
+    message = "This ad account is not linked to an active connection."
 
 
 def advertising_provider(provider: PlatformProvider) -> AdvertisingProvider | None:
@@ -132,31 +167,75 @@ def on_ad_account_linked(
 def start_import(
     session: Session, rt: Runtime, account: AdAccount, *, requested_by: uuid.UUID | None
 ) -> uuid.UUID:
-    """(Re)start the chain from the structure step."""
+    """Linking: the first import, or (an imported account linked again) a nightly-style
+    re-read with the structure."""
+    if account.first_import_completed_at is None:
+        return start_sync(session, rt, account, SyncMode.INITIAL, requested_by=requested_by)
+    return start_sync(
+        session, rt, account, SyncMode.NIGHTLY, requested_by=requested_by, structure=True
+    )
+
+
+def start_sync(
+    session: Session,
+    rt: Runtime,
+    account: AdAccount,
+    mode: SyncMode,
+    *,
+    requested_by: uuid.UUID | None = None,
+    structure: bool | None = None,
+) -> uuid.UUID:
+    """(Re)start the account's chain in ``mode``. The structure is read first for the first
+    import and the 3-hour run (and "Sync now"); nightly and weekly runs read figures only."""
     state = session.get(AdSyncState, account.id, with_for_update=True)
     if state is None:
         state = AdSyncState(ad_account_id=account.id, organization_id=account.organization_id)
         session.add(state)
-    now = rt.clock.now()
-    initial = account.first_import_completed_at is None
-    if initial:
+    if structure is None:
+        structure = mode in (SyncMode.INITIAL, SyncMode.QUICK)
+    if mode is SyncMode.INITIAL:
         account.status = "importing"
         state.import_progress = 0
-    state.sync_mode = "initial" if initial else "nightly"
-    state.sync_started_at = now
-    state.import_cursor = STEP_STRUCTURE
+    state.sync_mode = mode.value
+    state.sync_started_at = rt.clock.now()
+    state.import_cursor = STEP_STRUCTURE if structure else _cursor(*window(rt, account, mode))
     state.last_error_code = state.last_error_at = None
     job = _schedule(session, rt, account, state, requested_by=requested_by)
-    record_audit(
-        session,
-        organization_id=account.organization_id,
-        actor=Actor.user(requested_by) if requested_by else WORKER,
-        action="ad_account.import_started",
-        resource_type="ad_account",
-        resource_id=account.id,
-        metadata={"job_id": str(job), "mode": state.sync_mode},
-    )
+    if mode is SyncMode.INITIAL or requested_by is not None:  # scheduled runs: logs only
+        record_audit(
+            session,
+            organization_id=account.organization_id,
+            actor=Actor.user(requested_by) if requested_by else WORKER,
+            action="ad_account.import_started"
+            if mode is SyncMode.INITIAL
+            else "ad_account.sync_started",
+            resource_type="ad_account",
+            resource_id=account.id,
+            metadata={"job_id": str(job), "mode": mode.value},
+        )
     return job
+
+
+def window(rt: Runtime, account: AdAccount, mode: SyncMode) -> tuple[date, date]:
+    """The days a run of ``mode`` reads, in the account's time zone, never before its
+    history start."""
+    today = local_today(rt, account.timezone)
+    start = history_start(rt, account)
+    days = {
+        SyncMode.INITIAL: None,
+        SyncMode.QUICK: rt.settings.ADS_QUICK_WINDOW.days,
+        SyncMode.NIGHTLY: rt.settings.ADS_NIGHTLY_WINDOW.days,
+        SyncMode.WEEKLY: rt.settings.ADS_WEEKLY_WINDOW.days,
+    }[mode]
+    first = start if days is None else max(start, _shift(today, 1 - max(1, days)))
+    return min(first, today), today
+
+
+def chain_running(rt: Runtime, state: AdSyncState) -> bool:
+    """A chain is running unless none was started or it has been silent too long."""
+    if state.import_job_id is None:
+        return False
+    return state.updated_at > rt.clock.now() - rt.settings.ADS_CHAIN_STALE_AFTER
 
 
 def _schedule(
@@ -166,6 +245,7 @@ def _schedule(
     state: AdSyncState,
     *,
     requested_by: uuid.UUID | None = None,
+    delay_seconds: int = 0,
 ) -> uuid.UUID:
     job = create_job(
         session,
@@ -175,10 +255,126 @@ def _schedule(
         subject_type="ad_account",
         subject_id=account.id,
         requested_by=requested_by,
+        delay_seconds=delay_seconds,
     )
+    if delay_seconds > 0:  # durable: an early or re-sent message finds the job not yet due
+        job.next_attempt_at = func.now() + timedelta(seconds=delay_seconds)
     state.import_job_id = job.id
     state.updated_at = rt.clock.now()
     return job.id
+
+
+# ------------------------------------------------------------------ schedule and "Sync now"
+def due_mode(
+    rt: Runtime, state: AdSyncState | None, *, defer_rereads: bool = False
+) -> SyncMode | None:
+    """The run an imported account needs now, the longest first: weekly, nightly, then the
+    3-hour run. Nightly and weekly wait while the shared allowance is mostly used."""
+    now = rt.clock.now()
+    settings = rt.settings
+
+    def due(last: Any, interval: Any) -> bool:
+        return last is None or last <= now - interval
+
+    last_weekly = state.last_weekly_at if state else None
+    last_nightly = state.last_nightly_at if state else None
+    last_quick = state.last_quick_at if state else None
+    if not defer_rereads:
+        if due(last_weekly, settings.ADS_WEEKLY_INTERVAL):
+            return SyncMode.WEEKLY
+        if due(last_nightly, settings.ADS_NIGHTLY_INTERVAL):
+            return SyncMode.NIGHTLY
+    if due(last_quick, settings.ADS_QUICK_INTERVAL):
+        return SyncMode.QUICK
+    return None
+
+
+def _syncable(session: Session, account: AdAccount) -> bool:
+    """Linked, through an active connection."""
+    row = session.execute(
+        select(ExternalConnection.status)
+        .join(ExternalResource, ExternalResource.connection_id == ExternalConnection.id)
+        .join(
+            OrganizationResourceLink,
+            OrganizationResourceLink.external_resource_id == ExternalResource.id,
+        )
+        .where(
+            ExternalResource.id == account.external_resource_id,
+            OrganizationResourceLink.status == "active",
+        )
+    ).first()
+    return row is not None and row[0] == "active"
+
+
+def enqueue_ad_syncs(rt: Runtime) -> int:
+    """Start the run each imported ad account is due for (every tick of the scheduler).
+    Accounts come due at their own times (3 hours after their last run), so runs spread
+    over the day instead of starting together. Returns how many were started.
+
+    The account list comes from a narrow system-role read of ``ad_accounts`` (0013 grant);
+    everything else runs under each account's tenant context."""
+    with rt.db.transaction(system=True) as session:
+        accounts = session.execute(
+            select(AdAccount.id, AdAccount.organization_id, AdAccount.provider).where(
+                AdAccount.first_import_completed_at.is_not(None)
+            )
+        ).all()
+    defer: dict[str, bool | None] = {}  # per platform; None = not available here
+    started = 0
+    for account_id, org_id, provider_code in accounts:
+        if provider_code not in defer:
+            defer[provider_code] = _defer_rereads(rt, provider_code)
+        if defer[provider_code] is None:
+            continue
+        with rt.db.transaction(org_id=org_id) as session:
+            account = session.get(AdAccount, account_id)
+            state = session.get(AdSyncState, account_id, with_for_update=True)
+            if account is None or (state is not None and chain_running(rt, state)):
+                continue
+            if not _syncable(session, account):
+                continue
+            mode = due_mode(rt, state, defer_rereads=bool(defer[provider_code]))
+            if mode is None:
+                continue
+            start_sync(session, rt, account, mode)
+            started += 1
+    if started:
+        logger.info("ad_syncs_started", extra={"count": started})
+    return started
+
+
+def _defer_rereads(rt: Runtime, provider_code: str) -> bool | None:
+    """Whether nightly and weekly re-reads wait (the shared allowance is mostly used);
+    None when the platform is not available in this deployment."""
+    try:
+        provider = advertising_provider(rt.providers.get(provider_code))
+    except UnknownProvider:
+        return None
+    if provider is None:
+        return None
+    return quota_share_used(rt, provider) >= rt.settings.ADS_QUOTA_DEFER_SHARE
+
+
+def request_sync(
+    session: Session, rt: Runtime, account: AdAccount, *, requested_by: uuid.UUID
+) -> tuple[uuid.UUID, SyncMode]:
+    """ "Sync now": the structure and the last 30 days (or the first import again, when it
+    did not finish). Limited per account, not per person."""
+    if not _syncable(session, account):
+        raise AdAccountNotSyncing()
+    state = session.get(AdSyncState, account.id, with_for_update=True)
+    if state is not None and chain_running(rt, state):
+        raise AdSyncInProgress()
+    rt.throttler.hit(
+        Limit("ad_account_resync", rt.settings.THROTTLE_AD_ACCOUNT_RESYNC_PER_HOUR, HOUR),
+        str(account.id),
+    )
+    if account.first_import_completed_at is None:
+        return start_import(session, rt, account, requested_by=requested_by), SyncMode.INITIAL
+    job = start_sync(
+        session, rt, account, SyncMode.NIGHTLY, requested_by=requested_by, structure=True
+    )
+    return job, SyncMode.NIGHTLY
 
 
 # ------------------------------------------------------------------ the step
@@ -190,6 +386,9 @@ class _Context:
     ref: AdAccountRef
     step: str
     first_import: bool
+    mode: SyncMode
+    requested_by: uuid.UUID | None
+    platform: str
 
 
 def import_step(rt: Runtime, job: ClaimedJob) -> None:
@@ -212,7 +411,8 @@ def import_step(rt: Runtime, job: ClaimedJob) -> None:
             account = session.get(AdAccount, account_id)
             state = session.get(AdSyncState, account_id, with_for_update=True)
             if account is not None and state is not None and state.import_job_id == job.id:
-                _schedule(session, rt, account, state)
+                # A person's "Sync now" stays theirs through the chain (it never waits first).
+                _schedule(session, rt, account, state, requested_by=job.requested_by_user_id)
 
 
 def _load(
@@ -253,6 +453,9 @@ def _load(
                 ref=AdAccountRef(account.external_account_id, resource.access_hint),
                 step=state.import_cursor or STEP_STRUCTURE,
                 first_import=account.first_import_completed_at is None,
+                mode=_mode(state.sync_mode, account),
+                requested_by=job.requested_by_user_id,
+                platform=connection.provider,
             ),
             provider,
         )
@@ -266,6 +469,10 @@ def _step(rt: Runtime, job: ClaimedJob, org_id: uuid.UUID, account_id: uuid.UUID
     if ctx is None or provider is None:
         return False
     try:
+        wait = _quota_wait(rt, ctx, provider)
+        if wait is not None:
+            _wait(rt, ctx, job, wait)
+            return False
         if ctx.step == STEP_STRUCTURE:
             return _structure(rt, ctx, provider)
         if (span := performance_cursor(ctx.step)) is not None:
@@ -275,14 +482,99 @@ def _step(rt: Runtime, job: ClaimedJob, org_id: uuid.UUID, account_id: uuid.UUID
     except ResourceUnavailableError as exc:
         _fail(rt, ctx, exc.code, health=True)
         return False
+    except PlatformQuotaError as exc:  # the platform says the shared allowance is used up
+        delay = exc.retry_after_seconds or rt.settings.ADS_QUOTA_WAIT.total_seconds()
+        SharedQuota(rt.redis, rt.clock).block(ctx.platform, delay)
+        logger.warning(
+            "ad_platform_quota_exhausted",
+            extra={"provider": ctx.platform, "retry_after_seconds": int(delay)},
+        )
+        _wait(rt, ctx, job, delay)
+        return False
     except ProviderError as exc:
         if not exc.retryable or job.attempts >= job.max_attempts:
             _fail(rt, ctx, exc.code, health=False)
         raise
 
 
+def _mode(value: str | None, account: AdAccount) -> SyncMode:
+    if value in {m.value for m in SyncMode}:
+        return SyncMode(value)
+    initial = account.first_import_completed_at is None
+    return SyncMode.INITIAL if initial else SyncMode.NIGHTLY
+
+
 def _call(rt: Runtime, ctx: _Context, provider: AdvertisingProvider, fn: Any) -> Any:
     return call_provider(rt, provider, ctx.org_id, ctx.connection_id, fn)
+
+
+# ------------------------------------------------------------------ shared allowance
+def _cost(ctx: _Context, provider: AdvertisingProvider) -> int:
+    if ctx.step == STEP_STRUCTURE:
+        return int(getattr(provider, "structure_operations", 0))
+    if performance_cursor(ctx.step) is not None:
+        return int(getattr(provider, "level_operations", 0)) * len(AdLevel)
+    return 0
+
+
+def _quota_wait(rt: Runtime, ctx: _Context, provider: AdvertisingProvider) -> float | None:
+    """Reserve this step's operations; the seconds to wait when they do not fit, else None.
+    Nightly and weekly re-reads stop at a share of the allowance, so first imports, 3-hour
+    runs and a person's "Sync now" keep the rest."""
+    cost = _cost(ctx, provider)
+    if cost == 0:
+        return None
+    quota = SharedQuota(rt.redis, rt.clock)
+    blocked = quota.blocked_for(ctx.platform)
+    if blocked > 0:
+        return blocked
+    limit = getattr(provider, "shared_daily_operations", None)
+    if not isinstance(limit, int) or limit <= 0:
+        return None
+    deferrable = ctx.mode in (SyncMode.NIGHTLY, SyncMode.WEEKLY) and ctx.requested_by is None
+    ceiling = int(limit * rt.settings.ADS_QUOTA_DEFER_SHARE) if deferrable else limit
+    window_seconds = rt.settings.ADS_QUOTA_WINDOW.total_seconds()
+    if quota.reserve(ctx.platform, cost, ceiling=ceiling, window_seconds=window_seconds):
+        return None
+    logger.info(
+        "ad_sync_waiting_for_allowance",
+        extra={"ad_account_id": str(ctx.account_id), "mode": ctx.mode.value},
+    )
+    return rt.settings.ADS_QUOTA_WAIT.total_seconds()
+
+
+def quota_share_used(rt: Runtime, provider: AdvertisingProvider) -> float:
+    """How much of the shared allowance the last window used (0 … 1; 0 when none)."""
+    limit = getattr(provider, "shared_daily_operations", None)
+    if not isinstance(limit, int) or limit <= 0:
+        return 0.0
+    used = SharedQuota(rt.redis, rt.clock).used(
+        provider.code, window_seconds=rt.settings.ADS_QUOTA_WINDOW.total_seconds()
+    )
+    return used / limit
+
+
+def _wait(rt: Runtime, ctx: _Context, job: ClaimedJob, seconds: float) -> None:
+    """Hold the chain: the same step runs again later, as a new job (no attempt is used)."""
+    with rt.db.transaction(org_id=ctx.org_id) as session:
+        account = session.get(AdAccount, ctx.account_id)
+        state = session.get(AdSyncState, ctx.account_id, with_for_update=True)
+        if account is None or state is None or state.import_job_id != job.id:
+            return
+        _schedule(
+            session,
+            rt,
+            account,
+            state,
+            requested_by=ctx.requested_by,
+            delay_seconds=max(1, int(seconds)),
+        )
+        state.last_error_code, state.last_error_at = QUOTA_WAITING, rt.clock.now()
+
+
+def _clear_waiting(state: AdSyncState) -> None:
+    if state.last_error_code == QUOTA_WAITING:
+        state.last_error_code = state.last_error_at = None
 
 
 def _structure(rt: Runtime, ctx: _Context, provider: AdvertisingProvider) -> bool:
@@ -294,25 +586,28 @@ def _structure(rt: Runtime, ctx: _Context, provider: AdvertisingProvider) -> boo
         account.name = state.name or account.name
         account.platform_status = state.platform_status
         account.health_checked_at = rt.clock.now()
+        # The account answered: earlier access problems are over. Currency and time zone are
+        # fixed for the life of a Google Ads account; a change would make stored figures
+        # inconsistent, so it is recorded, never applied silently.
         if state.platform_status != "active":
             account.health_code = "account_not_enabled"
-        elif account.health_code == "account_not_enabled":
-            account.health_code = None
-        # Currency and time zone are fixed for the life of a Google Ads account; a change
-        # would make stored figures inconsistent, so it is recorded, never applied silently.
-        if (state.currency, state.timezone) != (account.currency, account.timezone):
+        elif (state.currency, state.timezone) != (account.currency, account.timezone):
             account.health_code = "account_details_changed"
+        else:
+            account.health_code = None
     if state.platform_status != "active":
         _fail(rt, ctx, "account_not_enabled", health=True)
         return False
-    records = list(_call(rt, ctx, provider, lambda: provider.read_structure(secrets, ctx.ref)))
+    records = _call(rt, ctx, provider, lambda: list(provider.read_structure(secrets, ctx.ref)))
     with rt.db.transaction(org_id=ctx.org_id) as session:
         counts = apply_structure(session, rt, ctx.org_id, ctx.account_id, records)
         sync = session.get(AdSyncState, ctx.account_id, with_for_update=True)
         assert sync is not None
         account = session.get(AdAccount, ctx.account_id)
         assert account is not None
-        sync.import_cursor = _cursor(history_start(rt, account), local_today(rt, account.timezone))
+        sync.import_cursor = _cursor(*window(rt, account, ctx.mode))
+        _clear_waiting(sync)
+        sync.updated_at = rt.clock.now()
         if ctx.first_import:
             sync.import_progress = 50
             record_audit(
@@ -364,17 +659,18 @@ def history_start(rt: Runtime, account: AdAccount) -> date:
 def _performance(
     rt: Runtime, ctx: _Context, provider: AdvertisingProvider, first: date, last: date
 ) -> bool:
-    end = month_slice(first, last)
+    # The first import reads calendar months; a re-read (2, 30 or 90 days) is one step.
+    end = month_slice(first, last) if ctx.mode is SyncMode.INITIAL else last
     secrets = usable_secrets(rt, ctx.org_id, ctx.connection_id)
     records: dict[AdLevel, list[AdPerformanceRecord]] = {}
     for level in AdLevel:
-        records[level] = list(
-            _call(
-                rt,
-                ctx,
-                provider,
-                lambda level=level: provider.read_performance(secrets, ctx.ref, level, first, end),
-            )
+        records[level] = _call(
+            rt,
+            ctx,
+            provider,
+            lambda level=level: list(
+                provider.read_performance(secrets, ctx.ref, level, first, end)
+            ),
         )
     with rt.db.transaction(org_id=ctx.org_id) as session:
         account = session.get(AdAccount, ctx.account_id)
@@ -384,6 +680,7 @@ def _performance(
         written = apply_performance(session, rt, account, first, end, records)
         more = end < last
         sync.import_cursor = _cursor(_shift(end, 1), last) if more else STEP_DONE
+        _clear_waiting(sync)
         if ctx.first_import:
             start = history_start(rt, account)
             span = max(1, (last - start).days + 1)
@@ -537,10 +834,21 @@ def _finish(rt: Runtime, ctx: _Context) -> None:
                 resource_id=ctx.account_id,
             )
         account.status = "active"
+        if account.health_code not in KEPT_HEALTH:  # the run reached the account
+            account.health_code, account.health_checked_at = None, now
         state.import_progress = 100
+        # What this run covered: the first import everything; a 3-hour run the recent days
+        # and structure; nightly (incl. "Sync now") 30 days; weekly 90 days.
+        if ctx.mode is SyncMode.INITIAL:
+            state.last_quick_at = state.last_nightly_at = state.last_weekly_at = now
+        elif ctx.mode is SyncMode.QUICK:
+            state.last_quick_at = now
+        elif ctx.mode is SyncMode.NIGHTLY:
+            state.last_nightly_at = now
+        else:
+            state.last_weekly_at = state.last_nightly_at = now
         state.import_job_id, state.import_cursor = None, None
         state.sync_mode = None
-        state.last_nightly_at = now
         state.last_error_code = state.last_error_at = None
         state.updated_at = now
 
