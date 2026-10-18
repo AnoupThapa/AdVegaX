@@ -58,7 +58,36 @@ def build_registry(
         registry.register(build_woocommerce(settings, outbound))
     if google_ads_configured(settings) and outbound is not None:
         registry.register(build_google_ads(settings, clock or SystemClock(), outbound))
+    if meta_ads_configured(settings) and outbound is not None:
+        registry.register(build_meta_ads(settings, clock or SystemClock(), outbound))
     return registry
+
+
+def meta_ads_configured(settings: Settings) -> bool:
+    return bool(
+        settings.META_ADS_ENABLED
+        and settings.META_APP_ID
+        and settings.META_APP_SECRET is not None
+        and settings.META_LOGIN_CONFIG_ID
+    )
+
+
+def build_meta_ads(settings: Settings, clock: Clock, outbound: OutboundPolicy) -> PlatformProvider:
+    """Meta Ads, read-only (Phase 4): fixed Meta hosts through the SSRF-safe client."""
+    from app.providers.http.client import SafeHttpClient
+    from app.providers.meta_ads.provider import MetaAdsProvider
+
+    assert settings.META_APP_ID is not None
+    assert settings.META_APP_SECRET is not None
+    assert settings.META_LOGIN_CONFIG_ID is not None
+    return MetaAdsProvider(
+        app_id=settings.META_APP_ID,
+        app_secret=settings.META_APP_SECRET.get_secret_value(),
+        login_config_id=settings.META_LOGIN_CONFIG_ID,
+        api_version=settings.META_API_VERSION,
+        http_factory=lambda: SafeHttpClient(outbound),
+        clock=clock,
+    )
 
 
 def google_ads_configured(settings: Settings) -> bool:

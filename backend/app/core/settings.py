@@ -172,6 +172,16 @@ class Settings(BaseSettings):
     # The newest major version when coding started (Q-3-1); upgraded yearly.
     GOOGLE_ADS_API_VERSION: str = Field(default="v25", pattern=r"^v[0-9]{2,3}$")
 
+    # --- Meta Ads (Phase 4, read-only; PHASE_04_PLAN) ----------------------------------
+    # Offered only when switched on AND the Meta app and its Facebook Login for Business
+    # configuration are set. The app secret comes from the environment / secret store only
+    # (D15); in development from the local, untracked settings file — never chat or the repo.
+    META_ADS_ENABLED: bool = False
+    META_APP_ID: str | None = Field(default=None, pattern=r"^[0-9]{5,20}$")
+    META_APP_SECRET: SecretStr | None = None
+    META_LOGIN_CONFIG_ID: str | None = Field(default=None, pattern=r"^[0-9]{5,20}$")
+    META_API_VERSION: str = Field(default="v26.0", pattern=r"^v[0-9]{2,3}\.0$")  # Q-4-1
+
     # --- Advertising import (Phase 3; PHASE_03_PLAN §9) ---------------------------------
     ADS_HISTORY_WINDOW: timedelta = timedelta(days=395)  # 13 months on first link (Q-3-6)
     # Ongoing sync (Q-3-5, task 3-07): every 3 hours structure + today and yesterday; nightly

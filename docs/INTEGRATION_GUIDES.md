@@ -195,6 +195,23 @@ Add one section per provider when its phase is implemented.
   Google's messages are never kept.
 - **To confirm live (Step 0, PHASE_03_PLAN §4.2):** int64 JSON encoding; the error values above for each situation; PKCE and `prompt=consent` giving a new refresh token on reconnect; the revocation answer; refresh-token rules in testing mode; that `adwords` is classed as a sensitive scope.
 
+### Meta Ads (`meta_ads`) — Phase 4, in progress (simulator; live Step 0 pending)
+- **Category / auth scheme:** advertising / OAuth 2.0 authorization code with **Facebook Login for Business** (a configuration id instead of a scope list; the configuration asks for `ads_read` and `business_management`), PKCE (S256, to confirm with Login for Business) and single-use state. The code is exchanged on the server, then for the **long-lived** user token (about 60 days). Long-lived tokens cannot be renewed without the person, so no token refresh is declared: when the token ends or Meta answers error 190, the connection shows "Needs reconnecting". The same Facebook account reconnecting reuses the connection (`external_account_id` = organization + Meta user id); it may also serve another organization (Q-4-11).
+- **Configuration:** offered only when `META_ADS_ENABLED=true` **and** `META_APP_ID`, `META_APP_SECRET` and `META_LOGIN_CONFIG_ID` are set (secret store / local untracked settings only). The API version is `META_API_VERSION` (`v26.0`, Q-4-1).
+- **Hosts:** browser → `www.facebook.com/{version}/dialog/oauth`. Server → `graph.facebook.com/{version}` only, through the SSRF-safe client; redirects are not followed.
+- **Requests:** `Authorization: Bearer <token>` and `appsecret_proof` on every call. The token exchange is a `POST` with the app secret in the form body (never in the address). The person and the granted permissions come from `/me` and `/me/permissions`; `debug_token` is not used (it puts the token in the address). Lists follow Meta's `after` cursor, never its `next` URL (which repeats the token).
+- **Read-only guard:** `GET` only, plus `POST /oauth/access_token`, `POST /<object>/insights` (async reports, 4-05) and `DELETE /me/permissions` (disconnect). Anything else is refused before it is sent.
+- **Errors (Meta `error.code` / `error_subcode` → plain codes):**
+  - 190, 102 → `meta_sign_in_rejected`;
+  - 10, 200–299 → `meta_permission_missing`;
+  - 4, 17, 32, 613, 80000–80014 → `rate_limited`, with Meta's `estimated_time_to_regain_access` when given;
+  - 100/1487534 → `too_much_data`; 100/33 → `no_account_access`; other 100 → `bad_query`;
+  - 1, 2 and 5xx → retried.
+
+  To confirm live (Step 0 item 4).
+- **Usage headers:** `x-fb-ads-insights-throttle`, `x-app-usage` and `x-business-use-case-usage` are read on every answer (highest percentage, regain estimate, access tier) for pacing in 4-06.
+- **Disconnect:** `DELETE /me/permissions`, then our copy of the token is deleted (also when Meta cannot be reached).
+
 ### Fake provider (`fake`) — test/local only
 - **Category / auth scheme:** advertising / OAuth 2 with PKCE.
 - **Resources:** two ad accounts (AUD, USD) and one store (NPR) by default; configurable.

@@ -162,6 +162,14 @@ Tests: `tests/providers/test_woocommerce_client.py` (74 cases: addresses, auth, 
 - **Read-only by construction:** a static test allows only three Google Ads read methods in advertising providers, and refuses any write capability.
 - Disconnect revokes the token at Google and always deletes our copy, even if Google cannot be reached.
 
+### Meta sign-in (Phase 4)
+- Facebook Login for Business with a configuration id (`ads_read`, `business_management`), PKCE (S256) and single-use state; the code is exchanged on the server for a long-lived token (about 60 days).
+- **Secrets never in an address:** the token travels in the `Authorization` header and the app secret only in the body of the token exchange. Every Graph call carries `appsecret_proof` (HMAC-SHA256 of the token with the app secret). Meta's `debug_token` is not used, because it carries the token in the URL; the person and the permissions come from `/me` and `/me/permissions`.
+- The token is encrypted at rest with its expiry date; the app secret lives only in the secret store or the local untracked settings file. None of them appears in responses, logs, audit records, errors or the web app (connect tests scan for them, including the HTTP client's request log).
+- Only the person's Meta user id is kept, to recognise a reconnect; no name, email or picture is stored.
+- **Read-only by construction:** every request passes one guard that allows `GET`, plus the token exchange, starting an insights report and removing AdVegaX's own permission — nothing that changes an ad account. Static tests check that the guard is the only way out and that `ads_management` is never requested.
+- Disconnect removes AdVegaX's permission at Meta (`DELETE /me/permissions`) and always deletes our copy, even if Meta cannot be reached.
+
 ## 11. Web application (Phase 1C)
 
 - **No secrets in the browser or the Next.js server.** The only configuration is the public API address; the build refuses a plain-`http` address that is not localhost.

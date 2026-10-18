@@ -93,7 +93,7 @@ def test_core_domains_do_not_import_platform_specific_code():
 # Google Ads REST methods are written as ``…/customers/{id}/googleAds:search``; every ``:verb``
 # a provider names must be one of these reads. Any change to an ad account goes only through
 # the Action Engine (Phase 10A), which does not exist yet.
-ADVERTISING_PROVIDER_DIRS = ("google_ads", "meta")
+ADVERTISING_PROVIDER_DIRS = ("google_ads", "meta_ads")
 ALLOWED_AD_METHODS = {"listAccessibleCustomers", "search", "searchStream"}
 _AD_METHOD = re.compile(r"""[\w}]:([a-zA-Z]+)\b""")
 _AD_WRITE_WORDS = re.compile(r"mutate|:upload|:apply|:remove|:create|:update", re.IGNORECASE)
@@ -148,3 +148,24 @@ def test_advertising_providers_declare_no_write_capability():
         if rel.split("/")[1] in ADVERTISING_PROVIDER_DIRS:
             src = path.read_text(encoding="utf-8")
             assert not any(f"Capability.{c.name}" in src for c in writes), rel
+
+
+# Phase 4 (PHASE_04_PLAN §3, §7, acceptance criterion 4): the Meta provider sends every request
+# through one guarded ``_send`` (GET, plus the token exchange, insights reports and removing
+# AdVegaX's own permission) and never asks for ``ads_management``.
+def test_meta_requests_all_pass_the_read_only_guard():
+    folder = APP / "providers" / "meta_ads"
+    sources = {p.name: p.read_text(encoding="utf-8") for p in folder.rglob("*.py")}
+    calls = {name: src.count(".request(") for name, src in sources.items() if ".request(" in src}
+    assert calls == {"client.py": 1}
+    client = sources["client.py"]
+    send = client[client.index("    def _send(") :]
+    send = send[: send.index("\n    def ", 10)]
+    assert "_allowed(method, path)" in send and send.index("_allowed(") < send.index(".request(")
+
+
+def test_meta_never_asks_for_write_permissions():
+    for path in (APP / "providers" / "meta_ads").rglob("*.py"):
+        src = path.read_text(encoding="utf-8")
+        assert "ads_management" not in src, path.name
+        assert "pages_manage" not in src, path.name
