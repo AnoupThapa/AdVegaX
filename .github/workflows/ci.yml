@@ -111,6 +111,12 @@ jobs:
       # Offer WooCommerce on the Connections page so its form can be checked (2B-09). The
       # browser test never submits a usable address, so no real store is ever called.
       WOOCOMMERCE_ENABLED: "true"
+      # Offer Google Ads too (3-10). These are placeholders, not credentials: the browser test
+      # connects through the in-process simulator, and nothing ever calls Google.
+      GOOGLE_ADS_ENABLED: "true"
+      GOOGLE_ADS_CLIENT_ID: "ci-not-a-real-client.apps.googleusercontent.com"
+      GOOGLE_ADS_CLIENT_SECRET: "ci-not-a-secret"
+      GOOGLE_ADS_DEVELOPER_TOKEN: "ci-not-a-token"
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6

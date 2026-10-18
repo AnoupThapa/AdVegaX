@@ -13,7 +13,7 @@ Plan: `PHASE_03_PLAN.md` (approved 2026-10-15, A21, all recommendations). One re
 | 3-07 Ongoing sync | ✅ Done — awaiting review |
 | 3-08 Read API | ✅ Done — awaiting review |
 | 3-09 Web app | ✅ Done — awaiting review |
-| 3-10 Journey test, browser test, docs, report | Not started |
+| 3-10 Journey test, browser test, docs, report | ✅ Done — awaiting review (`PHASE_03_REPORT.md`) |
 
 ---
 
@@ -524,4 +524,48 @@ Until then, work follows option C: build against Google's documentation and a si
 - a journey test: connect → discover (with a manager) → link two accounts → first import → 3-hour update → a correction picked up at night → Google's limit → permission removed → reconnect → disconnect;
 - a browser test of the new pages with the accessibility check;
 - `PHASE_03_REPORT.md`.
+
+## 3-10 — The whole journey, the browser test and the phase report (2026-10-18)
+
+**Completed**
+- **A journey test of the whole phase**, through the real API, database and job runner, against the simulator. It walks one organization through every stage:
+  - connect, then discover accounts directly and through the agency's managers; a cancelled account is refused with its reason;
+  - link two accounts, and the first import completes;
+  - the 3-hour run picks up a renamed campaign, and the nightly run picks up Google's correction to a past day;
+  - **the shared allowance runs out**: runs wait, nothing is marked, and they continue by themselves;
+  - **the person removes AdVegaX in their Google account**: "Needs reconnecting", and nothing runs;
+  - reconnect with the same Google account: the same connection, links and figures;
+  - "Sync now", with viewers refused;
+  - disconnect: the permission is revoked at Google, links end, and figures stay readable.
+
+  Every response, the audit log and the logs are scanned for tokens, the developer token and the client secret.
+- **A browser test of the Google Ads pages:**
+  - the grouped connection page, with the cancelled account explained;
+  - the Advertising tab with two accounts;
+  - the account page: exact spend, click-through rate, "may still change" days, the campaign table, Sync now;
+  - both kinds of campaign page.
+
+  Every page passes the automatic accessibility check (axe), and no Google token appears on any page.
+- **A browser-test helper** (`tests/e2e_google_ads.py`), with its own tests. It connects simulated accounts through the real sign-in, discovery, link and import, and refuses deployed environments.
+- **CI:** the browser job offers Google Ads using placeholder settings (not credentials) so the pages can be shown. Nothing calls Google.
+- **`PHASE_03_REPORT.md`**: acceptance criteria, security controls, results, defects, deviations, what Step 0 must confirm, risks, rollback and next steps.
+
+**Files changed** (11)
+- New (5): `tests/api/test_google_ads_journey.py`, `tests/e2e_google_ads.py`, `frontend/e2e/advertising.spec.ts`, `frontend/e2e/support/google_ads.ts`, `docs/phases/PHASE_03_REPORT.md`.
+- Modified (6): `tests/api/test_e2e_seed.py` (5 helper tests), `.github/workflows/ci.yml`, docs `INTEGRATION_GUIDES.md`, `PROJECT_STATUS.md`, this report.
+- Deleted: none. No migration.
+
+**Tests**
+- **Backend `make check`: 1,062 passed**, coverage 97 % (6 new: the journey and 5 helper tests).
+- **Frontend `npm run check`: 358 passed.**
+- **E2E: 12 passed** (one new), with no serious or critical accessibility issues.
+
+**Security:** no new endpoint. The journey and browser tests scan for every secret. The CI values are placeholders, not credentials, and the helper refuses staging and production.
+
+**Deviations**
+1. **The browser test does not press "Sync now".** The web server's worker has no simulator, so a real run would try to reach Google. The button is checked as available, and "Sync now" itself is covered by the journey and API tests.
+
+**Blocked:** Step 0 (3-01) still needs the developer token, the OAuth client and network access to Google's API.
+
+**Next:** your review of `PHASE_03_REPORT.md`; then the Google set-up for Step 0 (report §12), and the Phase 4 plan (Meta Ads, read-only) while it waits.
 

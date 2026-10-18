@@ -1,7 +1,7 @@
 # AdVegaX — Project Status & Progress Log
 
 **Last updated:** 2026-10-15
-**Current phase:** Phase 3 (Google Ads) approved (A21) and in progress · Phases 2A and 2B implemented against simulators and reviewed (A20; live checks pending) · Phase 1 (1A, 1B, 1C) implemented — awaiting product-owner review
+**Current phase:** Phase 3 (Google Ads, read-only) implemented against the simulator — awaiting product-owner review (`phases/PHASE_03_REPORT.md`; Step 0 live checks pending) · Phases 2A and 2B implemented against simulators and reviewed (A20; live checks pending) · Phase 1 (1A, 1B, 1C) implemented — awaiting product-owner review
 **Code written:** Phase 1A + 1B backend, Phase 1C web application, Phase 2A (Shopify) and 2B (WooCommerce) · **Migrations:** 0001–0012 · **Integrations:** Shopify and WooCommerce connectors (simulator-tested; not yet tried on a live store) · test (fake) platform
 
 Update this file at the end of every phase and every approved sub-phase (ROADMAP §5, step 13).
@@ -100,6 +100,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | 2026-10-18 | **3-07** Google Ads ongoing sync: 3-hour (structure + 2 days), nightly 30-day and weekly 90-day re-reads, shared allowance counter (re-reads wait at 80 %, all wait at 100 % or on Google's quota answer), "Sync now" logic (route in 3-08), self-clearing health; migration 0013 (scheduler reads 4 columns only); 30 tests | `phases/PHASE_03_PROGRESS.md`, `INTEGRATION_GUIDES.md` |
 | 2026-10-18 | **3-08** Ad account API: list/detail, daily figures with derived rates and "may still change" days, campaigns and one campaign with ad groups and ads, "Sync now" (`ads.view` / `ads.manage`); platform-reported labels, not-synchronized days never 0; 18 tests | `phases/PHASE_03_PROGRESS.md`, `API_SPECIFICATION.md` §19B |
 | 2026-10-18 | **3-09** Google Ads web app: Advertising tab, ad account page (health, facts, Sync now, performance with rates and "may still change" days, campaign table), campaign page (ad groups and ads), accounts grouped under managers on the connection page, plain Google error wording; "Reported by Google Ads" on every page; 15 web tests | `phases/PHASE_03_PROGRESS.md` |
+| 2026-10-18 | **3-10** Phase 3 journey test (connect → discover → link two → import → 3-hour run → nightly correction → allowance used up → permission removed → reconnect → Sync now → disconnect), browser test of the Google Ads pages with axe, browser-test helper, CI switch with placeholders; **Phase 3 report**. Backend 1,062, frontend 358, e2e 12 passed | `phases/PHASE_03_REPORT.md`, `phases/PHASE_03_PROGRESS.md` |
 | 2026-10-08 | **Phase 1B implemented**: connections/resources/links, encrypted credentials, SSRF-safe client, rate limiter, provider framework + fake platform, jobs with retry/dead-letter, single scheduler, audited denials | `backend/`, `phases/PHASE_01B_REPORT.md`, `SECURITY.md`, `INTEGRATION_GUIDES.md` |
 
 ## 3. Decision log
@@ -125,7 +126,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | A16 | Phase 1B plan and §20 defaults; organization owns connections, user authorizes; credentials never exposed; SSRF mandatory | Approved — implemented |
 | A17 | Phase 1C plan with all §15 recommendations; task-by-task delivery | Approved — implemented, awaiting review |
 | A19 | Phase 2B plan with all §2 recommendations (Q10a, Q10b, Q-2B-1…7); test environment A recommended, C-style until WordPress downloads are allowed | Approved 2026-10-14 ("go ahead") — in progress |
-| A21 | Phase 3 plan with all §2 recommendations (Q-3-1 … Q-3-11); live-testing option C | Approved 2026-10-15 ("Approve all") — in progress |
+| A21 | Phase 3 plan with all §2 recommendations (Q-3-1 … Q-3-11); live-testing option C | Approved 2026-10-15 ("Approve all") — implemented 2026-10-18, awaiting review |
 | A20 | Phase 2A and 2B reports reviewed by the product owner; continue to Phase 3 planning | Reviewed 2026-10-15 ("reviewed pls continue") |
 | A18 | Phase 2A plan v2 with all §2 recommendations (Q5–Q9, D-2A-1…3); live-testing option C | Approved 2026-10-13 — implemented, awaiting review (live checks pending) |
 
