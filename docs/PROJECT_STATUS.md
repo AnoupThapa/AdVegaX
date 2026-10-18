@@ -1,8 +1,8 @@
 # AdVegaX — Project Status & Progress Log
 
-**Last updated:** 2026-10-15
+**Last updated:** 2026-10-18
 **Current phase:** Phase 3 (Google Ads, read-only) implemented against the simulator — awaiting product-owner review (`phases/PHASE_03_REPORT.md`; Step 0 live checks pending) · Phase 4 (Meta Ads) plan drafted — awaiting approval · Phases 2A and 2B implemented against simulators and reviewed (A20; live checks pending) · Phase 1 (1A, 1B, 1C) implemented — awaiting product-owner review
-**Code written:** Phase 1A + 1B backend, Phase 1C web application, Phase 2A (Shopify) and 2B (WooCommerce) · **Migrations:** 0001–0012 · **Integrations:** Shopify and WooCommerce connectors (simulator-tested; not yet tried on a live store) · test (fake) platform
+**Code written:** Phase 1A + 1B backend, Phase 1C web application, Phase 2A (Shopify), 2B (WooCommerce) and 3 (Google Ads) · **Migrations:** 0001–0013 · **Integrations:** Shopify, WooCommerce and Google Ads connectors (simulator-tested; not yet tried live) · test (fake) platform
 
 Update this file at the end of every phase and every approved sub-phase (ROADMAP §5, step 13).
 
