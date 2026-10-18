@@ -47,6 +47,8 @@ class Permission(StrEnum):
     JOBS_VIEW = "jobs.view"
     STORES_VIEW = "stores.view"  # stores, products and their figures (2A-09)
     STORES_MANAGE = "stores.manage"  # "Sync now"
+    ADS_VIEW = "ads.view"  # ad accounts, campaigns and their figures (3-08)
+    ADS_MANAGE = "ads.manage"  # "Sync now" for ad accounts
 
 
 _ALL = frozenset(Role)
@@ -65,6 +67,8 @@ PERMISSION_MATRIX: dict[Permission, frozenset[Role]] = {
     Permission.JOBS_VIEW: _ALL,
     Permission.STORES_VIEW: _ALL,
     Permission.STORES_MANAGE: _OWNER_ADMIN_MANAGER,
+    Permission.ADS_VIEW: _ALL,
+    Permission.ADS_MANAGE: _OWNER_ADMIN_MANAGER,
 }
 
 

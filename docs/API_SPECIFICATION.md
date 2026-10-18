@@ -206,7 +206,7 @@ Permissions: `connections.view` (all roles) for reads; `connections.manage` (Own
 | `POST /organizations/{organization_id}/resources/{resource_id}/sync` | 202 `JobOut` | Resource must be actively linked |
 | `GET /organizations/{organization_id}/jobs/{job_id}` | 200 `JobOut` | Status, attempts, last error code |
 
-**Error codes (Phase 1B):** `UNKNOWN_PROVIDER` 404 · (2B-04) `STORE_NOT_REACHABLE` 422 · `INVALID_KEY_DELIVERY` 422 · `CONNECTION_NOT_ACTIVE` 409 · `RESOURCE_NOT_LINKABLE` 409 · (3-04) `RESOURCE_UNAVAILABLE` 409 · `ALREADY_LINKED` 409 · `NOT_LINKED` 409 (plus the Phase 1A codes, e.g. `FORBIDDEN`, `NOT_FOUND`, `SERVICE_UNAVAILABLE` when Redis is unavailable for connect state).
+**Error codes (Phase 1B):** (3-08) `AD_ACCOUNT_NOT_SYNCING` 409 · `UNKNOWN_PROVIDER` 404 · (2B-04) `STORE_NOT_REACHABLE` 422 · `INVALID_KEY_DELIVERY` 422 · `CONNECTION_NOT_ACTIVE` 409 · `RESOURCE_NOT_LINKABLE` 409 · (3-04) `RESOURCE_UNAVAILABLE` 409 · `ALREADY_LINKED` 409 · `NOT_LINKED` 409 (plus the Phase 1A codes, e.g. `FORBIDDEN`, `NOT_FOUND`, `SERVICE_UNAVAILABLE` when Redis is unavailable for connect state).
 
 Third-party platform authorization is a separate security domain from AdVegaX login (Decisions D7, D10).
 
@@ -246,6 +246,7 @@ Queue provider sync.
 ### GET /organizations/{organization_id}/ad-accounts/{ad_account_id}
 
 ### POST /organizations/{organization_id}/ad-accounts/{ad_account_id}/sync
+*As built (3-08): `…/resync` — see §19B.*
 
 ## 9. Campaigns
 
@@ -457,6 +458,21 @@ All under `/organizations/{organization_id}`; membership resolved server-side, R
 | `GET /stores/{store_id}/products?cursor&page_size(1–100, 50)&q&status` | all members | Ordered by title; cursor pagination (`next_cursor`); `q` matches title or SKU (literal text, no wildcards); `status` one of `active/draft/archived/unlisted/deleted` (deleted hidden by default). Each variant has `inventory {availability, tracked, available, synced_at}` and `cost {availability, unit_cost, source, effective_from, reason}` |
 | `GET /stores/{store_id}/products/{product_id}` | all members | One product with variants |
 | `GET /stores/{store_id}/metrics/daily?from&to` | all members | Default the last 30 store-local days; at most `METRICS_MAX_DAYS`. `definition_version` (`finance-v1`), `synced_from` (first fully covered day), per-day components and `cogs` / `gross_profit` / `cost_coverage` figures; days before `synced_from`, before the first import or in the future are `not_synchronized` (values null). `totals` adds `gross_margin`, `shipping_cost`, `payment_fees`, `new_vs_returning`; totals are `not_synchronized` if any day in the period is. **2B-07:** days and totals also carry a `reason`; a day with orders in another currency is `unavailable` with reason `other_currency_orders` (all values null, never 0), and so are the totals of a period containing one (`not_synchronized` takes precedence). Orders that do not count (`excluded_reason`) are never in the figures |
+
+## 19B. Ad accounts, campaigns and figures — as built (3-08)
+
+All under `/organizations/{organization_id}`; same rules as §19A (server-side membership, RLS plus explicit organization filters, another organization's ad account or campaign → 404, exact decimal strings, `availability` + `reason` on anything missing). Permissions: `ads.view` (all members), `ads.manage` (owner, admin, manager). Every answer carries `source: "platform_reported"`: the figures are the platform's own, in the **ad account's** currency (`currency_minor_units` for display) and time zone. No ROAS against store sales and no attribution (Phase 6).
+
+| Method & path | Who | Notes |
+|---|---|---|
+| `GET /ad-accounts` | all members | `name`, `external_account_id`, `group_path` (managers above it, display only), `currency`, `timezone`, `status` (`importing/active/error/disconnected`), `platform_status`, `linked`, `connection_status`, `history_from`, `first_import_completed_at`, `sync {running, mode, progress, waiting_for_allowance, last_quick_at, last_nightly_at, last_weekly_at, last_error_code, last_error_at}`, `health {code, checked_at}` |
+| `GET /ad-accounts/{ad_account_id}` | all members | One account (same shape). Unlinked accounts stay readable |
+| `POST /ad-accounts/{ad_account_id}/resync` | owner, admin, manager | "Sync now": structure + the last 30 days (the first import again if it did not finish). 202 `{ad_account_id, job_id, mode}`; 409 `SYNC_IN_PROGRESS`; 409 `AD_ACCOUNT_NOT_SYNCING` (unlinked / connection not active); 429 above `THROTTLE_AD_ACCOUNT_RESYNC_PER_HOUR` per account |
+| `GET /ad-accounts/{ad_account_id}/metrics/daily?from&to` | all members | Account-level days, default the last 30 account-local days, at most `METRICS_MAX_DAYS`; 422 `VALIDATION_ERROR` for an invalid range. `synced_from`, `settled_until` (days after it are `settled: false`: the platform may still change them; `ADS_UNSETTLED_DAYS`, 3). Per day and in `totals`: `impressions`, `clicks`, `cost`, `conversions`, `conversion_value` and the derived `click_through_rate` (clicks ÷ impressions, a fraction), `cost_per_click`, `cost_per_conversion`, `conversion_value_per_cost` (six decimals, half-even), each `unavailable` with `no_impressions` / `no_clicks` / `no_conversions` / `no_cost` when its divisor is 0. A day not read (before `synced_from`, before the first import, in the future) is `not_synchronized` with null values, and so are the totals of a period containing one. A day read with no activity has real zeros |
+| `GET /ad-accounts/{ad_account_id}/campaigns?from&to` | all members | Every campaign, removed ones included, ordered by name: `status`, `platform_type`, `bidding_strategy_type`, dates, `budget {name, period, amount, currency, shared}` and `figures` for the period from **campaign-level** rows (zeros when the period was read and the campaign had no activity; `not_synchronized` when part of the period was not read) |
+| `GET /campaigns/{campaign_id}?from&to` | all members | One campaign with its figures and `ad_groups[]` (budget, figures, `ads[]` with their figures), each from its own level; Performance Max campaigns have figures and no ad groups |
+
+Levels are never added into each other: account totals come from account rows, a campaign's from campaign rows. Figures of entities AdVegaX could not store (e.g. an unknown status) count in the account totals but are not listed.
 
 ## 20. Webhooks
 

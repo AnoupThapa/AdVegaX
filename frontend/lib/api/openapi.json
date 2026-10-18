@@ -1,6 +1,1067 @@
 {
   "components": {
     "schemas": {
+      "AdAccountOut": {
+        "properties": {
+          "connection_status": {
+            "title": "Connection Status",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "currency_minor_units": {
+            "title": "Currency Minor Units",
+            "type": "integer"
+          },
+          "external_account_id": {
+            "title": "External Account Id",
+            "type": "string"
+          },
+          "first_import_completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Import Completed At"
+          },
+          "group_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group Path"
+          },
+          "health": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AdHealthOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "history_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "History From"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "linked": {
+            "title": "Linked",
+            "type": "boolean"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "platform_status": {
+            "title": "Platform Status",
+            "type": "string"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "resource_id": {
+            "format": "uuid",
+            "title": "Resource Id",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "sync": {
+            "$ref": "#/components/schemas/AdSyncOut"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "resource_id",
+          "provider",
+          "source",
+          "external_account_id",
+          "name",
+          "group_path",
+          "currency",
+          "currency_minor_units",
+          "timezone",
+          "status",
+          "platform_status",
+          "linked",
+          "connection_status",
+          "history_from",
+          "first_import_completed_at",
+          "sync",
+          "health",
+          "created_at"
+        ],
+        "title": "AdAccountOut",
+        "type": "object"
+      },
+      "AdBudgetOut": {
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "period": {
+            "title": "Period",
+            "type": "string"
+          },
+          "shared": {
+            "title": "Shared",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "period",
+          "amount",
+          "currency",
+          "shared"
+        ],
+        "title": "AdBudgetOut",
+        "type": "object"
+      },
+      "AdCampaignDetailOut": {
+        "properties": {
+          "ad_account_id": {
+            "format": "uuid",
+            "title": "Ad Account Id",
+            "type": "string"
+          },
+          "ad_groups": {
+            "items": {
+              "$ref": "#/components/schemas/AdGroupOut"
+            },
+            "title": "Ad Groups",
+            "type": "array"
+          },
+          "bidding_strategy_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bidding Strategy Type"
+          },
+          "budget": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AdBudgetOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "currency_minor_units": {
+            "title": "Currency Minor Units",
+            "type": "integer"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date"
+          },
+          "external_id": {
+            "title": "External Id",
+            "type": "string"
+          },
+          "figures": {
+            "$ref": "#/components/schemas/AdFiguresOut"
+          },
+          "from_day": {
+            "format": "date",
+            "title": "From Day",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "platform_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform Type"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "to_day": {
+            "format": "date",
+            "title": "To Day",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ad_account_id",
+          "external_id",
+          "name",
+          "status",
+          "platform_type",
+          "bidding_strategy_type",
+          "start_date",
+          "end_date",
+          "budget",
+          "figures",
+          "source",
+          "currency",
+          "currency_minor_units",
+          "from_day",
+          "to_day",
+          "ad_groups"
+        ],
+        "title": "AdCampaignDetailOut",
+        "type": "object"
+      },
+      "AdCampaignListOut": {
+        "properties": {
+          "ad_account_id": {
+            "format": "uuid",
+            "title": "Ad Account Id",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "currency_minor_units": {
+            "title": "Currency Minor Units",
+            "type": "integer"
+          },
+          "from_day": {
+            "format": "date",
+            "title": "From Day",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AdCampaignOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "to_day": {
+            "format": "date",
+            "title": "To Day",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ad_account_id",
+          "source",
+          "currency",
+          "currency_minor_units",
+          "from_day",
+          "to_day",
+          "items"
+        ],
+        "title": "AdCampaignListOut",
+        "type": "object"
+      },
+      "AdCampaignOut": {
+        "properties": {
+          "ad_account_id": {
+            "format": "uuid",
+            "title": "Ad Account Id",
+            "type": "string"
+          },
+          "bidding_strategy_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bidding Strategy Type"
+          },
+          "budget": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AdBudgetOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date"
+          },
+          "external_id": {
+            "title": "External Id",
+            "type": "string"
+          },
+          "figures": {
+            "$ref": "#/components/schemas/AdFiguresOut"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "platform_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform Type"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ad_account_id",
+          "external_id",
+          "name",
+          "status",
+          "platform_type",
+          "bidding_strategy_type",
+          "start_date",
+          "end_date",
+          "budget",
+          "figures"
+        ],
+        "title": "AdCampaignOut",
+        "type": "object"
+      },
+      "AdDailyMetricsOut": {
+        "properties": {
+          "ad_account_id": {
+            "format": "uuid",
+            "title": "Ad Account Id",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "currency_minor_units": {
+            "title": "Currency Minor Units",
+            "type": "integer"
+          },
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/AdDayOut"
+            },
+            "title": "Days",
+            "type": "array"
+          },
+          "from_day": {
+            "format": "date",
+            "title": "From Day",
+            "type": "string"
+          },
+          "settled_until": {
+            "format": "date",
+            "title": "Settled Until",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "synced_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Synced From"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          },
+          "to_day": {
+            "format": "date",
+            "title": "To Day",
+            "type": "string"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/AdFiguresOut"
+          }
+        },
+        "required": [
+          "ad_account_id",
+          "source",
+          "currency",
+          "currency_minor_units",
+          "timezone",
+          "from_day",
+          "to_day",
+          "synced_from",
+          "settled_until",
+          "days",
+          "totals"
+        ],
+        "title": "AdDailyMetricsOut",
+        "type": "object"
+      },
+      "AdDayOut": {
+        "properties": {
+          "availability": {
+            "enum": [
+              "available",
+              "unavailable",
+              "unsupported",
+              "not_synchronized"
+            ],
+            "title": "Availability",
+            "type": "string"
+          },
+          "click_through_rate": {
+            "$ref": "#/components/schemas/FigureOut"
+          },
+          "clicks": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clicks"
+          },
+          "conversion_value": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversion Value"
+          },
+          "conversion_value_per_cost": {
+            "$ref": "#/components/schemas/FigureOut"
+          },
+          "conversions": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversions"
+          },
+          "cost": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost"
+          },
+          "cost_per_click": {
+            "$ref": "#/components/schemas/FigureOut"
+          },
+          "cost_per_conversion": {
+            "$ref": "#/components/schemas/FigureOut"
+          },
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "impressions": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Impressions"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "settled": {
+            "title": "Settled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "availability",
+          "impressions",
+          "clicks",
+          "cost",
+          "conversions",
+          "conversion_value",
+          "click_through_rate",
+          "cost_per_click",
+          "cost_per_conversion",
+          "conversion_value_per_cost",
+          "day",
+          "settled"
+        ],
+        "title": "AdDayOut",
+        "type": "object"
+      },
+      "AdFiguresOut": {
+        "description": "Platform-reported measures for a day or a period, and the rates derived from them.",
+        "properties": {
+          "availability": {
+            "enum": [
+              "available",
+              "unavailable",
+              "unsupported",
+              "not_synchronized"
+            ],
+            "title": "Availability",
+            "type": "string"
+          },
+          "click_through_rate": {
+            "$ref": "#/components/schemas/FigureOut"
+          },
+          "clicks": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clicks"
+          },
+          "conversion_value": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversion Value"
+          },
+          "conversion_value_per_cost": {
+            "$ref": "#/components/schemas/FigureOut"
+          },
+          "conversions": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversions"
+          },
+          "cost": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost"
+          },
+          "cost_per_click": {
+            "$ref": "#/components/schemas/FigureOut"
+          },
+          "cost_per_conversion": {
+            "$ref": "#/components/schemas/FigureOut"
+          },
+          "impressions": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Impressions"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "availability",
+          "impressions",
+          "clicks",
+          "cost",
+          "conversions",
+          "conversion_value",
+          "click_through_rate",
+          "cost_per_click",
+          "cost_per_conversion",
+          "conversion_value_per_cost"
+        ],
+        "title": "AdFiguresOut",
+        "type": "object"
+      },
+      "AdGroupOut": {
+        "properties": {
+          "ads": {
+            "items": {
+              "$ref": "#/components/schemas/AdOut"
+            },
+            "title": "Ads",
+            "type": "array"
+          },
+          "budget": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AdBudgetOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "external_id": {
+            "title": "External Id",
+            "type": "string"
+          },
+          "figures": {
+            "$ref": "#/components/schemas/AdFiguresOut"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "platform_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform Type"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "external_id",
+          "name",
+          "status",
+          "platform_type",
+          "budget",
+          "figures",
+          "ads"
+        ],
+        "title": "AdGroupOut",
+        "type": "object"
+      },
+      "AdHealthOut": {
+        "description": "A plain message key (``account_not_enabled``, ``no_account_access``,\n``developer_token_not_approved``, ``account_details_changed``), or None.",
+        "properties": {
+          "checked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checked At"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          }
+        },
+        "required": [
+          "code",
+          "checked_at"
+        ],
+        "title": "AdHealthOut",
+        "type": "object"
+      },
+      "AdOut": {
+        "properties": {
+          "external_id": {
+            "title": "External Id",
+            "type": "string"
+          },
+          "figures": {
+            "$ref": "#/components/schemas/AdFiguresOut"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "platform_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform Type"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "external_id",
+          "name",
+          "status",
+          "platform_type",
+          "figures"
+        ],
+        "title": "AdOut",
+        "type": "object"
+      },
+      "AdResyncOut": {
+        "properties": {
+          "ad_account_id": {
+            "format": "uuid",
+            "title": "Ad Account Id",
+            "type": "string"
+          },
+          "job_id": {
+            "format": "uuid",
+            "title": "Job Id",
+            "type": "string"
+          },
+          "mode": {
+            "title": "Mode",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ad_account_id",
+          "job_id",
+          "mode"
+        ],
+        "title": "AdResyncOut",
+        "type": "object"
+      },
+      "AdSyncOut": {
+        "properties": {
+          "last_error_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error At"
+          },
+          "last_error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error Code"
+          },
+          "last_nightly_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Nightly At"
+          },
+          "last_quick_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Quick At"
+          },
+          "last_weekly_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Weekly At"
+          },
+          "mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mode"
+          },
+          "progress": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Progress"
+          },
+          "running": {
+            "title": "Running",
+            "type": "boolean"
+          },
+          "waiting_for_allowance": {
+            "title": "Waiting For Allowance",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "running",
+          "mode",
+          "progress",
+          "waiting_for_allowance",
+          "last_quick_at",
+          "last_nightly_at",
+          "last_weekly_at",
+          "last_error_code",
+          "last_error_at"
+        ],
+        "title": "AdSyncOut",
+        "type": "object"
+      },
       "AuditLogOut": {
         "properties": {
           "action": {
@@ -606,6 +1667,86 @@
         "title": "DayOut",
         "type": "object"
       },
+      "Envelope_AdAccountOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AdAccountOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[AdAccountOut]",
+        "type": "object"
+      },
+      "Envelope_AdCampaignDetailOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AdCampaignDetailOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[AdCampaignDetailOut]",
+        "type": "object"
+      },
+      "Envelope_AdCampaignListOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AdCampaignListOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[AdCampaignListOut]",
+        "type": "object"
+      },
+      "Envelope_AdDailyMetricsOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AdDailyMetricsOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[AdDailyMetricsOut]",
+        "type": "object"
+      },
+      "Envelope_AdResyncOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AdResyncOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[AdResyncOut]",
+        "type": "object"
+      },
       "Envelope_AuthorizationStartOut_": {
         "properties": {
           "data": {
@@ -876,6 +2017,26 @@
           "meta"
         ],
         "title": "Envelope[UserOut]",
+        "type": "object"
+      },
+      "Envelope_list_AdAccountOut__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/AdAccountOut"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[list[AdAccountOut]]",
         "type": "object"
       },
       "Envelope_list_ConnectionOut__": {
@@ -3487,6 +4648,333 @@
         ]
       }
     },
+    "/api/v1/organizations/{organization_id}/ad-accounts": {
+      "get": {
+        "description": "Ad accounts of this organization with their sync status and health.",
+        "operationId": "list_ad_accounts_api_v1_organizations__organization_id__ad_accounts_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_AdAccountOut__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Ad Accounts",
+        "tags": [
+          "advertising"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/ad-accounts/{ad_account_id}": {
+      "get": {
+        "operationId": "get_ad_account_api_v1_organizations__organization_id__ad_accounts__ad_account_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ad_account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ad Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AdAccountOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Ad Account",
+        "tags": [
+          "advertising"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/ad-accounts/{ad_account_id}/campaigns": {
+      "get": {
+        "description": "Every campaign (removed ones included) with its figures for the period.",
+        "operationId": "list_ad_campaigns_api_v1_organizations__organization_id__ad_accounts__ad_account_id__campaigns_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ad_account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ad Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AdCampaignListOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Ad Campaigns",
+        "tags": [
+          "advertising"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/ad-accounts/{ad_account_id}/metrics/daily": {
+      "get": {
+        "description": "Account-level daily figures (account time zone, platform-reported); 30 days by default.",
+        "operationId": "ad_account_daily_metrics_api_v1_organizations__organization_id__ad_accounts__ad_account_id__metrics_daily_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ad_account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ad Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AdDailyMetricsOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ad Account Daily Metrics",
+        "tags": [
+          "advertising"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/ad-accounts/{ad_account_id}/resync": {
+      "post": {
+        "description": "\"Sync now\": the structure and the last 30 days (limited per account).",
+        "operationId": "resync_ad_account_api_v1_organizations__organization_id__ad_accounts__ad_account_id__resync_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ad_account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ad Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AdResyncOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resync Ad Account",
+        "tags": [
+          "advertising"
+        ]
+      }
+    },
     "/api/v1/organizations/{organization_id}/audit-logs": {
       "get": {
         "operationId": "audit_logs_api_v1_organizations__organization_id__audit_logs_get",
@@ -3657,6 +5145,94 @@
         "summary": "Audit Logs",
         "tags": [
           "audit"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/campaigns/{campaign_id}": {
+      "get": {
+        "description": "One campaign with its budget, ad groups and ads, each with its period figures.",
+        "operationId": "get_ad_campaign_api_v1_organizations__organization_id__campaigns__campaign_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "campaign_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Campaign Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AdCampaignDetailOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Ad Campaign",
+        "tags": [
+          "advertising"
         ]
       }
     },

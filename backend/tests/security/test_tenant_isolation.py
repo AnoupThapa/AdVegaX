@@ -83,6 +83,9 @@ def test_every_org_route_returns_404_for_non_members(app, tenants):
             # 2A-09: tenant B has no store; any id under another tenant's org is a 404 anyway.
             .replace("{store_id}", str(uuid.uuid4()))
             .replace("{product_id}", str(uuid.uuid4()))
+            # 3-08: likewise for ad accounts and campaigns.
+            .replace("{ad_account_id}", str(uuid.uuid4()))
+            .replace("{campaign_id}", str(uuid.uuid4()))
         )
         assert not re.search(r"\{\w+\}", path), f"unhandled path parameter in {template}"
         response = _call(tenants["a"], method, path, BODIES.get((method, template), {}))

@@ -312,6 +312,103 @@ export interface paths {
         patch: operations["update_organization_api_v1_organizations__organization_id__patch"];
         trace?: never;
     };
+    "/api/v1/organizations/{organization_id}/ad-accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Ad Accounts
+         * @description Ad accounts of this organization with their sync status and health.
+         */
+        get: operations["list_ad_accounts_api_v1_organizations__organization_id__ad_accounts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/ad-accounts/{ad_account_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Ad Account */
+        get: operations["get_ad_account_api_v1_organizations__organization_id__ad_accounts__ad_account_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/ad-accounts/{ad_account_id}/campaigns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Ad Campaigns
+         * @description Every campaign (removed ones included) with its figures for the period.
+         */
+        get: operations["list_ad_campaigns_api_v1_organizations__organization_id__ad_accounts__ad_account_id__campaigns_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/ad-accounts/{ad_account_id}/metrics/daily": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ad Account Daily Metrics
+         * @description Account-level daily figures (account time zone, platform-reported); 30 days by default.
+         */
+        get: operations["ad_account_daily_metrics_api_v1_organizations__organization_id__ad_accounts__ad_account_id__metrics_daily_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/ad-accounts/{ad_account_id}/resync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resync Ad Account
+         * @description "Sync now": the structure and the last 30 days (limited per account).
+         */
+        post: operations["resync_ad_account_api_v1_organizations__organization_id__ad_accounts__ad_account_id__resync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizations/{organization_id}/audit-logs": {
         parameters: {
             query?: never;
@@ -321,6 +418,26 @@ export interface paths {
         };
         /** Audit Logs */
         get: operations["audit_logs_api_v1_organizations__organization_id__audit_logs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/campaigns/{campaign_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Ad Campaign
+         * @description One campaign with its budget, ad groups and ads, each with its period figures.
+         */
+        get: operations["get_ad_campaign_api_v1_organizations__organization_id__campaigns__campaign_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -721,6 +838,347 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AdAccountOut */
+        AdAccountOut: {
+            /** Connection Status */
+            connection_status: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Currency */
+            currency: string;
+            /** Currency Minor Units */
+            currency_minor_units: number;
+            /** External Account Id */
+            external_account_id: string;
+            /** First Import Completed At */
+            first_import_completed_at: string | null;
+            /** Group Path */
+            group_path: string | null;
+            health: components["schemas"]["AdHealthOut"] | null;
+            /** History From */
+            history_from: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Linked */
+            linked: boolean;
+            /** Name */
+            name: string | null;
+            /** Platform Status */
+            platform_status: string;
+            /** Provider */
+            provider: string;
+            /**
+             * Resource Id
+             * Format: uuid
+             */
+            resource_id: string;
+            /** Source */
+            source: string;
+            /** Status */
+            status: string;
+            sync: components["schemas"]["AdSyncOut"];
+            /** Timezone */
+            timezone: string;
+        };
+        /** AdBudgetOut */
+        AdBudgetOut: {
+            /** Amount */
+            amount: string | null;
+            /** Currency */
+            currency: string;
+            /** Name */
+            name: string | null;
+            /** Period */
+            period: string;
+            /** Shared */
+            shared: boolean;
+        };
+        /** AdCampaignDetailOut */
+        AdCampaignDetailOut: {
+            /**
+             * Ad Account Id
+             * Format: uuid
+             */
+            ad_account_id: string;
+            /** Ad Groups */
+            ad_groups: components["schemas"]["AdGroupOut"][];
+            /** Bidding Strategy Type */
+            bidding_strategy_type: string | null;
+            budget: components["schemas"]["AdBudgetOut"] | null;
+            /** Currency */
+            currency: string;
+            /** Currency Minor Units */
+            currency_minor_units: number;
+            /** End Date */
+            end_date: string | null;
+            /** External Id */
+            external_id: string;
+            figures: components["schemas"]["AdFiguresOut"];
+            /**
+             * From Day
+             * Format: date
+             */
+            from_day: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Platform Type */
+            platform_type: string | null;
+            /** Source */
+            source: string;
+            /** Start Date */
+            start_date: string | null;
+            /** Status */
+            status: string;
+            /**
+             * To Day
+             * Format: date
+             */
+            to_day: string;
+        };
+        /** AdCampaignListOut */
+        AdCampaignListOut: {
+            /**
+             * Ad Account Id
+             * Format: uuid
+             */
+            ad_account_id: string;
+            /** Currency */
+            currency: string;
+            /** Currency Minor Units */
+            currency_minor_units: number;
+            /**
+             * From Day
+             * Format: date
+             */
+            from_day: string;
+            /** Items */
+            items: components["schemas"]["AdCampaignOut"][];
+            /** Source */
+            source: string;
+            /**
+             * To Day
+             * Format: date
+             */
+            to_day: string;
+        };
+        /** AdCampaignOut */
+        AdCampaignOut: {
+            /**
+             * Ad Account Id
+             * Format: uuid
+             */
+            ad_account_id: string;
+            /** Bidding Strategy Type */
+            bidding_strategy_type: string | null;
+            budget: components["schemas"]["AdBudgetOut"] | null;
+            /** End Date */
+            end_date: string | null;
+            /** External Id */
+            external_id: string;
+            figures: components["schemas"]["AdFiguresOut"];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Platform Type */
+            platform_type: string | null;
+            /** Start Date */
+            start_date: string | null;
+            /** Status */
+            status: string;
+        };
+        /** AdDailyMetricsOut */
+        AdDailyMetricsOut: {
+            /**
+             * Ad Account Id
+             * Format: uuid
+             */
+            ad_account_id: string;
+            /** Currency */
+            currency: string;
+            /** Currency Minor Units */
+            currency_minor_units: number;
+            /** Days */
+            days: components["schemas"]["AdDayOut"][];
+            /**
+             * From Day
+             * Format: date
+             */
+            from_day: string;
+            /**
+             * Settled Until
+             * Format: date
+             */
+            settled_until: string;
+            /** Source */
+            source: string;
+            /** Synced From */
+            synced_from: string | null;
+            /** Timezone */
+            timezone: string;
+            /**
+             * To Day
+             * Format: date
+             */
+            to_day: string;
+            totals: components["schemas"]["AdFiguresOut"];
+        };
+        /** AdDayOut */
+        AdDayOut: {
+            /**
+             * Availability
+             * @enum {string}
+             */
+            availability: "available" | "unavailable" | "unsupported" | "not_synchronized";
+            click_through_rate: components["schemas"]["FigureOut"];
+            /** Clicks */
+            clicks: number | null;
+            /** Conversion Value */
+            conversion_value: string | null;
+            conversion_value_per_cost: components["schemas"]["FigureOut"];
+            /** Conversions */
+            conversions: string | null;
+            /** Cost */
+            cost: string | null;
+            cost_per_click: components["schemas"]["FigureOut"];
+            cost_per_conversion: components["schemas"]["FigureOut"];
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Impressions */
+            impressions: number | null;
+            /** Reason */
+            reason?: string | null;
+            /** Settled */
+            settled: boolean;
+        };
+        /**
+         * AdFiguresOut
+         * @description Platform-reported measures for a day or a period, and the rates derived from them.
+         */
+        AdFiguresOut: {
+            /**
+             * Availability
+             * @enum {string}
+             */
+            availability: "available" | "unavailable" | "unsupported" | "not_synchronized";
+            click_through_rate: components["schemas"]["FigureOut"];
+            /** Clicks */
+            clicks: number | null;
+            /** Conversion Value */
+            conversion_value: string | null;
+            conversion_value_per_cost: components["schemas"]["FigureOut"];
+            /** Conversions */
+            conversions: string | null;
+            /** Cost */
+            cost: string | null;
+            cost_per_click: components["schemas"]["FigureOut"];
+            cost_per_conversion: components["schemas"]["FigureOut"];
+            /** Impressions */
+            impressions: number | null;
+            /** Reason */
+            reason?: string | null;
+        };
+        /** AdGroupOut */
+        AdGroupOut: {
+            /** Ads */
+            ads: components["schemas"]["AdOut"][];
+            budget: components["schemas"]["AdBudgetOut"] | null;
+            /** External Id */
+            external_id: string;
+            figures: components["schemas"]["AdFiguresOut"];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Platform Type */
+            platform_type: string | null;
+            /** Status */
+            status: string;
+        };
+        /**
+         * AdHealthOut
+         * @description A plain message key (``account_not_enabled``, ``no_account_access``,
+         *     ``developer_token_not_approved``, ``account_details_changed``), or None.
+         */
+        AdHealthOut: {
+            /** Checked At */
+            checked_at: string | null;
+            /** Code */
+            code: string | null;
+        };
+        /** AdOut */
+        AdOut: {
+            /** External Id */
+            external_id: string;
+            figures: components["schemas"]["AdFiguresOut"];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string | null;
+            /** Platform Type */
+            platform_type: string | null;
+            /** Status */
+            status: string;
+        };
+        /** AdResyncOut */
+        AdResyncOut: {
+            /**
+             * Ad Account Id
+             * Format: uuid
+             */
+            ad_account_id: string;
+            /**
+             * Job Id
+             * Format: uuid
+             */
+            job_id: string;
+            /** Mode */
+            mode: string;
+        };
+        /** AdSyncOut */
+        AdSyncOut: {
+            /** Last Error At */
+            last_error_at: string | null;
+            /** Last Error Code */
+            last_error_code: string | null;
+            /** Last Nightly At */
+            last_nightly_at: string | null;
+            /** Last Quick At */
+            last_quick_at: string | null;
+            /** Last Weekly At */
+            last_weekly_at: string | null;
+            /** Mode */
+            mode: string | null;
+            /** Progress */
+            progress: number | null;
+            /** Running */
+            running: boolean;
+            /** Waiting For Allowance */
+            waiting_for_allowance: boolean;
+        };
         /** AuditLogOut */
         AuditLogOut: {
             /** Action */
@@ -912,6 +1370,31 @@ export interface components {
             /** Total Sales */
             total_sales: string | null;
         };
+        /** Envelope[AdAccountOut] */
+        Envelope_AdAccountOut_: {
+            data: components["schemas"]["AdAccountOut"];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[AdCampaignDetailOut] */
+        Envelope_AdCampaignDetailOut_: {
+            data: components["schemas"]["AdCampaignDetailOut"];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[AdCampaignListOut] */
+        Envelope_AdCampaignListOut_: {
+            data: components["schemas"]["AdCampaignListOut"];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[AdDailyMetricsOut] */
+        Envelope_AdDailyMetricsOut_: {
+            data: components["schemas"]["AdDailyMetricsOut"];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[AdResyncOut] */
+        Envelope_AdResyncOut_: {
+            data: components["schemas"]["AdResyncOut"];
+            meta: components["schemas"]["Meta"];
+        };
         /** Envelope[AuthorizationStartOut] */
         Envelope_AuthorizationStartOut_: {
             data: components["schemas"]["AuthorizationStartOut"];
@@ -995,6 +1478,12 @@ export interface components {
         /** Envelope[UserOut] */
         Envelope_UserOut_: {
             data: components["schemas"]["UserOut"];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[list[AdAccountOut]] */
+        Envelope_list_AdAccountOut__: {
+            /** Data */
+            data: components["schemas"]["AdAccountOut"][];
             meta: components["schemas"]["Meta"];
         };
         /** Envelope[list[ConnectionOut]] */
@@ -2174,6 +2663,171 @@ export interface operations {
             };
         };
     };
+    list_ad_accounts_api_v1_organizations__organization_id__ad_accounts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_list_AdAccountOut__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_ad_account_api_v1_organizations__organization_id__ad_accounts__ad_account_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ad_account_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AdAccountOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_ad_campaigns_api_v1_organizations__organization_id__ad_accounts__ad_account_id__campaigns_get: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path: {
+                ad_account_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AdCampaignListOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ad_account_daily_metrics_api_v1_organizations__organization_id__ad_accounts__ad_account_id__metrics_daily_get: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path: {
+                ad_account_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AdDailyMetricsOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resync_ad_account_api_v1_organizations__organization_id__ad_accounts__ad_account_id__resync_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ad_account_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AdResyncOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     audit_logs_api_v1_organizations__organization_id__audit_logs_get: {
         parameters: {
             query?: {
@@ -2201,6 +2855,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ListEnvelope_AuditLogOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_ad_campaign_api_v1_organizations__organization_id__campaigns__campaign_id__get: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path: {
+                campaign_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AdCampaignDetailOut_"];
                 };
             };
             /** @description Validation Error */

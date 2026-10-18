@@ -184,6 +184,8 @@ class Settings(BaseSettings):
     ADS_WEEKLY_WINDOW: timedelta = timedelta(days=90)
     ADS_CHAIN_STALE_AFTER: timedelta = timedelta(hours=6)
     SCHEDULE_ADS_SYNC_TICK: timedelta = timedelta(minutes=5)
+    # The last days are shown as "may still change" (3-08): Google is not settled on them.
+    ADS_UNSETTLED_DAYS: int = Field(default=3, ge=0, le=30)
     # The platform allowance shared by every customer (Q-3-2): Google Ads operations a day per
     # developer token (Explorer 2,880; Basic 15,000). At ADS_QUOTA_DEFER_SHARE of it the
     # nightly and weekly re-reads wait; at 100 % every step waits ADS_QUOTA_WAIT and retries.

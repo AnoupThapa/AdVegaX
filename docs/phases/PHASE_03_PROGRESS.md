@@ -11,7 +11,7 @@ Plan: `PHASE_03_PLAN.md` (approved 2026-10-15, A21, all recommendations). One re
 | 3-05 Structure import | ✅ Done — awaiting review |
 | 3-06 Performance import | ✅ Done — awaiting review |
 | 3-07 Ongoing sync | ✅ Done — awaiting review |
-| 3-08 Read API | Not started |
+| 3-08 Read API | ✅ Done — awaiting review |
 | 3-09 Web app | Not started |
 | 3-10 Journey test, browser test, docs, report | Not started |
 
@@ -424,4 +424,53 @@ Until then, work follows option C: build against Google's documentation and a si
 - ad account list and detail, with sync status and health;
 - daily totals, campaigns with period figures, and one campaign with its ad groups and ads;
 - the "Sync now" address.
+
+## 3-08 — The ad account API (2026-10-18)
+
+**Completed**
+- **Six new addresses** for the web app (built in 3-09), all inside the organization:
+  - **ad accounts:** the list and one account, with status, Google's own status, currency, time zone, the managers above it, sync status (including "waiting for the shared allowance") and health;
+  - **daily figures** for an account: impressions, clicks, cost, conversions and conversion value per day and in total, for any period (the last 30 days by default);
+  - **campaigns** of an account with their budget and figures for the period (removed ones included, so history stays readable);
+  - **one campaign** with its ad groups and ads, each with its own figures;
+  - **"Sync now"**.
+- **Rates are worked out when asked for:** click-through rate, cost per click, cost per conversion, and conversion value per cost. When one can't be worked out (for example, no clicks), it says why instead of showing 0.
+- **Honest figures:**
+  - every answer says the figures are **reported by Google Ads**;
+  - days not read yet say "not synchronized"; quiet days show real zeros;
+  - the last 3 days are marked **"may still change"**;
+  - account totals come from the account's own figures, campaign totals from the campaign's; levels are never added together.
+- **Who can do what:** every member can read; owners, admins and managers can "Sync now". Another organization's account or campaign is "not found".
+
+**Files changed** (16)
+- New (4): `app/domains/advertising/{schemas,read_service,router}.py`, `tests/api/test_ad_accounts_api.py` (18 tests).
+- Modified (12): `app/api/router.py`, `app/domains/organizations/permissions.py` (`ads.view`, `ads.manage`), `app/core/settings.py` (`ADS_UNSETTLED_DAYS`), `tests/security/test_tenant_isolation.py` (the generated sweep now covers the new addresses), `frontend/lib/api/{openapi.json,schema.d.ts}` (regenerated), docs `API_SPECIFICATION.md` (§19B), `PROJECT_STATUS.md`, this report.
+- Deleted: none. No migration.
+
+**Tests**
+- **18 new.** They cover:
+  - the account list and detail;
+  - exact money and rates, real zeros and the reasons for missing rates, "may still change" days;
+  - days never read, invalid periods, an account whose first import failed;
+  - campaigns, removed ones, Performance Max without ad groups, one campaign with ad groups and ads;
+  - "Sync now": success, viewer refused, the hourly limit, an unlinked account, a run already going;
+  - other organizations, and no token or secret in any answer.
+- The generated security sweeps now include the six addresses (sign-in required, CSRF on "Sync now", 404 for non-members).
+- **Backend `make check`: 1,056 passed**, coverage 97 %. **Frontend `npm run check`: 343 passed.** E2E not rerun: no page changed yet.
+
+**Security**
+- Read-only; organization filters plus row-level security on every query.
+- No tokens, secrets or platform error messages in any answer (tested).
+
+**Deviations**
+1. **"Sync now" is `…/resync`**, as for stores and as in the plan. The old outline in the API specification said `…/sync`; it now points to the as-built section.
+2. **Campaigns are listed per ad account** (`/ad-accounts/{id}/campaigns`), as in the plan. The old outline's organization-wide campaign list with filters is not built in Phase 3.
+3. **Rates use six decimals**, rounded half-to-even; the web app rounds for display.
+
+**Blocked:** Step 0 (3-01) still needs network access to Google and your Google credentials.
+
+**Next task:** 3-09 — the web app:
+- "Connect Google Ads", with discovered accounts grouped under their manager;
+- the Advertising tab, the account page (daily totals, rates, date range, campaign table, health, "Sync now") and the campaign page;
+- every page labelled "reported by Google Ads" and checked for accessibility.
 

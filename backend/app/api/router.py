@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from app.api import health
+from app.domains.advertising.router import router as advertising_router
 from app.domains.audit.router import router as audit_router
 from app.domains.commerce.router import router as commerce_router
 from app.domains.identity.router import router as identity_router
@@ -19,4 +20,5 @@ api_router.include_router(organizations_router)
 api_router.include_router(audit_router)
 api_router.include_router(integrations_router)
 api_router.include_router(commerce_router)
+api_router.include_router(advertising_router)
 api_router.include_router(webhooks_router)
