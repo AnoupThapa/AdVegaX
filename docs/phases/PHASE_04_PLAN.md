@@ -1,6 +1,6 @@
 # Phase 4 — Meta Ads (read-only): Implementation Plan
 
-**Status:** 📝 **Draft — awaiting product-owner approval.** No Phase 4 code is written until it is approved. · **Date:** 2026-10-18
+**Status:** ✅ **Approved by the product owner (2026-10-18, A22: "Approve all") with all §2 recommendations (Q-4-1 … Q-4-12).** Implementation authorized for Phase 4 only. · **Date:** 2026-10-18
 
 > **Live tests (Q-4-10):** recommended option C, as for Google Ads: build against Meta's documentation and a Meta simulator; Step 0 (4-01) runs when the Meta app, a test ad account and network access to Meta's API are available.
 **Depends on:** Phase 1 (connections, credentials, jobs, SSRF-safe client) and the Phase 3 advertising model, import chain, sync schedule, read API and pages, which were designed for Meta too. Phase 3 is implemented and awaiting review; this plan does not change it. · **Followed by:** Phase 5 (GA4).
