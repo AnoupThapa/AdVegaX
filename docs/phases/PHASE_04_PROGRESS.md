@@ -52,7 +52,7 @@ Until then, work follows option C: build against Meta's documentation and a simu
 - **Problem found and fixed while testing:** the plan's token check (`debug_token`) puts the token in the web address, and the HTTP library's request log would have recorded it. The person and permissions now come from `/me` and `/me/permissions`, with the token in the header. The test scans that log too.
 
 **Files changed** (13)
-- New (6): `app/providers/meta_ads/{__init__,client,provider}.py`, `tests/meta_sim.py`, `tests/providers/test_meta_ads_client.py` (79 tests), `tests/api/test_meta_ads_connect.py` (17 tests).
+- New (6): `app/providers/meta_ads/{__init__,client,provider}.py`, `tests/meta_sim.py`, `tests/providers/test_meta_ads_client.py` (83 tests), `tests/api/test_meta_ads_connect.py` (15 tests).
 - Modified (7): `app/core/settings.py` (`META_ADS_ENABLED`, `META_APP_ID`, `META_APP_SECRET`, `META_LOGIN_CONFIG_ID`, `META_API_VERSION`), `app/providers/base/registry.py`, `tests/security/test_static_rules.py` (2 new rules), `.env.example` (Google Ads and Meta entries), docs `INTEGRATION_GUIDES.md`, `SECURITY.md`, this report.
 - Deleted: none. No migration.
 
