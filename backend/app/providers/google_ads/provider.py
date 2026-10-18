@@ -51,7 +51,7 @@ from app.providers.base.types import (
     SyncSummary,
     WebhookDelivery,
 )
-from app.providers.google_ads import mapping
+from app.providers.google_ads import mapping, queries
 from app.providers.google_ads.client import (
     AUTHORIZE_URL,
     AccountNotEnabledError,
@@ -430,13 +430,26 @@ class GoogleAdsProvider:
 
     def read_performance(
         self,
-        secrets: Secrets,  # noqa: ARG002
-        account: AdAccountRef,  # noqa: ARG002
-        level: AdLevel,  # noqa: ARG002
-        first_day: date,  # noqa: ARG002
-        last_day: date,  # noqa: ARG002
+        secrets: Secrets,
+        account: AdAccountRef,
+        level: AdLevel,
+        first_day: date,
+        last_day: date,
     ) -> Iterator[AdPerformanceRecord]:
-        raise UnsupportedOperationError()  # task 3-06
+        """Daily figures for one level (one operation). Unreadable rows are skipped and
+        counted; days without activity are absent (the caller writes real zeros)."""
+        if last_day < first_day:
+            raise InvalidRequestError()
+        query = queries.performance(level.value, first_day.isoformat(), last_day.isoformat())
+        skipped = 0
+        for row in self._rows(secrets, account, query):
+            record = mapping.performance(row, level)
+            if record is None or not first_day <= record.day <= last_day:
+                skipped += 1
+                continue
+            yield record
+        if skipped:
+            logger.warning("google_ads_rows_skipped", extra={"count": skipped})
 
 
 def _positive_int(value: Any) -> int | None:

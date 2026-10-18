@@ -80,3 +80,26 @@ SELECT
   ad_group_ad.ad_group
 FROM ad_group_ad
 """.strip()
+
+# Daily figures (one operation per level and date range). ``segments.date`` is in the
+# account's time zone. Selected metrics that are zero are omitted from the JSON answer
+# (proto3 default values), so a missing metric in a returned row means 0.
+METRICS = (
+    "metrics.impressions, metrics.clicks, metrics.cost_micros, "
+    "metrics.conversions, metrics.conversions_value"
+)
+PERFORMANCE = {
+    "account": "SELECT segments.date, {metrics} FROM customer",
+    "campaign": "SELECT campaign.id, segments.date, {metrics} FROM campaign",
+    "ad_group": "SELECT campaign.id, ad_group.id, segments.date, {metrics} FROM ad_group",
+    "ad": (
+        "SELECT campaign.id, ad_group.id, ad_group_ad.ad.id, segments.date, {metrics} "
+        "FROM ad_group_ad"
+    ),
+}
+
+
+def performance(level: str, first: str, last: str) -> str:
+    """The daily query for ``level`` between two ISO dates (inclusive)."""
+    base = PERFORMANCE[level].format(metrics=METRICS)
+    return f"{base} WHERE segments.date BETWEEN '{first}' AND '{last}'"

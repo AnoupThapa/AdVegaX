@@ -150,11 +150,12 @@ def test_linking_creates_the_account_and_imports_its_structure(owner, sim, admin
         assert expected in actions
 
 
-def test_the_import_reads_through_the_manager_and_costs_five_operations(owner, sim):
+def test_the_structure_reads_through_the_manager_and_costs_five_operations(owner, sim):
     before = len(sim.calls("googleAds:searchStream"))
     _link(owner)
     calls = sim.calls("googleAds:searchStream")[before:]
-    assert len(calls) == 5  # account, budgets, campaigns, ad groups, ads
+    structure = [c for c in calls if b"segments.date" not in c.content]  # figures: 3-06
+    assert len(structure) == 5  # account, budgets, campaigns, ad groups, ads
     assert {c.url.path.split("/")[3] for c in calls} == {AU}
     assert {c.headers.get("login-customer-id") for c in calls} == {"9000000001"}
     assert not [r for r in sim.requests if r.url.path.endswith(":search")]  # streamed reads only

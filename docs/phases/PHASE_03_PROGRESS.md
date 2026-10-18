@@ -9,7 +9,7 @@ Plan: `PHASE_03_PLAN.md` (approved 2026-10-15, A21, all recommendations). One re
 | 3-03 Google sign-in, token refresh and revocation, REST client, simulator | ✅ Done |
 | 3-04 Discovery and linking rules | ✅ Done |
 | 3-05 Structure import | ✅ Done — awaiting review |
-| 3-06 Performance import | Not started |
+| 3-06 Performance import | ✅ Done — awaiting review |
 | 3-07 Ongoing sync, corrections, shared quota, Sync now, health | Not started |
 | 3-08 Read API | Not started |
 | 3-09 Web app | Not started |
@@ -309,4 +309,61 @@ Until then, work follows option C: build against Google's documentation and a si
 **Next task:** 3-06 — daily figures:
 - 13 months of daily figures at account, campaign, ad group and ad level, read in monthly slices;
 - impressions, clicks, exact cost, conversions and conversion value, in the account's time zone.
+
+## 3-06 — Importing 13 months of daily figures (2026-10-18)
+
+**Completed**
+- **After the structure, the import reads 13 months of daily figures** for each linked account:
+  - four levels: account, campaign, ad group and ad;
+  - impressions, clicks, cost, conversions and conversion value;
+  - one calendar month per background step (4 requests a month, about 56 for a first import), so a long import is resumable and never one huge request.
+- **Exact and in the account's own terms:**
+  - cost is exact to the millionth, in the account's currency (from Google's micros);
+  - fractional conversions are kept;
+  - days are the **account's own days** (an account in Los Angeles is still on 13 October when Sydney is on the 14th).
+- **Zero only where Google says zero:** Google sends nothing for a day without activity; the account total then gets a real 0 for that day, so every day of the 13 months is present. Lower levels have no row for a quiet day.
+- **Corrections overwrite:** every month read replaces what was stored for its days, so a cost Google later corrects, or activity it removes, never leaves an old number behind.
+- **Nothing is lost or invented:**
+  - figures for a campaign AdVegaX could not store (unknown status) are kept, just not linked;
+  - Performance Max campaigns have campaign figures without ad groups; levels are never added together;
+  - a row Google sends twice is stored once; an unreadable row is skipped and counted.
+- **Problems:** a temporary error repeats the same month; a permanent one ends the import with its code (the structure stays); lost access marks only the account. When the per-connection limit is reached, the step simply waits and continues.
+
+**Files changed** (11)
+- New (1): `tests/api/test_google_ads_performance.py` (23 tests).
+- Modified (10):
+  - `app/providers/google_ads/{queries,mapping,provider}.py`: the daily-figures query, exact reading of Google's rows, and `read_performance`;
+  - `app/domains/advertising/importer.py`: monthly slices, replacing stored days, zero days, links, progress;
+  - `tests/google_ads_sim.py`: daily figures answered like Google (zero metrics left out);
+  - `tests/providers/test_google_ads_{mapping,provider}.py`, `tests/api/test_google_ads_structure.py`;
+  - docs `INTEGRATION_GUIDES.md`, `DATABASE_SCHEMA.md`, `PROJECT_STATUS.md`, this report.
+- Deleted: none. No migration (the table came with 0012).
+
+**Tests**
+- **40 new** (23 import + 17 reading). They cover:
+  - every day of 13 months present, exact figures on active days, real zeros on quiet days;
+  - 14 monthly slices with no gap or overlap, 4 levels each, through the manager;
+  - the account's own time zone;
+  - corrections replacing old figures;
+  - unlinked figures kept, duplicates stored once;
+  - a failed month repeated, a permanent error, lost access, the per-connection limit;
+  - month boundaries (leap year, year end) and Google's row formats.
+- **Backend `make check`: 1,008 passed**, coverage 97 %. **Frontend `npm run check`: 343 passed** (unchanged). E2E not rerun: no web or API change.
+
+**Security**
+- Only reads, through the allowed `searchStream` call; no new endpoint.
+- Every row is written in the organization's own context, with row-level security.
+
+**Deviations**
+1. **An ad's figures are keyed by ad group and ad** (`2101~90001`). Google identifies an ad within its ad group, so this keeps two ad groups' figures apart.
+2. **Values too large to store are skipped**, not cut: conversions and values above 14 digits before the point, which Google should never send.
+3. **Until 3-07, a new import of an already-imported account re-reads the full 13 months.** The shorter nightly (30 days) and weekly (90 days) re-reads come with 3-07.
+4. **When the per-connection limit pauses a month, the levels already read for it are read again.** That costs at most three extra requests in that case; the shared daily allowance (3-07) will keep this in check.
+
+**Blocked:** Step 0 (3-01). The answer shapes are to be confirmed there.
+
+**Next task:** 3-07 — staying up to date:
+- every 3 hours: today and yesterday, plus structure changes;
+- nightly: the last 30 days; weekly: the last 90 days;
+- "Sync now", the shared daily allowance, and account health.
 

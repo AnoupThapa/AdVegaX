@@ -46,6 +46,14 @@ STRUCTURE = {
     "ad_group": "ad_groups",
     "ad_group_ad": "ads",
 }
+# FROM resource of a daily-figures query (one with ``segments.date``) → AdVegaX level.
+PERFORMANCE_LEVELS = {
+    "customer": "account",
+    "campaign": "campaign",
+    "ad_group": "ad_group",
+    "ad_group_ad": "ad",
+}
+_BETWEEN = re.compile(r"segments\.date BETWEEN '(\d{4}-\d{2}-\d{2})' AND '(\d{4}-\d{2}-\d{2})'")
 FAILURE_TYPE = f"type.googleapis.com/google.ads.googleads.{API_VERSION}.errors.GoogleAdsFailure"
 
 
@@ -64,6 +72,8 @@ class Customer:
     campaigns: list[dict[str, Any]] = field(default_factory=list)
     ad_groups: list[dict[str, Any]] = field(default_factory=list)
     ads: list[dict[str, Any]] = field(default_factory=list)
+    # Daily-figure rows per level ("account", "campaign", "ad_group", "ad"), see ``perf_row``.
+    performance: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
 
 
 @dataclass
@@ -312,7 +322,9 @@ class GoogleAdsSim:
             return self.failure(400, {"queryError": "UNEXPECTED_END_OF_QUERY"})
         found = re.search(r"\bFROM\s+(\w+)", query)
         resource = found.group(1) if found else ""
-        if resource == "customer_client":
+        if "segments.date" in query and resource in PERFORMANCE_LEVELS:
+            rows = self.performance_rows(customer, PERFORMANCE_LEVELS[resource], query)
+        elif resource == "customer_client":
             rows = self.hierarchy_rows(customer_id)
         elif resource == "customer":
             rows = [self.account_row(customer)]
@@ -333,6 +345,20 @@ class GoogleAdsSim:
         if start + self.page_size < len(rows):
             answer["nextPageToken"] = str(start + self.page_size)
         return httpx.Response(200, json=answer)
+
+    @staticmethod
+    def performance_rows(customer: Customer, level: str, query: str) -> list[dict[str, Any]]:
+        """The stored rows of ``level`` whose day lies in the query's BETWEEN range (Google
+        sends nothing for a day or entity without activity)."""
+        found = _BETWEEN.search(query)
+        if found is None:
+            return []
+        first, last = found.groups()
+        return [
+            r
+            for r in customer.performance.get(level, [])
+            if first <= str(r.get("segments", {}).get("date", "")) <= last
+        ]
 
     def client_row(self, customer: Customer, level: int) -> dict[str, Any]:
         """A ``customer_client`` row as Google's REST API sends it (camelCase, int64 strings)."""
@@ -380,8 +406,10 @@ class GoogleAdsSim:
         )
 
 
-def build_provider(sim: GoogleAdsSim) -> GoogleAdsProvider:
-    return GoogleAdsProvider(
+def build_provider(sim: GoogleAdsSim, *, burst: int = 1000) -> GoogleAdsProvider:
+    """The test clock is frozen, so the per-connection limiter never refills: tests get a
+    large burst unless they test the limit itself (pass ``burst=10``, the real value)."""
+    provider = GoogleAdsProvider(
         client_id=CLIENT_ID,
         client_secret=CLIENT_SECRET,
         developer_token=DEVELOPER_TOKEN,
@@ -389,6 +417,9 @@ def build_provider(sim: GoogleAdsSim) -> GoogleAdsProvider:
         http_factory=sim.http_factory,
         clock=sim.clock,
     )
+    rate, _ = provider.rate_limit
+    provider.rate_limit = (rate, burst)
+    return provider
 
 
 def sample_hierarchy(sim: GoogleAdsSim) -> GoogleAdsSim:
@@ -513,4 +544,61 @@ def sample_structure(customer: Customer) -> Customer:
             }
         },
     ]
+    return customer
+
+
+def perf_row(
+    day: str,
+    *,
+    campaign: str | None = None,
+    ad_group: str | None = None,
+    ad: str | None = None,
+    impressions: int = 0,
+    clicks: int = 0,
+    cost_micros: int = 0,
+    conversions: float | str = 0,
+    conversions_value: float | str = 0,
+) -> dict[str, Any]:
+    """One daily-figures row as Google's REST API sends it: int64 values as strings, money in
+    micros, and — proto3 JSON — metrics that are zero left out entirely."""
+    metrics: dict[str, Any] = {}
+    for key, value in (
+        ("impressions", str(impressions) if impressions else None),
+        ("clicks", str(clicks) if clicks else None),
+        ("costMicros", str(cost_micros) if cost_micros else None),
+        ("conversions", conversions if conversions else None),
+        ("conversionsValue", conversions_value if conversions_value else None),
+    ):
+        if value is not None:
+            metrics[key] = value
+    row: dict[str, Any] = {"segments": {"date": day}, "metrics": metrics}
+    if campaign is not None:
+        row["campaign"] = {"resourceName": f"customers/1/campaigns/{campaign}", "id": campaign}
+    if ad_group is not None:
+        row["adGroup"] = {"resourceName": f"customers/1/adGroups/{ad_group}", "id": ad_group}
+    if ad is not None:
+        row["adGroupAd"] = {"ad": {"id": ad}}
+    return row
+
+
+def sample_performance(customer: Customer, search_day: str, pmax_day: str) -> Customer:
+    """Figures for two days: on ``search_day`` the Search campaign 11 (ad group 2101, ad 90001)
+    spends AUD 12.345678 with 1.5 conversions; on ``pmax_day`` the Performance Max campaign 12
+    (no ad groups) has impressions only. Account rows are Google's totals for those days."""
+    search = {
+        "impressions": 1200,
+        "clicks": 34,
+        "cost_micros": 12_345_678,
+        "conversions": 1.5,
+        "conversions_value": 89.9,
+    }
+    customer.performance = {
+        "account": [perf_row(search_day, **search), perf_row(pmax_day, impressions=500)],
+        "campaign": [
+            perf_row(search_day, campaign="11", **search),
+            perf_row(pmax_day, campaign="12", impressions=500),
+        ],
+        "ad_group": [perf_row(search_day, campaign="11", ad_group="2101", **search)],
+        "ad": [perf_row(search_day, campaign="11", ad_group="2101", ad="90001", **search)],
+    }
     return customer

@@ -6,8 +6,12 @@ the commerce import, the work runs as a **chain of short jobs** (``advertising.i
 one step each, under a per-account lock; ``ad_sync_state.import_job_id`` names the only step
 allowed to continue, so a duplicated job message stops at once.
 
-Steps of a chain (``ad_sync_state.import_cursor``): ``structure`` → ``done`` (3-06 inserts the
-daily-figure slices between them). Removed campaigns, ad groups and ads are kept (status
+Steps of a chain (``ad_sync_state.import_cursor``): ``structure`` → ``perf:<first>:<last>`` (one
+step per calendar-month slice of daily figures, four levels each, so a 13-month first import
+costs about 56 operations) → ``done``. Each slice **replaces** the stored figures of its days,
+so corrections and removed activity never leave stale numbers; the account level gets a real
+zero for every day Google reports nothing (A10: zero only where the platform says zero).
+Removed campaigns, ad groups and ads are kept (status
 ``removed``) so their history stays readable; items the platform stops listing are left as
 they are, never deleted on absence.
 """
@@ -18,10 +22,11 @@ import logging
 import uuid
 from dataclasses import dataclass
 from datetime import date
+from decimal import Decimal
 from typing import Any, cast
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.domains.advertising.models import (
@@ -30,6 +35,7 @@ from app.domains.advertising.models import (
     AdBudget,
     AdCampaign,
     AdGroup,
+    AdPerformanceDaily,
     AdSyncState,
 )
 from app.domains.audit.service import Actor, record_audit
@@ -48,6 +54,8 @@ from app.providers.base.types import (
     AdBudgetRecord,
     AdCampaignRecord,
     AdGroupRecord,
+    AdLevel,
+    AdPerformanceRecord,
     AdRecord,
     AdStructureRecord,
     ProviderCategory,
@@ -62,12 +70,16 @@ WORKER = Actor("worker", None)
 IMPORT_LOCK_TTL_SECONDS = 15 * 60  # one step is a handful of short reads
 STEP_STRUCTURE = "structure"
 STEP_DONE = "done"
+STEP_PERFORMANCE = "perf"
+ACCOUNT_KEY = "account"  # entity_key of account-level rows
 
 
 def advertising_provider(provider: PlatformProvider) -> AdvertisingProvider | None:
     if provider.category is not ProviderCategory.ADVERTISING:
         return None
-    if not all(hasattr(provider, m) for m in ("read_account", "read_structure")):
+    if not all(
+        hasattr(provider, m) for m in ("read_account", "read_structure", "read_performance")
+    ):
         return None
     return cast(AdvertisingProvider, provider)
 
@@ -107,7 +119,7 @@ def on_ad_account_linked(
             timezone=resource.timezone,
             status="importing",
             platform_status="active",
-            history_from=date.fromordinal(today.toordinal() - rt.settings.ADS_HISTORY_WINDOW.days),
+            history_from=_shift(today, -rt.settings.ADS_HISTORY_WINDOW.days),
         )
         session.add(account)
         session.flush()
@@ -256,6 +268,8 @@ def _step(rt: Runtime, job: ClaimedJob, org_id: uuid.UUID, account_id: uuid.UUID
     try:
         if ctx.step == STEP_STRUCTURE:
             return _structure(rt, ctx, provider)
+        if (span := performance_cursor(ctx.step)) is not None:
+            return _performance(rt, ctx, provider, *span)
         _finish(rt, ctx)
         return False
     except ResourceUnavailableError as exc:
@@ -296,7 +310,9 @@ def _structure(rt: Runtime, ctx: _Context, provider: AdvertisingProvider) -> boo
         counts = apply_structure(session, rt, ctx.org_id, ctx.account_id, records)
         sync = session.get(AdSyncState, ctx.account_id, with_for_update=True)
         assert sync is not None
-        sync.import_cursor = STEP_DONE
+        account = session.get(AdAccount, ctx.account_id)
+        assert account is not None
+        sync.import_cursor = _cursor(history_start(rt, account), local_today(rt, account.timezone))
         if ctx.first_import:
             sync.import_progress = 50
             record_audit(
@@ -309,6 +325,198 @@ def _structure(rt: Runtime, ctx: _Context, provider: AdvertisingProvider) -> boo
                 metadata={"counts": counts},
             )
     return True
+
+
+# ------------------------------------------------------------------ daily figures
+def _cursor(first: date, last: date) -> str:
+    return f"{STEP_PERFORMANCE}:{first.isoformat()}:{last.isoformat()}"
+
+
+def performance_cursor(step: str) -> tuple[date, date] | None:
+    """``perf:<first>:<last>`` → the days still to read; None for any other step."""
+    parts = step.split(":")
+    if len(parts) != 3 or parts[0] != STEP_PERFORMANCE:
+        return None
+    try:
+        first, last = date.fromisoformat(parts[1]), date.fromisoformat(parts[2])
+    except ValueError:
+        return None
+    return (first, last) if first <= last else None
+
+
+def _shift(day: date, days: int) -> date:
+    return date.fromordinal(day.toordinal() + days)
+
+
+def month_slice(first: date, last: date) -> date:
+    """The last day of the slice starting at ``first``: the end of its calendar month."""
+    next_month = _shift(first.replace(day=28), 4).replace(day=1)
+    return min(last, _shift(next_month, -1))
+
+
+def history_start(rt: Runtime, account: AdAccount) -> date:
+    if account.history_from is not None:
+        return account.history_from
+    today = local_today(rt, account.timezone)
+    return _shift(today, -rt.settings.ADS_HISTORY_WINDOW.days)
+
+
+def _performance(
+    rt: Runtime, ctx: _Context, provider: AdvertisingProvider, first: date, last: date
+) -> bool:
+    end = month_slice(first, last)
+    secrets = usable_secrets(rt, ctx.org_id, ctx.connection_id)
+    records: dict[AdLevel, list[AdPerformanceRecord]] = {}
+    for level in AdLevel:
+        records[level] = list(
+            _call(
+                rt,
+                ctx,
+                provider,
+                lambda level=level: provider.read_performance(secrets, ctx.ref, level, first, end),
+            )
+        )
+    with rt.db.transaction(org_id=ctx.org_id) as session:
+        account = session.get(AdAccount, ctx.account_id)
+        sync = session.get(AdSyncState, ctx.account_id, with_for_update=True)
+        assert account is not None
+        assert sync is not None
+        written = apply_performance(session, rt, account, first, end, records)
+        more = end < last
+        sync.import_cursor = _cursor(_shift(end, 1), last) if more else STEP_DONE
+        if ctx.first_import:
+            start = history_start(rt, account)
+            span = max(1, (last - start).days + 1)
+            done = (end - start).days + 1
+            sync.import_progress = min(99, 50 + (50 * done) // span)
+        sync.updated_at = rt.clock.now()
+        logger.info(
+            "ad_performance_slice_imported",
+            extra={"ad_account_id": str(ctx.account_id), "first": str(first), "rows": written},
+        )
+    return True
+
+
+def apply_performance(
+    session: Session,
+    rt: Runtime,
+    account: AdAccount,
+    first: date,
+    last: date,
+    records: dict[AdLevel, list[AdPerformanceRecord]],
+) -> int:
+    """Replace the stored figures of ``first`` … ``last`` for each level read. Rows are
+    linked to the structure where it is known; duplicates of one entity and day
+    are never summed: the first is kept and the rest are counted as skipped."""
+    now = rt.clock.now()
+    campaigns = {
+        c.external_campaign_id: c.id
+        for c in session.execute(
+            select(AdCampaign).where(AdCampaign.ad_account_id == account.id)
+        ).scalars()
+    }
+    groups = {
+        g.external_ad_group_id: g.id
+        for g in session.execute(
+            select(AdGroup)
+            .join(AdCampaign, AdCampaign.id == AdGroup.campaign_id)
+            .where(AdCampaign.ad_account_id == account.id)
+        ).scalars()
+    }
+    ads = {
+        (a.ad_group_id, a.external_ad_id): a.id
+        for a in session.execute(
+            select(Ad)
+            .join(AdGroup, AdGroup.id == Ad.ad_group_id)
+            .join(AdCampaign, AdCampaign.id == AdGroup.campaign_id)
+            .where(AdCampaign.ad_account_id == account.id)
+        ).scalars()
+    }
+    written = skipped = 0
+    for level, rows in records.items():
+        session.execute(
+            delete(AdPerformanceDaily).where(
+                AdPerformanceDaily.ad_account_id == account.id,
+                AdPerformanceDaily.level == level.value,
+                AdPerformanceDaily.day.between(first, last),
+            )
+        )
+        seen: set[tuple[str, date]] = set()
+        for r in rows:
+            key = _entity_key(r)
+            if key is None or (key, r.day) in seen:
+                skipped += 1
+                continue
+            seen.add((key, r.day))
+            group_id = groups.get(r.ad_group_external_id or r.entity_external_id or "")
+            session.add(
+                AdPerformanceDaily(
+                    organization_id=account.organization_id,
+                    ad_account_id=account.id,
+                    level=level.value,
+                    entity_key=key,
+                    campaign_id=campaigns.get(r.campaign_external_id or "")
+                    if level is not AdLevel.CAMPAIGN
+                    else campaigns.get(r.entity_external_id or ""),
+                    ad_group_id=group_id if level in (AdLevel.AD_GROUP, AdLevel.AD) else None,
+                    ad_id=ads.get((group_id, r.entity_external_id or ""))
+                    if level is AdLevel.AD and group_id is not None
+                    else None,
+                    day=r.day,
+                    impressions=r.impressions,
+                    clicks=r.clicks,
+                    cost=r.cost,
+                    conversions=r.conversions,
+                    conversion_value=r.conversion_value,
+                    currency=account.currency,
+                    fetched_at=now,
+                )
+            )
+            written += 1
+        if level is AdLevel.ACCOUNT:  # Google sends no row for a day without activity
+            day = first
+            while day <= last:
+                if (ACCOUNT_KEY, day) not in seen:
+                    session.add(_zero_day(account, day, now))
+                    written += 1
+                day = _shift(day, 1)
+    session.flush()
+    if skipped:
+        logger.warning(
+            "ad_performance_rows_skipped",
+            extra={"ad_account_id": str(account.id), "count": skipped},
+        )
+    return written
+
+
+def _entity_key(record: AdPerformanceRecord) -> str | None:
+    if record.level is AdLevel.ACCOUNT:
+        return ACCOUNT_KEY
+    if record.entity_external_id is None:
+        return None
+    if record.level is AdLevel.AD:  # an ad is identified within its ad group
+        if record.ad_group_external_id is None:
+            return None
+        return f"{record.ad_group_external_id}~{record.entity_external_id}"
+    return record.entity_external_id
+
+
+def _zero_day(account: AdAccount, day: date, now: Any) -> AdPerformanceDaily:
+    zero = Decimal(0)
+    return AdPerformanceDaily(
+        organization_id=account.organization_id,
+        ad_account_id=account.id,
+        level=AdLevel.ACCOUNT.value,
+        entity_key=ACCOUNT_KEY,
+        day=day,
+        impressions=0,
+        clicks=0,
+        cost=zero,
+        conversions=zero,
+        conversion_value=zero,
+        currency=account.currency,
+        fetched_at=now,
+    )
 
 
 def _finish(rt: Runtime, ctx: _Context) -> None:

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import base64
 import json
-from datetime import date
 
 import httpx
 import pytest
@@ -17,7 +16,7 @@ from app.providers.base.errors import (
     RetryableError,
     UnsupportedOperationError,
 )
-from app.providers.base.types import AdAccountRef, AdLevel, AuthorizationRequest, ResourceDescriptor
+from app.providers.base.types import AuthorizationRequest, ResourceDescriptor
 from app.providers.google_ads.client import (
     GoogleAdsClient,
     GoogleSignIn,
@@ -254,14 +253,10 @@ def test_an_empty_400_from_the_token_endpoint_is_a_bad_request():
 
 # ------------------------------------------------------------------ not supported here
 def test_operations_google_ads_does_not_support(provider):
-    ref = AdAccountRef("1000000003")
     for call in (
         lambda: provider.verify_install({}),
         lambda: provider.parse_webhook({}, b""),
         lambda: provider.sync_resource({}, ResourceDescriptor(kind="ad_account", external_id="1")),
-        lambda: provider.read_performance(
-            {}, ref, AdLevel.ACCOUNT, date(2026, 10, 1), date(2026, 10, 2)
-        ),
     ):
         with pytest.raises(UnsupportedOperationError):
             call()

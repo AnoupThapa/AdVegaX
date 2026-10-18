@@ -18,10 +18,13 @@ from app.providers.base.types import (
     AdCampaignRecord,
     AdEntityStatus,
     AdGroupRecord,
+    AdLevel,
+    AdPerformanceRecord,
     AdRecord,
 )
 
 MICROS = Decimal(1_000_000)
+AMOUNT_LIMIT = Decimal(10) ** 14  # the stored columns hold 14 digits before the point
 DAILY_PERIODS = frozenset({"DAILY", "FIXED_DAILY"})
 _ID = re.compile(r"^[0-9]{1,20}$")
 _STATUSES = {
@@ -168,3 +171,76 @@ def ad(row: dict[str, Any]) -> AdRecord | None:
         name=text(inner.get("name")),
         platform_type=text(inner.get("type"), 64),
     )
+
+
+def _count(value: Any) -> int | None:
+    """An int64 count (sent as a string); a selected metric absent from a row is 0."""
+    if value is None:
+        return 0
+    try:
+        number = int(str(value))
+    except ValueError:
+        return None
+    return number if number >= 0 else None
+
+
+def _amount(value: Any) -> Decimal | None:
+    """A double (conversions can be fractional); absent means 0. Kept exact as written."""
+    if value is None:
+        return Decimal(0)
+    try:
+        number = Decimal(str(value))
+    except (InvalidOperation, ValueError):
+        return None
+    if not number.is_finite() or number < 0 or number >= AMOUNT_LIMIT:
+        return None
+    return number
+
+
+def performance(row: dict[str, Any], level: AdLevel) -> AdPerformanceRecord | None:
+    """One day of one entity. Returns None for a row that cannot be read (no valid date or
+    id, or a metric in a shape AdVegaX does not know) — counted by the caller, never guessed."""
+    segments = row.get("segments")
+    metrics = row.get("metrics")
+    when = day(segments.get("date")) if isinstance(segments, dict) else None
+    if when is None or not isinstance(metrics, dict):
+        return None
+    campaign_id = _nested_id(row, "campaign")
+    group_id = _nested_id(row, "adGroup")
+    entity: str | None
+    if level is AdLevel.ACCOUNT:
+        entity = None
+    elif level is AdLevel.CAMPAIGN:
+        entity = campaign_id
+    elif level is AdLevel.AD_GROUP:
+        entity = group_id
+    else:
+        inner = row.get("adGroupAd")
+        ad_data = inner.get("ad") if isinstance(inner, dict) else None
+        entity = ident(ad_data.get("id")) if isinstance(ad_data, dict) else None
+    if level is not AdLevel.ACCOUNT and entity is None:
+        return None
+    impressions, clicks = _count(metrics.get("impressions")), _count(metrics.get("clicks"))
+    cost_micros = metrics.get("costMicros")
+    cost = money(cost_micros) if cost_micros is not None else Decimal(0)
+    conversions = _amount(metrics.get("conversions"))
+    value = _amount(metrics.get("conversionsValue"))
+    if None in (impressions, clicks, cost, conversions, value) or (cost is not None and cost < 0):
+        return None
+    return AdPerformanceRecord(
+        level=level,
+        day=when,
+        entity_external_id=entity,
+        campaign_external_id=campaign_id if level is not AdLevel.CAMPAIGN else None,
+        ad_group_external_id=group_id if level is AdLevel.AD else None,
+        impressions=impressions,
+        clicks=clicks,
+        cost=cost,
+        conversions=conversions,
+        conversion_value=value,
+    )
+
+
+def _nested_id(row: dict[str, Any], key: str) -> str | None:
+    data = row.get(key)
+    return ident(data.get("id")) if isinstance(data, dict) else None
