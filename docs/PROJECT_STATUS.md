@@ -20,7 +20,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | 2B | WooCommerce (read-only) | ✅ **Implemented against the WooCommerce simulator — reviewed (A20)**; live Step 0 (2B-01) waits for WordPress downloads to be allowed | 799 backend + 343 frontend + 11 end-to-end tests; `phases/PHASE_02B_REPORT.md` |
 | 3 | Google Ads (read-only) | ✅ **Implemented against the Google Ads simulator — awaiting review**; Step 0 (3-01) waits for Google credentials and network access | 1,062 backend + 358 frontend + 12 end-to-end tests; `phases/PHASE_03_REPORT.md` |
 | 4 | Meta (read-only) | ✅ **Implemented against the Meta simulator — awaiting review**; Step 0 (4-01) waits for the Meta app and network access | 1,301 backend + 370 frontend + 13 end-to-end tests; `phases/PHASE_04_REPORT.md` |
-| 5 | GA4 (read-only) | Not started | Needs Q11 |
+| 5 | GA4 (read-only) | **Plan drafted — awaiting approval** (settles Q11) | `phases/PHASE_05_PLAN.md` |
 | 6 | Unified analytics & financial engine | Not started | Needs signed-off metric definitions (Q7) |
 | 7 | Funnel intelligence | Not started | |
 | 8 | AI campaign planner | Not started | Needs Q12 |
@@ -109,6 +109,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | 2026-10-19 | **4-06** Meta pacing from usage headers (slow from 75 %, pause from 95 % or Meta's estimate, no attempt used), per-account vs app-wide limits, sign-in expiry warnings at 14 and 3 days and "Needs reconnecting" at the end, plain health reasons; fix: platform-wide wait checked for every calling step; 24 tests | `phases/PHASE_04_PROGRESS.md`, `INTEGRATION_GUIDES.md` |
 | 2026-10-19 | **4-07** API: `connection_expires_at` on ad accounts, `sign_in_expires_at` on connections. Web app: both platforms on the Advertising tab; Meta wording (ad sets, purchases, link clicks, objective, business, Reported by Meta); sign-in end date and 14/3-day notice with Reconnect; business grouping and Meta reasons on Connections; Meta health and error wording; 13 tests | `phases/PHASE_04_PROGRESS.md`, `API_SPECIFICATION.md` |
 | 2026-10-19 | **4-08 / Phase 4 complete (simulator)** Whole-journey test, browser test with a simulated Meta account and accessibility checks, browser helper, CI placeholders, security notes; 1,301 backend + 370 frontend + 13 end-to-end tests | `phases/PHASE_04_REPORT.md`, `phases/PHASE_04_PROGRESS.md` |
+| 2026-10-19 | **Phase 5 plan drafted** (GA4 read-only): settles Q11 (daily aggregates + Admin API discovery); 11 decisions with recommendations (Data/Admin API v1beta, own Google Analytics connection on the shared OAuth client, three views, users never summed across days, 14-day nightly re-read, quota pacing, data-quality flags shown, demo property for Step 0); migration 0014; tasks 5-01 … 5-09; Google facts checked 2026-10-19 | `phases/PHASE_05_PLAN.md` |
 | 2026-10-08 | **Phase 1B implemented**: connections/resources/links, encrypted credentials, SSRF-safe client, rate limiter, provider framework + fake platform, jobs with retry/dead-letter, single scheduler, audited denials | `backend/`, `phases/PHASE_01B_REPORT.md`, `SECURITY.md`, `INTEGRATION_GUIDES.md` |
 
 ## 3. Decision log
@@ -159,7 +160,7 @@ Q5 Shopify public-app approach (2A production) · Q6 same store/account in two o
 
 ## 5. Next actions
 
-0. **Now:** review `phases/PHASE_04_REPORT.md` and `phases/PHASE_03_REPORT.md`; do the Meta and Google set-ups so both Step 0 checks can run; apply `advegax-pending.bundle` to the desktop folder and open a pull request so GitHub CI runs. Then Phase 5 (GA4), which needs Q11.
+0. **Now:** review `phases/PHASE_04_REPORT.md` and `phases/PHASE_03_REPORT.md`; do the Meta and Google set-ups so both Step 0 checks can run; apply `advegax-pending.bundle` to the desktop folder and open a pull request so GitHub CI runs. Then Phase 5 (GA4): review and approve `phases/PHASE_05_PLAN.md` (it settles Q11).
 1. Product owner reviews Phase 1 (`PHASE_01A_REPORT.md`, `PHASE_01B_REPORT.md`, `PHASE_01C_REPORT.md`) and Phase 2A (`PHASE_02A_REPORT.md`).
 2. Open a pull request `feature/phase-1a → main` so GitHub CI runs every job (CI does not run on pushes to the feature branch alone).
 3. Live Shopify checks (2A-01): Shopify Partner account + development store + app in the Dev Dashboard, and a reachable public HTTPS address (Shopify domains allowed in Claude network settings plus a tunnel, or a staging server).
