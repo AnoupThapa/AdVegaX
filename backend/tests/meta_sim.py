@@ -12,6 +12,11 @@ resolver returns a public address; the transport is ``httpx.MockTransport``):
   ad accounts a user can reach (task 4-03);
 * ``GET /act_<id>/campaigns``, ``/adsets`` and ``/ads`` (task 4-04): archived and deleted
   objects are hidden unless ``filtering`` asks for them by ``effective_status``, as Meta does;
+* ``GET /act_<id>/insights`` (task 4-05): one row per day and entity for a level, with
+  ``actions`` / ``action_values``; deleted and archived objects' rows only when filtered by
+  ``<level>.effective_status``; "too much data" (100 / 1487534) for chosen levels; and the
+  asynchronous report (``POST …/insights`` → ``report_run_id``, ``GET /<id>``,
+  ``GET /<id>/insights``);
 * every other call: the token must be known and unexpired and ``appsecret_proof`` must match;
   errors use Meta's ``{"error": {"code", "error_subcode", "type", "message"}}`` shape; usage
   headers can be set per answer.
@@ -71,6 +76,9 @@ class AdAccount:
     campaigns: list[dict[str, Any]] = field(default_factory=list)
     adsets: list[dict[str, Any]] = field(default_factory=list)
     ads: list[dict[str, Any]] = field(default_factory=list)
+    # level ("account" | "campaign" | "adset" | "ad") → Meta rows; "_status" is the object's
+    # effective status (stripped from answers).
+    insights: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
 
     def row(self) -> dict[str, Any]:
         row: dict[str, Any] = {
@@ -100,6 +108,10 @@ class MetaSim:
     usage_headers: dict[str, str] = field(default_factory=dict)
     token_expiry_seconds: int = LONG_LIVED_SECONDS
     accounts: dict[str, AdAccount] = field(default_factory=dict)
+    too_large: set[str] = field(default_factory=set)  # levels answered with 100 / 1487534
+    report_polls: int = 2  # "Job Running" answers before "Job Completed"
+    report_outcome: str = "Job Completed"
+    reports: dict[str, dict[str, Any]] = field(default_factory=dict)
     extra_rows: list[dict[str, Any]] = field(default_factory=list)  # odd rows for skip tests
     _codes: dict[str, dict[str, str]] = field(default_factory=dict)
     issued: int = 0
@@ -220,6 +232,31 @@ class MetaSim:
             return handler(self, request, user_id)
         if route == "/me/adaccounts" and request.method == "GET":
             return self._ad_accounts(query, user_id)
+        insights = re.fullmatch(r"/(act_[0-9]+)/insights", route)
+        if insights:
+            owner = self.accounts.get(insights.group(1))
+            if owner is None or user_id not in owner.users:
+                return self.error(400, 100, 33)
+            if request.method == "POST":
+                form = {k: v[0] for k, v in parse_qs(request.content.decode()).items()}
+                report = str(900000000 + len(self.reports) + 1)
+                self.reports[report] = {"rows": self._insight_rows(owner, form), "polls": 0}
+                return httpx.Response(200, json={"report_run_id": report})
+            if query.get("level") in self.too_large:
+                return self.error(400, 100, 1487534)
+            return self._page(self._insight_rows(owner, query), query)
+        report = re.fullmatch(r"/([0-9]+)(/insights)?", route)
+        if report and report.group(1) in self.reports and request.method == "GET":
+            job = self.reports[report.group(1)]
+            if report.group(2):
+                return self._page(job["rows"], query)
+            job["polls"] += 1
+            done = job["polls"] > self.report_polls
+            status = self.report_outcome if done else "Job Running"
+            percent = 100 if done else 50
+            return httpx.Response(
+                200, json={"async_status": status, "async_percent_completion": percent}
+            )
         edge = re.fullmatch(r"/(act_[0-9]+)/(campaigns|adsets|ads)", route)
         if edge and request.method == "GET":
             owner = self.accounts.get(edge.group(1))
@@ -261,6 +298,24 @@ class MetaSim:
             if r.get("effective_status") in shown or "effective_status" not in r
         ]
         return self._page(kept, query)
+
+    def _insight_rows(self, owner: AdAccount, query: dict[str, str]) -> list[dict[str, Any]]:
+        level = query["level"]
+        assert query.get("time_increment") == "1"
+        assert query.get("use_unified_attribution_setting") == "true"
+        span = json.loads(query["time_range"])
+        shown = {"ACTIVE", "PAUSED", "CAMPAIGN_PAUSED", "ADSET_PAUSED", "WITH_ISSUES"}
+        if "filtering" in query:
+            (rule,) = json.loads(query["filtering"])
+            assert (rule["field"], rule["operator"]) == (f"{level}.effective_status", "IN")
+            shown = set(rule["value"])
+        fields = set(query.get("fields", "").split(","))
+        return [
+            {k: v for k, v in r.items() if k in fields}
+            for r in owner.insights.get(level, [])
+            if span["since"] <= r["date_start"] <= span["until"]
+            and (level == "account" or r.get("_status", "ACTIVE") in shown)
+        ]
 
     def _page(self, rows: list[dict[str, Any]], query: dict[str, str]) -> httpx.Response:
         limit = int(query.get("limit", "25"))
@@ -313,7 +368,9 @@ class MetaSim:
         )
 
 
-def build_provider(sim: MetaSim, *, burst: int = 1000) -> MetaAdsProvider:
+def build_provider(
+    sim: MetaSim, *, burst: int = 1000, sleeps: list[float] | None = None
+) -> MetaAdsProvider:
     """As for the Google Ads simulator: the frozen test clock never refills the per-connection
     limiter, so tests get a large burst unless they test the limit itself."""
     provider = MetaAdsProvider(
@@ -323,6 +380,7 @@ def build_provider(sim: MetaSim, *, burst: int = 1000) -> MetaAdsProvider:
         api_version=API_VERSION,
         http_factory=sim.http_factory,
         clock=sim.clock,
+        sleep=(sleeps.append if sleeps is not None else lambda seconds: None),
     )
     rate, _ = provider.rate_limit
     provider.rate_limit = (rate, burst)
@@ -441,4 +499,67 @@ def sample_structure(account: AdAccount) -> AdAccount:
         },
         {"id": "340004", "adset_id": "230003", "status": "DELETED", "effective_status": "DELETED"},
     ]
+    return account
+
+
+def insight(
+    day: str, *, purchases: str | None = None, value: str | None = None, **ids: Any
+) -> dict[str, Any]:
+    """One Meta insights row for one day; figures are strings, as Meta sends them."""
+    row: dict[str, Any] = {"date_start": day, "date_stop": day, **ids}
+    row.setdefault("impressions", "1000")
+    row.setdefault("inline_link_clicks", "20")
+    row.setdefault("spend", "12.34")
+    if purchases is not None:
+        row["actions"] = [
+            {"action_type": "link_click", "value": row["inline_link_clicks"]},
+            {"action_type": "offsite_conversion.fb_pixel_purchase", "value": purchases},
+            {"action_type": "omni_purchase", "value": purchases},
+        ]
+    if value is not None:
+        row["action_values"] = [
+            {"action_type": "offsite_conversion.fb_pixel_purchase", "value": value},
+            {"action_type": "omni_purchase", "value": value},
+        ]
+    return row
+
+
+def sample_insights(account: AdAccount, *days: str) -> AdAccount:
+    """Figures for the sample structure on each day: ad 340001 sells, 340003 does not, and
+    the deleted ad 340004 (ad set 230003, campaign 120004) still has spend. Parent rows
+    include their deleted children, as Meta's do; the account row includes everything."""
+    ads = [
+        ("340001", "230001", "120001", "ACTIVE", "1500", "30", "40.00", "2", "159.90"),
+        ("340003", "230002", "120002", "CAMPAIGN_PAUSED", "500", "5", "7.50", None, None),
+        ("340004", "230003", "120004", "DELETED", "100", "1", "1.25", None, None),
+    ]
+    level_rows: dict[str, list[dict[str, Any]]] = {
+        "account": [],
+        "campaign": [],
+        "adset": [],
+        "ad": [],
+    }
+    for day in days:
+        for ad_id, set_id, camp_id, status, imp, clk, spend, buys, value in ads:
+            figures = {"impressions": imp, "inline_link_clicks": clk, "spend": spend}
+            for level, ids in (
+                ("ad", {"ad_id": ad_id, "adset_id": set_id, "campaign_id": camp_id}),
+                ("adset", {"adset_id": set_id, "campaign_id": camp_id}),
+                ("campaign", {"campaign_id": camp_id}),
+            ):
+                row = insight(day, purchases=buys, value=value, **ids, **figures)
+                row["_status"] = status
+                level_rows[level].append(row)
+        level_rows["account"].append(
+            insight(
+                day,
+                purchases="2",
+                value="159.90",
+                impressions="2100",
+                inline_link_clicks="36",
+                spend="48.75",
+            )
+        )
+    for level, rows in level_rows.items():
+        account.insights.setdefault(level, []).extend(rows)
     return account

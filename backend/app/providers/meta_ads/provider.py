@@ -1,4 +1,5 @@
-"""Meta Ads provider — sign-in and token lifecycle (Phase 4, task 4-02; PHASE_04_PLAN §6).
+"""Meta Ads provider (Phase 4; PHASE_04_PLAN §6): sign-in and token lifecycle (4-02), ad
+account discovery (4-03), structure (4-04) and daily figures (4-05).
 
 Read-only. **Facebook Login for Business** with a configuration (``config_id``) that asks for
 ``ads_read`` and ``business_management`` (Q-4-2):
@@ -24,7 +25,8 @@ from __future__ import annotations
 
 import json
 import logging
-from collections.abc import Iterator, Mapping
+import time
+from collections.abc import Callable, Iterator, Mapping
 from datetime import date
 from typing import Any
 from urllib.parse import urlencode
@@ -59,6 +61,9 @@ from app.providers.meta_ads.client import (
     HttpFactory,
     MetaGraphClient,
     MetaSignInRejectedError,
+    ReportFailedError,
+    ReportPendingError,
+    TooMuchDataError,
     UnexpectedResponseError,
     valid_node,
 )
@@ -80,6 +85,20 @@ AD_SET_FIELDS = (
 )
 AD_FIELDS = "id,name,status,effective_status,adset_id,creative{id,name}"
 PAGE_SIZE = "500"
+INSIGHT_FIELDS = (
+    "date_start,date_stop,campaign_id,adset_id,ad_id,impressions,inline_link_clicks,spend,"
+    "actions,action_values"
+)
+META_LEVELS = {
+    AdLevel.ACCOUNT: "account",
+    AdLevel.CAMPAIGN: "campaign",
+    AdLevel.AD_GROUP: "adset",
+    AdLevel.AD: "ad",
+}
+# Asynchronous reports (used only when Meta says a request is too large): checked every few
+# seconds within the same job step; a report not done in time is started again later.
+REPORT_POLL_SECONDS = 5.0
+REPORT_MAX_POLLS = 60
 
 
 class MetaAdsProvider:
@@ -100,6 +119,7 @@ class MetaAdsProvider:
         api_version: str,
         http_factory: HttpFactory,
         clock: Clock,
+        sleep: Callable[[float], None] = time.sleep,
     ) -> None:
         if not app_id or not app_secret or not login_config_id:
             raise ValueError("Meta needs an app id, an app secret and a login configuration id")
@@ -107,6 +127,7 @@ class MetaAdsProvider:
         self._app_secret = app_secret
         self._config_id = login_config_id
         self._clock = clock
+        self._sleep = sleep
         self.graph = MetaGraphClient(http_factory, api_version, app_secret)
         # Ad account → currency from the latest ``read_account`` (the importer reads the
         # account just before its structure), so budgets need no second account call. Not
@@ -306,19 +327,87 @@ class MetaAdsProvider:
 
     def read_performance(
         self,
-        secrets: Secrets,  # noqa: ARG002
-        account: AdAccountRef,  # noqa: ARG002
-        level: AdLevel,  # noqa: ARG002
-        first_day: date,  # noqa: ARG002
-        last_day: date,  # noqa: ARG002
+        secrets: Secrets,
+        account: AdAccountRef,
+        level: AdLevel,
+        first_day: date,
+        last_day: date,
     ) -> Iterator[AdPerformanceRecord]:
-        raise UnsupportedOperationError()  # task 4-05
+        """Daily figures for one level, one row per entity and day in the account's time
+        zone, with each ad set's own attribution setting (Q-4-6). Archived and deleted
+        objects are asked for explicitly, so their days stay readable. When Meta says the
+        request is too large, the same request runs as an asynchronous report. Unreadable
+        rows are skipped and counted; days without activity are absent (the caller writes
+        real zeros at the account level)."""
+        if last_day < first_day:
+            raise InvalidRequestError()
+        token = _token(secrets)
+        node = valid_node(account.external_id)
+        params = _insights_params(level, first_day, last_day)
+        try:
+            rows = list(self.graph.get_all(token, f"/{node}/insights", params))
+        except TooMuchDataError:
+            rows = self._report(token, node, params)
+        skipped = 0
+        for row in rows:
+            record = mapping.performance(row, level)
+            if record is None or not first_day <= record.day <= last_day:
+                skipped += 1
+                continue
+            yield record
+        if skipped:
+            logger.warning("meta_ads_rows_skipped", extra={"count": skipped})
+
+    def _report(self, token: str, node: str, params: dict[str, str]) -> list[dict[str, Any]]:
+        """Start, check and read one asynchronous report. Its id is used only here."""
+        form = {k: v for k, v in params.items() if k != "limit"}
+        report = self.graph.start_report(token, node, form)
+        for _ in range(REPORT_MAX_POLLS):
+            self._sleep(REPORT_POLL_SECONDS)
+            state = self.graph.get(
+                token, f"/{report}", {"fields": "async_status,async_percent_completion"}
+            )
+            status = state.get("async_status")
+            if status == "Job Completed":
+                return list(self.graph.get_all(token, f"/{report}/insights", {"limit": PAGE_SIZE}))
+            if status in ("Job Failed", "Job Skipped"):
+                raise ReportFailedError()
+            if not isinstance(status, str):
+                raise UnexpectedResponseError()
+        raise ReportPendingError()  # started again by the job's next attempt
 
 
 _ALL_STATUSES = json.dumps(
     [{"field": "effective_status", "operator": "IN", "value": list(mapping.EFFECTIVE_STATUSES)}],
     separators=(",", ":"),
 )
+
+
+def _insights_params(level: AdLevel, first_day: date, last_day: date) -> dict[str, str]:
+    meta_level = META_LEVELS[level]
+    params = {
+        "level": meta_level,
+        "fields": INSIGHT_FIELDS,
+        "time_range": json.dumps(
+            {"since": first_day.isoformat(), "until": last_day.isoformat()},
+            separators=(",", ":"),
+        ),
+        "time_increment": "1",
+        "use_unified_attribution_setting": "true",
+        "limit": PAGE_SIZE,
+    }
+    if level is not AdLevel.ACCOUNT:
+        params["filtering"] = json.dumps(
+            [
+                {
+                    "field": f"{meta_level}.effective_status",
+                    "operator": "IN",
+                    "value": list(mapping.EFFECTIVE_STATUSES),
+                }
+            ],
+            separators=(",", ":"),
+        )
+    return params
 
 
 def _token(secrets: Secrets) -> str:

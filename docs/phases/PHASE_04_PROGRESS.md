@@ -8,7 +8,7 @@ Plan: `PHASE_04_PLAN.md` (approved 2026-10-18, A22, all recommendations). One re
 | 4-02 Meta sign-in, Graph client, simulator, read-only guard | ✅ Done — awaiting review |
 | 4-03 Discovery and linking rules | ✅ Done — awaiting review |
 | 4-04 Structure import | ✅ Done — awaiting review |
-| 4-05 Insights import | Not started |
+| 4-05 Insights import | ✅ Done — awaiting review |
 | 4-06 Ongoing sync, rate limits, token expiry | Not started |
 | 4-07 API additions and web app | Not started |
 | 4-08 Journey test, browser test, docs, report | Not started |
@@ -163,4 +163,42 @@ Until then, work follows option C: build against Meta's documentation and a simu
 **Blocked:** Step 0 (4-01): needs the Meta app, a sandbox ad account and network access to Meta.
 
 **Next task:** 4-05 — daily figures: 13 months of history at four levels (account, campaign, ad set, ad); purchases using each ad set's own attribution setting; exact money in the account's time zone; Meta's report jobs for slices that are too large.
+
+## 4-05 — Daily figures import (2026-10-19)
+
+**Completed**
+- **Linking a Meta ad account now imports 13 months of daily figures**, so the first import finishes completely: the account shows as active with its history.
+- **Four levels**, as for Google Ads: account, campaign, ad set and ad. One calendar month is read per step (14 steps for 13 months), one row per day.
+- **Measures:** impressions, link clicks, spend, purchases and purchase value.
+  - **Spend** is exact, in the account's currency, as Meta reports it (Meta's figures are not in cents, so no conversion).
+  - **Purchases** are Meta's combined website, app and offline figure (`omni_purchase`), the same as the "Purchases" column in Ads Manager. Other purchase rows in Meta's list are ignored, so nothing is counted twice.
+  - **Attribution:** each ad set's own setting, so figures match what you see in Ads Manager.
+- **Days** are the account's own days (its time zone). A day with no activity is a real zero at account level, never missing.
+- **Deleted and archived campaigns, ad sets and ads** keep their figures for the days they ran. Account totals come from Meta's account rows, which include them.
+- **Large reads:** when Meta answers that a request is too large, the same request runs as one of Meta's report jobs: started, checked every 5 seconds, then read. If Meta can't finish the report, the step is retried later, then stops with a plain reason on the account (the connection stays fine). Report ids are never stored.
+- **A later import replaces the figures of the days it reads**, so Meta's corrections (up to 28 days) are picked up. A duplicated row is stored once, never added up. Rows AdVegaX can't read are skipped and counted.
+
+**Files changed** (8)
+- New (1): `tests/api/test_meta_ads_performance.py` (9 tests).
+- Modified (7): `app/providers/meta_ads/mapping.py` (figures rules), `app/providers/meta_ads/client.py` (starting a report; `report_failed` and `report_pending`), `app/providers/meta_ads/provider.py` (`read_performance`), `tests/meta_sim.py` (daily figures, "too much data", report jobs, sample figures), `tests/providers/test_meta_ads_client.py` (19 new tests; the 4-02 placeholder now expects a sign-in), `docs/INTEGRATION_GUIDES.md`, this report and `PROJECT_STATUS.md`.
+- Deleted: none. No migration.
+
+**Tests**
+- **28 new.**
+- **Backend `make check`: 1,271 passed**, coverage 97 % (Meta client 100 %, provider 98 %, mapping 97 %).
+- **Frontend:** no changes (358 passed at 4-03).
+
+**Security**
+- Read-only: figures are GET requests. The one POST starts a report, which changes nothing in the account; it is the documented exception in the read-only gate, and the gate's static test passes.
+- The report request carries the token in the header and the settings in the body; nothing secret is in an address (tested).
+- Report ids are checked to be digits before they enter an address.
+
+**Deviations**
+1. **Clicks are Meta's link clicks (`inline_link_clicks`)**, not "all clicks", which also counts likes, comments and profile clicks. Link clicks are what Google Ads counts as clicks, so click-through rate and cost per click compare fairly. It can be switched if you prefer.
+2. **Report jobs are checked within one step** (every 5 seconds, up to 5 minutes) rather than as separate queued steps. Simpler, and nothing is kept between steps; if a report takes longer, the next attempt starts a new one.
+3. **The web app does not yet have Meta wording** for the new reasons (`report_failed`, `report_pending`, `too_much_data`); added in 4-07 with the other Meta wording.
+
+**Blocked:** Step 0 (4-01): needs the Meta app, a sandbox ad account, one of your real ad accounts for figures, and network access to Meta.
+
+**Next task:** 4-06 — ongoing sync: pacing from Meta's usage headers (slow down above 75 %, pause when Meta says so), sign-in expiry warnings at 14 and 3 days, and account health.
 

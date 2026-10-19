@@ -436,14 +436,17 @@ def test_operations_not_used_by_meta_or_not_built_yet(provider):
         provider.read_account({}, AdAccountRef("act_1"))
     with pytest.raises(MetaSignInRejectedError):  # task 4-04
         list(provider.read_structure({}, AdAccountRef("act_1")))
+    with pytest.raises(MetaSignInRejectedError):  # task 4-05
+        list(
+            provider.read_performance(
+                {}, AdAccountRef("act_1"), AdLevel.ACCOUNT, date(2026, 10, 1), date(2026, 10, 1)
+            )
+        )
 
     for call in (
         lambda: provider.verify_install({}),
         lambda: provider.parse_webhook({}, b""),
         lambda: provider.sync_resource({}, ResourceDescriptor(kind="ad_account", external_id="1")),
-        lambda: provider.read_performance(
-            {}, AdAccountRef("act_1"), AdLevel.ACCOUNT, date(2026, 10, 1), date(2026, 10, 1)
-        ),
     ):
         with pytest.raises(UnsupportedOperationError):
             call()
@@ -641,3 +644,185 @@ def test_unreadable_structure_rows_are_skipped_and_counted(sim, provider, caplog
     (warning,) = [r for r in caplog.records if r.getMessage() == "meta_ads_rows_skipped"]
     assert warning.count == 2  # campaign 120009 has no name; ad "bad" has no usable id
     # 120005's status is not in the filter, so Meta (and the simulator) never return it
+
+
+# ------------------------------------------------------------------ daily figures (4-05)
+def _figures(level, **row):
+    from app.providers.base.types import AdLevel
+    from app.providers.meta_ads import mapping
+
+    base = {"date_start": "2026-10-01", "date_stop": "2026-10-01"}
+    return mapping.performance({**base, **row}, getattr(AdLevel, level))
+
+
+def test_spend_is_exact_and_never_offset():
+    from decimal import Decimal
+
+    assert _figures("ACCOUNT", spend="1234").cost == Decimal("1234")  # JPY: whole yen
+    assert _figures("ACCOUNT", spend="12.345678").cost == Decimal("12.345678")
+    assert _figures("ACCOUNT").cost == Decimal(0)  # no spend reported: a real 0
+
+
+def test_purchases_come_from_omni_purchase_only():
+    from decimal import Decimal
+
+    row = _figures(
+        "ACCOUNT",
+        actions=[
+            {"action_type": "offsite_conversion.fb_pixel_purchase", "value": "3"},
+            {"action_type": "purchase", "value": "3"},
+            {"action_type": "omni_purchase", "value": "4"},
+        ],
+        action_values=[{"action_type": "omni_purchase", "value": "199.95"}],
+    )
+    assert (row.conversions, row.conversion_value) == (Decimal("4"), Decimal("199.95"))
+    none = _figures("ACCOUNT", actions=[{"action_type": "link_click", "value": "9"}])
+    assert (none.conversions, none.conversion_value) == (Decimal(0), Decimal(0))
+
+
+@pytest.mark.parametrize(
+    "row",
+    [
+        {"date_stop": "2026-10-02"},  # not one day
+        {"date_start": "01/10/2026"},
+        {"impressions": "-1"},
+        {"inline_link_clicks": "1.5"},
+        {"spend": "-1.00"},
+        {"spend": "12,34"},
+        {"actions": "x"},
+        {"actions": [{"action_type": "omni_purchase", "value": "1"}] * 2},  # never summed
+        {"action_values": [{"action_type": "omni_purchase", "value": "abc"}]},
+    ],
+)
+def test_rows_in_a_shape_advegax_does_not_know_are_skipped(row):
+    assert _figures("ACCOUNT", **row) is None
+
+
+def test_each_level_needs_its_ids():
+    assert _figures("CAMPAIGN") is None
+    assert _figures("AD_GROUP", campaign_id="1") is None
+    assert _figures("AD", ad_id="3", campaign_id="1") is None  # no ad set
+    ad = _figures("AD", ad_id="3", adset_id="2", campaign_id="1")
+    assert (ad.entity_external_id, ad.ad_group_external_id, ad.campaign_external_id) == (
+        "3",
+        "2",
+        "1",
+    )
+    group = _figures("AD_GROUP", adset_id="2", campaign_id="1")
+    assert (group.entity_external_id, group.campaign_external_id) == ("2", "1")
+    campaign = _figures("CAMPAIGN", campaign_id="1")
+    assert (campaign.entity_external_id, campaign.campaign_external_id) == ("1", None)
+    assert _figures("ACCOUNT", impressions=7, inline_link_clicks=2).impressions == 7
+
+
+def _report_setup(sim, provider):
+    from app.providers.base.types import AdAccountRef, AdLevel
+
+    from tests.meta_sim import sample_insights, sample_structure
+
+    token = sim.new_token(USER)
+    sample_insights(sample_structure(sim.add_account("act_9", USER)), "2026-10-01")
+    sim.too_large = {"campaign"}
+    return lambda: list(
+        provider.read_performance(
+            {"access_token": token},
+            AdAccountRef("act_9"),
+            AdLevel.CAMPAIGN,
+            date(2026, 10, 1),
+            date(2026, 10, 1),
+        )
+    )
+
+
+def test_a_report_not_finished_in_time_is_left_for_the_next_attempt(sim, provider, monkeypatch):
+    from app.providers.meta_ads import provider as module_provider
+    from app.providers.meta_ads.client import ReportPendingError
+
+    read = _report_setup(sim, provider)
+    sim.report_polls = 10
+    monkeypatch.setattr(module_provider, "REPORT_MAX_POLLS", 3)
+    with pytest.raises(ReportPendingError) as caught:
+        read()
+    assert caught.value.code == "report_pending" and caught.value.retryable
+    assert len([r for r in sim.requests if r.method == "POST"]) == 1
+
+
+@pytest.mark.parametrize("outcome", ["Job Failed", "Job Skipped"])
+def test_a_report_meta_gives_up_on_is_retryable(sim, provider, outcome):
+    from app.providers.meta_ads.client import ReportFailedError
+
+    read = _report_setup(sim, provider)
+    sim.report_outcome = outcome
+    with pytest.raises(ReportFailedError):
+        read()
+
+
+def test_odd_report_answers_are_refused(sim, provider):
+    read = _report_setup(sim, provider)
+    original = sim.handler
+
+    def odd_status(request):
+        if request.method == "GET" and request.url.path.endswith("/900000001"):
+            return httpx.Response(200, json={"async_status": 7})
+        return original(request)
+
+    sim.handler = odd_status
+    with pytest.raises(UnexpectedResponseError):
+        read()
+    sim.handler = lambda request: (
+        httpx.Response(200, json={"report_run_id": "../me"})
+        if request.method == "POST"
+        else original(request)
+    )
+    with pytest.raises(UnexpectedResponseError):
+        read()
+
+
+def test_a_numeric_report_id_is_accepted(sim, provider):
+    read = _report_setup(sim, provider)
+    original = sim.handler
+
+    def numeric(request):
+        response = original(request)
+        if request.method == "POST":
+            return httpx.Response(
+                200, json={"report_run_id": int(response.json()["report_run_id"])}
+            )
+        return response
+
+    sim.handler = numeric
+    assert len(read()) == 3
+
+
+def test_figures_need_a_valid_range(sim, provider):
+    from app.providers.base.types import AdAccountRef, AdLevel
+
+    with pytest.raises(InvalidRequestError):
+        list(
+            provider.read_performance(
+                {"access_token": "t"},
+                AdAccountRef("act_9"),
+                AdLevel.ACCOUNT,
+                date(2026, 10, 2),
+                date(2026, 10, 1),
+            )
+        )
+
+
+def test_rows_outside_the_range_are_skipped(sim, provider):
+    from app.providers.base.types import AdAccountRef, AdLevel
+
+    token = sim.new_token(USER)
+    account = sim.add_account("act_9", USER)
+    account.insights["account"] = [{"date_start": "2026-10-01", "date_stop": "2026-10-01"}]
+    sim.routes["GET /act_9/insights"] = lambda s, r, u: httpx.Response(
+        200, json={"data": [{"date_start": "2026-09-30", "date_stop": "2026-09-30"}]}
+    )
+    rows = provider.read_performance(
+        {"access_token": token},
+        AdAccountRef("act_9"),
+        AdLevel.ACCOUNT,
+        date(2026, 10, 1),
+        date(2026, 10, 1),
+    )
+    assert list(rows) == []

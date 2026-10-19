@@ -89,6 +89,18 @@ class UnexpectedResponseError(RetryableError):
     code = "unexpected_response"
 
 
+class ReportFailedError(RetryableError):
+    """Meta could not finish an asynchronous report ("Job Failed" / "Job Skipped")."""
+
+    code = "report_failed"
+
+
+class ReportPendingError(RetryableError):
+    """An asynchronous report was not finished in time; the next attempt starts a new one."""
+
+    code = "report_pending"
+
+
 # Meta's documented error codes (Graph API "Handling errors"; to confirm live, Step 0 item 4).
 _RATE_CODES = frozenset({4, 17, 32, 613, *range(80000, 80015)})
 _AUTH_CODES = frozenset({102, 190, 463, 467})
@@ -317,6 +329,19 @@ class MetaGraphClient:
         if not isinstance(body, dict):
             raise UnexpectedResponseError()
         return body
+
+    def start_report(self, token: str, node: str, form: dict[str, str]) -> str:
+        """Start an asynchronous insights report (``POST /<node>/insights``; it changes
+        nothing in the account). Returns Meta's report id."""
+        body = self._send(
+            method="POST", path=f"/{valid_node(node)}/insights", token=token, form=form
+        )
+        report = body.get("report_run_id") if isinstance(body, dict) else None
+        if isinstance(report, int) and not isinstance(report, bool):
+            report = str(report)
+        if not isinstance(report, str) or not report.isdigit() or len(report) > 25:
+            raise UnexpectedResponseError()
+        return report
 
     def remove_permissions(self, token: str) -> None:
         """Disconnect: ``DELETE /me/permissions`` ends AdVegaX's access for this person. A token

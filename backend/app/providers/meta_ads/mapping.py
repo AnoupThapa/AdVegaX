@@ -19,6 +19,8 @@ from app.providers.base.types import (
     AdCampaignRecord,
     AdEntityStatus,
     AdGroupRecord,
+    AdLevel,
+    AdPerformanceRecord,
     AdRecord,
     ResourceDescriptor,
     ResourceKind,
@@ -261,4 +263,94 @@ def ad(row: dict[str, Any]) -> AdRecord | None:
             creative_name=text(creative.get("name")),
             delivery=shown[1],
         ),
+    )
+
+
+# ------------------------------------------------------------------ daily figures (4-05)
+PURCHASE = "omni_purchase"  # website, app and offline purchases combined, as Ads Manager (Q-4-5)
+_COUNT = re.compile(r"^[0-9]{1,15}$")
+_AMOUNT = re.compile(r"^[0-9]{1,15}(?:\.[0-9]{1,6})?$")
+_DATE = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
+_UNSET = object()
+
+
+def count(value: Any) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value if value >= 0 else None
+    return int(value) if isinstance(value, str) and _COUNT.fullmatch(value) else None
+
+
+def amount(value: Any) -> Decimal | None:
+    """An exact amount as Meta writes it (``"12.34"``, already in the currency's units)."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return Decimal(value) if value >= 0 else None
+    return Decimal(value) if isinstance(value, str) and _AMOUNT.fullmatch(value) else None
+
+
+def iso_day(value: Any) -> date | None:
+    if not isinstance(value, str) or not _DATE.fullmatch(value):
+        return None
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        return None
+
+
+def action(rows: Any, action_type: str) -> Decimal | None:
+    """The value of one action type in Meta's ``actions`` / ``action_values`` list. No list,
+    or the type absent, means Meta recorded none: a real 0. An unreadable entry → None."""
+    if rows is None:
+        return Decimal(0)
+    if not isinstance(rows, list):
+        return None
+    found: Any = _UNSET
+    for entry in rows:
+        if isinstance(entry, dict) and entry.get("action_type") == action_type:
+            if found is not _UNSET:
+                return None  # listed twice: never summed or guessed
+            found = entry.get("value")
+    return Decimal(0) if found is _UNSET else amount(found)
+
+
+def performance(row: dict[str, Any], level: AdLevel) -> AdPerformanceRecord | None:
+    """One day of one entity. None for a row that cannot be read (counted by the caller)."""
+    first, last = iso_day(row.get("date_start")), iso_day(row.get("date_stop"))
+    if first is None or first != last:
+        return None
+    campaign_id, group_id = object_id(row.get("campaign_id")), object_id(row.get("adset_id"))
+    entity: str | None
+    if level is AdLevel.ACCOUNT:
+        entity = None
+    elif level is AdLevel.CAMPAIGN:
+        entity = campaign_id
+    elif level is AdLevel.AD_GROUP:
+        entity = group_id
+    else:
+        entity = object_id(row.get("ad_id"))
+    if level is not AdLevel.ACCOUNT and entity is None:
+        return None
+    if level is AdLevel.AD and group_id is None:
+        return None
+    spend = amount(row.get("spend")) if row.get("spend") is not None else Decimal(0)
+    impressions = count(row.get("impressions", 0))
+    clicks = count(row.get("inline_link_clicks", 0))
+    purchases = action(row.get("actions"), PURCHASE)
+    value = action(row.get("action_values"), PURCHASE)
+    if None in (spend, impressions, clicks, purchases, value):
+        return None
+    return AdPerformanceRecord(
+        level=level,
+        day=first,
+        entity_external_id=entity,
+        campaign_external_id=campaign_id if level in (AdLevel.AD_GROUP, AdLevel.AD) else None,
+        ad_group_external_id=group_id if level is AdLevel.AD else None,
+        impressions=impressions,
+        clicks=clicks,
+        cost=spend,
+        conversions=purchases,
+        conversion_value=value,
     )
