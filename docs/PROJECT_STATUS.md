@@ -20,7 +20,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | 2B | WooCommerce (read-only) | ✅ **Implemented against the WooCommerce simulator — reviewed (A20)**; live Step 0 (2B-01) waits for WordPress downloads to be allowed | 799 backend + 343 frontend + 11 end-to-end tests; `phases/PHASE_02B_REPORT.md` |
 | 3 | Google Ads (read-only) | ✅ **Implemented against the Google Ads simulator — awaiting review**; Step 0 (3-01) waits for Google credentials and network access | 1,062 backend + 358 frontend + 12 end-to-end tests; `phases/PHASE_03_REPORT.md` |
 | 4 | Meta (read-only) | ✅ **Implemented against the Meta simulator — awaiting review**; Step 0 (4-01) waits for the Meta app and network access | 1,301 backend + 370 frontend + 13 end-to-end tests; `phases/PHASE_04_REPORT.md` |
-| 5 | GA4 (read-only) | **Plan drafted — awaiting approval** (settles Q11) | `phases/PHASE_05_PLAN.md` |
+| 5 | GA4 (read-only) | **Approved (A23) — in progress** (Step 0 waits for Google access) | `phases/PHASE_05_PLAN.md`, `phases/PHASE_05_PROGRESS.md` |
 | 6 | Unified analytics & financial engine | Not started | Needs signed-off metric definitions (Q7) |
 | 7 | Funnel intelligence | Not started | |
 | 8 | AI campaign planner | Not started | Needs Q12 |
@@ -136,6 +136,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | A17 | Phase 1C plan with all §15 recommendations; task-by-task delivery | Approved — implemented, awaiting review |
 | A19 | Phase 2B plan with all §2 recommendations (Q10a, Q10b, Q-2B-1…7); test environment A recommended, C-style until WordPress downloads are allowed | Approved 2026-10-14 ("go ahead") — in progress |
 | A22 | Phase 4 plan with all §2 recommendations (Q-4-1 … Q-4-12); live-testing option C | Approved 2026-10-18 ("Approve all") — implemented 2026-10-19 (`phases/PHASE_04_REPORT.md`) |
+| A23 | Phase 5 plan with all §2 recommendations (Q11 settled: daily aggregates + Admin API discovery; Q-5-1 … Q-5-11); live-testing option C | Approved 2026-10-19 ("Approve all") — in progress |
 | A21 | Phase 3 plan with all §2 recommendations (Q-3-1 … Q-3-11); live-testing option C | Approved 2026-10-15 ("Approve all") — implemented 2026-10-18, awaiting review |
 | A20 | Phase 2A and 2B reports reviewed by the product owner; continue to Phase 3 planning | Reviewed 2026-10-15 ("reviewed pls continue") |
 | A18 | Phase 2A plan v2 with all §2 recommendations (Q5–Q9, D-2A-1…3); live-testing option C | Approved 2026-10-13 — implemented, awaiting review (live checks pending) |
@@ -160,7 +161,7 @@ Q5 Shopify public-app approach (2A production) · Q6 same store/account in two o
 
 ## 5. Next actions
 
-0. **Now:** review `phases/PHASE_04_REPORT.md` and `phases/PHASE_03_REPORT.md`; do the Meta and Google set-ups so both Step 0 checks can run; apply `advegax-pending.bundle` to the desktop folder and open a pull request so GitHub CI runs. Then Phase 5 (GA4): review and approve `phases/PHASE_05_PLAN.md` (it settles Q11).
+0. **Now:** review `phases/PHASE_04_REPORT.md` and `phases/PHASE_03_REPORT.md`; do the Meta and Google set-ups so both Step 0 checks can run; apply `advegax-pending.bundle` to the desktop folder and open a pull request so GitHub CI runs. Phase 5 (GA4) is approved (A23) and in progress.
 1. Product owner reviews Phase 1 (`PHASE_01A_REPORT.md`, `PHASE_01B_REPORT.md`, `PHASE_01C_REPORT.md`) and Phase 2A (`PHASE_02A_REPORT.md`).
 2. Open a pull request `feature/phase-1a → main` so GitHub CI runs every job (CI does not run on pushes to the feature branch alone).
 3. Live Shopify checks (2A-01): Shopify Partner account + development store + app in the Dev Dashboard, and a reachable public HTTPS address (Shopify domains allowed in Claude network settings plus a tunnel, or a staging server).

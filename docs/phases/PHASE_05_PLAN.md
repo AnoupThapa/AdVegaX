@@ -1,6 +1,6 @@
 # Phase 5 — Google Analytics 4 (read-only): Implementation Plan
 
-**Status:** 📝 **Draft — awaiting product-owner approval.** Nothing in this plan is implemented until it is approved. · **Date:** 2026-10-19
+**Status:** ✅ **Approved by the product owner (2026-10-19, A23: "Approve all") with all §2 recommendations (Q11, Q-5-1 … Q-5-11).** Implementation authorized for Phase 5 only. · **Date:** 2026-10-19
 
 > **Live tests (Q-5-9):** recommended option C, as for Google Ads and Meta: build against Google's documentation and a GA4 simulator; Step 0 (5-01) runs when the Google OAuth client and network access to Google's Analytics APIs are available. Google's public **demo property** (Google Merchandise Store) and one of your own properties are the live checks.
 
