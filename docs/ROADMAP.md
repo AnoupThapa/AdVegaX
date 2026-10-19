@@ -29,8 +29,8 @@ This roadmap splits AdVegaX into phases. Each phase has its own plan in `docs/ph
 | 1 | Foundation — 1A platform core & identity · 1B integration foundation · 1C frontend shell | Secure multi-tenant platform skeleton: identity, sessions, email, orgs, RBAC, RLS, audit, CI (1A); connections/resources, encryption, jobs, provider framework, SSRF client (1B); UI shell (1C) | 0 | **Implemented (1A, 1B, 1C) — awaiting review** |
 | 2A | Commerce — Shopify (read-only) | Connect Shopify stores; import catalogue, inventory, orders, refunds; finance core | 1 | **Implemented against the simulator — awaiting review**; live checks pending |
 | 2B | Commerce — WooCommerce (read-only) | Connect WooCommerce stores safely; same normalized models; proves abstraction | 2A | **Implemented against the WooCommerce simulator — awaiting review** (A19); live Step 0 pending |
-| 3 | Advertising — Google Ads (read-only) | Accounts, structure, daily performance | 1 | Approved (A21) — in progress (`phases/PHASE_03_PLAN.md`) |
-| 4 | Advertising — Meta (read-only) | Accounts, structure, insights | 1 | Not started |
+| 3 | Advertising — Google Ads (read-only) | Accounts, structure, daily performance | 1 | Implemented against the simulator — awaiting review; live Step 0 pending (`phases/PHASE_03_REPORT.md`) |
+| 4 | Advertising — Meta (read-only) | Accounts, structure, insights | 1 | Implemented against the simulator — awaiting review; live Step 0 pending (`phases/PHASE_04_REPORT.md`) |
 | 5 | Analytics — GA4 (read-only) | Property discovery, aggregated behaviour data | 1 | Not started |
 | 6 | Unified analytics & financial engine | One trustworthy cross-source view of revenue, spend, cost and profit | 2A, 3, 4, 5 (2B recommended) | Not started |
 | 7 | Funnel intelligence | Source-labelled funnel stages and conversion rates | 6 | Not started |

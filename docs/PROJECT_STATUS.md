@@ -1,7 +1,7 @@
 # AdVegaX — Project Status & Progress Log
 
 **Last updated:** 2026-10-18
-**Current phase:** Phase 3 (Google Ads, read-only) implemented against the simulator — awaiting product-owner review (`phases/PHASE_03_REPORT.md`; Step 0 live checks pending) · Phase 4 (Meta Ads, read-only) approved (A22) and in progress · Phases 2A and 2B implemented against simulators and reviewed (A20; live checks pending) · Phase 1 (1A, 1B, 1C) implemented — awaiting product-owner review
+**Current phase:** Phase 4 (Meta Ads, read-only) implemented against the simulator — awaiting product-owner review (`phases/PHASE_04_REPORT.md`; Step 0 live checks pending) · Phase 3 (Google Ads, read-only) implemented against the simulator — awaiting product-owner review (`phases/PHASE_03_REPORT.md`; Step 0 live checks pending) · Phases 2A and 2B implemented against simulators and reviewed (A20; live checks pending) · Phase 1 (1A, 1B, 1C) implemented — awaiting product-owner review
 **Code written:** Phase 1A + 1B backend, Phase 1C web application, Phase 2A (Shopify), 2B (WooCommerce) and 3 (Google Ads) · **Migrations:** 0001–0013 · **Integrations:** Shopify, WooCommerce and Google Ads connectors (simulator-tested; not yet tried live) · test (fake) platform
 
 Update this file at the end of every phase and every approved sub-phase (ROADMAP §5, step 13).
@@ -18,8 +18,8 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | 1C | Frontend shell | ✅ **Implemented — awaiting review** | 251 unit + 9 end-to-end tests, axe 0 violations; `phases/PHASE_01C_REPORT.md` |
 | 2A | Shopify (read-only) + finance core | ✅ **Implemented against the Shopify simulator — reviewed (A20)**; live checks on a development store (2A-01) pending | 582 backend + 290 frontend + 10 end-to-end tests; `phases/PHASE_02A_REPORT.md` |
 | 2B | WooCommerce (read-only) | ✅ **Implemented against the WooCommerce simulator — reviewed (A20)**; live Step 0 (2B-01) waits for WordPress downloads to be allowed | 799 backend + 343 frontend + 11 end-to-end tests; `phases/PHASE_02B_REPORT.md` |
-| 3 | Google Ads (read-only) | **Approved (A21) — in progress** (Step 0 waits for Google credentials and network access) | `phases/PHASE_03_PLAN.md`, `phases/PHASE_03_PROGRESS.md` |
-| 4 | Meta (read-only) | Not started | Start App Review / Business Verification early |
+| 3 | Google Ads (read-only) | ✅ **Implemented against the Google Ads simulator — awaiting review**; Step 0 (3-01) waits for Google credentials and network access | 1,062 backend + 358 frontend + 12 end-to-end tests; `phases/PHASE_03_REPORT.md` |
+| 4 | Meta (read-only) | ✅ **Implemented against the Meta simulator — awaiting review**; Step 0 (4-01) waits for the Meta app and network access | 1,301 backend + 370 frontend + 13 end-to-end tests; `phases/PHASE_04_REPORT.md` |
 | 5 | GA4 (read-only) | Not started | Needs Q11 |
 | 6 | Unified analytics & financial engine | Not started | Needs signed-off metric definitions (Q7) |
 | 7 | Funnel intelligence | Not started | |
@@ -108,6 +108,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | 2026-10-19 | **4-05** Meta daily figures: 13 months, four levels, monthly slices, each ad set's attribution, `omni_purchase` purchases and value, link clicks, exact spend, archived/deleted included, async report jobs for too-large slices; 28 tests | `phases/PHASE_04_PROGRESS.md`, `INTEGRATION_GUIDES.md` |
 | 2026-10-19 | **4-06** Meta pacing from usage headers (slow from 75 %, pause from 95 % or Meta's estimate, no attempt used), per-account vs app-wide limits, sign-in expiry warnings at 14 and 3 days and "Needs reconnecting" at the end, plain health reasons; fix: platform-wide wait checked for every calling step; 24 tests | `phases/PHASE_04_PROGRESS.md`, `INTEGRATION_GUIDES.md` |
 | 2026-10-19 | **4-07** API: `connection_expires_at` on ad accounts, `sign_in_expires_at` on connections. Web app: both platforms on the Advertising tab; Meta wording (ad sets, purchases, link clicks, objective, business, Reported by Meta); sign-in end date and 14/3-day notice with Reconnect; business grouping and Meta reasons on Connections; Meta health and error wording; 13 tests | `phases/PHASE_04_PROGRESS.md`, `API_SPECIFICATION.md` |
+| 2026-10-19 | **4-08 / Phase 4 complete (simulator)** Whole-journey test, browser test with a simulated Meta account and accessibility checks, browser helper, CI placeholders, security notes; 1,301 backend + 370 frontend + 13 end-to-end tests | `phases/PHASE_04_REPORT.md`, `phases/PHASE_04_PROGRESS.md` |
 | 2026-10-08 | **Phase 1B implemented**: connections/resources/links, encrypted credentials, SSRF-safe client, rate limiter, provider framework + fake platform, jobs with retry/dead-letter, single scheduler, audited denials | `backend/`, `phases/PHASE_01B_REPORT.md`, `SECURITY.md`, `INTEGRATION_GUIDES.md` |
 
 ## 3. Decision log
@@ -133,7 +134,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | A16 | Phase 1B plan and §20 defaults; organization owns connections, user authorizes; credentials never exposed; SSRF mandatory | Approved — implemented |
 | A17 | Phase 1C plan with all §15 recommendations; task-by-task delivery | Approved — implemented, awaiting review |
 | A19 | Phase 2B plan with all §2 recommendations (Q10a, Q10b, Q-2B-1…7); test environment A recommended, C-style until WordPress downloads are allowed | Approved 2026-10-14 ("go ahead") — in progress |
-| A22 | Phase 4 plan with all §2 recommendations (Q-4-1 … Q-4-12); live-testing option C | Approved 2026-10-18 ("Approve all") — in progress |
+| A22 | Phase 4 plan with all §2 recommendations (Q-4-1 … Q-4-12); live-testing option C | Approved 2026-10-18 ("Approve all") — implemented 2026-10-19 (`phases/PHASE_04_REPORT.md`) |
 | A21 | Phase 3 plan with all §2 recommendations (Q-3-1 … Q-3-11); live-testing option C | Approved 2026-10-15 ("Approve all") — implemented 2026-10-18, awaiting review |
 | A20 | Phase 2A and 2B reports reviewed by the product owner; continue to Phase 3 planning | Reviewed 2026-10-15 ("reviewed pls continue") |
 | A18 | Phase 2A plan v2 with all §2 recommendations (Q5–Q9, D-2A-1…3); live-testing option C | Approved 2026-10-13 — implemented, awaiting review (live checks pending) |
@@ -141,6 +142,10 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 ## 4. Open items
 
 **Awaiting product owner now**
+- Review of Phase 4: `phases/PHASE_04_REPORT.md` (deviations §8, not verified §9, risks §10), and of Phase 3: `phases/PHASE_03_REPORT.md`.
+- Meta set-up for Step 0 (4-01): developer app with Login for Business and a configuration (`ads_read`, `business_management`), a sandbox ad account; app id, secret and configuration id only in the local untracked settings file; allow `graph.facebook.com` and `www.facebook.com` in Claude's network settings. Start Business Verification and App Review.
+- Google set-up for Step 0 (3-01): developer token, OAuth client; allow Google's API hosts.
+- Apply the pending work (`advegax-pending.bundle`) to the desktop folder when it is available again, then push.
 - Start the external approvals that take weeks (see `ROADMAP.md §7`): Google Ads developer token, Meta developer app + Business Verification, Shopify Partner account with a development store.
 - Review of Phase 1: `phases/PHASE_01A_REPORT.md`, `phases/PHASE_01B_REPORT.md` (incl. deviations §10), `phases/PHASE_01C_REPORT.md` (incl. review follow-up §13).
 - Review of Phase 2A: `phases/PHASE_02A_REPORT.md` (deviations §8, not verified §9, risks §10).
@@ -154,6 +159,7 @@ Q5 Shopify public-app approach (2A production) · Q6 same store/account in two o
 
 ## 5. Next actions
 
+0. **Now:** review `phases/PHASE_04_REPORT.md` and `phases/PHASE_03_REPORT.md`; do the Meta and Google set-ups so both Step 0 checks can run; apply `advegax-pending.bundle` to the desktop folder and open a pull request so GitHub CI runs. Then Phase 5 (GA4), which needs Q11.
 1. Product owner reviews Phase 1 (`PHASE_01A_REPORT.md`, `PHASE_01B_REPORT.md`, `PHASE_01C_REPORT.md`) and Phase 2A (`PHASE_02A_REPORT.md`).
 2. Open a pull request `feature/phase-1a → main` so GitHub CI runs every job (CI does not run on pushes to the feature branch alone).
 3. Live Shopify checks (2A-01): Shopify Partner account + development store + app in the Dev Dashboard, and a reachable public HTTPS address (Shopify domains allowed in Claude network settings plus a tunnel, or a staging server).

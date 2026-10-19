@@ -11,7 +11,7 @@ Plan: `PHASE_04_PLAN.md` (approved 2026-10-18, A22, all recommendations). One re
 | 4-05 Insights import | ✅ Done — awaiting review |
 | 4-06 Ongoing sync, rate limits, token expiry | ✅ Done — awaiting review |
 | 4-07 API additions and web app | ✅ Done — awaiting review |
-| 4-08 Journey test, browser test, docs, report | Not started |
+| 4-08 Journey test, browser test, docs, report | ✅ Done — awaiting review |
 
 ---
 
@@ -294,4 +294,47 @@ Until then, work follows option C: build against Meta's documentation and a simu
 **Blocked:** Step 0 (4-01): needs the Meta app, a sandbox ad account, one of your real ad accounts, and network access to Meta.
 
 **Next task:** 4-08 — journey test (connect → discover → link → import → sync → limits → expiry warning → reconnect → disconnect), a browser test of the Meta pages with an accessibility check, and `PHASE_04_REPORT.md`.
+
+## 4-08 — Journey test, browser test, docs and report (2026-10-19)
+
+**Completed**
+- **Whole-journey test** (`test_meta_ads_journey.py`), one organization start to finish through the real API, database, job runner and the Meta simulator:
+  1. connect, and find ad accounts by business (an account with an unpaid balance cannot be linked);
+  2. link an AUD and a JPY account, which import their structure and 13 months of figures (A$50.00 from 5,000 cents; ¥5,000 stays ¥5,000);
+  3. the 3-hour run picks up a renamed campaign;
+  4. Meta corrects a past day and the nightly run picks it up;
+  5. Meta's usage hits its limit: every account pauses and then continues by itself;
+  6. a warning is recorded 14 days before the sign-in ends;
+  7. the person removes AdVegaX in Facebook ("Needs reconnecting"; figures still readable);
+  8. reconnecting with the same Facebook account keeps the connection, links and data, and starts a new 60 days;
+  9. "Sync now", which viewers cannot use;
+  10. disconnect: permission removed at Meta, links ended, figures still readable.
+
+  It also checks that every call to Meta was a read (except the token exchanges and the removal), and that no token or the app secret ever appeared in a response, the audit log or the logs.
+- **Browser test** (`e2e/meta.spec.ts`) with a simulated Meta account, through a helper process (`tests/e2e_meta_ads.py`, 4 tests of its own):
+  - the Connections page offers Meta as read-only and shows the sign-in's end date and notice;
+  - the connection page groups accounts by business ("Has an unpaid balance in Meta");
+  - the Advertising tab and the account page use Meta's words (Purchases, Link clicks, "Reported by Meta", "Reconnect Meta");
+  - the campaign page shows ad sets and ads;
+  - all five pages pass the accessibility check, and no Meta token reaches a page.
+- **CI:** the browser job switches Meta on with placeholder settings only, to show the pages; nothing ever calls Meta.
+- **Docs:** `PHASE_04_REPORT.md`; `SECURITY.md` (expiry, limits, no personal data, data-deletion URL before real customers, test helpers never ship); `INTEGRATION_GUIDES.md` (status); `PROJECT_STATUS.md`, `ROADMAP.md`.
+
+**Files changed** (12)
+- New (5): `backend/tests/api/test_meta_ads_journey.py`, `backend/tests/e2e_meta_ads.py`, `frontend/e2e/meta.spec.ts`, `frontend/e2e/support/meta_ads.ts`, `docs/phases/PHASE_04_REPORT.md`.
+- Modified (7): `backend/tests/api/test_e2e_seed.py` (4 new tests), `.github/workflows/ci.yml` (Meta placeholders for the browser job), `docs/SECURITY.md`, `docs/INTEGRATION_GUIDES.md`, `docs/PROJECT_STATUS.md`, `docs/ROADMAP.md`, and this report.
+- Deleted: none. No migration.
+
+**Tests**
+- **6 new** (journey 1, helper 4, browser 1).
+- **Backend `make check`: 1,301 passed**, coverage 97 %.
+- **Frontend `npm run check`: 370 passed** (no web-app code changed in this task).
+- **Browser tests (Playwright + axe): 13 passed.**
+
+**Deviations**
+1. **In the journey, Meta's limit pauses every account.** The usage headers sent put AdVegaX's whole app at 97 %, which is the app-wide case; the one-account case is covered in `test_meta_ads_sync.py`.
+
+**Blocked:** Step 0 (4-01): needs the Meta app, a sandbox ad account, one of your real ad accounts, and network access to Meta.
+
+**Next:** product-owner review of `PHASE_04_REPORT.md`; the Meta set-up for Step 0 (report §12).
 

@@ -117,6 +117,12 @@ jobs:
       GOOGLE_ADS_CLIENT_ID: "ci-not-a-real-client.apps.googleusercontent.com"
       GOOGLE_ADS_CLIENT_SECRET: "ci-not-a-secret"
       GOOGLE_ADS_DEVELOPER_TOKEN: "ci-not-a-token"
+      # And Meta (4-08): placeholders again; the browser test connects through the in-process
+      # Meta simulator, and nothing ever calls Meta.
+      META_ADS_ENABLED: "true"
+      META_APP_ID: "1234567890123"
+      META_APP_SECRET: "ci-not-a-secret"
+      META_LOGIN_CONFIG_ID: "9876543210"
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6

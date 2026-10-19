@@ -195,7 +195,7 @@ Add one section per provider when its phase is implemented.
   Google's messages are never kept.
 - **To confirm live (Step 0, PHASE_03_PLAN §4.2):** int64 JSON encoding; the error values above for each situation; PKCE and `prompt=consent` giving a new refresh token on reconnect; the revocation answer; refresh-token rules in testing mode; that `adwords` is classed as a sensitive scope.
 
-### Meta Ads (`meta_ads`) — Phase 4, in progress (simulator; live Step 0 pending)
+### Meta Ads (`meta_ads`) — Phase 4, built against the simulator (live Step 0 pending)
 - **Category / auth scheme:** advertising / OAuth 2.0 authorization code with **Facebook Login for Business** (a configuration id instead of a scope list; the configuration asks for `ads_read` and `business_management`), PKCE (S256, to confirm with Login for Business) and single-use state. The code is exchanged on the server, then for the **long-lived** user token (about 60 days). Long-lived tokens cannot be renewed without the person, so no token refresh is declared: when the token ends or Meta answers error 190, the connection shows "Needs reconnecting". The same Facebook account reconnecting reuses the connection (`external_account_id` = organization + Meta user id); it may also serve another organization (Q-4-11).
 - **Configuration:** offered only when `META_ADS_ENABLED=true` **and** `META_APP_ID`, `META_APP_SECRET` and `META_LOGIN_CONFIG_ID` are set (secret store / local untracked settings only). The API version is `META_API_VERSION` (`v26.0`, Q-4-1).
 - **Hosts:** browser → `www.facebook.com/{version}/dialog/oauth`. Server → `graph.facebook.com/{version}` only, through the SSRF-safe client; redirects are not followed.

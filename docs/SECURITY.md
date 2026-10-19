@@ -169,6 +169,11 @@ Tests: `tests/providers/test_woocommerce_client.py` (74 cases: addresses, auth, 
 - Only the person's Meta user id is kept, to recognise a reconnect; no name, email or picture is stored.
 - **Read-only by construction:** every request passes one guard that allows `GET`, plus the token exchange, starting an insights report and removing AdVegaX's own permission — nothing that changes an ad account. Static tests check that the guard is the only way out and that `ads_management` is never requested.
 - Disconnect removes AdVegaX's permission at Meta (`DELETE /me/permissions`) and always deletes our copy, even if Meta cannot be reached.
+- **Sign-in expiry (4-06):** an ended sign-in is never sent to Meta. The hourly check that records warnings (14 and 3 days) reads connection ids and dates only, with no token decrypted, and the warnings go to each organization's own audit log. The web app receives only the end date.
+- **Meta's limits (4-06):** usage figures kept in memory are percentages per ad account; no token is kept with them.
+- **No personal data:** ad accounts, campaigns, ad sets, ads and their daily figures hold no customer data. Breakdowns by age or gender are not requested. Only a creative's id and name are kept, never ad texts, images or audiences.
+- **Before real customers connect:** Meta's Platform Terms and Developer Policies apply, and Meta requires a data-deletion instructions URL. The privacy policy must describe how Meta ads data is used and deleted (PHASE_04_PLAN §13).
+- **Test simulator and helpers never ship:** `backend/tests` (including `meta_sim.py` and the browser-test helper `e2e_meta_ads.py`) is excluded from the Docker image, and the helper refuses deployed environments. CI switches Meta on with placeholder settings only, to show the pages.
 
 ## 11. Web application (Phase 1C)
 

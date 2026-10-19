@@ -194,3 +194,92 @@ def test_the_google_ads_seed_reports_a_wrong_password(make_client, capsys):
     args = ["--email", "seed-ads-pw@example.com", "--organization", org]
     assert ads.main([*args, "--password", "wrong password here"]) == 1
     assert "sign-in failed" in capsys.readouterr().err
+
+
+# ------------------------------------------------------------------ Meta (4-08)
+def test_connects_and_imports_a_simulated_meta_ad_account(make_client, admin_engine, capsys):
+    from datetime import UTC, date, datetime
+    from zoneinfo import ZoneInfo
+
+    from sqlalchemy import text
+
+    from tests import e2e_meta_ads as meta
+
+    owner = make_client()
+    owner.signup("seed-meta@example.com")
+    org = owner.create_org("Seed Meta")["id"]
+    assert meta.main(["--email", "seed-meta@example.com", "--organization", org]) == 0, (
+        capsys.readouterr().err
+    )
+    out = json.loads(capsys.readouterr().out)
+    (account,) = owner.get(f"/organizations/{org}/ad-accounts").json()["data"]
+    assert (account["id"], account["provider"], account["status"]) == (
+        out["ad_account_id"],
+        "meta_ads",
+        "active",
+    )
+    resources = owner.get(f"/organizations/{org}/connections/{out['connection_id']}/resources")
+    reasons = {r["external_id"]: r["unavailable_reason"] for r in resources.json()["data"]}
+    assert reasons == {meta.AU: None, meta.OWN: None, meta.UNPAID: "account_unsettled"}
+    # The helper runs on the real clock (the test API on a fixed one): read its day and the
+    # sign-in's end date from the database.
+    today = datetime.now(UTC).astimezone(ZoneInfo("Australia/Sydney")).date()
+    sale_day = date.fromordinal(today.toordinal() - 3)
+    with admin_engine.begin() as db:
+        rows = db.execute(
+            text(
+                "SELECT day, clicks, impressions FROM ad_performance_daily "
+                "WHERE level = 'account' AND ad_account_id = :a AND impressions > 0"
+            ),
+            {"a": account["id"]},
+        ).all()
+        (expires,) = db.execute(
+            text("SELECT token_expires_at FROM external_connection_credentials")
+        ).scalars()
+    assert {(d, c, i) for d, c, i in rows} == {(sale_day, 36, 2100)}
+    left = expires - datetime.now(UTC)
+    assert meta.SIGN_IN_DAYS - 1 < left.total_seconds() / 86400 <= meta.SIGN_IN_DAYS
+
+
+def test_the_meta_seed_refuses_deployed_environments(settings, monkeypatch, capsys):
+    from tests import e2e_meta_ads as meta
+
+    deployed = settings.model_copy(update={"ENVIRONMENT": Environment.PRODUCTION})
+    monkeypatch.setattr(meta, "get_settings", lambda: deployed)
+    assert meta.main(["--email", "a@example.com", "--organization", "x"]) == 1
+    assert "deployed" in capsys.readouterr().err
+
+
+def test_the_meta_seed_replaces_the_real_provider_when_switched_on(
+    make_client, settings, monkeypatch, capsys
+):
+    from pydantic import SecretStr
+
+    from tests import e2e_meta_ads as meta
+
+    switched_on = settings.model_copy(
+        update={
+            "META_ADS_ENABLED": True,
+            "META_APP_ID": "1234567890",
+            "META_APP_SECRET": SecretStr("ci-not-a-secret"),
+            "META_LOGIN_CONFIG_ID": "555555555",
+        }
+    )
+    monkeypatch.setattr(meta, "get_settings", lambda: switched_on)
+    owner = make_client()
+    owner.signup("seed-meta-on@example.com")
+    org = owner.create_org("Seed Meta On")["id"]
+    assert meta.main(["--email", "seed-meta-on@example.com", "--organization", org]) == 0, (
+        capsys.readouterr().err
+    )
+
+
+def test_the_meta_seed_reports_a_wrong_password(make_client, capsys):
+    from tests import e2e_meta_ads as meta
+
+    owner = make_client()
+    owner.signup("seed-meta-pw@example.com")
+    org = owner.create_org("Seed Meta Pw")["id"]
+    args = ["--email", "seed-meta-pw@example.com", "--organization", org]
+    assert meta.main([*args, "--password", "wrong password here"]) == 1
+    assert "sign-in failed" in capsys.readouterr().err
