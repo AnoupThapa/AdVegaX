@@ -114,6 +114,8 @@ export const CONNECT_FIELDS: Readonly<Record<string, readonly ConnectField[]>> =
 export const CONNECT_NOTES: Readonly<Record<string, string>> = {
   google_ads:
     "Sign in with the Google account you use for Google Ads. AdVegaX finds the ad accounts it can reach, also through manager accounts, and only reads them — it never changes campaigns, budgets or ads.",
+  meta_ads:
+    "Sign in with the Facebook account you use for Meta ads and choose the businesses and ad accounts AdVegaX may read. AdVegaX only reads them — it never changes campaigns, budgets or ads. Meta sign-ins last about 60 days; AdVegaX reminds you before one ends.",
   woocommerce:
     "Your store opens its own WordPress page. Sign in there as an administrator and approve read-only access. AdVegaX can read your store but never change it.",
 };

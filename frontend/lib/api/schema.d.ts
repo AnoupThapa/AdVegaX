@@ -840,6 +840,8 @@ export interface components {
     schemas: {
         /** AdAccountOut */
         AdAccountOut: {
+            /** Connection Expires At */
+            connection_expires_at?: string | null;
             /** Connection Status */
             connection_status: string;
             /**
@@ -1274,6 +1276,8 @@ export interface components {
             provider: string;
             /** Revoked At */
             revoked_at: string | null;
+            /** Sign In Expires At */
+            sign_in_expires_at?: string | null;
             /** Status */
             status: string;
         };

@@ -44,6 +44,8 @@ class ConnectionOut(BaseModel):
     last_error_code: str | None
     created_at: datetime
     revoked_at: datetime | None
+    # Phase 4: when a sign-in that cannot be renewed ends (Meta, ~60 days); null otherwise.
+    sign_in_expires_at: datetime | None = None
 
 
 class ResourceOut(BaseModel):

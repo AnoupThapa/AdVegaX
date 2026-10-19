@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from decimal import ROUND_HALF_EVEN, Decimal
 from typing import Any
 
@@ -57,9 +57,11 @@ from app.domains.commerce.schemas import FigureOut
 from app.domains.finance.definitions import minor_units
 from app.domains.integrations.models import (
     ExternalConnection,
+    ExternalConnectionCredential,
     ExternalResource,
     OrganizationResourceLink,
 )
+from app.domains.integrations.tokens import sign_in_ends_at
 from app.domains.organizations.permissions import Permission, authorize
 from app.domains.organizations.tenancy import TenantContext
 from app.runtime import Runtime
@@ -77,6 +79,7 @@ class _AccountRow:
     resource: ExternalResource
     connection: ExternalConnection
     linked: bool
+    token_expires_at: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -211,17 +214,29 @@ class AdvertisingReadService:
             .exists()
         )
         stmt = (
-            select(AdAccount, AdSyncState, ExternalResource, ExternalConnection, active_link)
+            select(
+                AdAccount,
+                AdSyncState,
+                ExternalResource,
+                ExternalConnection,
+                active_link,
+                ExternalConnectionCredential.token_expires_at,
+            )
             .outerjoin(AdSyncState, AdSyncState.ad_account_id == AdAccount.id)
             .join(ExternalResource, ExternalResource.id == AdAccount.external_resource_id)
             .join(ExternalConnection, ExternalConnection.id == ExternalResource.connection_id)
+            .outerjoin(
+                ExternalConnectionCredential,
+                ExternalConnectionCredential.connection_id == ExternalConnection.id,
+            )
             .where(AdAccount.organization_id == ctx.organization_id)
             .order_by(AdAccount.created_at)
         )
         if account_id is not None:
             stmt = stmt.where(AdAccount.id == account_id)
         return [
-            _AccountRow(a, st, r, c, bool(linked)) for a, st, r, c, linked in session.execute(stmt)
+            _AccountRow(a, st, r, c, bool(linked), expires)
+            for a, st, r, c, linked, expires in session.execute(stmt)
         ]
 
     def _one(self, session: Session, ctx: TenantContext, account_id: uuid.UUID) -> _AccountRow:
@@ -248,6 +263,11 @@ class AdvertisingReadService:
             platform_status=account.platform_status,
             linked=row.linked,
             connection_status=row.connection.status,
+            connection_expires_at=(
+                sign_in_ends_at(self.rt, row.connection.provider, row.token_expires_at)
+                if row.connection.status != "revoked"
+                else None
+            ),
             history_from=account.history_from,
             first_import_completed_at=account.first_import_completed_at,
             sync=AdSyncOut(

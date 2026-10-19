@@ -305,3 +305,24 @@ def test_an_account_that_cannot_be_read_says_why(owner, sim, admin_engine, statu
     assert account == {"status": "error", "health_code": reason}
     assert _state(admin_engine)["last_error_code"] == reason
     assert _connection(admin_engine)["status"] == "active"
+
+
+# ------------------------------------------------------------------ the API (4-07)
+def test_the_api_shows_when_the_meta_sign_in_ends(owner, sim, clock):
+    from datetime import datetime
+
+    from tests.meta_sim import LONG_LIVED_SECONDS
+
+    expected = clock.now() + timedelta(seconds=LONG_LIVED_SECONDS)
+    detail = owner.get(f"/organizations/{owner.org}/connections/{owner.conn}").json()["data"]
+    ends = datetime.fromisoformat(detail["sign_in_expires_at"])
+    assert abs((ends - expected).total_seconds()) < 5
+    (listed,) = owner.get(f"/organizations/{owner.org}/connections").json()["data"]
+    assert listed["sign_in_expires_at"] == detail["sign_in_expires_at"]
+    _link(owner)
+    (account,) = owner.get(f"/organizations/{owner.org}/ad-accounts").json()["data"]
+    assert account["connection_expires_at"] == detail["sign_in_expires_at"]
+    gone = owner.post(f"/organizations/{owner.org}/connections/{owner.conn}/disconnect")
+    assert gone.json()["data"]["sign_in_expires_at"] is None
+    (account,) = owner.get(f"/organizations/{owner.org}/ad-accounts").json()["data"]
+    assert account["connection_expires_at"] is None

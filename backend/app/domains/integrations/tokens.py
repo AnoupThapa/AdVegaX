@@ -28,6 +28,7 @@ from app.domains.integrations.models import ExternalConnection, ExternalConnecti
 from app.providers.base.capabilities import Capability
 from app.providers.base.errors import AuthExpiredError, RetryableError, SignInExpiredError
 from app.providers.base.interfaces import Secrets
+from app.providers.base.registry import UnknownProvider
 from app.runtime import Runtime
 
 logger = logging.getLogger("advegax.integrations.tokens")
@@ -164,3 +165,19 @@ def usable_secrets(
             extra={"provider": provider.code, "connection_id": str(connection_id)},
         )
         return result.secrets
+
+
+def sign_in_ends_at(
+    rt: Runtime, provider_code: str, token_expires_at: datetime | None
+) -> datetime | None:
+    """When a sign-in that cannot be renewed ends (Meta's ~60-day token, Phase 4); None for
+    sign-ins that renew themselves (their access token's end date means nothing to people)."""
+    if token_expires_at is None:
+        return None
+    try:
+        provider = rt.providers.get(provider_code)
+    except UnknownProvider:
+        return None
+    if provider.capabilities.supports(Capability.TOKEN_REFRESH):
+        return None
+    return token_expires_at

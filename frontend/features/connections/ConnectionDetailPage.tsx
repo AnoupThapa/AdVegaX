@@ -22,10 +22,11 @@ import {
   useProviders,
   useRediscover,
   useResources,
+  type Connection,
   type Resource,
 } from "./api";
 import styles from "./connections.module.css";
-import { connectError, connectionStatus } from "./labels";
+import { connectError, connectionStatus, signInNotice } from "./labels";
 import { ResourceRow, type RowNotice } from "./ResourceRow";
 
 /**
@@ -43,10 +44,40 @@ export function groupByPath(resources: readonly Resource[]) {
     .map(([path, items]) => ({ path, items }));
 }
 
-function groupCaption(all: readonly Resource[], count: number): string {
+function groupCaption(all: readonly Resource[], count: number, provider: string): string {
   const grouped = all.some((r) => r.group_path);
   const n = count === 1 ? "1 account" : `${count} accounts`;
-  return grouped ? `Directly accessible: ${n}` : n;
+  if (!grouped) return n;
+  return provider === "meta_ads" ? `Not in a business: ${n}` : `Directly accessible: ${n}`;
+}
+
+function pathCaption(path: string, provider: string): string {
+  const shown = path.replaceAll(" > ", " › ");
+  return provider === "meta_ads" ? `Business: ${shown}` : `Through ${shown}`;
+}
+
+/** The sign-in end notice (Meta) with the way to reconnect. */
+function SignInAlert({
+  connection,
+  orgId,
+  manage,
+}: {
+  connection: Connection;
+  orgId: string;
+  manage: boolean;
+}) {
+  const notice = signInNotice(connection.sign_in_expires_at, connection.provider);
+  if (!notice) return null;
+  return (
+    <Alert tone={notice.tone}>
+      {notice.text}{" "}
+      {manage ? (
+        <Link href={`/orgs/${orgId}/connections#connect-title`}>Reconnect</Link>
+      ) : (
+        "Ask an owner or admin of this organization to reconnect."
+      )}
+    </Alert>
+  );
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -120,6 +151,7 @@ function Detail({ connectionId }: { connectionId: string }) {
       {c.status !== "active" && c.status !== "revoked" ? (
         <Alert tone="error">{connectError(c.last_error_code)}</Alert>
       ) : null}
+      {c.status === "active" ? <SignInAlert connection={c} orgId={org.id} manage={manage} /> : null}
 
       <dl className={`${styles.panel} ${styles.details}`}>
         <dt>Status</dt>
@@ -140,6 +172,16 @@ function Detail({ connectionId }: { connectionId: string }) {
             new Date(c.created_at),
           )}
         </dd>
+        {c.sign_in_expires_at && c.status === "active" ? (
+          <>
+            <dt>Sign-in ends</dt>
+            <dd>
+              {new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(
+                new Date(c.sign_in_expires_at),
+              )}
+            </dd>
+          </>
+        ) : null}
         {c.revoked_at ? (
           <>
             <dt>Disconnected</dt>
@@ -186,8 +228,8 @@ function Detail({ connectionId }: { connectionId: string }) {
                 <table className={styles.table}>
                   <caption>
                     {group.path
-                      ? `Through ${group.path.replaceAll(" > ", " › ")}`
-                      : groupCaption(resources.data, group.items.length)}
+                      ? pathCaption(group.path, c.provider)
+                      : groupCaption(resources.data, group.items.length, c.provider)}
                   </caption>
                   <thead>
                     <tr>
@@ -290,6 +332,12 @@ function Detail({ connectionId }: { connectionId: string }) {
           <p>
             AdVegaX also asks Google to remove its access. You can check this in your Google account
             (Security → Third-party connections).
+          </p>
+        ) : null}
+        {c.provider === "meta_ads" ? (
+          <p>
+            AdVegaX also asks Meta to remove its access. You can check this in Facebook (Settings →
+            Business integrations).
           </p>
         ) : null}
         {c.provider === "woocommerce" ? (

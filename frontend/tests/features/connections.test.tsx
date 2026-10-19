@@ -621,3 +621,91 @@ describe("Google Ads accounts on a connection (3-09)", () => {
     expect(within(direct).getByRole("button", { name: "Link Own account" })).toBeInTheDocument();
   });
 });
+
+describe("Meta on the Connections pages (4-07)", () => {
+  const DAY_MS = 86_400_000;
+  const inDays = (days: number) => new Date(Date.now() + days * DAY_MS).toISOString();
+  const meta = {
+    code: "meta_ads",
+    display_name: "Meta",
+    category: "advertising",
+    auth_scheme: "oauth2",
+    capabilities: { pkce: true, token_revocation: true },
+    test_only: false,
+  };
+
+  it("offers Meta as read-only and shows when each sign-in ends", async () => {
+    baseApi("owner", {
+      "GET /api/v1/providers": ok([meta]),
+      [`GET ${ORG_PATH}/connections`]: ok([
+        connection({ provider: "meta_ads", account_label: "Meta", sign_in_expires_at: inDays(40) }),
+        connection({
+          id: "c2",
+          provider: "meta_ads",
+          account_label: "Meta",
+          sign_in_expires_at: inDays(3),
+        }),
+      ]),
+    });
+    renderWithProviders(inShell(<ConnectionsPage />, `/orgs/${ORG_ID}/connections`), {
+      session: me,
+    });
+    expect(await screen.findByRole("button", { name: "Connect Meta" })).toBeInTheDocument();
+    expect(screen.getByText(/only reads them — it never changes campaigns/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Sign-in ends/)).toHaveLength(2);
+    expect(screen.getAllByText(/The Meta sign-in ends in/)).toHaveLength(1); // only the 3-day one
+  });
+
+  it("groups ad accounts by business and explains Meta's reasons", async () => {
+    detail("owner", {
+      "GET /api/v1/providers": ok([meta]),
+      [`GET ${ORG_PATH}/connections/${CONN}`]: ok(
+        connection({ provider: "meta_ads", account_label: "Meta", sign_in_expires_at: inDays(12) }),
+      ),
+      [`GET ${ORG_PATH}/connections/${CONN}/resources`]: ok([
+        resource("de", {
+          provider: "meta_ads",
+          group_path: "Eve Zone Business",
+          display_name: "DE",
+        }),
+        resource("us", {
+          provider: "meta_ads",
+          group_path: "Eve Zone Business",
+          display_name: "US",
+          unavailable_reason: "account_unsettled",
+        }),
+        resource("own", { provider: "meta_ads", group_path: null, display_name: "Own" }),
+      ]),
+    });
+    const business = await screen.findByRole("table", { name: "Business: Eve Zone Business" });
+    expect(screen.getByRole("table", { name: "Not in a business: 1 account" })).toBeInTheDocument();
+    const unpaid = within(business).getByRole("row", { name: /US/ });
+    expect(unpaid).toHaveTextContent("Has an unpaid balance in Meta");
+    expect(within(unpaid).queryByRole("button", { name: "Link US" })).toBeNull();
+    expect(screen.getByText("Sign-in ends")).toBeInTheDocument();
+    const notice = screen.getByText(/The Meta sign-in ends in 12 days/);
+    expect(within(notice).getByRole("link", { name: "Reconnect" })).toHaveAttribute(
+      "href",
+      `/orgs/${ORG_ID}/connections#connect-title`,
+    );
+  });
+
+  it("explains an ended Meta sign-in", async () => {
+    detail("viewer", {
+      "GET /api/v1/providers": ok([meta]),
+      [`GET ${ORG_PATH}/connections/${CONN}`]: ok(
+        connection({
+          provider: "meta_ads",
+          status: "expired",
+          last_error_code: "sign_in_expired",
+          sign_in_expires_at: inDays(-1),
+        }),
+      ),
+      [`GET ${ORG_PATH}/connections/${CONN}/resources`]: ok([]),
+    });
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "The sign-in ended (Meta sign-ins last about 60 days)",
+    );
+    expect(screen.queryByText("Sign-in ends")).not.toBeInTheDocument();
+  });
+});

@@ -53,6 +53,8 @@ class AdAccountOut(BaseModel):
     platform_status: str  # active | not_enabled | cancelled | suspended | closed
     linked: bool
     connection_status: str
+    # Phase 4: when the sign-in behind this account ends (Meta, ~60 days); null for Google Ads.
+    connection_expires_at: datetime | None = None
     history_from: date | None
     first_import_completed_at: datetime | None
     sync: AdSyncOut

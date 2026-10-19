@@ -3,6 +3,18 @@
     "schemas": {
       "AdAccountOut": {
         "properties": {
+          "connection_expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Connection Expires At"
+          },
           "connection_status": {
             "title": "Connection Status",
             "type": "string"
@@ -1317,6 +1329,18 @@
               }
             ],
             "title": "Revoked At"
+          },
+          "sign_in_expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sign In Expires At"
           },
           "status": {
             "title": "Status",

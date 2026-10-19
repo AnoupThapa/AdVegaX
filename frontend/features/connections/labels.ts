@@ -87,6 +87,21 @@ const CONNECT_ERRORS: Readonly<Record<string, string>> = {
   quota_exhausted:
     "Google Ads is limiting how much AdVegaX can read right now. It continues by itself later.",
   bad_query: "Google Ads did not accept AdVegaX's request. Please contact AdVegaX support.",
+  // Meta (4-07).
+  meta_sign_in_rejected:
+    "Meta no longer accepts AdVegaX's permission (it was removed, expired or the password changed). Please reconnect Meta.",
+  meta_permission_missing:
+    "Meta's permission to read ads was not granted. Please connect Meta again and allow AdVegaX to read your ads.",
+  sign_in_expired:
+    "The sign-in ended (Meta sign-ins last about 60 days). Please reconnect to keep the figures updating.",
+  account_unsettled: "The ad account has an unpaid balance in Meta, so it cannot be read.",
+  account_under_review: "Meta is reviewing this ad account, so it cannot be read for now.",
+  too_much_data:
+    "The platform said the request was too large. AdVegaX reads it in smaller parts by itself.",
+  report_failed:
+    "Meta could not prepare a report AdVegaX asked for. AdVegaX tries again by itself later.",
+  report_pending:
+    "Meta is still preparing a report AdVegaX asked for. AdVegaX tries again by itself later.",
   server_error: "The store had a temporary problem. Please try again in a few minutes.",
   timeout: "The store took too long to answer. Please try again in a few minutes.",
 };
@@ -112,7 +127,7 @@ export function connectError(code: string | null | undefined): string {
   );
 }
 
-/** Why a discovered account cannot be linked (3-04), in plain words. */
+/** Why a discovered account cannot be linked (3-04; Meta 4-07), in plain words. */
 const UNAVAILABLE_REASONS: Readonly<Record<string, string>> = {
   account_not_enabled: "Cancelled, suspended or closed in Google Ads",
   account_details_missing: "Google did not give its currency or time zone",
@@ -120,9 +135,21 @@ const UNAVAILABLE_REASONS: Readonly<Record<string, string>> = {
   developer_token_not_approved: "Google has not yet approved AdVegaX for real accounts",
 };
 
-export function unavailableReason(reason: string | null | undefined): string | null {
+const META_UNAVAILABLE_REASONS: Readonly<Record<string, string>> = {
+  account_not_enabled: "Disabled or closed in Meta",
+  account_unsettled: "Has an unpaid balance in Meta",
+  account_under_review: "Under review by Meta",
+  account_details_missing: "Meta did not give its currency or time zone",
+  no_account_access: "This Facebook account cannot read it",
+};
+
+export function unavailableReason(
+  reason: string | null | undefined,
+  provider?: string | null,
+): string | null {
   if (!reason) return null;
-  return UNAVAILABLE_REASONS[reason] ?? "This account cannot be linked";
+  const reasons = provider === "meta_ads" ? META_UNAVAILABLE_REASONS : UNAVAILABLE_REASONS;
+  return reasons[reason] ?? "This account cannot be linked";
 }
 
 export const JOB_STATUS: Readonly<Record<string, string>> = {
@@ -132,3 +159,38 @@ export const JOB_STATUS: Readonly<Record<string, string>> = {
   failed: "Failed",
   dead: "Failed after several tries",
 };
+
+/** Platforms whose sign-in ends and cannot renew itself (Meta, ~60 days, Q-4-2). */
+const SIGN_IN_PLATFORMS: Readonly<Record<string, string>> = { meta_ads: "Meta" };
+
+/** A notice from 14 days before such a sign-in ends; urgent from 3 days. Null otherwise. */
+export function signInNotice(
+  expiresAt: string | null | undefined,
+  provider: string,
+  now: Date = new Date(),
+): { tone: "info" | "error"; text: string } | null {
+  if (!expiresAt) return null;
+  const ends = new Date(expiresAt);
+  if (Number.isNaN(ends.getTime())) return null;
+  const left = ends.getTime() - now.getTime();
+  const day = 86_400_000;
+  if (left > 14 * day) return null;
+  const name = SIGN_IN_PLATFORMS[provider] ?? "platform";
+  const date = new Intl.DateTimeFormat("en-AU", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(ends);
+  if (left <= 0) {
+    return {
+      tone: "error",
+      text: `The ${name} sign-in ended on ${date}. Reconnect ${name} to keep the figures updating.`,
+    };
+  }
+  const days = Math.ceil(left / day);
+  const when = days === 1 ? "tomorrow" : `in ${days} days`;
+  return {
+    tone: left <= 3 * day ? "error" : "info",
+    text: `The ${name} sign-in ends ${when}, on ${date}. ${name} sign-ins last about 60 days. Reconnect ${name} before then to keep the figures updating — it takes a few clicks and keeps everything already imported.`,
+  };
+}

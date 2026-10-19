@@ -46,6 +46,7 @@ def test_full_journey_with_audit_history(owner):
         "last_error_code",
         "created_at",
         "revoked_at",
+        "sign_in_expires_at",  # Phase 4: dates only; null for this platform
     }
 
     resources = _resources(owner, conn)  # discovery ran as a background job after the callback

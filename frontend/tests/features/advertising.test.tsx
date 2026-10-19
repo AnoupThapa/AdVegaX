@@ -474,3 +474,153 @@ describe("Campaign page", () => {
     expect(await screen.findByRole("heading", { name: "Campaign not found" })).toBeInTheDocument();
   });
 });
+
+// ------------------------------------------------------------------ Meta (4-07)
+const DAY_MS = 86_400_000;
+const inDays = (days: number) => new Date(Date.now() + days * DAY_MS).toISOString();
+
+const metaAccount = (extra: Record<string, unknown> = {}, sync: Record<string, unknown> = {}) =>
+  account(
+    {
+      provider: "meta_ads",
+      external_account_id: "act_1001",
+      name: "Eve Zone DE",
+      group_path: "Eve Zone Business",
+      currency: "EUR",
+      timezone: "Europe/Berlin",
+      connection_expires_at: inDays(50),
+      ...extra,
+    },
+    sync,
+  );
+
+function metaAccountApi(role = "manager", extra: Record<string, unknown> = {}) {
+  return accountApi(role, {
+    [`GET ${ACCOUNT_PATH}`]: ok(metaAccount(extra)),
+  });
+}
+
+describe("Meta ad accounts", () => {
+  it("are listed next to Google Ads accounts with their business", async () => {
+    baseApi("viewer", {
+      [`GET ${ORG_PATH}/ad-accounts`]: ok([
+        account(),
+        metaAccount({ id: "m2" }, { running: true, waiting_for_allowance: true }),
+      ]),
+    });
+    renderWithProviders(inShell(<AdAccountsPage />, `/orgs/${ORG_ID}/advertising`), {
+      session: me,
+    });
+    expect(await screen.findByRole("link", { name: "Eve Zone DE" })).toBeInTheDocument();
+    expect(screen.getByText("Google Ads · AUD · Australia/Sydney")).toBeInTheDocument();
+    expect(screen.getByText("Meta · Eve Zone Business · EUR · Europe/Berlin")).toBeInTheDocument();
+    expect(screen.getByText(/Meta is limiting how much AdVegaX can read/)).toBeInTheDocument();
+    expect(screen.queryByText(/Something went wrong/)).not.toBeInTheDocument();
+  });
+
+  it("use Meta's words: purchases, link clicks, ad sets, reported by Meta", async () => {
+    metaAccountApi();
+    renderAccount();
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Eve Zone DE" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Meta ad account act_1001")).toBeInTheDocument();
+    expect(await screen.findAllByText(/Reported by Meta/)).not.toHaveLength(0);
+    const tiles = await screen.findByRole("list", { name: "Totals for the period" });
+    for (const label of ["Purchases", "Purchase value", "Link clicks", "Cost per purchase"]) {
+      expect(within(tiles).getByText(label)).toBeInTheDocument();
+    }
+    expect(within(tiles).queryByText("Conversions")).not.toBeInTheDocument();
+    expect(screen.getByText(/Meta Pixel or Conversions API/)).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Purchase value" })).toBeInTheDocument();
+    expect(screen.getByText("Business")).toBeInTheDocument();
+    expect(screen.getByText("Meta sign-in ends")).toBeInTheDocument();
+    expect(screen.queryByText(/sign-in ends in/)).not.toBeInTheDocument(); // 50 days left
+  });
+
+  it("warn from 14 days before the sign-in ends, with a way to reconnect", async () => {
+    metaAccountApi("manager", { connection_expires_at: inDays(10) });
+    renderAccount();
+    const notice = await screen.findByText(/The Meta sign-in ends in 10 days/);
+    expect(within(notice).getByRole("link", { name: "Reconnect Meta" })).toHaveAttribute(
+      "href",
+      `/orgs/${ORG_ID}/connections`,
+    );
+  });
+
+  it("tell viewers who can reconnect", async () => {
+    metaAccountApi("viewer", { connection_expires_at: inDays(2) });
+    renderAccount();
+    const notice = await screen.findByText(/The Meta sign-in ends in 2 days/);
+    expect(notice).toHaveTextContent("Ask an owner or admin of this organization to reconnect.");
+    expect(within(notice).queryByRole("link")).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["account_unsettled", "The ad account has an unpaid balance in Meta"],
+    ["account_under_review", "Meta is reviewing this ad account"],
+    ["account_not_enabled", "Meta disabled or closed this ad account"],
+    ["no_account_access", "AdVegaX can no longer read this ad account"],
+  ])("explain %s in Meta's terms", async (code, title) => {
+    metaAccountApi("manager", {
+      health: { code, checked_at: "2026-10-14T03:00:00Z" },
+      platform_status: code === "no_account_access" ? "active" : "not_enabled",
+    });
+    renderAccount();
+    expect(await screen.findByRole("heading", { level: 2, name: title })).toBeInTheDocument();
+    if (code === "no_account_access")
+      expect(screen.getByText(/The Facebook account that connected Meta/)).toBeInTheDocument();
+    if (code !== "no_account_access")
+      expect(screen.getByText("Not active at Meta")).toBeInTheDocument();
+  });
+
+  it("show campaigns with ad sets and Meta's objectives", async () => {
+    baseApi("viewer", {
+      [`GET ${ORG_PATH}/campaigns/${CAMPAIGN}`]: ok(
+        detail({
+          provider: "meta_ads",
+          platform_type: "OUTCOME_SALES",
+          bidding_strategy_type: "LOWEST_COST_WITHOUT_CAP",
+          budget: {
+            name: null,
+            period: "daily",
+            amount: "50.000000",
+            currency: "EUR",
+            shared: false,
+          },
+          ad_groups: [
+            {
+              ...detail().ad_groups[0],
+              name: "AU buyers",
+              platform_type: "OFFSITE_CONVERSIONS",
+              ads: [
+                {
+                  ...detail().ad_groups[0]!.ads[0],
+                  name: "Vinyl gloves video",
+                  platform_type: null,
+                },
+              ],
+            },
+            { ...detail().ad_groups[0], id: "g-2", name: "Empty set", ads: [] },
+          ],
+        }),
+      ),
+    });
+    renderWithProviders(
+      inShell(<CampaignPage />, `/orgs/${ORG_ID}/advertising/campaigns/${CAMPAIGN}`, {
+        campaignId: CAMPAIGN,
+      }),
+      { session: me },
+    );
+    expect(
+      await screen.findByRole("heading", { level: 2, name: "Ad sets and ads" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Objective")).toBeInTheDocument();
+    expect(screen.getByText("Sales")).toBeInTheDocument();
+    expect(screen.getByText("Lowest cost without cap")).toBeInTheDocument();
+    expect(screen.getByText("No ads in this ad set.")).toBeInTheDocument();
+    const ads = screen.getByRole("table", { name: "Ads in AU buyers" });
+    expect(within(ads).getByRole("columnheader", { name: "Purchases" })).toBeInTheDocument();
+    expect(within(ads).getByRole("rowheader", { name: "Vinyl gloves video" })).toBeInTheDocument();
+  });
+});

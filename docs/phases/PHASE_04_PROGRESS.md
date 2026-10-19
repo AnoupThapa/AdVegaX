@@ -10,7 +10,7 @@ Plan: `PHASE_04_PLAN.md` (approved 2026-10-18, A22, all recommendations). One re
 | 4-04 Structure import | ✅ Done — awaiting review |
 | 4-05 Insights import | ✅ Done — awaiting review |
 | 4-06 Ongoing sync, rate limits, token expiry | ✅ Done — awaiting review |
-| 4-07 API additions and web app | Not started |
+| 4-07 API additions and web app | ✅ Done — awaiting review |
 | 4-08 Journey test, browser test, docs, report | Not started |
 
 ---
@@ -245,4 +245,53 @@ Until then, work follows option C: build against Meta's documentation and a simu
 **Blocked:** Step 0 (4-01): needs the Meta app, a sandbox ad account, one of your real ad accounts, and network access to Meta.
 
 **Next task:** 4-07 — API additions and web app: Meta wording ("ad set", "Purchases", "Reported by Meta"), accounts grouped by business on the Connections page, the sign-in end date and its warning, Meta's reasons in plain words, and both platforms on the Advertising tab.
+
+## 4-07 — API additions and web app (2026-10-19)
+
+**Completed**
+- **API (no new routes, two additive fields):**
+  - `connection_expires_at` on each ad account: when the sign-in behind it ends (Meta); empty for Google Ads, whose sign-in renews itself;
+  - `sign_in_expires_at` on connections (list and detail), for the Connections pages.
+- **Advertising tab:** Google Ads and Meta accounts together, each labelled with its platform; Meta accounts also show their business.
+- **Account and campaign pages speak each platform's language:**
+  - for Meta: "Ad sets" instead of "Ad groups", "Purchases", "Purchase value", "Cost per purchase" and "Link clicks", "Objective" (e.g. "Sales") and "Business";
+  - "Reported by Meta" on every set of figures, and a short note that purchases need the Meta Pixel or Conversions API;
+  - Google Ads pages read exactly as before.
+- **Sign-in ending:**
+  - the account page shows when the Meta sign-in ends;
+  - from 14 days before, a notice with a **"Reconnect Meta"** link (urgent from 3 days); viewers are told to ask an owner or admin;
+  - the Connections list and the connection page show the end date and the same notice.
+- **Connections pages:**
+  - "Connect Meta", with a note that AdVegaX only reads and never changes campaigns, budgets or ads, and that sign-ins last about 60 days;
+  - discovered ad accounts grouped under "Business: …", with personal accounts under "Not in a business";
+  - Meta's reasons in plain words: "Has an unpaid balance in Meta", "Under review by Meta", "Disabled or closed in Meta";
+  - disconnecting explains that AdVegaX also asks Meta to remove its access.
+- **Health in Meta's terms:** "The ad account has an unpaid balance in Meta", "Meta is reviewing this ad account", "Meta disabled or closed this ad account", "Meta is limiting how much AdVegaX can read — figures will update later", each with its fix.
+- **Wording for every new Meta code** (sign-in rejected, permission missing, sign-in ended, report failed or not ready, too much data).
+- **Fixed on the way:** while an account waited for a platform's limit, its summary line also said "Something went wrong with the platform". It now only says it is waiting.
+
+**Files changed** (26)
+- Backend (8): `app/domains/advertising/{read_service,schemas}.py`, `app/domains/integrations/{schemas,service,tokens}.py` (`sign_in_ends_at`), `app/providers/meta_ads/mapping.py` (the status list written so the web app's error-code scan does not mistake it for error codes), `tests/api/test_meta_ads_sync.py` (1 new test), `tests/api/test_connections.py` (the connection's field list now includes `sign_in_expires_at`).
+- Web app (16): `features/advertising/{labels.ts,Figures.tsx,AdAccountPage.tsx,AdAccountsPage.tsx,CampaignPage.tsx}`, `features/connections/{labels.ts,ConnectionsPage.tsx,ConnectionDetailPage.tsx,ResourceRow.tsx,connect-fields.ts,connections.module.css}`, `lib/api/{openapi.json,schema.d.ts}` (regenerated), `tests/features/{advertising,connections}.test.tsx` (12 new tests).
+- Docs (2): `API_SPECIFICATION.md`, this report (and `PROJECT_STATUS.md`).
+- Deleted: none. No migration.
+
+**Tests**
+- **13 new** (1 backend, 12 web app).
+- **Backend `make check`: 1,296 passed**, coverage 97 %. (The first run flagged one existing test that lists a connection's fields exactly; the new field was added to that list and the test passes.)
+- **Frontend `npm run check`: 370 passed** (types, lint, unit, coverage 96.8 %); no vulnerabilities.
+- **Browser tests (Playwright + axe): 12 passed**, including the Google Ads advertising pages, which keep their wording. Meta's browser test and accessibility check come in 4-08.
+
+**Security**
+- The new fields are dates only. The end date is withheld once a connection is disconnected.
+- Nothing about the sign-in itself (tokens, Facebook ids) reaches the web app.
+- Tenant isolation unchanged: the existing routes and their sweeps.
+
+**Deviations**
+1. **The notice is worked out in the web app from the end date** (14 and 3 days, as in the hourly check). It needs no extra API field, and it always matches the date shown.
+2. **The "Reconnect" link opens the Connections page's "Connect a platform" section.** Connecting Meta again with the same Facebook account reuses the connection, so links and imported data stay.
+
+**Blocked:** Step 0 (4-01): needs the Meta app, a sandbox ad account, one of your real ad accounts, and network access to Meta.
+
+**Next task:** 4-08 — journey test (connect → discover → link → import → sync → limits → expiry warning → reconnect → disconnect), a browser test of the Meta pages with an accessibility check, and `PHASE_04_REPORT.md`.
 

@@ -16,7 +16,7 @@ import { goToExternal } from "@/lib/navigation/external";
 import { useConnections, useProviders, useStartConnection, type Provider } from "./api";
 import { CONNECT_FIELDS, CONNECT_NOTES } from "./connect-fields";
 import styles from "./connections.module.css";
-import { connectError, connectionStatus, storeUnreachable } from "./labels";
+import { connectError, connectionStatus, signInNotice, storeUnreachable } from "./labels";
 
 type Notice = { tone: "success" | "error" | "info"; text: string; requestId: string | null };
 
@@ -188,6 +188,23 @@ function ConnectForm({
   );
 }
 
+/** From 14 days before a sign-in that cannot renew itself ends (Meta). */
+export function SignInWarning({
+  expiresAt,
+  provider,
+}: {
+  expiresAt: string | null | undefined;
+  provider: string;
+}) {
+  const notice = signInNotice(expiresAt, provider);
+  if (!notice) return null;
+  return (
+    <p className={notice.tone === "error" ? styles.warning : styles.muted} role="status">
+      {notice.text}
+    </p>
+  );
+}
+
 export function ConnectionsPage() {
   const org = useCurrentOrganization();
   const connections = useConnections(org.id);
@@ -234,7 +251,13 @@ export function ConnectionsPage() {
                       {c.last_error_code && c.status !== "active"
                         ? ` · ${connectError(c.last_error_code)}`
                         : ""}
+                      {c.status === "active" && c.sign_in_expires_at
+                        ? ` · Sign-in ends ${new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(c.sign_in_expires_at))}`
+                        : ""}
                     </p>
+                    {c.status === "active" ? (
+                      <SignInWarning expiresAt={c.sign_in_expires_at} provider={c.provider} />
+                    ) : null}
                   </div>
                   <span className={`${styles.status} ${styles[status.tone]}`}>{status.label}</span>
                 </li>

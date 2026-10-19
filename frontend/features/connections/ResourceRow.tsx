@@ -56,7 +56,7 @@ export function ResourceRow({
   const [showHistory, setShowHistory] = useState(false);
   const history = useLinkHistory(orgId, resource.id, showHistory);
   const name = resource.display_name || resource.external_id;
-  const unavailable = unavailableReason(resource.unavailable_reason);
+  const unavailable = unavailableReason(resource.unavailable_reason, resource.provider);
 
   // When a sync finishes, refresh the list so "Last synced" updates.
   const finished = jobFinished(job.data);

@@ -15,7 +15,15 @@ import { NotSyncedNotice, UUID } from "./AdAccountPage";
 import { useAdCampaign, type AdCampaignDetail } from "./api";
 import styles from "./advertising.module.css";
 import { FigureTiles, figureText, PERIODS, type Currency } from "./Figures";
-import { budgetText, entityStatus, platformType, reportedBy } from "./labels";
+import {
+  budgetText,
+  capitalize,
+  entityStatus,
+  platformType,
+  platformWords,
+  reportedBy,
+  type PlatformWords,
+} from "./labels";
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -38,13 +46,22 @@ function daysBetween(from: string, to: string): number {
   );
 }
 
-function AdGroups({ data, currency }: { data: AdCampaignDetail; currency: Currency }) {
+function AdGroups({
+  data,
+  currency,
+  words,
+}: {
+  data: AdCampaignDetail;
+  currency: Currency;
+  words: PlatformWords;
+}) {
   const t = figureText(currency);
   if (data.ad_groups.length === 0) {
     return (
       <p className={styles.muted}>
-        This campaign has no ad groups. Some campaign types, such as Performance Max, report figures
-        only for the whole campaign.
+        {data.provider === "meta_ads"
+          ? "This campaign has no ad sets yet."
+          : "This campaign has no ad groups. Some campaign types, such as Performance Max, report figures only for the whole campaign."}
       </p>
     );
   }
@@ -70,6 +87,7 @@ function AdGroups({ data, currency }: { data: AdCampaignDetail; currency: Curren
               figures={group.figures}
               currency={currency}
               label={`Totals for ${group.name}`}
+              words={words}
             />
             {group.ads.length ? (
               <div className={styles.tableWrap}>
@@ -83,13 +101,13 @@ function AdGroups({ data, currency }: { data: AdCampaignDetail; currency: Curren
                         Spend
                       </th>
                       <th scope="col" className={styles.num}>
-                        Clicks
+                        {words.clicks}
                       </th>
                       <th scope="col" className={styles.num}>
                         Impressions
                       </th>
                       <th scope="col" className={styles.num}>
-                        Conversions
+                        {words.conversions}
                       </th>
                     </tr>
                   </thead>
@@ -102,8 +120,14 @@ function AdGroups({ data, currency }: { data: AdCampaignDetail; currency: Curren
                         <tr key={ad.id}>
                           <th scope="row">
                             {ad.name ?? `Ad ${ad.external_id}`}
-                            <br />
-                            <span className={styles.muted}>{platformType(ad.platform_type)}</span>
+                            {ad.platform_type ? (
+                              <>
+                                <br />
+                                <span className={styles.muted}>
+                                  {platformType(ad.platform_type)}
+                                </span>
+                              </>
+                            ) : null}
                           </th>
                           <td>
                             <span className={`${styles.status} ${styles[adStatus.tone]}`}>
@@ -121,7 +145,7 @@ function AdGroups({ data, currency }: { data: AdCampaignDetail; currency: Curren
                 </table>
               </div>
             ) : (
-              <p className={styles.muted}>No ads in this ad group.</p>
+              <p className={styles.muted}>No ads in this {words.adGroup}.</p>
             )}
           </section>
         );
@@ -151,6 +175,7 @@ function Detail({ campaignId }: { campaignId: string }) {
   const currency = { currency: c.currency, minorUnits: c.currency_minor_units };
   const t = figureText(currency);
   const status = entityStatus(c.status);
+  const words = platformWords(c.provider);
   const span = String(daysBetween(c.from_day, c.to_day));
   const options = PERIODS.some((p) => p.value === span)
     ? PERIODS
@@ -170,7 +195,7 @@ function Detail({ campaignId }: { campaignId: string }) {
           <span className={`${styles.status} ${styles[status.tone]}`}>{status.label}</span>
         </p>
         <dl className={styles.facts}>
-          <dt>Type</dt>
+          <dt>{c.provider === "meta_ads" ? "Objective" : "Type"}</dt>
           <dd>{platformType(c.platform_type)}</dd>
           <dt>Bidding</dt>
           <dd>{platformType(c.bidding_strategy_type)}</dd>
@@ -201,14 +226,20 @@ function Detail({ campaignId }: { campaignId: string }) {
         {c.figures.availability !== "available" ? (
           <NotSyncedNotice syncedFrom={c.synced_from} />
         ) : null}
-        <FigureTiles figures={c.figures} currency={currency} label="Totals for the period" />
+        {words.conversionsNote ? <p className={styles.muted}>{words.conversionsNote}</p> : null}
+        <FigureTiles
+          figures={c.figures}
+          currency={currency}
+          label="Totals for the period"
+          words={words}
+        />
       </section>
       <section aria-labelledby="campaign-groups" className={styles.section}>
-        <h2 id="campaign-groups">Ad groups and ads</h2>
+        <h2 id="campaign-groups">{capitalize(words.adGroups)} and ads</h2>
         <p className={styles.source}>
           {reportedBy(c.provider)}. Each level has its own figures; they are not added together.
         </p>
-        <AdGroups data={c} currency={currency} />
+        <AdGroups data={c} currency={currency} words={words} />
       </section>
     </section>
   );

@@ -16,7 +16,8 @@ import { adAccountStatus, adSyncError, providerName, SYNC_MODE } from "./labels"
 export function AdSyncSummary({ account }: { account: AdAccount }) {
   const { sync } = account;
   if (!account.first_import_completed_at) {
-    if (account.status === "error") return <>{adSyncError(sync.last_error_code)}</>;
+    if (account.status === "error")
+      return <>{adSyncError(sync.last_error_code, account.provider)}</>;
     return (
       <>
         Importing campaigns and 13 months of figures
@@ -26,9 +27,14 @@ export function AdSyncSummary({ account }: { account: AdAccount }) {
   }
   const parts = [`Last updated: ${formatSyncedAt(sync.last_quick_at)}`];
   if (sync.waiting_for_allowance)
-    parts.push("Waiting for Google's daily limit — figures update by themselves later");
+    parts.push(
+      account.provider === "meta_ads"
+        ? "Meta is limiting how much AdVegaX can read — figures update by themselves later"
+        : "Waiting for Google's daily limit — figures update by themselves later",
+    );
   else if (sync.running && sync.mode) parts.push(`${SYNC_MODE[sync.mode] ?? "Updating"} now`);
-  if (sync.last_error_code) parts.push(adSyncError(sync.last_error_code));
+  if (sync.last_error_code && sync.last_error_code !== "quota_waiting")
+    parts.push(adSyncError(sync.last_error_code, account.provider));
   return <>{parts.join(" · ")}</>;
 }
 
@@ -45,9 +51,10 @@ export function AdAccountsPage() {
         <div className={styles.panel}>
           <p>No ad accounts yet.</p>
           <p className={styles.muted}>
-            Connect Google Ads on the <Link href={`/orgs/${org.id}/connections`}>Connections</Link>{" "}
-            page and link the ad accounts this organization uses. AdVegaX then imports their
-            campaigns and 13 months of figures. It only reads them and never changes anything.
+            Connect Google Ads or Meta on the{" "}
+            <Link href={`/orgs/${org.id}/connections`}>Connections</Link> page and link the ad
+            accounts this organization uses. AdVegaX then imports their campaigns and 13 months of
+            figures. It only reads them and never changes anything.
           </p>
         </div>
       ) : null}
@@ -64,8 +71,14 @@ export function AdAccountsPage() {
                     </Link>
                   </p>
                   <p className={styles.muted}>
-                    {providerName(account.provider)} · {account.currency} ·{" "}
-                    {account.timezone.replaceAll("_", " ")}
+                    {[
+                      providerName(account.provider),
+                      account.provider === "meta_ads" ? account.group_path : null,
+                      account.currency,
+                      account.timezone.replaceAll("_", " "),
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
                   </p>
                   <p className={styles.muted} aria-live="polite">
                     <AdSyncSummary account={account} />

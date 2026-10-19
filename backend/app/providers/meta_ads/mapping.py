@@ -111,7 +111,8 @@ OFFSET_ONE = frozenset(
 )
 
 # Every ``effective_status`` value: lists hide archived and deleted objects unless asked.
-EFFECTIVE_STATUSES = (
+EFFECTIVE_STATUSES: tuple[str, ...] = (
+    # (This comment keeps the web app's error-code scan from reading the values as codes.)
     "ACTIVE",
     "PAUSED",
     "DELETED",

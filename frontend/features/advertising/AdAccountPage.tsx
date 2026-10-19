@@ -31,8 +31,11 @@ import {
   budgetText,
   entityStatus,
   platformType,
+  platformWords,
   providerName,
   reportedBy,
+  signInNotice,
+  type PlatformWords,
 } from "./labels";
 
 export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -65,10 +68,12 @@ function CampaignTable({
   orgId,
   data,
   currency,
+  words,
 }: {
   orgId: string;
   data: AdCampaignList;
   currency: Currency;
+  words: PlatformWords;
 }) {
   const t = figureText(currency);
   if (data.items.length === 0) return <p>No campaigns in this ad account yet.</p>;
@@ -88,10 +93,10 @@ function CampaignTable({
               Spend
             </th>
             <th scope="col" className={styles.num}>
-              Clicks
+              {words.clicks}
             </th>
             <th scope="col" className={styles.num}>
-              Conversions
+              {words.conversions}
             </th>
             <th scope="col" className={styles.num}>
               Click-through rate
@@ -138,6 +143,7 @@ function Performance({ orgId, account }: { orgId: string; account: AdAccount }) 
   const metrics = useAdDailyMetrics(orgId, account.id, from, to);
   const campaigns = useAdCampaigns(orgId, account.id, from, to);
   const currency = { currency: account.currency, minorUnits: account.currency_minor_units };
+  const words = platformWords(account.provider);
 
   return (
     <>
@@ -147,6 +153,7 @@ function Performance({ orgId, account }: { orgId: string; account: AdAccount }) 
           {reportedBy(account.provider)}. Amounts in {account.currency}. AdVegaX does not compare
           them with store sales yet.
         </p>
+        {words.conversionsNote ? <p className={styles.muted}>{words.conversionsNote}</p> : null}
         <div className={styles.toolbar}>
           <SelectField
             label="Period"
@@ -166,9 +173,10 @@ function Performance({ orgId, account }: { orgId: string; account: AdAccount }) 
               figures={metrics.data.totals}
               currency={currency}
               label="Totals for the period"
+              words={words}
             />
             <h3>By day</h3>
-            <DailyTable data={metrics.data} currency={currency} />
+            <DailyTable data={metrics.data} currency={currency} words={words} />
           </>
         ) : null}
       </section>
@@ -178,7 +186,7 @@ function Performance({ orgId, account }: { orgId: string; account: AdAccount }) 
         {campaigns.error ? <Alert tone="error">{messageFor(campaigns.error)}</Alert> : null}
         {campaigns.isPending ? <p role="status">Loading campaigns…</p> : null}
         {campaigns.data ? (
-          <CampaignTable orgId={orgId} data={campaigns.data} currency={currency} />
+          <CampaignTable orgId={orgId} data={campaigns.data} currency={currency} words={words} />
         ) : null}
       </section>
     </>
@@ -202,8 +210,12 @@ function Detail({ accountId }: { accountId: string }) {
   const a = account.data;
   if (!a) return <p role="status">Loading ad account…</p>;
   const status = adAccountStatus(a);
-  const health = adHealth(a.health?.code);
+  const health = adHealth(a.health?.code, a.provider);
   const canSync = manage && a.linked && a.connection_status === "active";
+  const expiry =
+    a.linked && a.connection_status === "active"
+      ? signInNotice(a.connection_expires_at, a.provider)
+      : null;
 
   function syncNow() {
     resync.mutate(undefined, {
@@ -236,6 +248,16 @@ function Detail({ accountId }: { accountId: string }) {
           {notice.text}
         </Alert>
       ) : null}
+      {expiry ? (
+        <Alert tone={expiry.tone}>
+          {expiry.text}{" "}
+          {manage ? (
+            <Link href={`/orgs/${org.id}/connections`}>Reconnect {providerName(a.provider)}</Link>
+          ) : (
+            "Ask an owner or admin of this organization to reconnect."
+          )}
+        </Alert>
+      ) : null}
       {health ? (
         <section aria-labelledby="ad-health" className={styles.health}>
           <h2 id="ad-health">{health.title}</h2>
@@ -255,7 +277,7 @@ function Detail({ accountId }: { accountId: string }) {
         <dl className={styles.facts}>
           {a.group_path ? (
             <>
-              <dt>Reached through</dt>
+              <dt>{a.provider === "meta_ads" ? "Business" : "Reached through"}</dt>
               <dd>{a.group_path.replaceAll(" > ", " › ")}</dd>
             </>
           ) : null}
@@ -269,6 +291,12 @@ function Detail({ accountId }: { accountId: string }) {
           <dd>{formatSyncedAt(a.sync.last_nightly_at)}</dd>
           <dt>Last 90 days re-checked</dt>
           <dd>{formatSyncedAt(a.sync.last_weekly_at)}</dd>
+          {a.connection_expires_at ? (
+            <>
+              <dt>{providerName(a.provider)} sign-in ends</dt>
+              <dd>{formatSyncedAt(a.connection_expires_at)}</dd>
+            </>
+          ) : null}
         </dl>
         {!a.linked ? (
           <p className={styles.muted}>

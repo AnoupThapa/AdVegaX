@@ -6,6 +6,7 @@ import { formatFigureMoney, formatFigureRatio, formatMoney, type Figure } from "
 import type { AdDailyMetrics, AdFigures } from "./api";
 import styles from "./advertising.module.css";
 import { formatCount, formatDecimal, formatFigureDecimal, missingText } from "./format";
+import { platformWords, type PlatformWords } from "./labels";
 
 export type Currency = { readonly currency: string; readonly minorUnits: number };
 
@@ -53,29 +54,42 @@ export function FigureTiles({
   figures,
   currency,
   label,
+  words = platformWords(null),
 }: {
   figures: AdFigures;
   currency: Currency;
   label: string;
+  words?: PlatformWords;
 }) {
   const t = figureText(currency);
   return (
     <ul className={styles.tiles} aria-label={label}>
       <Tile label="Spend" value={t.cost(figures)} />
-      <Tile label="Clicks" value={t.clicks(figures)} />
+      <Tile label={words.clicks} value={t.clicks(figures)} />
       <Tile label="Impressions" value={t.impressions(figures)} />
-      <Tile label="Conversions" value={t.conversions(figures)} />
-      <Tile label="Conversion value" value={t.value(figures)} />
+      <Tile label={words.conversions} value={t.conversions(figures)} />
+      <Tile label={words.conversionValue} value={t.value(figures)} />
       <Tile label="Click-through rate" value={t.ctr(figures)} />
       <Tile label="Cost per click" value={t.cpc(figures)} />
-      <Tile label="Cost per conversion" value={t.cpa(figures)} />
-      <Tile label={`Conversion value per ${currency.currency} spent`} value={t.roas(figures)} />
+      <Tile label={words.costPerConversion} value={t.cpa(figures)} />
+      <Tile
+        label={`${words.conversionValue} per ${currency.currency} spent`}
+        value={t.roas(figures)}
+      />
     </ul>
   );
 }
 
 /** Account-level days, newest first; the last days are marked as possibly still changing. */
-export function DailyTable({ data, currency }: { data: AdDailyMetrics; currency: Currency }) {
+export function DailyTable({
+  data,
+  currency,
+  words = platformWords(null),
+}: {
+  data: AdDailyMetrics;
+  currency: Currency;
+  words?: PlatformWords;
+}) {
   const t = figureText(currency);
   const cell = (missing: boolean) => `${styles.num} ${missing ? styles.missing : ""}`;
   return (
@@ -83,7 +97,7 @@ export function DailyTable({ data, currency }: { data: AdDailyMetrics; currency:
       <table className={styles.table}>
         <caption>
           Each day in the ad account&apos;s time zone ({data.timezone}). Days marked “may still
-          change” can still be corrected by the platform.
+          change” can still be corrected by {words.name}.
         </caption>
         <thead>
           <tr>
@@ -92,16 +106,16 @@ export function DailyTable({ data, currency }: { data: AdDailyMetrics; currency:
               Spend
             </th>
             <th scope="col" className={styles.num}>
-              Clicks
+              {words.clicks}
             </th>
             <th scope="col" className={styles.num}>
               Impressions
             </th>
             <th scope="col" className={styles.num}>
-              Conversions
+              {words.conversions}
             </th>
             <th scope="col" className={styles.num}>
-              Conversion value
+              {words.conversionValue}
             </th>
           </tr>
         </thead>

@@ -35,6 +35,7 @@ from app.domains.integrations.connect_state import (
 from app.domains.integrations.credentials import erase_secrets, load_secrets, store_secrets
 from app.domains.integrations.models import (
     ExternalConnection,
+    ExternalConnectionCredential,
     ExternalResource,
     OrganizationResourceLink,
 )
@@ -46,7 +47,7 @@ from app.domains.integrations.schemas import (
     ProviderOut,
     ResourceOut,
 )
-from app.domains.integrations.tokens import AccountBusy, account_lock, lock_key
+from app.domains.integrations.tokens import AccountBusy, account_lock, lock_key, sign_in_ends_at
 from app.domains.jobs.service import create_job
 from app.domains.organizations.permissions import Permission, authorize
 from app.domains.organizations.service import OrganizationService
@@ -126,7 +127,9 @@ class NotLinked(Conflict):
     message = "This resource is not linked to the organization."
 
 
-def _connection_out(c: ExternalConnection) -> ConnectionOut:
+def _connection_out(
+    c: ExternalConnection, sign_in_expires_at: datetime | None = None
+) -> ConnectionOut:
     return ConnectionOut(
         id=c.id,
         provider=c.provider,
@@ -138,6 +141,7 @@ def _connection_out(c: ExternalConnection) -> ConnectionOut:
         last_error_code=c.last_error_code,
         created_at=c.created_at,
         revoked_at=c.revoked_at,
+        sign_in_expires_at=sign_in_expires_at if c.status != "revoked" else None,
     )
 
 
@@ -590,21 +594,29 @@ class IntegrationService:
     def list_connections(self, ctx: TenantContext) -> list[ConnectionOut]:
         authorize(ctx, Permission.CONNECTIONS_VIEW)
         with self.rt.db.transaction(org_id=ctx.organization_id, user_id=ctx.user_id) as session:
-            rows = (
-                session.execute(
-                    select(ExternalConnection)
-                    .where(ExternalConnection.organization_id == ctx.organization_id)
-                    .order_by(ExternalConnection.created_at.desc())
+            rows = session.execute(
+                select(ExternalConnection, ExternalConnectionCredential.token_expires_at)
+                .outerjoin(
+                    ExternalConnectionCredential,
+                    ExternalConnectionCredential.connection_id == ExternalConnection.id,
                 )
-                .scalars()
-                .all()
-            )
-            return [_connection_out(c) for c in rows]
+                .where(ExternalConnection.organization_id == ctx.organization_id)
+                .order_by(ExternalConnection.created_at.desc())
+            ).all()
+            return [
+                _connection_out(c, sign_in_ends_at(self.rt, c.provider, expires))
+                for c, expires in rows
+            ]
 
     def get_connection(self, ctx: TenantContext, connection_id: uuid.UUID) -> ConnectionOut:
         authorize(ctx, Permission.CONNECTIONS_VIEW)
         with self.rt.db.transaction(org_id=ctx.organization_id, user_id=ctx.user_id) as session:
-            return _connection_out(self._get_connection(session, ctx, connection_id))
+            connection = self._get_connection(session, ctx, connection_id)
+            record = session.get(ExternalConnectionCredential, connection.id)
+            expires = record.token_expires_at if record is not None else None
+            return _connection_out(
+                connection, sign_in_ends_at(self.rt, connection.provider, expires)
+            )
 
     def disconnect(self, ctx: TenantContext, connection_id: uuid.UUID) -> ConnectionOut:
         authorize(ctx, Permission.CONNECTIONS_MANAGE)

@@ -59,6 +59,11 @@
   color: var(--color-warning);
 }
 
+.warning {
+  color: var(--color-warning);
+  font-weight: 600;
+}
+
 .off {
   border-color: var(--color-border);
   color: var(--color-text-muted);
