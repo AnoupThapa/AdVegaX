@@ -9,10 +9,20 @@ Field formats are to be confirmed live (Step 0 item 1).
 from __future__ import annotations
 
 import re
+from datetime import date, datetime
+from decimal import Decimal, InvalidOperation
 from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from app.providers.base.types import ResourceDescriptor, ResourceKind
+from app.providers.base.types import (
+    AdBudgetRecord,
+    AdCampaignRecord,
+    AdEntityStatus,
+    AdGroupRecord,
+    AdRecord,
+    ResourceDescriptor,
+    ResourceKind,
+)
 
 _ACCOUNT_ID = re.compile(r"^act_[0-9]{1,25}$")
 _CURRENCY = re.compile(r"^[A-Z]{3}$")
@@ -84,4 +94,171 @@ def ad_account(row: dict[str, Any]) -> ResourceDescriptor | None:
         timezone=tz,
         unavailable_reason=reason,
         group_path=business_name(row),
+    )
+
+
+# ------------------------------------------------------------------ structure (4-04)
+_OBJECT_ID = re.compile(r"^[0-9]{1,25}$")
+_ENUM = re.compile(r"^[A-Z][A-Z0-9_]{0,63}$")
+_MINOR_UNITS = re.compile(r"^[0-9]{1,18}$")
+
+# Currencies Meta counts in whole units (offset 1); every other currency is in cents (100).
+# "Currencies and offsets" reference; to confirm live (Step 0 item 6).
+OFFSET_ONE = frozenset(
+    {"CLP", "COP", "CRC", "HUF", "ISK", "IDR", "JPY", "KRW", "PYG", "TWD", "VND"}
+)
+
+# Every ``effective_status`` value: lists hide archived and deleted objects unless asked.
+EFFECTIVE_STATUSES = (
+    "ACTIVE",
+    "PAUSED",
+    "DELETED",
+    "ARCHIVED",
+    "PENDING_REVIEW",
+    "DISAPPROVED",
+    "PREAPPROVED",
+    "PENDING_BILLING_INFO",
+    "CAMPAIGN_PAUSED",
+    "ADSET_PAUSED",
+    "IN_PROCESS",
+    "WITH_ISSUES",
+)
+# The status shown. ``effective_status`` already carries a parent's pause, archive or delete
+# down to its children; review and billing states are delivery details of an active object.
+_SHOWN = {
+    "ACTIVE": AdEntityStatus.ACTIVE,
+    "PAUSED": AdEntityStatus.PAUSED,
+    "CAMPAIGN_PAUSED": AdEntityStatus.PAUSED,
+    "ADSET_PAUSED": AdEntityStatus.PAUSED,
+    "ARCHIVED": AdEntityStatus.ARCHIVED,
+    "DELETED": AdEntityStatus.REMOVED,
+}
+_CONFIGURED = {
+    "ACTIVE": AdEntityStatus.ACTIVE,
+    "PAUSED": AdEntityStatus.PAUSED,
+    "ARCHIVED": AdEntityStatus.ARCHIVED,
+    "DELETED": AdEntityStatus.REMOVED,
+}
+
+
+def offset(currency_code: str) -> int:
+    return 1 if currency_code in OFFSET_ONE else 100
+
+
+def object_id(value: Any) -> str | None:
+    return value if isinstance(value, str) and _OBJECT_ID.fullmatch(value) else None
+
+
+def enum(value: Any) -> str | None:
+    return value if isinstance(value, str) and _ENUM.fullmatch(value) else None
+
+
+def status(row: dict[str, Any]) -> tuple[AdEntityStatus, str | None] | None:
+    """The shown status and, when it differs, Meta's delivery status (display only)."""
+    effective, configured = enum(row.get("effective_status")), enum(row.get("status"))
+    shown = _SHOWN.get(effective or "") or _CONFIGURED.get(configured or "")
+    if shown is None:
+        return None
+    detail = effective if effective and effective not in _SHOWN else None
+    return shown, detail
+
+
+def money(value: Any, currency_code: str) -> Decimal | None:
+    """A budget in the currency's smallest unit → an exact amount; "0" or none → None."""
+    if isinstance(value, bool):
+        return None
+    raw = str(value) if isinstance(value, int) else value
+    if not isinstance(raw, str) or not _MINOR_UNITS.fullmatch(raw):
+        return None
+    try:
+        units = Decimal(raw)
+    except InvalidOperation:  # pragma: no cover - the pattern allows digits only
+        return None
+    if units == 0:
+        return None
+    return units / offset(currency_code)
+
+
+def day(value: Any) -> date | None:
+    """``2026-03-01T00:00:00+0100`` → the date as Meta wrote it (the account's time zone)."""
+    if not isinstance(value, str) or len(value) > 40:
+        return None
+    try:
+        return datetime.strptime(value, "%Y-%m-%dT%H:%M:%S%z").date()
+    except ValueError:
+        return None
+
+
+def budget(row: dict[str, Any], level: str, currency_code: str) -> AdBudgetRecord | None:
+    """The object's own budget (daily or lifetime). Meta has no shared budgets: the budget
+    belongs to the campaign (Advantage campaign budget) or to each ad set."""
+    found = object_id(row.get("id"))
+    if found is None:
+        return None
+    for period in ("daily", "lifetime"):
+        amount = money(row.get(f"{period}_budget"), currency_code)
+        if amount is not None:
+            prefix = "campaign" if level == "campaign" else "adset"
+            return AdBudgetRecord(
+                external_id=f"{prefix}:{found}", level=level, period=period, amount=amount
+            )
+    return None
+
+
+def _extensions(**values: Any) -> dict[str, Any] | None:
+    kept = {k: v for k, v in values.items() if v is not None}
+    return kept or None
+
+
+def campaign(row: dict[str, Any], budget_id: str | None) -> AdCampaignRecord | None:
+    found, shown = object_id(row.get("id")), status(row)
+    name = text(row.get("name"))
+    if found is None or shown is None or name is None:
+        return None
+    return AdCampaignRecord(
+        external_id=found,
+        name=name,
+        status=shown[0],
+        platform_type=enum(row.get("objective")),
+        bidding_strategy_type=enum(row.get("bid_strategy")),
+        start_date=day(row.get("start_time")),
+        end_date=day(row.get("stop_time")),
+        budget_external_id=budget_id,
+        extensions=_extensions(buying_type=enum(row.get("buying_type")), delivery=shown[1]),
+    )
+
+
+def ad_set(row: dict[str, Any], budget_id: str | None) -> AdGroupRecord | None:
+    found, parent, shown = object_id(row.get("id")), object_id(row.get("campaign_id")), status(row)
+    name = text(row.get("name"))
+    if found is None or parent is None or shown is None or name is None:
+        return None
+    return AdGroupRecord(
+        external_id=found,
+        campaign_external_id=parent,
+        name=name,
+        status=shown[0],
+        platform_type=enum(row.get("optimization_goal")),
+        budget_external_id=budget_id,
+        extensions=_extensions(bid_strategy=enum(row.get("bid_strategy")), delivery=shown[1]),
+    )
+
+
+def ad(row: dict[str, Any]) -> AdRecord | None:
+    found, parent, shown = object_id(row.get("id")), object_id(row.get("adset_id")), status(row)
+    if found is None or parent is None or shown is None:
+        return None
+    creative = row.get("creative")
+    if not isinstance(creative, dict):
+        creative = {}
+    return AdRecord(
+        external_id=found,
+        ad_group_external_id=parent,
+        status=shown[0],
+        name=text(row.get("name")),
+        extensions=_extensions(
+            creative_id=object_id(creative.get("id")),
+            creative_name=text(creative.get("name")),
+            delivery=shown[1],
+        ),
     )

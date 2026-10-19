@@ -22,6 +22,7 @@ come in 4-06). The 90-day data-access expiry does not apply to the ads permissio
 
 from __future__ import annotations
 
+import json
 import logging
 from collections.abc import Iterator, Mapping
 from datetime import date
@@ -69,6 +70,16 @@ REQUIRED_SCOPES = frozenset({ADS_READ})
 WANTED_SCOPES = frozenset({ADS_READ, "business_management"})
 ACCOUNT_FIELDS = "id,name,currency,timezone_name,account_status,business{id,name}"
 MAX_ACCOUNTS = 5000
+CAMPAIGN_FIELDS = (
+    "id,name,status,effective_status,objective,buying_type,bid_strategy,"
+    "start_time,stop_time,daily_budget,lifetime_budget"
+)
+AD_SET_FIELDS = (
+    "id,name,status,effective_status,campaign_id,optimization_goal,bid_strategy,"
+    "daily_budget,lifetime_budget"
+)
+AD_FIELDS = "id,name,status,effective_status,adset_id,creative{id,name}"
+PAGE_SIZE = "500"
 
 
 class MetaAdsProvider:
@@ -97,6 +108,10 @@ class MetaAdsProvider:
         self._config_id = login_config_id
         self._clock = clock
         self.graph = MetaGraphClient(http_factory, api_version, app_secret)
+        # Ad account → currency from the latest ``read_account`` (the importer reads the
+        # account just before its structure), so budgets need no second account call. Not
+        # secret; an account's currency is the same for every organization.
+        self._currencies: dict[str, str] = {}
 
     # ------------------------------------------------------------------ connect
     def prepare_connect(self, params: Mapping[str, str]) -> PreparedConnect:
@@ -233,6 +248,7 @@ class MetaAdsProvider:
         if mapping.account_id(row.get("id")) != node or money is None or tz is None:
             raise UnexpectedResponseError()
         platform_status, _ = mapping.account_status(row.get("account_status"))
+        self._currencies[node] = money
         return AdAccountState(
             external_id=node,
             name=mapping.text(row.get("name")),
@@ -242,11 +258,51 @@ class MetaAdsProvider:
         )
 
     def read_structure(
-        self,
-        secrets: Secrets,  # noqa: ARG002
-        account: AdAccountRef,  # noqa: ARG002
+        self, secrets: Secrets, account: AdAccountRef
     ) -> Iterator[AdStructureRecord]:
-        raise UnsupportedOperationError()  # task 4-04
+        """Campaigns, ad sets and ads — parents first, archived and deleted ones included
+        (Meta hides them unless ``effective_status`` is filtered explicitly). Budgets come
+        from the object holding them, converted with the account currency's offset (one
+        account read, unless the account was just read). Rows that cannot be read are
+        skipped and logged by count."""
+        token = _token(secrets)
+        node = valid_node(account.external_id)
+        currency_code = self._currencies.get(node) or self.read_account(secrets, account).currency
+        skipped = 0
+
+        def rows(edge: str, fields: str) -> Iterator[dict[str, Any]]:
+            return self.graph.get_all(
+                token,
+                f"/{node}/{edge}",
+                {"fields": fields, "limit": PAGE_SIZE, "filtering": _ALL_STATUSES},
+            )
+
+        for row in rows("campaigns", CAMPAIGN_FIELDS):
+            money = mapping.budget(row, "campaign", currency_code)
+            record = mapping.campaign(row, money.external_id if money else None)
+            if record is None:
+                skipped += 1
+                continue
+            if money is not None:
+                yield money
+            yield record
+        for row in rows("adsets", AD_SET_FIELDS):
+            money = mapping.budget(row, "ad_group", currency_code)
+            group = mapping.ad_set(row, money.external_id if money else None)
+            if group is None:
+                skipped += 1
+                continue
+            if money is not None:
+                yield money
+            yield group
+        for row in rows("ads", AD_FIELDS):
+            item = mapping.ad(row)
+            if item is None:
+                skipped += 1
+                continue
+            yield item
+        if skipped:
+            logger.warning("meta_ads_rows_skipped", extra={"count": skipped})
 
     def read_performance(
         self,
@@ -257,6 +313,12 @@ class MetaAdsProvider:
         last_day: date,  # noqa: ARG002
     ) -> Iterator[AdPerformanceRecord]:
         raise UnsupportedOperationError()  # task 4-05
+
+
+_ALL_STATUSES = json.dumps(
+    [{"field": "effective_status", "operator": "IN", "value": list(mapping.EFFECTIVE_STATUSES)}],
+    separators=(",", ":"),
+)
 
 
 def _token(secrets: Secrets) -> str:

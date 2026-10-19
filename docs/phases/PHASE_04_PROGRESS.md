@@ -7,7 +7,7 @@ Plan: `PHASE_04_PLAN.md` (approved 2026-10-18, A22, all recommendations). One re
 | 4-01 Step 0 on the sandbox and one real account | ⏸ Waiting — needs the Meta app, a sandbox ad account and network access to Meta's API (Q-4-10, option C) |
 | 4-02 Meta sign-in, Graph client, simulator, read-only guard | ✅ Done — awaiting review |
 | 4-03 Discovery and linking rules | ✅ Done — awaiting review |
-| 4-04 Structure import | Not started |
+| 4-04 Structure import | ✅ Done — awaiting review |
 | 4-05 Insights import | Not started |
 | 4-06 Ongoing sync, rate limits, token expiry | Not started |
 | 4-07 API additions and web app | Not started |
@@ -115,4 +115,52 @@ Until then, work follows option C: build against Meta's documentation and a simu
 **Blocked:** Step 0 (4-01): needs the Meta app, a sandbox ad account and network access to Meta.
 
 **Next task:** 4-04 — structure import: campaigns, ad sets and ads (including archived and deleted), with budgets converted using each currency's offset.
+
+## 4-04 — Structure import (2026-10-19)
+
+**Completed**
+- **Linking a Meta ad account now imports its campaigns, ad sets and ads.** Ad sets are stored as AdVegaX's ad groups, as planned.
+- **Archived and deleted items are kept.** Meta leaves them out unless they are asked for by status, so every read asks for them explicitly. Their history stays readable.
+- **What is kept** (only what the plan approved):
+  - campaigns: name, objective, bid strategy, buying type, start and end dates;
+  - ad sets: name, optimization goal, bid strategy;
+  - ads: name and the creative's id and name only (no texts, images or audiences).
+- **Statuses:**
+  - Meta's effective status is shown, so a paused campaign shows its ad sets and ads as paused too.
+  - "Disapproved", "in review" and similar delivery states are kept as Meta's own detail beside an active item; they are never turned into a different status.
+- **Budgets:**
+  - Each budget belongs to the campaign or to the ad set, and is daily or lifetime.
+  - Meta sends amounts in cents for most currencies, so 5000 AUD cents becomes A$50.00. For 11 currencies (JPY, KRW, IDR, VND and others) Meta counts whole units, so ¥5000 stays ¥5000.
+  - Tested for all 11 whole-unit currencies and 7 cent currencies, plus AUD and JPY accounts end to end.
+  - A budget of "0" means the budget sits at the other level; it is stored as no budget, never as 0.
+  - When a budget moves from a campaign to its ad sets, the next import follows it.
+- **Efficiency:** large accounts are read 500 items a page. The currency comes from the account read the importer already makes, so there is no second call.
+- **Robustness:**
+  - A later import updates names, statuses and budgets and never deletes anything.
+  - An account the person can no longer reach, or one disabled after linking, stops with a plain reason on the account; the connection stays fine.
+  - A request Meta refuses as malformed is not retried.
+
+**Files changed** (8)
+- New (1): `tests/api/test_meta_ads_structure.py` (11 tests).
+- Modified (7): `app/providers/meta_ads/mapping.py` (status, money, date and structure rules), `app/providers/meta_ads/provider.py` (`read_structure`), `tests/meta_sim.py` (campaign, ad set and ad lists that hide archived and deleted items unless asked; sample structure), `tests/providers/test_meta_ads_client.py` (42 new tests; the 4-02 placeholder now expects a sign-in), `docs/INTEGRATION_GUIDES.md`, this report, `PROJECT_STATUS.md`.
+- Deleted: none. No migration (the Phase 3 tables hold Meta as planned).
+
+**Tests**
+- **53 new.**
+- **Backend `make check`: 1,243 passed**, coverage 97 % (Meta mapping and client 100 %, provider 98 %).
+- **Frontend:** no changes (358 passed at 4-03).
+
+**Security**
+- Read-only: only GET requests to the account's own lists; the read-only gate and its static test are unchanged and pass.
+- Ids are checked before they enter any address; the token stays in the header.
+- No creative texts, images, audiences or targeting are read.
+
+**Deviations**
+1. **The import still stops after the structure, with `unsupported`**, until daily figures are read (4-05). Expected; nothing is shown as 0.
+2. **A status Meta might add in future is not in the request filter,** so such items would not be returned until it is added. Step 0 checks the live list of statuses.
+3. **Meta has no shared budgets** (as Google does), so every Meta budget is unshared and named by its holder (`campaign:<id>` or `adset:<id>`).
+
+**Blocked:** Step 0 (4-01): needs the Meta app, a sandbox ad account and network access to Meta.
+
+**Next task:** 4-05 — daily figures: 13 months of history at four levels (account, campaign, ad set, ad); purchases using each ad set's own attribution setting; exact money in the account's time zone; Meta's report jobs for slices that are too large.
 

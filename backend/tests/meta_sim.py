@@ -10,6 +10,8 @@ resolver returns a public address; the transport is ``httpx.MockTransport``):
 * ``GET /me``, ``GET /me/permissions`` and ``DELETE /me/permissions``;
 * ``GET /me/adaccounts`` (``limit`` / ``after`` cursor paging) and ``GET /act_<id>`` for the
   ad accounts a user can reach (task 4-03);
+* ``GET /act_<id>/campaigns``, ``/adsets`` and ``/ads`` (task 4-04): archived and deleted
+  objects are hidden unless ``filtering`` asks for them by ``effective_status``, as Meta does;
 * every other call: the token must be known and unexpired and ``appsecret_proof`` must match;
   errors use Meta's ``{"error": {"code", "error_subcode", "type", "message"}}`` shape; usage
   headers can be set per answer.
@@ -66,6 +68,9 @@ class AdAccount:
     account_status: int = 1
     business: tuple[str, str] | None = ("555000111", "Eve Zone Business")
     users: set[str] = field(default_factory=set)
+    campaigns: list[dict[str, Any]] = field(default_factory=list)
+    adsets: list[dict[str, Any]] = field(default_factory=list)
+    ads: list[dict[str, Any]] = field(default_factory=list)
 
     def row(self) -> dict[str, Any]:
         row: dict[str, Any] = {
@@ -215,6 +220,12 @@ class MetaSim:
             return handler(self, request, user_id)
         if route == "/me/adaccounts" and request.method == "GET":
             return self._ad_accounts(query, user_id)
+        edge = re.fullmatch(r"/(act_[0-9]+)/(campaigns|adsets|ads)", route)
+        if edge and request.method == "GET":
+            owner = self.accounts.get(edge.group(1))
+            if owner is None or user_id not in owner.users:
+                return self.error(400, 100, 33)
+            return self._edge(getattr(owner, edge.group(2)), query)
         if request.method == "GET" and re.fullmatch(r"/act_[0-9]+", route):
             account = self.accounts.get(route[1:])
             if account is None or user_id not in account.users:
@@ -224,6 +235,34 @@ class MetaSim:
 
     def _ad_accounts(self, query: dict[str, str], user_id: str) -> httpx.Response:
         rows = [a.row() for a in self.accounts.values() if user_id in a.users] + self.extra_rows
+        return self._page(rows, query)
+
+    def _edge(self, rows: list[dict[str, Any]], query: dict[str, str]) -> httpx.Response:
+        shown = {
+            "ACTIVE",
+            "PAUSED",
+            "CAMPAIGN_PAUSED",
+            "ADSET_PAUSED",
+            "PENDING_REVIEW",
+            "DISAPPROVED",
+            "PREAPPROVED",
+            "PENDING_BILLING_INFO",
+            "IN_PROCESS",
+            "WITH_ISSUES",
+        }  # Meta's default: no ARCHIVED or DELETED
+        if "filtering" in query:
+            (rule,) = json.loads(query["filtering"])
+            assert (rule["field"], rule["operator"]) == ("effective_status", "IN")
+            shown = set(rule["value"])
+        fields = set(re.sub(r"\{[^}]*\}", "", query.get("fields", "")).split(","))
+        kept = [
+            {k: v for k, v in r.items() if k.split("{")[0] in fields}
+            for r in rows
+            if r.get("effective_status") in shown or "effective_status" not in r
+        ]
+        return self._page(kept, query)
+
+    def _page(self, rows: list[dict[str, Any]], query: dict[str, str]) -> httpx.Response:
         limit = int(query.get("limit", "25"))
         start = int(query["after"].removeprefix("cur")) if "after" in query else 0
         page = rows[start : start + limit]
@@ -311,3 +350,95 @@ def usage(percent: int, *, regain_minutes: int = 0, account: str = "act_1") -> d
             {"app_id_util_pct": percent, "acc_id_util_pct": percent}
         ),
     }
+
+
+def sample_structure(account: AdAccount) -> AdAccount:
+    """Campaigns, ad sets and ads covering every status group and both budget holders.
+
+    120001 holds the budget itself (Advantage campaign budget); 120002's ad set holds it.
+    Archived and deleted objects are only listed when asked for; 120005's status is one
+    AdVegaX does not ask for, so it is never returned."""
+    account.campaigns = [
+        {
+            "id": "120001",
+            "name": "Gloves - Sales",
+            "status": "ACTIVE",
+            "effective_status": "ACTIVE",
+            "objective": "OUTCOME_SALES",
+            "buying_type": "AUCTION",
+            "bid_strategy": "LOWEST_COST_WITHOUT_CAP",
+            "start_time": "2026-03-01T00:00:00+1100",
+            "daily_budget": "5000",
+            "lifetime_budget": "0",
+        },
+        {
+            "id": "120002",
+            "name": "Spring push",
+            "status": "PAUSED",
+            "effective_status": "PAUSED",
+            "objective": "OUTCOME_TRAFFIC",
+            "buying_type": "AUCTION",
+            "start_time": "2026-03-01T00:00:00+1100",
+            "stop_time": "2026-05-31T23:59:59+1000",
+            "daily_budget": "0",
+            "lifetime_budget": "0",
+        },
+        {"id": "120003", "name": "Winter", "status": "ARCHIVED", "effective_status": "ARCHIVED"},
+        {"id": "120004", "name": "Test", "status": "DELETED", "effective_status": "DELETED"},
+        {"id": "120005", "name": "New kind", "status": "NEW_STATE", "effective_status": "NEW"},
+    ]
+    account.adsets = [
+        {
+            "id": "230001",
+            "name": "AU buyers",
+            "campaign_id": "120001",
+            "status": "ACTIVE",
+            "effective_status": "ACTIVE",
+            "optimization_goal": "OFFSITE_CONVERSIONS",
+            "daily_budget": "0",
+            "lifetime_budget": "0",
+        },
+        {
+            "id": "230002",
+            "name": "Site visitors",
+            "campaign_id": "120002",
+            "status": "ACTIVE",
+            "effective_status": "CAMPAIGN_PAUSED",
+            "optimization_goal": "LINK_CLICKS",
+            "bid_strategy": "COST_CAP",
+            "lifetime_budget": "123456",
+        },
+        {
+            "id": "230003",
+            "name": "Old test",
+            "campaign_id": "120004",
+            "status": "DELETED",
+            "effective_status": "DELETED",
+        },
+    ]
+    account.ads = [
+        {
+            "id": "340001",
+            "name": "Vinyl gloves video",
+            "adset_id": "230001",
+            "status": "ACTIVE",
+            "effective_status": "ACTIVE",
+            "creative": {"id": "450001", "name": "Gloves 15s"},
+        },
+        {
+            "id": "340002",
+            "name": "Nitrile carousel",
+            "adset_id": "230001",
+            "status": "ACTIVE",
+            "effective_status": "DISAPPROVED",
+        },
+        {
+            "id": "340003",
+            "name": "Spring banner",
+            "adset_id": "230002",
+            "status": "ACTIVE",
+            "effective_status": "CAMPAIGN_PAUSED",
+        },
+        {"id": "340004", "adset_id": "230003", "status": "DELETED", "effective_status": "DELETED"},
+    ]
+    return account

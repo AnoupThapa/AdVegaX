@@ -10,7 +10,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
-from datetime import timedelta
+from datetime import date, timedelta
 
 import httpx
 import pytest
@@ -434,12 +434,13 @@ def test_operations_not_used_by_meta_or_not_built_yet(provider):
         provider.discover_resources({})
     with pytest.raises(MetaSignInRejectedError):
         provider.read_account({}, AdAccountRef("act_1"))
+    with pytest.raises(MetaSignInRejectedError):  # task 4-04
+        list(provider.read_structure({}, AdAccountRef("act_1")))
 
     for call in (
         lambda: provider.verify_install({}),
         lambda: provider.parse_webhook({}, b""),
         lambda: provider.sync_resource({}, ResourceDescriptor(kind="ad_account", external_id="1")),
-        lambda: provider.read_structure({}, AdAccountRef("act_1")),
         lambda: provider.read_performance(
             {}, AdAccountRef("act_1"), AdLevel.ACCOUNT, date(2026, 10, 1), date(2026, 10, 1)
         ),
@@ -535,3 +536,108 @@ def test_mapping_skips_rows_it_cannot_read():
         None,
     )
     assert mapping.zone("x" * 65) is None and mapping.text("x" * 300) == "x" * 255
+
+
+# ------------------------------------------------------------------ structure rules (4-04)
+OFFSET_ONE = ["CLP", "COP", "CRC", "HUF", "ISK", "IDR", "JPY", "KRW", "PYG", "TWD", "VND"]
+
+
+@pytest.mark.parametrize("code", OFFSET_ONE)
+def test_whole_unit_currencies_are_not_divided(code):
+    from decimal import Decimal
+
+    from app.providers.meta_ads import mapping
+
+    assert mapping.offset(code) == 1
+    assert mapping.money("5000", code) == Decimal("5000")
+
+
+@pytest.mark.parametrize("code", ["AUD", "USD", "EUR", "GBP", "NZD", "INR", "NPR"])
+def test_cent_currencies_are_divided_by_100(code):
+    from decimal import Decimal
+
+    from app.providers.meta_ads import mapping
+
+    assert mapping.offset(code) == 100
+    assert mapping.money("123456", code) == Decimal("1234.56")
+    assert mapping.money(5, code) == Decimal("0.05")
+
+
+@pytest.mark.parametrize("value", ["0", 0, None, "", "-100", "12.5", "1e3", True, "9" * 19, []])
+def test_budgets_that_are_none_or_unreadable_are_none_never_0(value):
+    from app.providers.meta_ads import mapping
+
+    assert mapping.money(value, "AUD") is None
+
+
+@pytest.mark.parametrize(
+    ("effective", "configured", "shown", "detail"),
+    [
+        ("ACTIVE", "ACTIVE", "active", None),
+        ("PAUSED", "PAUSED", "paused", None),
+        ("CAMPAIGN_PAUSED", "ACTIVE", "paused", None),
+        ("ADSET_PAUSED", "ACTIVE", "paused", None),
+        ("ARCHIVED", "ARCHIVED", "archived", None),
+        ("DELETED", "DELETED", "removed", None),
+        ("DISAPPROVED", "ACTIVE", "active", "DISAPPROVED"),
+        ("PENDING_REVIEW", "ACTIVE", "active", "PENDING_REVIEW"),
+        ("WITH_ISSUES", "PAUSED", "paused", "WITH_ISSUES"),
+        (None, "ARCHIVED", "archived", None),
+    ],
+)
+def test_statuses_follow_metas_effective_status(effective, configured, shown, detail):
+    from app.providers.meta_ads import mapping
+
+    found = mapping.status({"effective_status": effective, "status": configured})
+    assert found is not None and (found[0].value, found[1]) == (shown, detail)
+
+
+def test_unknown_statuses_are_skipped():
+    from app.providers.meta_ads import mapping
+
+    assert mapping.status({"effective_status": "NEW", "status": "NEW_STATE"}) is None
+    assert mapping.status({"effective_status": "bad value!"}) is None
+    assert mapping.status({}) is None
+
+
+def test_dates_keep_the_day_meta_wrote():
+    from app.providers.meta_ads import mapping
+
+    assert mapping.day("2026-03-01T00:00:00+1100") == date(2026, 3, 1)
+    assert mapping.day("2026-05-31T23:59:59-0700") == date(2026, 5, 31)
+    for odd in (None, "", "2026-03-01", "x" * 41, 20260301):
+        assert mapping.day(odd) is None
+
+
+def test_a_daily_budget_wins_over_a_lifetime_one_and_odd_rows_are_skipped():
+    from decimal import Decimal
+
+    from app.providers.meta_ads import mapping
+
+    both = mapping.budget(
+        {"id": "1", "daily_budget": "100", "lifetime_budget": "900"}, "campaign", "AUD"
+    )
+    assert both is not None and (both.period, both.amount) == ("daily", Decimal("1"))
+    assert mapping.budget({"id": "x", "daily_budget": "100"}, "campaign", "AUD") is None
+    assert mapping.campaign({"id": "1", "status": "ACTIVE"}, None) is None  # no name
+    assert mapping.ad_set({"id": "1", "name": "a", "status": "ACTIVE"}, None) is None  # no parent
+    assert mapping.ad({"id": "1", "adset_id": "2", "status": "ACTIVE", "creative": "x"}) is not None
+
+
+def test_unreadable_structure_rows_are_skipped_and_counted(sim, provider, caplog):
+    import logging
+
+    from app.providers.base.types import AdAccountRef
+
+    from tests.meta_sim import sample_structure
+
+    token = sim.new_token(USER)
+    account = sample_structure(sim.add_account("act_9", USER))
+    account.ads.append({"id": "bad", "adset_id": "230001", "status": "ACTIVE"})
+    account.campaigns.append({"id": "120009", "status": "ACTIVE", "effective_status": "ACTIVE"})
+    caplog.set_level(logging.WARNING, logger="advegax.providers.meta_ads")
+    records = list(provider.read_structure({"access_token": token}, AdAccountRef("act_9")))
+    assert len(records) == 4 + 3 + 4 + 2  # campaigns, ad sets, ads, budgets
+    (warning,) = [r for r in caplog.records if r.getMessage() == "meta_ads_rows_skipped"]
+    assert warning.count == 2  # campaign 120009 has no name; ad "bad" has no usable id
+    # 120005's status is not in the filter, so Meta (and the simulator) never return it
