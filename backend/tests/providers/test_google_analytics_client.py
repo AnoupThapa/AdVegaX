@@ -358,14 +358,16 @@ def test_operations_not_used_by_ga4_or_not_built_yet(sim):
     from app.providers.base.types import AnalyticsPropertyRef, ResourceDescriptor
 
     provider = build_provider(sim)
-    assert provider.discover_resources({}) == []  # task 5-04
+    with pytest.raises(SignInRejectedError):  # discovery needs a token (task 5-04)
+        provider.discover_resources({})
+    with pytest.raises(SignInRejectedError):
+        provider.read_property({}, AnalyticsPropertyRef("111"))
     for call in (
         lambda: provider.verify_install({}),
         lambda: provider.parse_webhook({}, b""),
         lambda: provider.sync_resource(
             {}, ResourceDescriptor(kind="analytics_property", external_id="1")
         ),
-        lambda: provider.read_property({}, AnalyticsPropertyRef("111")),
         lambda: list(
             provider.read_daily(
                 {}, AnalyticsPropertyRef("111"), date(2026, 10, 1), date(2026, 10, 1)

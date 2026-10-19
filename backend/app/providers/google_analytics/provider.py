@@ -12,6 +12,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Iterator, Mapping
 from datetime import date
+from typing import Any
 
 from app.core.clock import Clock
 from app.providers.base.capabilities import Capability, ProviderCapabilities
@@ -30,12 +31,23 @@ from app.providers.base.types import (
     SyncSummary,
     WebhookDelivery,
 )
-from app.providers.google.oauth import GoogleOAuth, HttpFactory
-from app.providers.google_analytics.client import GoogleAnalyticsClient
+from app.providers.google.oauth import (
+    GoogleOAuth,
+    HttpFactory,
+    SignInRejectedError,
+    UnexpectedResponseError,
+)
+from app.providers.google_analytics import mapping
+from app.providers.google_analytics.client import (
+    GoogleAnalyticsClient,
+    NoPropertyAccessError,
+    valid_property_id,
+)
 
 logger = logging.getLogger("advegax.providers.google_analytics")
 
 ANALYTICS_SCOPE = "https://www.googleapis.com/auth/analytics.readonly"
+MAX_PROPERTIES = 500  # one properties.get each; more than any one business has
 
 
 class GoogleAnalyticsProvider:
@@ -107,15 +119,43 @@ class GoogleAnalyticsProvider:
         raise UnsupportedOperationError()  # properties are imported by the analytics core
 
     # ------------------------------------------------------------------ reads (5-04, 5-05)
-    def discover_resources(self, secrets: Secrets) -> list[ResourceDescriptor]:  # noqa: ARG002
-        return []  # task 5-04
+    def discover_resources(self, secrets: Secrets) -> list[ResourceDescriptor]:
+        """Every GA4 property the person can reach (``accountSummaries``), grouped by its
+        Analytics account, with its currency and time zone (``properties.get``, one call per
+        property, at most ``MAX_PROPERTIES``). A property that cannot be read or used is
+        listed with a plain reason (Q-5-3); entries that cannot be parsed are skipped and
+        counted."""
+        token = _token(secrets)
+        found: dict[str, ResourceDescriptor] = {}
+        skipped = 0
+        for row in self.analytics.account_summaries(token):
+            listed, unreadable = mapping.summaries(row)
+            skipped += unreadable
+            for summary in listed:
+                if summary.id in found:
+                    continue
+                if len(found) >= MAX_PROPERTIES:
+                    logger.warning(
+                        "google_analytics_property_limit_reached", extra={"count": len(found)}
+                    )
+                    return list(found.values())
+                try:
+                    details: dict[str, Any] | None = self.analytics.get_property(token, summary.id)
+                    reason = None
+                except NoPropertyAccessError:
+                    details, reason = None, "no_property_access"
+                found[summary.id] = mapping.descriptor(summary, details, reason)
+        if skipped:
+            logger.warning("google_analytics_rows_skipped", extra={"count": skipped})
+        return list(found.values())
 
-    def read_property(
-        self,
-        secrets: Secrets,  # noqa: ARG002
-        prop: AnalyticsPropertyRef,  # noqa: ARG002
-    ) -> AnalyticsPropertyState:
-        raise UnsupportedOperationError()  # task 5-04
+    def read_property(self, secrets: Secrets, prop: AnalyticsPropertyRef) -> AnalyticsPropertyState:
+        """The property's name, currency, time zone and status (one call)."""
+        pid = valid_property_id(prop.external_id)
+        state = mapping.property_state(pid, self.analytics.get_property(_token(secrets), pid))
+        if state is None:
+            raise UnexpectedResponseError()
+        return state
 
     def read_daily(
         self,
@@ -125,3 +165,10 @@ class GoogleAnalyticsProvider:
         last_day: date,  # noqa: ARG002
     ) -> Iterator[AnalyticsDailyRecord]:
         raise UnsupportedOperationError()  # task 5-05
+
+
+def _token(secrets: Secrets) -> str:
+    token = secrets.get("access_token")
+    if not isinstance(token, str) or not token:
+        raise SignInRejectedError()
+    return token

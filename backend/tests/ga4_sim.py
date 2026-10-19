@@ -78,6 +78,8 @@ class GA4Sim(GoogleOAuthSim):
     # Forced failures for the next Analytics call: (HTTP status, Google status, reason).
     fail_next: list[tuple[int, str, str | None]] = field(default_factory=list)
     api_enabled: bool = True
+    # Failures for one property's own calls: property id → (HTTP status, status, reason).
+    property_errors: dict[str, tuple[int, str, str | None]] = field(default_factory=dict)
     report_cost: int = 10  # tokens a report uses
     day_used: dict[str, int] = field(default_factory=dict)
     hour_used: dict[str, int] = field(default_factory=dict)
@@ -198,6 +200,8 @@ class GA4Sim(GoogleOAuthSim):
         return httpx.Response(200, json=body)
 
     def _property(self, user: str, property_id: str) -> httpx.Response:
+        if property_id in self.property_errors:
+            return self.failure(*self.property_errors[property_id])
         prop = self.properties.get(property_id)
         if prop is None or user not in prop.users:
             return self.failure(403, "PERMISSION_DENIED")

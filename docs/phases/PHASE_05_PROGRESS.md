@@ -7,7 +7,7 @@ Plan: `PHASE_05_PLAN.md` (approved 2026-10-19, A23, all recommendations; Q11 set
 | 5-01 Step 0 on the demo property and one of your properties | ⏸ Waiting — needs the Google OAuth client (with the Analytics APIs enabled) and network access to Google's Analytics APIs (Q-5-9, option C) |
 | 5-02 Analytics model, interface, read-only rule | ✅ Done — awaiting review |
 | 5-03 Google Analytics sign-in, client, simulator | ✅ Done — awaiting review |
-| 5-04 Discovery and linking rules | Not started |
+| 5-04 Discovery and linking rules | ✅ Done — awaiting review |
 | 5-05 Daily import | Not started |
 | 5-06 Ongoing sync, quota pacing, health | Not started |
 | 5-07 Read API | Not started |
@@ -114,3 +114,34 @@ The rest of Phase 5 is built against Google's documentation and a GA4 simulator 
 
 **Next task:** 5-04: finding properties by Analytics account (account summaries, each property's currency and time zone), the reasons a property cannot be linked, and linking.
 
+## 5-04 — Finding and linking Google Analytics properties (2026-10-19)
+
+**Completed**
+- **Properties are found by Analytics account.** After connecting, AdVegaX lists every GA4 property the Google account can see, grouped under its Analytics account name (for example "Eve Zone" → "Eve Zone AU", "Eve Zone NZ"), each with its currency and time zone.
+- **Properties that cannot be linked say why**, in plain words, and the Link button is refused (409):
+  - the currency or time zone cannot be read ("property details missing");
+  - the property is in Google's bin ("property deleted");
+  - Google refused to show its details ("no access to this property") — the other properties carry on.
+- **Rediscovery** updates names, account groups and reasons and keeps existing links; a property that is no longer listed is shown as no longer accessible.
+- **Edge cases:** large accounts are read page by page (200 accounts a page); discovery stops at 500 properties; a Google account with no Analytics access finds nothing and stays connected; the Analytics APIs not enabled in the Google Cloud project shows as a set-up error; a sign-in Google no longer accepts shows "Needs reconnecting".
+- **Reading one property** (name, currency, time zone, deleted or not) is ready for the import in 5-05.
+- Linking an available property works now; the analytics property record and the 13-month import start on link in 5-05.
+
+**Files changed** (6)
+- New (2): `app/providers/google_analytics/mapping.py`, `tests/api/test_google_analytics_discovery.py` (14 tests).
+- Modified (4): `app/providers/google_analytics/provider.py`, `tests/ga4_sim.py` (per-property errors), `tests/providers/test_google_analytics_client.py` (placeholder test updated), docs `INTEGRATION_GUIDES.md`, this report and `PROJECT_STATUS.md`.
+- Deleted: none. No migration.
+
+**Tests**
+- **14 new** (64 GA4 provider and discovery tests pass).
+- **Backend `make check`: 1,398 passed**, coverage 97 %.
+
+**Security**
+- Discovery is read-only (account summaries and property details, through the gate); Google's messages never travel on; property ids are checked before they enter an address.
+- Properties belong to the connection's organization only (the existing resource rules and RLS apply).
+
+**Deviations:** none.
+
+**Blocked:** Step 0 (5-01) — unchanged.
+
+**Next task:** 5-05 — daily import: 13 months, monthly slices, three views, data-quality flags, exact money, property time zone.
