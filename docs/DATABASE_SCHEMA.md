@@ -12,7 +12,7 @@ This document is the **target data model**. Tables are created only in the phase
 | 1B | external_connections, external_connection_credentials, external_resources, organization_resource_links, job_runs |
 | 2A / 2B | **as built (migrations 0007–0011):** stores, products, product_variants (incl. inventory), product_cost_history, orders (incl. hashed customer key), order_items, sales_entries, refunds, refund_items, commerce_sync_state, webhook_events, financial_daily (store components) — see §4A |
 | 3–4 | **as built (migrations 0012–0013):** ad_accounts (resource extension), ad_budgets, ad_campaigns, ad_groups, ads, ad_performance_daily, ad_sync_state — see §4B. Keywords and audience_targets come with the phases that use them |
-| 5 | analytics_properties (resource extension), analytics table per decision Q11 |
+| 5 | **as built (migration 0014):** analytics_properties (resource extension), analytics_daily (daily aggregates in three views), analytics_sync_state — see §12 (decision Q11, A23) |
 | 6 | fx_rates, metric_definitions, store_cost_rules; financial_daily gains ad-spend components |
 | 7 | funnel_daily |
 | 8–9 | ai_models, prompt_versions, ai_runs, campaign_strategies, creatives |
@@ -495,8 +495,28 @@ Unique key should prevent duplicate provider/date/entity records.
 
 ## 12. Analytics
 
+### Analytics as built (Phase 5, migration 0014; decision Q11 settled by A23)
+
+GA4's Data API returns **aggregated reports, not events**, so AdVegaX stores daily aggregates and discovers properties with the GA4 Admin API. Forced Row-Level Security and composite tenant keys on all three tables; the scheduler's system role reads four columns of `analytics_properties` only (id, organization, provider, first import time).
+
+**analytics_properties** (extension of an `analytics_property` resource)
+- id, organization_id, external_resource_id (unique), provider, external_property_id (unique per organization and provider)
+- name, account_name (display only), currency, timezone
+- status (`importing` | `active` | `disconnected` | `error`), platform_status (`active` | `deleted`)
+- history_from, first_import_completed_at, health_code, health_checked_at, created_at, updated_at
+
+**analytics_daily** — one row per property, day, view and value (unique)
+- id, organization_id, property_id, day (property time zone)
+- breakdown (`total` | `channel` | `source`), dimension_key (`total`, the channel group, or `source|medium|campaign`), channel_group, traffic_source, traffic_medium, campaign
+- sessions, engaged_sessions, total_users, new_users, key_events (exact decimal), purchases, purchase_revenue (exact decimal, property currency) — NULL when not provided, never 0
+- quality flags: other_row, thresholded, sampled, truncated (shown, never hidden)
+- currency, source (`platform_reported`), fetched_at
+- **Users are distinct counts per day and are never added across days or views** (Q-5-5).
+
+**analytics_sync_state** — as `ad_sync_state`, keyed by property_id.
+
 ### analytics_events
-> **Future-phase decision Q11 (Phase 5).** The GA4 Data API is expected to return aggregated reports, not events; the proposed replacement is an aggregated `analytics_daily` table plus GA4 Admin API discovery. Not created before Phase 5.
+> **Superseded by Q11 (A23, 2026-10-19): not created.** The GA4 Data API returns aggregated reports, not events; `analytics_daily` above replaces this table. The outline is kept for reference (event-level data would need BigQuery export, out of scope).
 
 - id
 - organization_id

@@ -420,3 +420,69 @@ class AdPerformanceRecord:
     cost: Decimal | None = None
     conversions: Decimal | None = None
     conversion_value: Decimal | None = None
+
+
+# ------------------------------------------------------------------ analytics (Phase 5)
+class AnalyticsBreakdown(StrEnum):
+    """The three daily views kept per property (PHASE_05_PLAN Q-5-4)."""
+
+    TOTAL = "total"
+    CHANNEL = "channel"  # default channel group
+    SOURCE = "source"  # source / medium / campaign
+
+
+@dataclass(frozen=True)
+class AnalyticsPropertyRef:
+    """How a provider reaches a linked property: its id and the resource's ``access_hint``."""
+
+    external_id: str
+    access_hint: str | None = None
+
+
+@dataclass(frozen=True)
+class AnalyticsPropertyState:
+    """The platform's view of a property (name, currency, time zone, status)."""
+
+    external_id: str
+    name: str | None
+    currency: str
+    timezone: str
+    platform_status: str  # active | deleted
+    account_name: str | None = None
+    unavailable_reason: str | None = None
+
+
+@dataclass(frozen=True)
+class AnalyticsQuality:
+    """What the platform said about the report a row came from (Q-5-8): rare values grouped
+    into "(other)", rows withheld for privacy, sampling, truncation. Shown, never hidden."""
+
+    other_row: bool = False
+    thresholded: bool = False
+    sampled: bool = False
+    truncated: bool = False
+
+
+@dataclass(frozen=True)
+class AnalyticsDailyRecord:
+    """One property's figures for one day and one view value (property time zone).
+
+    ``channel_group`` is set for the channel view; ``source``, ``medium`` and ``campaign`` for
+    the source view; none of them for the total. Measures the platform did not provide are
+    None, never 0 (A10). Users count each person once for this day only and are never added
+    across days (Q-5-5)."""
+
+    breakdown: AnalyticsBreakdown
+    day: date
+    channel_group: str | None = None
+    source: str | None = None
+    medium: str | None = None
+    campaign: str | None = None
+    sessions: int | None = None
+    engaged_sessions: int | None = None
+    total_users: int | None = None
+    new_users: int | None = None
+    key_events: Decimal | None = None
+    purchases: int | None = None
+    purchase_revenue: Decimal | None = None
+    quality: AnalyticsQuality = AnalyticsQuality()

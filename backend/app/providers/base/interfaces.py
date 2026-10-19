@@ -17,6 +17,9 @@ from app.providers.base.types import (
     AdLevel,
     AdPerformanceRecord,
     AdStructureRecord,
+    AnalyticsDailyRecord,
+    AnalyticsPropertyRef,
+    AnalyticsPropertyState,
     AuthorizationRequest,
     AuthScheme,
     BulkKind,
@@ -190,4 +193,26 @@ class AdvertisingProvider(PlatformProvider, Protocol):
 
 
 class AnalyticsProvider(PlatformProvider, Protocol):
-    """GA4, … — aggregated reads in Phase 5."""
+    """GA4, … — aggregated, read-only reads (Phase 5, decision Q11). Properties are discovered
+    with ``discover_resources`` (kind ``analytics_property``); the methods below read one
+    linked property, reached through its ``AnalyticsPropertyRef``. Nothing here changes
+    anything at the platform.
+
+    Optional attribute: ``quota_floor`` (share of the platform's hourly or daily allowance
+    below which a run waits; None = no allowance to watch)."""
+
+    def read_property(self, secrets: Secrets, prop: AnalyticsPropertyRef) -> AnalyticsPropertyState:
+        """The property's current name, currency, time zone and platform status."""
+        ...
+
+    def read_daily(
+        self,
+        secrets: Secrets,
+        prop: AnalyticsPropertyRef,
+        first_day: date,
+        last_day: date,
+    ) -> Iterator[AnalyticsDailyRecord]:
+        """Daily figures in every view (total, channel, source) between two days (inclusive,
+        property time zone). Days without activity may be absent: the caller writes real
+        zeros at the total level for the days it asked for."""
+        ...

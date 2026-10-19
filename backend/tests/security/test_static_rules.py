@@ -169,3 +169,77 @@ def test_meta_never_asks_for_write_permissions():
         src = path.read_text(encoding="utf-8")
         assert "ads_management" not in src, path.name
         assert "pages_manage" not in src, path.name
+
+
+# ------------------------------------------------------------------ analytics is read-only
+# Phase 5 (PHASE_05_PLAN §3, §7, acceptance criterion 4): analytics providers may only read.
+# GA4 methods are written as ``…/properties/{id}:runReport``; every ``:verb`` an analytics
+# provider names must be a report read. Property discovery is plain GET (``accountSummaries``,
+# ``properties/{id}``). ``analytics.edit`` and the full ``analytics`` permission are never
+# requested, and no request uses PATCH, PUT or DELETE.
+ANALYTICS_PROVIDER_DIRS = ("google_analytics",)
+ALLOWED_ANALYTICS_METHODS = {"runReport", "batchRunReports"}
+_ANALYTICS_METHOD = re.compile(r"""[\w}"']:([a-zA-Z]+)\b""")
+_ANALYTICS_WRITES = re.compile(
+    r"""analytics\.edit|auth/analytics["']|\b(PATCH|PUT|DELETE)\b|:(create|update|delete|"""
+    r"""archive|acknowledge|provision)""",
+)
+
+
+def analytics_write_calls(source: str) -> list[str]:
+    """Every platform call in ``source`` that is not an allowed read."""
+    found = []
+    for line in source.splitlines():
+        code = line.split("#", 1)[0]
+        if _ANALYTICS_WRITES.search(code):
+            found.append(code.strip())
+            continue
+        if "properties" not in code and "accountSummaries" not in code:
+            continue
+        for verb in _ANALYTICS_METHOD.findall(code):
+            if verb not in ALLOWED_ANALYTICS_METHODS and verb not in {"https", "http"}:
+                found.append(code.strip())
+    return found
+
+
+def test_the_analytics_read_only_check_catches_write_calls():
+    assert analytics_write_calls('URL = f"/v1beta/properties/{pid}:runReport"') == []
+    assert analytics_write_calls('f"{DATA}/v1beta/properties/{pid}:batchRunReports"') == []
+    assert analytics_write_calls('ADMIN = "https://analyticsadmin.googleapis.com/v1beta"') == []
+    assert analytics_write_calls('path = f"/v1beta/accountSummaries"') == []
+    assert (
+        analytics_write_calls('SCOPE = "https://www.googleapis.com/auth/analytics.readonly"') == []
+    )
+    for bad in (
+        'f"/v1beta/properties/{pid}:runAccessReport"',
+        'f"/v1beta/properties/{pid}/keyEvents:create"',
+        'f"/v1beta/properties/{pid}:acknowledgeUserDataCollection"',
+        'f"/v1alpha/accounts:provisionAccountTicket"',
+        'client.request("PATCH", f"/v1beta/properties/{pid}")',
+        'client.request("DELETE", url)',
+        'SCOPE = "https://www.googleapis.com/auth/analytics.edit"',
+        'SCOPE = "https://www.googleapis.com/auth/analytics"',
+    ):
+        assert analytics_write_calls(bad), bad
+
+
+def test_analytics_providers_only_read():
+    offenders = {}
+    for name in ANALYTICS_PROVIDER_DIRS:
+        folder = APP / "providers" / name
+        for path in folder.rglob("*.py") if folder.exists() else ():
+            calls = analytics_write_calls(path.read_text(encoding="utf-8"))
+            if calls:
+                offenders[path.relative_to(APP).as_posix()] = calls
+    assert offenders == {}
+
+
+def test_analytics_providers_declare_no_write_capability():
+    from app.providers.base.capabilities import Capability
+
+    writes = {Capability.CREATE_CAMPAIGN, Capability.VALIDATE_ONLY}
+    for path in (APP / "providers").rglob("*.py"):
+        rel = path.relative_to(APP).as_posix()
+        if rel.split("/")[1] in ANALYTICS_PROVIDER_DIRS:
+            src = path.read_text(encoding="utf-8")
+            assert not any(f"Capability.{c.name}" in src for c in writes), rel
