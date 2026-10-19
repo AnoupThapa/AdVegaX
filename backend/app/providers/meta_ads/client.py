@@ -26,15 +26,18 @@ import hashlib
 import hmac
 import json
 import re
+import time
 from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass
 from typing import Any
 from urllib.parse import urlencode
 
 from app.providers.base.errors import (
+    AccountBusyError,
     AuthExpiredError,
     InvalidRequestError,
     PermissionDeniedError,
+    PlatformQuotaError,
     RateLimitedError,
     ResourceNotFoundError,
     ResourceUnavailableError,
@@ -68,8 +71,16 @@ class NoAccountAccessError(ResourceUnavailableError):
     code = "no_account_access"
 
 
-class MetaRateLimitedError(RateLimitedError):
-    """Meta's per-app, per-account or business use-case limit; retrying early extends it."""
+class MetaRateLimitedError(AccountBusyError):
+    """Meta's per-ad-account or business use-case limit (17, 613, 80000-80014, or the usage
+    headers near 100 %): that account waits; retrying early extends the block."""
+
+    code = "rate_limited"
+
+
+class MetaAppLimitError(PlatformQuotaError):
+    """Meta's limit for AdVegaX's whole app (error 4; subcode 1504022 is global load):
+    every Meta account waits."""
 
     code = "rate_limited"
 
@@ -102,7 +113,8 @@ class ReportPendingError(RetryableError):
 
 
 # Meta's documented error codes (Graph API "Handling errors"; to confirm live, Step 0 item 4).
-_RATE_CODES = frozenset({4, 17, 32, 613, *range(80000, 80015)})
+_APP_RATE_CODES = frozenset({4})
+_RATE_CODES = frozenset({17, 32, 613, *range(80000, 80015)})
 _AUTH_CODES = frozenset({102, 190, 463, 467})
 _PERMISSION_CODES = frozenset({10, *range(200, 300)})
 _TOO_MUCH_DATA = 1487534
@@ -111,11 +123,15 @@ _NO_OBJECT_SUBCODE = 33  # "object does not exist, or no permission to read it"
 
 @dataclass(frozen=True)
 class Usage:
-    """The highest share of a Meta limit used (0-100) and Meta's wait estimate, if any."""
+    """The highest share of a Meta limit used (0-100) and Meta's wait estimate, if any.
+    ``app_percent`` is AdVegaX's whole app (shared by every customer); ``account_percent``
+    the ad account or business use case the answer was about."""
 
     percent: float = 0.0
     regain_seconds: float | None = None
     access_tier: str | None = None
+    app_percent: float = 0.0
+    account_percent: float = 0.0
 
 
 def appsecret_proof(app_secret: str, token: str) -> str:
@@ -154,25 +170,24 @@ def _number(value: Any) -> float | None:
 
 
 def read_usage(headers: Mapping[str, str]) -> Usage:
-    """The highest percentage across Meta's usage headers, and the longest wait it names."""
-    percents: list[float] = []
+    """The highest percentages in Meta's usage headers (app and account), and the longest
+    wait Meta names."""
+    app_used: list[float] = []
+    account_used: list[float] = []
     waits: list[float] = []
     tier: str | None = None
     insights = _header_json(headers, "x-fb-ads-insights-throttle")
     if isinstance(insights, dict):
-        for key in ("app_id_util_pct", "acc_id_util_pct"):
+        for key, bucket in (("app_id_util_pct", app_used), ("acc_id_util_pct", account_used)):
             if (n := _number(insights.get(key))) is not None:
-                percents.append(n)
-        tier = (
-            insights.get("ads_api_access_tier")
-            if isinstance(insights.get("ads_api_access_tier"), str)
-            else tier
-        )
+                bucket.append(n)
+        if isinstance(insights.get("ads_api_access_tier"), str):
+            tier = insights["ads_api_access_tier"]
     app = _header_json(headers, "x-app-usage")
     if isinstance(app, dict):
         for key in ("call_count", "total_cputime", "total_time"):
             if (n := _number(app.get(key))) is not None:
-                percents.append(n)
+                app_used.append(n)
     business = _header_json(headers, "x-business-use-case-usage")
     if isinstance(business, dict):
         for entries in business.values():
@@ -181,16 +196,20 @@ def read_usage(headers: Mapping[str, str]) -> Usage:
                     continue
                 for key in ("call_count", "total_cputime", "total_time"):
                     if (n := _number(entry.get(key))) is not None:
-                        percents.append(n)
+                        account_used.append(n)
                 minutes = _number(entry.get("estimated_time_to_regain_access"))
                 if minutes:
                     waits.append(minutes * 60)
                 if isinstance(entry.get("ads_api_access_tier"), str):
                     tier = entry["ads_api_access_tier"]
+    app_percent = min(100.0, max(app_used, default=0.0))
+    account_percent = min(100.0, max(account_used, default=0.0))
     return Usage(
-        percent=min(100.0, max(percents, default=0.0)),
+        percent=max(app_percent, account_percent),
         regain_seconds=max(waits) if waits else None,
         access_tier=tier[:32] if tier else None,
+        app_percent=app_percent,
+        account_percent=account_percent,
     )
 
 
@@ -208,6 +227,8 @@ def raise_for_meta(response: SafeResponse) -> None:
     code = error.get("code") if isinstance(error, dict) else None
     subcode = error.get("error_subcode") if isinstance(error, dict) else None
     if isinstance(code, int) and not isinstance(code, bool):
+        if code in _APP_RATE_CODES:
+            raise MetaAppLimitError(retry_after_seconds=read_usage(response.headers).regain_seconds)
         if code in _RATE_CODES:
             usage = read_usage(response.headers)
             raise MetaRateLimitedError(retry_after_seconds=usage.regain_seconds)
@@ -248,16 +269,78 @@ def _allowed(method: str, path: str) -> bool:
     return method == "DELETE" and path == "/me/permissions"
 
 
-class MetaGraphClient:
-    """Graph API calls for one pinned version (e.g. ``v26.0``)."""
+# Pacing (Q-4-12): from SLOW_ABOVE % of a limit each call waits a little longer (up to
+# SLOW_MAX_SECONDS at PAUSE_AT %); from PAUSE_AT %, or while Meta names a wait, the account
+# (or, for the app's own limit, every account) pauses instead of calling.
+SLOW_ABOVE = 75.0
+PAUSE_AT = 95.0
+SLOW_MAX_SECONDS = 10.0
+PAUSE_SECONDS = 600.0  # when Meta gives no estimate
+_ACCOUNT_IN_PATH = re.compile(r"^/(act_[0-9]{1,25})(?:/|$)")
 
-    def __init__(self, http_factory: HttpFactory, version: str, app_secret: str) -> None:
+
+class MetaGraphClient:
+    """Graph API calls for one pinned version (e.g. ``v26.0``).
+
+    Usage is remembered per process: AdVegaX's app as a whole, and each ad account it has
+    read. Every Meta answer carries fresh figures, so a worker learns them on its first call.
+    """
+
+    def __init__(
+        self,
+        http_factory: HttpFactory,
+        version: str,
+        app_secret: str,
+        *,
+        now: Callable[[], float] | None = None,
+        sleep: Callable[[float], None] | None = None,
+    ) -> None:
         if not re.fullmatch(r"v[0-9]{2,3}\.0", version):
             raise ValueError("Meta API version must look like v26.0")
         self._http_factory = http_factory
         self.version = version
         self._app_secret = app_secret
+        self._now = now or time.time
+        self._sleep = sleep or time.sleep
         self.last_usage = Usage()
+        self._app_percent = 0.0
+        self._account_percent: dict[str, float] = {}
+        self._app_paused_until = 0.0
+        self._paused_until: dict[str, float] = {}
+
+    # ------------------------------------------------------------------ pacing
+    def _pace(self, account: str | None) -> None:
+        now = self._now()
+        if self._app_paused_until > now:
+            raise MetaAppLimitError(retry_after_seconds=self._app_paused_until - now)
+        if account is not None and self._paused_until.get(account, 0.0) > now:
+            raise MetaRateLimitedError(retry_after_seconds=self._paused_until[account] - now)
+        used = max(self._app_percent, self._account_percent.get(account or "", 0.0))
+        if used >= SLOW_ABOVE:
+            share = min(1.0, (used - SLOW_ABOVE) / (PAUSE_AT - SLOW_ABOVE))
+            self._sleep(round(max(1.0, SLOW_MAX_SECONDS * share), 1))
+
+    def _learn(self, usage: Usage, account: str | None, *, refused: bool = False) -> None:
+        """Remember the usage of this answer; pause the app or the account when Meta is at
+        its limit or names a wait (``refused``: Meta already turned the call down)."""
+        now = self._now()
+        wait = usage.regain_seconds or PAUSE_SECONDS
+        self._app_percent = usage.app_percent
+        if usage.app_percent >= PAUSE_AT:
+            self._app_paused_until = max(self._app_paused_until, now + wait)
+        if account is not None:
+            self._account_percent[account] = usage.account_percent
+            if usage.account_percent >= PAUSE_AT or (usage.regain_seconds and not refused):
+                self._paused_until[account] = max(self._paused_until.get(account, 0.0), now + wait)
+
+    def _refused(self, exc: RateLimitedError, account: str | None) -> None:
+        now = self._now()
+        wait = exc.retry_after_seconds or PAUSE_SECONDS
+        if isinstance(exc, MetaAppLimitError):
+            self._app_paused_until = max(self._app_paused_until, now + wait)
+        elif account is not None:
+            self._paused_until[account] = max(self._paused_until.get(account, 0.0), now + wait)
+        exc.retry_after_seconds = wait
 
     def _send(
         self,
@@ -278,6 +361,10 @@ class MetaGraphClient:
         url = f"{GRAPH_BASE}/{self.version}{path}"
         if query:
             url = f"{url}?{urlencode(query)}"
+        found = _ACCOUNT_IN_PATH.match(path)
+        account = found.group(1) if found else None
+        if token is not None:
+            self._pace(account)
         client = self._http_factory()
         try:
             response = client.request(
@@ -286,7 +373,13 @@ class MetaGraphClient:
         finally:
             client.close()
         self.last_usage = read_usage(response.headers)
-        raise_for_meta(response)
+        try:
+            raise_for_meta(response)
+        except RateLimitedError as exc:
+            self._learn(self.last_usage, account, refused=True)
+            self._refused(exc, account)
+            raise
+        self._learn(self.last_usage, account)
         return _json(response)
 
     def get(self, token: str, path: str, params: Mapping[str, str] | None = None) -> Any:

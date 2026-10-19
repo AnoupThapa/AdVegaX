@@ -70,7 +70,13 @@ def token_refresh_task() -> int | None:
     rt = worker_runtime()
     ttl = int(rt.settings.SCHEDULE_TOKEN_REFRESH_INTERVAL.total_seconds() * 0.9)
     return run_singleton(
-        rt.redis, "token_refresh", ttl, lambda: integration_jobs.enqueue_keepalive_refreshes(rt)
+        rt.redis,
+        "token_refresh",
+        ttl,
+        lambda: (
+            integration_jobs.enqueue_keepalive_refreshes(rt)
+            + integration_jobs.check_sign_in_expiry(rt)
+        ),
     )
 
 

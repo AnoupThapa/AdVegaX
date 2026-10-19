@@ -350,6 +350,9 @@ class AdAccountState:
     currency: str
     timezone: str
     platform_status: str  # active | not_enabled | cancelled | suspended | closed
+    # Phase 4: why an account that is not active cannot be read, when the platform says
+    # more than "not enabled" (e.g. Meta's ``account_unsettled``, ``account_under_review``).
+    unavailable_reason: str | None = None
 
 
 @dataclass(frozen=True)

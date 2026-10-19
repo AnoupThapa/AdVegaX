@@ -26,7 +26,7 @@ from app.core.security.tokens import generate_token
 from app.domains.integrations.credentials import load_secrets, store_secrets
 from app.domains.integrations.models import ExternalConnection, ExternalConnectionCredential
 from app.providers.base.capabilities import Capability
-from app.providers.base.errors import AuthExpiredError, RetryableError
+from app.providers.base.errors import AuthExpiredError, RetryableError, SignInExpiredError
 from app.providers.base.interfaces import Secrets
 from app.runtime import Runtime
 
@@ -98,6 +98,14 @@ def usable_secrets(
         expires = record.token_expires_at if record else None
         key = lock_key(connection.provider, connection.external_account_id, connection_id)
     if not provider.capabilities.supports(Capability.TOKEN_REFRESH):
+        if expires is not None and expires <= rt.clock.now():
+            # A sign-in that cannot be renewed has ended (Meta, ~60 days): never call the
+            # platform with it; the connection shows "Needs reconnecting".
+            from app.domains.integrations.jobs import mark_connection_error
+
+            ended = SignInExpiredError()
+            mark_connection_error(rt, org_id, connection_id, ended)
+            raise ended
         return secrets
     if not force and not _needs_refresh(expires, rt.clock.now(), margin):
         return secrets

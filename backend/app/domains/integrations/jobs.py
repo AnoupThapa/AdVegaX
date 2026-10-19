@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 from collections.abc import Callable, Iterable
+from datetime import datetime, timedelta
 
 from sqlalchemy import String, select
 from sqlalchemy.orm import Session
 
+from app.domains.audit.models import AuditLog
 from app.domains.audit.service import Actor, record_audit
 from app.domains.integrations.models import (
     ExternalConnection,
@@ -18,12 +21,20 @@ from app.domains.integrations.models import (
 from app.domains.integrations.tokens import usable_secrets
 from app.domains.jobs.models import JobRun
 from app.domains.jobs.service import ClaimedJob, JobSubjectGoneError, create_job
-from app.providers.base.errors import AuthExpiredError, PermissionDeniedError, ProviderError
+from app.providers.base.capabilities import Capability
+from app.providers.base.errors import (
+    AuthExpiredError,
+    PermissionDeniedError,
+    ProviderError,
+    SignInExpiredError,
+)
 from app.providers.base.interfaces import PlatformProvider
+from app.providers.base.registry import UnknownProvider
 from app.providers.base.types import ResourceDescriptor, ResourceKind
 from app.runtime import Runtime
 
 WORKER = Actor("worker", None)
+logger = logging.getLogger("advegax.integrations")
 
 
 def mark_connection_error(
@@ -326,3 +337,87 @@ def enqueue_keepalive_refreshes(rt: Runtime) -> int:
                 requested_by=None,
             )
     return len(candidates)
+
+
+# ------------------------------------------------------------------ sign-in expiry (Phase 4)
+def sign_in_warning(expires_at: datetime | None, now: datetime, days: Iterable[int]) -> int | None:
+    """The warning that applies to a sign-in that cannot be renewed: 0 when it has ended, the
+    smallest of ``days`` (e.g. 14, 3) it is within, or None (no warning yet / no end date)."""
+    if expires_at is None:
+        return None
+    if expires_at <= now:
+        return 0
+    left = expires_at - now
+    within = [d for d in days if left <= timedelta(days=d)]
+    return min(within) if within else None
+
+
+def check_sign_in_expiry(rt: Runtime) -> int:
+    """Scheduled sweep for sign-ins that cannot be renewed (no token refresh, e.g. Meta's
+    ~60-day token): one ``connection.sign_in_expiring`` audit event per warning (14 and 3
+    days before the end, Q-4-2) and per sign-in, and "Needs reconnecting" at the end, even
+    when no sync runs. Reads ids and dates only — no secret is decrypted."""
+    now = rt.clock.now()
+    horizon = now + timedelta(days=max(rt.settings.SIGN_IN_WARNING_DAYS))
+    with rt.db.transaction(system=True) as session:
+        candidates = session.execute(
+            select(
+                ExternalConnection.id,
+                ExternalConnection.organization_id,
+                ExternalConnection.provider,
+                ExternalConnectionCredential.token_expires_at,
+            )
+            .join(
+                ExternalConnectionCredential,
+                ExternalConnectionCredential.connection_id == ExternalConnection.id,
+            )
+            .where(
+                ExternalConnection.status == "active",
+                ExternalConnectionCredential.ciphertext.is_not(None),
+                ExternalConnectionCredential.token_expires_at.is_not(None),
+                ExternalConnectionCredential.token_expires_at <= horizon,
+            )
+        ).all()
+    changed = 0
+    for connection_id, org_id, provider_code, expires_at in candidates:
+        try:
+            provider = rt.providers.get(provider_code)
+        except UnknownProvider:
+            continue
+        if provider.capabilities.supports(Capability.TOKEN_REFRESH):
+            continue  # renewed by itself: its access token's end date means nothing here
+        warning = sign_in_warning(expires_at, now, rt.settings.SIGN_IN_WARNING_DAYS)
+        if warning == 0:
+            mark_connection_error(rt, org_id, connection_id, SignInExpiredError())
+            changed += 1
+            continue
+        if warning is None or expires_at is None:  # pragma: no cover - the query filters these
+            continue
+        ends_at = expires_at.isoformat()
+        with rt.db.transaction(org_id=org_id) as session:
+            already = session.execute(
+                select(AuditLog.id).where(
+                    AuditLog.organization_id == org_id,
+                    AuditLog.action == "connection.sign_in_expiring",
+                    AuditLog.resource_id == str(connection_id),
+                    AuditLog.metadata_json["days"].as_integer() == warning,
+                    AuditLog.metadata_json["ends_at"].as_string() == ends_at,
+                )
+            ).first()
+            if already is not None:
+                continue
+            record_audit(
+                session,
+                organization_id=org_id,
+                actor=WORKER,
+                action="connection.sign_in_expiring",
+                resource_type="connection",
+                resource_id=connection_id,
+                metadata={"days": warning, "ends_at": ends_at},
+            )
+        logger.info(
+            "sign_in_expiring",
+            extra={"connection_id": str(connection_id), "days": warning},
+        )
+        changed += 1
+    return changed

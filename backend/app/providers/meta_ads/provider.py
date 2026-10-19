@@ -128,7 +128,13 @@ class MetaAdsProvider:
         self._config_id = login_config_id
         self._clock = clock
         self._sleep = sleep
-        self.graph = MetaGraphClient(http_factory, api_version, app_secret)
+        self.graph = MetaGraphClient(
+            http_factory,
+            api_version,
+            app_secret,
+            now=lambda: clock.now().timestamp(),
+            sleep=sleep,
+        )
         # Ad account → currency from the latest ``read_account`` (the importer reads the
         # account just before its structure), so budgets need no second account call. Not
         # secret; an account's currency is the same for every organization.
@@ -268,7 +274,7 @@ class MetaAdsProvider:
         money, tz = mapping.currency(row.get("currency")), mapping.zone(row.get("timezone_name"))
         if mapping.account_id(row.get("id")) != node or money is None or tz is None:
             raise UnexpectedResponseError()
-        platform_status, _ = mapping.account_status(row.get("account_status"))
+        platform_status, reason = mapping.account_status(row.get("account_status"))
         self._currencies[node] = money
         return AdAccountState(
             external_id=node,
@@ -276,6 +282,7 @@ class MetaAdsProvider:
             currency=money,
             timezone=tz,
             platform_status=platform_status,
+            unavailable_reason=reason,
         )
 
     def read_structure(

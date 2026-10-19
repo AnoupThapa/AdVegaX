@@ -58,6 +58,7 @@ from app.domains.integrations.models import (
 from app.domains.integrations.tokens import AccountBusy, account_lock, usable_secrets
 from app.domains.jobs.service import ClaimedJob, JobSubjectGoneError, create_job
 from app.providers.base.errors import (
+    AccountBusyError,
     PlatformQuotaError,
     ProviderError,
     ResourceUnavailableError,
@@ -482,6 +483,14 @@ def _step(rt: Runtime, job: ClaimedJob, org_id: uuid.UUID, account_id: uuid.UUID
     except ResourceUnavailableError as exc:
         _fail(rt, ctx, exc.code, health=True)
         return False
+    except AccountBusyError as exc:  # the platform asks this one account to wait (Meta)
+        delay = exc.retry_after_seconds or rt.settings.ADS_ACCOUNT_BUSY_WAIT.total_seconds()
+        logger.info(
+            "ad_account_busy_waiting",
+            extra={"ad_account_id": str(ctx.account_id), "retry_after_seconds": int(delay)},
+        )
+        _wait(rt, ctx, job, delay)
+        return False
     except PlatformQuotaError as exc:  # the platform says the shared allowance is used up
         delay = exc.retry_after_seconds or rt.settings.ADS_QUOTA_WAIT.total_seconds()
         SharedQuota(rt.redis, rt.clock).block(ctx.platform, delay)
@@ -521,13 +530,15 @@ def _quota_wait(rt: Runtime, ctx: _Context, provider: AdvertisingProvider) -> fl
     """Reserve this step's operations; the seconds to wait when they do not fit, else None.
     Nightly and weekly re-reads stop at a share of the allowance, so first imports, 3-hour
     runs and a person's "Sync now" keep the rest."""
+    if ctx.step != STEP_STRUCTURE and performance_cursor(ctx.step) is None:
+        return None  # the last step calls nobody
+    quota = SharedQuota(rt.redis, rt.clock)
+    blocked = quota.blocked_for(ctx.platform)
+    if blocked > 0:  # the platform said every AdVegaX account must wait (Google or Meta)
+        return blocked
     cost = _cost(ctx, provider)
     if cost == 0:
         return None
-    quota = SharedQuota(rt.redis, rt.clock)
-    blocked = quota.blocked_for(ctx.platform)
-    if blocked > 0:
-        return blocked
     limit = getattr(provider, "shared_daily_operations", None)
     if not isinstance(limit, int) or limit <= 0:
         return None
@@ -590,13 +601,13 @@ def _structure(rt: Runtime, ctx: _Context, provider: AdvertisingProvider) -> boo
         # fixed for the life of a Google Ads account; a change would make stored figures
         # inconsistent, so it is recorded, never applied silently.
         if state.platform_status != "active":
-            account.health_code = "account_not_enabled"
+            account.health_code = state.unavailable_reason or "account_not_enabled"
         elif (state.currency, state.timezone) != (account.currency, account.timezone):
             account.health_code = "account_details_changed"
         else:
             account.health_code = None
     if state.platform_status != "active":
-        _fail(rt, ctx, "account_not_enabled", health=True)
+        _fail(rt, ctx, state.unavailable_reason or "account_not_enabled", health=True)
         return False
     records = _call(rt, ctx, provider, lambda: list(provider.read_structure(secrets, ctx.ref)))
     with rt.db.transaction(org_id=ctx.org_id) as session:

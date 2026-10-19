@@ -203,6 +203,12 @@ class Settings(BaseSettings):
     ADS_QUOTA_WINDOW: timedelta = timedelta(hours=24)
     ADS_QUOTA_DEFER_SHARE: float = Field(default=0.8, gt=0, le=1)
     ADS_QUOTA_WAIT: timedelta = timedelta(minutes=15)
+    # A platform that asks one account to wait without saying for how long (Meta, Q-4-12):
+    # that account's run pauses this long, then continues by itself.
+    ADS_ACCOUNT_BUSY_WAIT: timedelta = timedelta(minutes=10)
+    # Sign-ins that cannot be renewed (Meta's ~60-day token): warnings this many days before
+    # the end (Q-4-2), largest first.
+    SIGN_IN_WARNING_DAYS: tuple[int, ...] = (14, 3)
 
     # --- Commerce import (Phase 2A, 2A-06; PHASE_02A_PLAN §9) ----------------------------
     # Longest order history imported (13 months, Q9); the platform may allow less (Shopify:
@@ -281,6 +287,7 @@ class Settings(BaseSettings):
             "SCHEDULE_ADS_SYNC_TICK": self.SCHEDULE_ADS_SYNC_TICK,
             "ADS_QUOTA_WINDOW": self.ADS_QUOTA_WINDOW,
             "ADS_QUOTA_WAIT": self.ADS_QUOTA_WAIT,
+            "ADS_ACCOUNT_BUSY_WAIT": self.ADS_ACCOUNT_BUSY_WAIT,
             "SHOPIFY_DEFAULT_ORDER_HISTORY": self.SHOPIFY_DEFAULT_ORDER_HISTORY,
             "SCHEDULE_COMMERCE_RECONCILE_INTERVAL": self.SCHEDULE_COMMERCE_RECONCILE_INTERVAL,
             "SCHEDULE_COMMERCE_DEEP_INTERVAL": self.SCHEDULE_COMMERCE_DEEP_INTERVAL,
@@ -299,6 +306,13 @@ class Settings(BaseSettings):
         for name, value in durations.items():
             if value <= timedelta(0):
                 raise ValueError(f"{name} must be a positive duration")
+        warnings = self.SIGN_IN_WARNING_DAYS
+        if (
+            not warnings
+            or any(not 1 <= d <= 60 for d in warnings)
+            or list(warnings) != sorted(set(warnings), reverse=True)
+        ):
+            raise ValueError("SIGN_IN_WARNING_DAYS must be distinct days (1-60), largest first")
         if timedelta(0) > self.COMMERCE_PAGE_INTERVAL:
             raise ValueError("COMMERCE_PAGE_INTERVAL must not be negative")
         if self.SESSION_IDLE_TIMEOUT > self.SESSION_ABSOLUTE_TIMEOUT:

@@ -26,6 +26,7 @@ from app.providers.http.client import SafeHttpClient, SafeResponse
 from app.providers.meta_ads import client as module
 from app.providers.meta_ads.client import (
     BadQueryError,
+    MetaAppLimitError,
     MetaGraphClient,
     MetaPermissionMissingError,
     MetaRateLimitedError,
@@ -208,7 +209,7 @@ def test_non_json_answers_are_unexpected(sim, graph, token):
         (400, 102, None, MetaSignInRejectedError),
         (403, 200, None, MetaPermissionMissingError),
         (400, 10, None, MetaPermissionMissingError),
-        (400, 4, None, MetaRateLimitedError),
+        (400, 4, None, MetaAppLimitError),
         (400, 17, None, MetaRateLimitedError),
         (400, 80004, None, MetaRateLimitedError),
         (400, 613, None, MetaRateLimitedError),
@@ -826,3 +827,94 @@ def test_rows_outside_the_range_are_skipped(sim, provider):
         date(2026, 10, 1),
     )
     assert list(rows) == []
+
+
+# ------------------------------------------------------------------ pacing (4-06)
+class _Time:
+    def __init__(self):
+        self.now = 1_000_000.0
+        self.sleeps: list[float] = []
+
+    def sleep(self, seconds):
+        self.sleeps.append(seconds)
+
+
+@pytest.fixture
+def paced(sim):
+    clock = _Time()
+    graph = MetaGraphClient(
+        sim.http_factory, API_VERSION, APP_SECRET, now=lambda: clock.now, sleep=clock.sleep
+    )
+    return graph, clock
+
+
+def test_usage_is_split_between_the_app_and_the_account():
+    found = read_usage(
+        httpx.Headers(
+            {
+                "x-app-usage": json.dumps({"call_count": 30, "total_time": 12}),
+                "x-fb-ads-insights-throttle": json.dumps(
+                    {"app_id_util_pct": 40, "acc_id_util_pct": 81}
+                ),
+            }
+        )
+    )
+    assert (found.app_percent, found.account_percent, found.percent) == (40.0, 81.0, 81.0)
+
+
+def test_pacing_slows_down_from_75_percent(sim, paced, token):
+    graph, clock = paced
+    sim.add_account("act_5", USER)
+    sim.add_account("act_6", USER)
+    sim.usage_headers = usage(90)
+    graph.get(token, "/act_5", {"fields": "id"})
+    assert clock.sleeps == []  # nothing known yet
+    graph.get(token, "/act_5", {"fields": "id"})
+    graph.get(token, "/act_6", {"fields": "id"})  # another account: only the app share counts
+    assert clock.sleeps == [7.5, 7.5]  # the insights header names both shares at 90 %
+
+
+def test_at_the_limit_the_account_pauses_without_calling(sim, paced, token):
+    graph, clock = paced
+    sim.add_account("act_5", USER)
+    sim.usage_headers = {"x-fb-ads-insights-throttle": json.dumps({"acc_id_util_pct": 99})}
+    graph.get(token, "/act_5", {"fields": "id"})
+    before = len(sim.requests)
+    with pytest.raises(MetaRateLimitedError) as paused:
+        graph.get(token, "/act_5/campaigns")
+    assert paused.value.retry_after_seconds == 600  # Meta named no wait: 10 minutes
+    assert len(sim.requests) == before
+    graph.get(token, "/me")  # not an ad account read: carries on
+    clock.now += 601
+    sim.usage_headers = {}
+    graph.get(token, "/act_5", {"fields": "id"})  # the pause is over
+
+
+def test_the_apps_own_limit_pauses_every_account(sim, paced, token):
+    graph, clock = paced
+    sim.usage_headers = {"x-app-usage": json.dumps({"call_count": 96})}
+    graph.get(token, "/me")
+    with pytest.raises(MetaAppLimitError):
+        graph.get(token, "/act_7")
+    with pytest.raises(MetaAppLimitError):
+        graph.get(token, "/me")
+    clock.now += 601
+    sim.usage_headers = {}
+    graph.get(token, "/me")
+
+
+def test_a_refusal_from_meta_keeps_the_account_paused(sim, paced, token):
+    graph, _ = paced
+    sim.add_account("act_5", USER)
+    sim.fail_next.append((400, 17, None))
+    with pytest.raises(MetaRateLimitedError):
+        graph.get(token, "/act_5")
+    before = len(sim.requests)
+    with pytest.raises(MetaRateLimitedError) as again:
+        graph.get(token, "/act_5")
+    assert len(sim.requests) == before and 0 < again.value.retry_after_seconds <= 600
+    sim.fail_next.append((400, 4, None))
+    with pytest.raises(MetaAppLimitError):
+        graph.get(token, "/me")
+    with pytest.raises(MetaAppLimitError):  # every account now
+        graph.get(token, "/act_9")

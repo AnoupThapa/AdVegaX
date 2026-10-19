@@ -31,8 +31,23 @@ class PlatformQuotaError(RateLimitedError):
     code = "quota_exhausted"
 
 
+class AccountBusyError(RateLimitedError):
+    """The platform asks AdVegaX to wait before reading this one account again (e.g. Meta's
+    per-ad-account limits): that account's run pauses and continues by itself, without using
+    a retry attempt; other accounts carry on (Phase 4)."""
+
+    code = "rate_limited"
+
+
 class AuthExpiredError(ProviderError):
     code = "auth_expired"
+
+
+class SignInExpiredError(AuthExpiredError):
+    """The sign-in reached its end date and cannot be renewed without the person (Meta's
+    long-lived tokens, Phase 4): "Needs reconnecting"."""
+
+    code = "sign_in_expired"
 
 
 class PermissionDeniedError(ProviderError):

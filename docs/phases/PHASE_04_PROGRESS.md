@@ -9,7 +9,7 @@ Plan: `PHASE_04_PLAN.md` (approved 2026-10-18, A22, all recommendations). One re
 | 4-03 Discovery and linking rules | ✅ Done — awaiting review |
 | 4-04 Structure import | ✅ Done — awaiting review |
 | 4-05 Insights import | ✅ Done — awaiting review |
-| 4-06 Ongoing sync, rate limits, token expiry | Not started |
+| 4-06 Ongoing sync, rate limits, token expiry | ✅ Done — awaiting review |
 | 4-07 API additions and web app | Not started |
 | 4-08 Journey test, browser test, docs, report | Not started |
 
@@ -201,4 +201,48 @@ Until then, work follows option C: build against Meta's documentation and a simu
 **Blocked:** Step 0 (4-01): needs the Meta app, a sandbox ad account, one of your real ad accounts for figures, and network access to Meta.
 
 **Next task:** 4-06 — ongoing sync: pacing from Meta's usage headers (slow down above 75 %, pause when Meta says so), sign-in expiry warnings at 14 and 3 days, and account health.
+
+## 4-06 — Ongoing sync, Meta's limits, sign-in expiry and health (2026-10-19)
+
+**Completed**
+- **Ongoing sync:** Meta accounts follow the same schedule as Google Ads (every 3 hours, nightly 30 days, weekly 90 days). Nothing new was needed for that; it is covered by the tests.
+- **Pacing from Meta's usage figures**, which arrive with every answer:
+  - from 75 % of a limit, each call to that ad account waits a little (up to 10 seconds);
+  - from 95 %, or while Meta says how long to wait, AdVegaX stops calling that account. Its import **pauses and continues by itself** when the time has passed. A pause is not a failure: no retry attempt is used, and the connection stays fine;
+  - Meta's "too many calls" errors for one ad account pause only that account; other accounts carry on;
+  - Meta's limit for AdVegaX's whole app pauses every Meta account, using the Phase 3 platform-wide wait.
+- **Sign-in expiry** (Meta sign-ins last about 60 days and cannot be renewed without the person):
+  - an hourly check records a warning **14 days** and **3 days** before the end, once each per sign-in (the web app shows it in 4-07);
+  - at the end, the connection shows **"Needs reconnecting"**, even if no sync runs;
+  - an ended sign-in is never sent to Meta;
+  - reconnecting with the same Facebook account starts a new 60 days, with new warnings.
+- **Health in plain words:** an ad account with an unpaid balance now says so (`account_unsettled`), as does one under Meta's review (`account_under_review`), instead of the general "not enabled".
+- **Fixed on the way:** Meta's app-wide limit would not have paused the other Meta accounts, because the shared wait was only checked for platforms with a daily allowance (Google). It is now checked for every step that calls a platform.
+
+**Files changed** (14)
+- New (1): `tests/api/test_meta_ads_sync.py` (19 tests).
+- Modified (13):
+  - core (platform-neutral): `app/providers/base/errors.py` (`AccountBusyError`, `SignInExpiredError`), `app/providers/base/types.py` (an account's reason when it cannot be read), `app/core/settings.py` (`ADS_ACCOUNT_BUSY_WAIT`, `SIGN_IN_WARNING_DAYS`), `app/domains/advertising/importer.py` (pause one account; platform-wide wait for every calling step; the platform's reason), `app/domains/integrations/tokens.py` (an ended sign-in is not used), `app/domains/integrations/jobs.py` (expiry check and warnings), `app/workers/job_tasks.py` (runs it hourly with the token keep-alive);
+  - Meta: `app/providers/meta_ads/client.py` (usage per app and account, pacing, two kinds of limit), `app/providers/meta_ads/provider.py`;
+  - tests and docs: `tests/providers/test_meta_ads_client.py` (5 new; code 4 is now the app limit), `docs/INTEGRATION_GUIDES.md`, this report, `PROJECT_STATUS.md`.
+- Deleted: none. No migration (the warnings are audit events; no new column).
+
+**Tests**
+- **24 new.**
+- **Backend `make check`: 1,295 passed**, coverage 97 % (Meta client 99 %, provider 98 %).
+- **Frontend:** no changes (358 passed at 4-03).
+
+**Security**
+- The expiry check reads ids and dates only; no token is decrypted.
+- Warnings are recorded in the organization's own audit log (tenant context); nothing about one organization reaches another. The usage figures kept in memory are percentages per ad account, never tokens.
+- An ended sign-in is never sent anywhere.
+
+**Deviations**
+1. **Warnings are recorded as audit events and shown by the web app (4-07); no email is sent.** The plan asked for in-app warnings. An email to the organization's owners could be added later with the existing email system, if you'd like.
+2. **Usage figures are remembered per worker process**, not shared between workers. Each Meta answer carries fresh figures, so a worker learns them on its first call; if needed later, they can be shared through Redis.
+3. **The web app has no wording yet** for `sign_in_expired`, `account_unsettled` and `account_under_review` (added in 4-07 with the other Meta wording).
+
+**Blocked:** Step 0 (4-01): needs the Meta app, a sandbox ad account, one of your real ad accounts, and network access to Meta.
+
+**Next task:** 4-07 — API additions and web app: Meta wording ("ad set", "Purchases", "Reported by Meta"), accounts grouped by business on the Connections page, the sign-in end date and its warning, Meta's reasons in plain words, and both platforms on the Advertising tab.
 
