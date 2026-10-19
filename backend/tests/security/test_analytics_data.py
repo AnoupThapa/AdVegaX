@@ -151,6 +151,24 @@ def test_a_measure_the_platform_did_not_provide_is_null_not_zero(analytics, app_
     assert value is None
 
 
+def test_revenue_net_of_refunds_can_be_negative(analytics, app_engine):  # noqa: F811
+    """GA4 purchase revenue is purchases minus refunds (0015): stored exactly as reported."""
+    with app_engine.begin() as conn:
+        _ctx(conn, org=analytics["org_a"])
+        conn.execute(
+            text(DAILY),
+            _row(
+                {**analytics["a"], "org": analytics["org_a"]},
+                day="2026-10-07",
+                revenue=Decimal("-42.5"),
+            ),
+        )
+        value = conn.execute(
+            text("SELECT purchase_revenue FROM analytics_daily WHERE day = '2026-10-07'")
+        ).scalar_one()
+    assert value == Decimal("-42.500000")
+
+
 def test_one_row_per_property_view_value_and_day(analytics, app_engine):  # noqa: F811
     with pytest.raises(IntegrityError), app_engine.begin() as conn:
         _ctx(conn, org=analytics["org_a"])
@@ -165,7 +183,7 @@ def test_one_row_per_property_view_value_and_day(analytics, app_engine):  # noqa
         {"breakdown": "channel", "key": "total"},
         {"sessions": -1},
         {"users": -5},
-        {"revenue": Decimal("-0.01")},
+        {"key_events": Decimal("-1")},
     ],
 )
 def test_invalid_daily_rows_are_refused(analytics, app_engine, values):  # noqa: F811

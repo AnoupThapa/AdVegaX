@@ -801,6 +801,12 @@ class IntegrationService:
             on_ad_account_linked(
                 session, self.rt, resource=resource, connection=connection, user_id=ctx.user_id
             )
+            # Analytics properties: create the property and start its import (5-05).
+            from app.domains.analytics.importer import on_property_linked
+
+            on_property_linked(
+                session, self.rt, resource=resource, connection=connection, user_id=ctx.user_id
+            )
             return _link_out(link)
 
     def unlink(self, ctx: TenantContext, resource_id: uuid.UUID) -> LinkOut:

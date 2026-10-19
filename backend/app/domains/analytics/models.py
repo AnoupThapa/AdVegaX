@@ -146,8 +146,7 @@ class AnalyticsDaily(UUIDPrimaryKey, Base):
                 "new_users",
                 "key_events",
                 "purchases",
-                "purchase_revenue",
-            )
+            )  # purchase revenue is net of refunds and can be negative (0015)
         ),
         Index(
             "ix_analytics_daily_organization_id_property_id_day",
@@ -173,7 +172,7 @@ class AnalyticsDaily(UUIDPrimaryKey, Base):
     new_users: Mapped[int | None] = mapped_column(BigInteger)
     key_events: Mapped[Decimal | None] = mapped_column(MONEY)  # platforms report fractions
     purchases: Mapped[int | None] = mapped_column(BigInteger)
-    purchase_revenue: Mapped[Decimal | None] = mapped_column(MONEY)
+    purchase_revenue: Mapped[Decimal | None] = mapped_column(MONEY)  # minus refunds: may be < 0
     currency: Mapped[str] = mapped_column(String(3), nullable=False)
     other_row: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=false())
     thresholded: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=false())

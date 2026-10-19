@@ -191,6 +191,20 @@ class Settings(BaseSettings):
     # Data API and Admin API version (Q-5-1): the stable ``v1beta``; alpha is never used.
     GOOGLE_ANALYTICS_API_VERSION: str = Field(default="v1beta", pattern=r"^v1(beta)?$")
 
+    # --- Analytics import (Phase 5, 5-05; PHASE_05_PLAN §9) ------------------------------
+    ANALYTICS_HISTORY_WINDOW: timedelta = timedelta(days=395)  # 13 months on first link
+    # Re-read windows (the schedule itself is task 5-06): 3-hour today + yesterday, nightly
+    # 14 days (Google's late data and attribution changes, Q-5-6), weekly 90 days.
+    ANALYTICS_QUICK_WINDOW: timedelta = timedelta(days=2)
+    ANALYTICS_NIGHTLY_WINDOW: timedelta = timedelta(days=14)
+    ANALYTICS_WEEKLY_WINDOW: timedelta = timedelta(days=90)
+    ANALYTICS_CHAIN_STALE_AFTER: timedelta = timedelta(hours=6)
+    # Google says a property's quota is used up without saying for how long: it waits this.
+    ANALYTICS_PROPERTY_BUSY_WAIT: timedelta = timedelta(minutes=15)
+    # The source / medium / campaign view keeps this many values a day (most sessions first);
+    # the rest are added into one "(other)" row, marked, with users left unknown (Q-5-5).
+    ANALYTICS_SOURCE_ROWS_PER_DAY: int = Field(default=500, ge=10, le=10_000)
+
     # --- Advertising import (Phase 3; PHASE_03_PLAN §9) ---------------------------------
     ADS_HISTORY_WINDOW: timedelta = timedelta(days=395)  # 13 months on first link (Q-3-6)
     # Ongoing sync (Q-3-5, task 3-07): every 3 hours structure + today and yesterday; nightly
@@ -297,6 +311,12 @@ class Settings(BaseSettings):
             "ADS_QUOTA_WINDOW": self.ADS_QUOTA_WINDOW,
             "ADS_QUOTA_WAIT": self.ADS_QUOTA_WAIT,
             "ADS_ACCOUNT_BUSY_WAIT": self.ADS_ACCOUNT_BUSY_WAIT,
+            "ANALYTICS_HISTORY_WINDOW": self.ANALYTICS_HISTORY_WINDOW,
+            "ANALYTICS_QUICK_WINDOW": self.ANALYTICS_QUICK_WINDOW,
+            "ANALYTICS_NIGHTLY_WINDOW": self.ANALYTICS_NIGHTLY_WINDOW,
+            "ANALYTICS_WEEKLY_WINDOW": self.ANALYTICS_WEEKLY_WINDOW,
+            "ANALYTICS_CHAIN_STALE_AFTER": self.ANALYTICS_CHAIN_STALE_AFTER,
+            "ANALYTICS_PROPERTY_BUSY_WAIT": self.ANALYTICS_PROPERTY_BUSY_WAIT,
             "SHOPIFY_DEFAULT_ORDER_HISTORY": self.SHOPIFY_DEFAULT_ORDER_HISTORY,
             "SCHEDULE_COMMERCE_RECONCILE_INTERVAL": self.SCHEDULE_COMMERCE_RECONCILE_INTERVAL,
             "SCHEDULE_COMMERCE_DEEP_INTERVAL": self.SCHEDULE_COMMERCE_DEEP_INTERVAL,

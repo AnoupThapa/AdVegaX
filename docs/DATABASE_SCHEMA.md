@@ -12,7 +12,7 @@ This document is the **target data model**. Tables are created only in the phase
 | 1B | external_connections, external_connection_credentials, external_resources, organization_resource_links, job_runs |
 | 2A / 2B | **as built (migrations 0007–0011):** stores, products, product_variants (incl. inventory), product_cost_history, orders (incl. hashed customer key), order_items, sales_entries, refunds, refund_items, commerce_sync_state, webhook_events, financial_daily (store components) — see §4A |
 | 3–4 | **as built (migrations 0012–0013):** ad_accounts (resource extension), ad_budgets, ad_campaigns, ad_groups, ads, ad_performance_daily, ad_sync_state — see §4B. Keywords and audience_targets come with the phases that use them |
-| 5 | **as built (migration 0014):** analytics_properties (resource extension), analytics_daily (daily aggregates in three views), analytics_sync_state — see §12 (decision Q11, A23) |
+| 5 | **as built (migrations 0014, 0015):** analytics_properties (resource extension), analytics_daily (daily aggregates in three views), analytics_sync_state — see §12 (decision Q11, A23) |
 | 6 | fx_rates, metric_definitions, store_cost_rules; financial_daily gains ad-spend components |
 | 7 | funnel_daily |
 | 8–9 | ai_models, prompt_versions, ai_runs, campaign_strategies, creatives |
@@ -495,7 +495,7 @@ Unique key should prevent duplicate provider/date/entity records.
 
 ## 12. Analytics
 
-### Analytics as built (Phase 5, migration 0014; decision Q11 settled by A23)
+### Analytics as built (Phase 5, migrations 0014 and 0015; decision Q11 settled by A23)
 
 GA4's Data API returns **aggregated reports, not events**, so AdVegaX stores daily aggregates and discovers properties with the GA4 Admin API. Forced Row-Level Security and composite tenant keys on all three tables; the scheduler's system role reads four columns of `analytics_properties` only (id, organization, provider, first import time).
 
@@ -509,9 +509,11 @@ GA4's Data API returns **aggregated reports, not events**, so AdVegaX stores dai
 - id, organization_id, property_id, day (property time zone)
 - breakdown (`total` | `channel` | `source`), dimension_key (`total`, the channel group, or `source|medium|campaign`), channel_group, traffic_source, traffic_medium, campaign
 - sessions, engaged_sessions, total_users, new_users, key_events (exact decimal), purchases, purchase_revenue (exact decimal, property currency) — NULL when not provided, never 0
+- every measure is ≥ 0 except **purchase_revenue**, which is purchases minus refunds in GA4 and can be negative on a day with more refunds (migration 0015, task 5-05)
 - quality flags: other_row, thresholded, sampled, truncated (shown, never hidden)
 - currency, source (`platform_reported`), fetched_at
 - **Users are distinct counts per day and are never added across days or views** (Q-5-5).
+- `dimension_key` for the source view escapes `\` and `|` inside values. The source view keeps at most `ANALYTICS_SOURCE_ROWS_PER_DAY` values a day (500); the rest are added into one `(other)|(other)|(other)` row with `other_row` set and users unknown.
 
 **analytics_sync_state** — as `ad_sync_state`, keyed by property_id.
 

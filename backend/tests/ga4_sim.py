@@ -7,8 +7,9 @@ resolver returns a public address; the transport is ``httpx.MockTransport``):
 * Admin API ``v1beta``: ``GET accountSummaries`` (paged with ``nextPageToken``) and
   ``GET properties/<id>`` (currency, time zone, ``deleteTime`` for a property in the bin);
 * Data API ``v1beta``: ``POST properties/<id>:batchRunReports`` and ``:runReport``, answered by
-  a ``report_handler`` (task 5-05 adds sample reports), with the ``propertyQuota`` block when
-  asked for it;
+  ``traffic_report`` from each property's ``traffic`` (grouped by the dimensions asked for,
+  ordered, paged with ``limit`` / ``offset``, values as strings, ``date`` as ``YYYYMMDD``), with
+  the ``propertyQuota`` block when asked for it;
 * every call needs a known, unexpired token in the ``Authorization`` header and
   ``analytics.readonly``; errors use Google's ``{"error": {"code", "status", "details"}}``
   shape (``SERVICE_DISABLED``, ``ACCESS_TOKEN_SCOPE_INSUFFICIENT``, ``RESOURCE_EXHAUSTED``…).
@@ -22,6 +23,8 @@ import json
 import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from datetime import date
+from decimal import Decimal
 from typing import Any
 from urllib.parse import parse_qs
 
@@ -43,6 +46,24 @@ ReportHandler = Callable[["GA4Sim", str, dict[str, Any]], dict[str, Any]]
 
 
 @dataclass
+class Visit:
+    """Sessions of one day from one channel / source / medium / campaign (property time zone)."""
+
+    day: date
+    channel: str = "Organic Search"
+    source: str = "google"
+    medium: str = "organic"
+    campaign: str = "(organic)"
+    sessions: int = 10
+    engaged: int = 6
+    users: int = 8
+    new_users: int = 3
+    key_events: Decimal = Decimal("2")
+    purchases: int = 1
+    revenue: Decimal = Decimal("49.95")
+
+
+@dataclass
 class GA4Property:
     id: str  # digits
     account: str  # digits
@@ -51,6 +72,11 @@ class GA4Property:
     time_zone: str | None = "Australia/Sydney"
     deleted: bool = False
     users: set[str] = field(default_factory=set)  # Google account ids with access
+    traffic: list[Visit] = field(default_factory=list)
+    # Google's distinct users of a whole day (the total view); summed from visits otherwise.
+    day_users: dict[date, int] = field(default_factory=dict)
+    # Extra report ``metadata`` per view name ("total", "channel", "source").
+    metadata: dict[str, dict[str, Any]] = field(default_factory=dict)
 
 
 @dataclass
@@ -59,21 +85,87 @@ class GA4Account:
     display_name: str = "Eve Zone"
 
 
-def _empty_report(sim: GA4Sim, property_id: str, request: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "dimensionHeaders": [{"name": d["name"]} for d in request.get("dimensions", [])],
-        "metricHeaders": [{"name": m["name"]} for m in request.get("metrics", [])],
-        "rowCount": 0,
-        "metadata": {"currencyCode": sim.properties[property_id].currency or "USD"},
+_DIMENSION = {
+    "date": lambda v: v.day.strftime("%Y%m%d"),
+    "sessionDefaultChannelGroup": lambda v: v.channel,
+    "sessionSource": lambda v: v.source,
+    "sessionMedium": lambda v: v.medium,
+    "sessionCampaignName": lambda v: v.campaign,
+}
+_METRIC = {
+    "sessions": ("sessions", "TYPE_INTEGER"),
+    "engagedSessions": ("engaged", "TYPE_INTEGER"),
+    "totalUsers": ("users", "TYPE_INTEGER"),
+    "newUsers": ("new_users", "TYPE_INTEGER"),
+    "keyEvents": ("key_events", "TYPE_FLOAT"),
+    "ecommercePurchases": ("purchases", "TYPE_INTEGER"),
+    "purchaseRevenue": ("revenue", "TYPE_CURRENCY"),
+}
+_VIEWS = {
+    ("date",): "total",
+    ("date", "sessionDefaultChannelGroup"): "channel",
+    ("date", "sessionSource", "sessionMedium", "sessionCampaignName"): "source",
+}
+
+
+def traffic_report(sim: GA4Sim, property_id: str, request: dict[str, Any]) -> dict[str, Any]:
+    """Google's report over the property's visits, grouped by the dimensions asked for."""
+    prop = sim.properties[property_id]
+    dims = [d["name"] for d in request.get("dimensions", [])]
+    mets = [m["name"] for m in request.get("metrics", [])]
+    if any(d not in _DIMENSION for d in dims) or any(m not in _METRIC for m in mets):
+        raise BadRequest()
+    spans = request.get("dateRanges") or [{"startDate": "1970-01-01", "endDate": "1970-01-01"}]
+    if len(spans) != 1:
+        raise BadRequest()  # AdVegaX asks for one range at a time
+    first = date.fromisoformat(spans[0]["startDate"])
+    last = date.fromisoformat(spans[0]["endDate"])
+    groups: dict[tuple[str, ...], dict[str, Any]] = {}
+    for visit in prop.traffic:
+        if not first <= visit.day <= last:
+            continue
+        key = tuple(_DIMENSION[d](visit) for d in dims)
+        sums = groups.setdefault(key, {"day": visit.day})
+        for attr, _ in _METRIC.values():
+            sums[attr] = sums.get(attr, 0) + getattr(visit, attr)
+    if dims == ["date"]:
+        for sums in groups.values():
+            if sums["day"] in prop.day_users:
+                sums["users"] = prop.day_users[sums["day"]]
+    ordered = sorted(groups.items())
+    offset, limit = int(request.get("offset", 0)), int(request.get("limit", 10_000))
+    page = ordered[offset : offset + limit]
+    report: dict[str, Any] = {
+        "rowCount": len(ordered),
+        "metadata": {
+            "currencyCode": prop.currency or "USD",
+            "timeZone": prop.time_zone or "UTC",
+            **prop.metadata.get(_VIEWS.get(tuple(dims), ""), {}),
+        },
         "kind": "analyticsData#runReport",
     }
+    if page:  # Google leaves the headers and rows out of an empty report
+        report["dimensionHeaders"] = [{"name": d} for d in dims]
+        report["metricHeaders"] = [{"name": m, "type": _METRIC[m][1]} for m in mets]
+        report["rows"] = [
+            {
+                "dimensionValues": [{"value": v} for v in key],
+                "metricValues": [{"value": str(sums[_METRIC[m][0]])} for m in mets],
+            }
+            for key, sums in page
+        ]
+    return report
+
+
+class BadRequest(Exception):
+    """An unknown dimension or metric (Google answers 400 INVALID_ARGUMENT)."""
 
 
 @dataclass
 class GA4Sim(GoogleOAuthSim):
     accounts: dict[str, GA4Account] = field(default_factory=dict)
     properties: dict[str, GA4Property] = field(default_factory=dict)
-    report_handler: ReportHandler = _empty_report
+    report_handler: ReportHandler = traffic_report
     page_size_cap: int = 200
     # Forced failures for the next Analytics call: (HTTP status, Google status, reason).
     fail_next: list[tuple[int, str, str | None]] = field(default_factory=list)
@@ -258,7 +350,10 @@ class GA4Sim(GoogleOAuthSim):
             if day > DAY_TOKENS or hour > HOUR_TOKENS:
                 return self.failure(429, "RESOURCE_EXHAUSTED")
             self.day_used[property_id], self.hour_used[property_id] = day, hour
-            report = self.report_handler(self, property_id, one)
+            try:
+                report = self.report_handler(self, property_id, one)
+            except BadRequest:
+                return self.failure(400, "INVALID_ARGUMENT")
             if one.get("returnPropertyQuota"):
                 report = {**report, "propertyQuota": self._quota(property_id)}
             reports.append(report)

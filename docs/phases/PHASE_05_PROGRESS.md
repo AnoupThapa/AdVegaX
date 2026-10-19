@@ -8,7 +8,7 @@ Plan: `PHASE_05_PLAN.md` (approved 2026-10-19, A23, all recommendations; Q11 set
 | 5-02 Analytics model, interface, read-only rule | ✅ Done — awaiting review |
 | 5-03 Google Analytics sign-in, client, simulator | ✅ Done — awaiting review |
 | 5-04 Discovery and linking rules | ✅ Done — awaiting review |
-| 5-05 Daily import | Not started |
+| 5-05 Daily import | ✅ Done — awaiting review |
 | 5-06 Ongoing sync, quota pacing, health | Not started |
 | 5-07 Read API | Not started |
 | 5-08 Web app | Not started |
@@ -145,3 +145,44 @@ The rest of Phase 5 is built against Google's documentation and a GA4 simulator 
 **Blocked:** Step 0 (5-01) — unchanged.
 
 **Next task:** 5-05 — daily import: 13 months, monthly slices, three views, data-quality flags, exact money, property time zone.
+
+## 5-05 — Importing a property's daily figures (2026-10-19)
+
+**Completed**
+- **Linking a Google Analytics property starts its import.** AdVegaX creates the property (name, Analytics account, currency, time zone), checks it with Google, then reads **13 months of daily figures, one calendar month per step** (about 14 Google calls). Each call holds all three views:
+  - the property's **total** for each day;
+  - **by channel** (Organic Search, Paid Search, …);
+  - **by source / medium / campaign** (for example google / cpc / Spring Sale).
+- **Figures kept per day:** sessions, engaged sessions, users, new users, key events, purchases and purchase revenue — exact amounts in the property's currency, on the property's own days (a Los Angeles property ends a day later than a Sydney one).
+- **Users are never added up.** The day's users come from Google's own count for that day (11 people, even if channels show 8 + 4, because one person can arrive twice).
+- **Nothing is invented:** a value Google does not give is unknown, never 0. A day with no activity at all is a real zero in the total only.
+- **Refunds:** Google's purchase revenue is purchases minus refunds, so a day can be negative; it is stored exactly as reported (small migration 0015).
+- **Google's data-quality notes are kept on every row:** rare values grouped into "(other)", rows withheld for privacy, sampling, truncation. They will be shown on the property page (5-08).
+- **Very busy properties:** large views are read page by page; the source view keeps the 500 biggest values a day and adds the rest into one marked "(other)" row (its users are left unknown rather than added up).
+- **Each read replaces the days it covers**, so Google's late corrections never leave old numbers. Linking a property again re-reads the last 14 days.
+- **Problems in plain words, for that property only:** deleted in Google Analytics; no longer readable; currency or time zone changed in Google (recorded, figures not converted); Google's quota for the property used up → that property pauses 15 minutes and continues by itself, without using a retry, while other properties carry on.
+
+**Files changed** (19)
+- New (4): `app/domains/analytics/importer.py`, `alembic/versions/0015_analytics_refunds.py`, `tests/providers/test_google_analytics_reports.py` (15 tests), `tests/api/test_google_analytics_import.py` (13 tests).
+- Modified (15): `app/providers/google_analytics/{mapping,provider}.py`, `app/domains/analytics/models.py`, `app/domains/integrations/service.py` (link starts the import), `app/workers/job_tasks.py`, `app/core/settings.py` (`ANALYTICS_*` import settings), `tests/ga4_sim.py` (sample traffic and Google-style reports), `tests/providers/test_google_analytics_client.py`, `tests/security/test_analytics_data.py` (1 new test, 1 case changed), docs `DATABASE_SCHEMA.md`, `INTEGRATION_GUIDES.md`, this report, `PROJECT_STATUS.md`.
+- Deleted: none.
+
+**Tests**
+- **29 new.**
+- **Backend `make check`: 1,427 passed**, coverage 96 % (importer 86 %: the 3-hour and weekly branches are used from 5-06).
+- Frontend: no changes.
+
+**Security**
+- Reads only, through the read-only gate. Tokens never appear in the audit log or the logs (tested).
+- All three tables keep forced row-level security; the import runs under the property's own organization.
+
+**Migration:** `0015_analytics_refunds` drops the "revenue ≥ 0" check on `analytics_daily.purchase_revenue` only. Additive and safe; downgrade restores the check.
+
+**Deviations**
+1. **Migration 0015** (the plan named only 0014): Google's purchase revenue is net of refunds and can be negative, which 0014 refused. The security test that expected a refusal now checks a negative key-event count instead, and a new test checks negative revenue is stored.
+2. **Source and medium are read as two dimensions** (`sessionSource`, `sessionMedium`) instead of the combined `sessionSourceMedium` in the plan, so they are stored in their own columns as the data model defines.
+3. **The source view keeps 500 values a day** (setting `ANALYTICS_SOURCE_ROWS_PER_DAY`); the plan said "capped" without a number.
+
+**Blocked:** Step 0 (5-01) — unchanged.
+
+**Next task:** 5-06 — sync and health: the 3-hour, nightly (14 days) and weekly (90 days) runs, "Sync now", quota pacing from Google's remaining allowance, and the property health messages.

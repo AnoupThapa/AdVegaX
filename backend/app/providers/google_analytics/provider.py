@@ -1,5 +1,5 @@
 """Google Analytics 4 provider (Phase 5; PHASE_05_PLAN §6): sign-in and token lifecycle (5-03),
-property discovery (5-04) and daily reports (5-05).
+property discovery (5-04) and daily reports in three views (5-05).
 
 Read-only. The Google sign-in is shared with Google Ads (``providers/google``): the same
 Google Cloud OAuth client, PKCE and offline access. This connection asks only for
@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Iterator, Mapping
+from dataclasses import replace
 from datetime import date
 from typing import Any
 
@@ -19,9 +20,11 @@ from app.providers.base.capabilities import Capability, ProviderCapabilities
 from app.providers.base.errors import InvalidConnectParamsError, UnsupportedOperationError
 from app.providers.base.interfaces import Secrets
 from app.providers.base.types import (
+    AnalyticsBreakdown,
     AnalyticsDailyRecord,
     AnalyticsPropertyRef,
     AnalyticsPropertyState,
+    AnalyticsQuality,
     AuthorizationRequest,
     AuthScheme,
     ConnectResult,
@@ -48,6 +51,7 @@ logger = logging.getLogger("advegax.providers.google_analytics")
 
 ANALYTICS_SCOPE = "https://www.googleapis.com/auth/analytics.readonly"
 MAX_PROPERTIES = 500  # one properties.get each; more than any one business has
+MAX_REPORT_PAGES = 25  # 250,000 rows of one view in one slice; the rest is marked truncated
 
 
 class GoogleAnalyticsProvider:
@@ -158,13 +162,59 @@ class GoogleAnalyticsProvider:
         return state
 
     def read_daily(
-        self,
-        secrets: Secrets,  # noqa: ARG002
-        prop: AnalyticsPropertyRef,  # noqa: ARG002
-        first_day: date,  # noqa: ARG002
-        last_day: date,  # noqa: ARG002
+        self, secrets: Secrets, prop: AnalyticsPropertyRef, first_day: date, last_day: date
     ) -> Iterator[AnalyticsDailyRecord]:
-        raise UnsupportedOperationError()  # task 5-05
+        """The three daily views of ``first_day`` … ``last_day`` (property time zone): one
+        ``batchRunReports`` call holding all three, then ``runReport`` with ``offset`` for any
+        view with more rows than a page, at most ``MAX_REPORT_PAGES`` pages a view (the rest is
+        marked as truncated, never guessed)."""
+        if first_day > last_day:
+            raise ValueError("first_day must not be after last_day")
+        pid, token = valid_property_id(prop.external_id), _token(secrets)
+        views = list(mapping.VIEW_DIMENSIONS)
+        reports = self.analytics.batch_run_reports(
+            token, pid, [mapping.report_request(v, first_day, last_day) for v in views]
+        )
+        skipped = 0
+        for view, report in zip(views, reports, strict=True):
+            page = _parsed(view, report, first_day, last_day)
+            records, quality, total, seen = (
+                page.records,
+                page.quality,
+                page.row_count,
+                page.rows_seen,
+            )
+            skipped += page.skipped
+            pages = 1
+            while seen < total and pages < MAX_REPORT_PAGES:
+                request = mapping.report_request(view, first_day, last_day, offset=seen)
+                more = _parsed(
+                    view, self.analytics.run_report(token, pid, request), first_day, last_day
+                )
+                if more.rows_seen == 0:
+                    break  # Google said there were more rows but sent none: stop, mark it
+                records += more.records
+                quality = mapping.merge_quality(quality, more.quality)
+                seen, pages, skipped = seen + more.rows_seen, pages + 1, skipped + more.skipped
+            if seen < total:
+                quality = mapping.merge_quality(quality, AnalyticsQuality(truncated=True))
+                logger.warning(
+                    "google_analytics_report_truncated",
+                    extra={"view": view.value, "rows": seen, "row_count": total},
+                )
+            for record in records:
+                yield replace(record, quality=mapping.merge_quality(record.quality, quality))
+        if skipped:
+            logger.warning("google_analytics_rows_skipped", extra={"count": skipped})
+
+
+def _parsed(
+    view: AnalyticsBreakdown, report: dict[str, Any], first: date, last: date
+) -> mapping.ParsedReport:
+    parsed = mapping.parse_report(view, report, first, last)
+    if parsed is None:
+        raise UnexpectedResponseError()
+    return parsed
 
 
 def _token(secrets: Secrets) -> str:
