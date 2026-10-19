@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import json
 import re
-from collections.abc import Callable, Iterator
+from collections.abc import Iterator
 from typing import Any
 
 from app.providers.base.errors import (
@@ -25,18 +25,31 @@ from app.providers.base.errors import (
     InvalidRequestError,
     PermissionDeniedError,
     PlatformQuotaError,
-    RateLimitedError,
     ResourceNotFoundError,
     ResourceUnavailableError,
     RetryableError,
 )
-from app.providers.http.client import SafeHttpClient, SafeResponse
+from app.providers.google.oauth import (  # shared with Google Analytics (Phase 5)
+    AUTHORIZE_URL,
+    REVOKE_URL,
+    TOKEN_URL,
+    GoogleSignIn,
+    HttpFactory,
+    SignInRejectedError,
+    UnexpectedResponseError,
+)
+from app.providers.http.client import SafeResponse
 
-HttpFactory = Callable[[], SafeHttpClient]
+__all__ = [
+    "AUTHORIZE_URL",
+    "REVOKE_URL",
+    "TOKEN_URL",
+    "GoogleSignIn",
+    "HttpFactory",
+    "SignInRejectedError",
+    "UnexpectedResponseError",
+]
 
-AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth"  # opened by the browser only
-TOKEN_URL = "https://oauth2.googleapis.com/token"  # noqa: S105 - an endpoint, not a secret
-REVOKE_URL = "https://oauth2.googleapis.com/revoke"
 ADS_BASE = "https://googleads.googleapis.com"
 
 _CUSTOMER_ID = re.compile(r"^[0-9]{1,20}$")
@@ -44,12 +57,6 @@ MAX_PAGES = 1000  # 10,000 rows a page: a runaway answer stops at 10 million row
 
 
 # ------------------------------------------------------------------ plain error codes
-class SignInRejectedError(AuthExpiredError):
-    """Google refused the sign-in grant (revoked, expired, or a testing-mode limit)."""
-
-    code = "google_sign_in_rejected"
-
-
 class NoAccountAccessError(ResourceUnavailableError):
     code = "no_account_access"
 
@@ -84,10 +91,6 @@ class QuotaExhaustedError(PlatformQuotaError):
 
 class BadQueryError(InvalidRequestError):
     code = "bad_query"
-
-
-class UnexpectedResponseError(RetryableError):
-    code = "unexpected_response"
 
 
 # Google Ads error values (``errorCode`` entries of a GoogleAdsFailure) → plain codes.
@@ -185,62 +188,6 @@ def raise_for_ads(response: SafeResponse) -> None:
     if status >= 500:
         raise RetryableError("server_error")
     raise InvalidRequestError()
-
-
-class GoogleSignIn:
-    """The token and revocation endpoints of Google's OAuth 2.0 server."""
-
-    def __init__(self, http_factory: HttpFactory) -> None:
-        self._http_factory = http_factory
-
-    def token(self, data: dict[str, str]) -> dict[str, Any]:
-        """``POST /token`` (code exchange or refresh). A refused grant → ``SignInRejected``."""
-        client = self._http_factory()
-        try:
-            response = client.request(
-                "POST",
-                TOKEN_URL,
-                data=data,
-                headers={"Accept": "application/json"},
-                follow_redirects=False,
-            )
-        finally:
-            client.close()
-        if response.status_code in (400, 401):
-            body = _json(response) if response.content else {}
-            error = body.get("error") if isinstance(body, dict) else None
-            if error in ("invalid_grant", "unauthorized_client", "invalid_client"):
-                raise SignInRejectedError()
-            raise InvalidRequestError()
-        if response.status_code == 429:
-            raise RateLimitedError()
-        if response.status_code >= 500:
-            raise RetryableError("server_error")
-        if response.status_code != 200:
-            raise InvalidRequestError()
-        body = _json(response)
-        if not isinstance(body, dict):
-            raise UnexpectedResponseError()
-        return body
-
-    def revoke(self, token: str) -> None:
-        """``POST /revoke``. A token Google no longer knows counts as revoked."""
-        client = self._http_factory()
-        try:
-            response = client.request(
-                "POST",
-                REVOKE_URL,
-                data={"token": token},
-                headers={"Accept": "application/json"},
-                follow_redirects=False,
-            )
-        finally:
-            client.close()
-        if response.status_code == 200 or response.status_code == 400:
-            return  # 400 = invalid_token: already revoked or expired
-        if response.status_code >= 500 or response.status_code == 429:
-            raise RetryableError("server_error")
-        raise InvalidRequestError()
 
 
 class GoogleAdsClient:

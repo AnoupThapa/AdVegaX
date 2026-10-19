@@ -93,7 +93,7 @@ def test_core_domains_do_not_import_platform_specific_code():
 # Google Ads REST methods are written as ``…/customers/{id}/googleAds:search``; every ``:verb``
 # a provider names must be one of these reads. Any change to an ad account goes only through
 # the Action Engine (Phase 10A), which does not exist yet.
-ADVERTISING_PROVIDER_DIRS = ("google_ads", "meta_ads")
+ADVERTISING_PROVIDER_DIRS = ("google", "google_ads", "meta_ads")  # google: shared sign-in
 ALLOWED_AD_METHODS = {"listAccessibleCustomers", "search", "searchStream"}
 _AD_METHOD = re.compile(r"""[\w}]:([a-zA-Z]+)\b""")
 _AD_WRITE_WORDS = re.compile(r"mutate|:upload|:apply|:remove|:create|:update", re.IGNORECASE)
@@ -177,7 +177,7 @@ def test_meta_never_asks_for_write_permissions():
 # provider names must be a report read. Property discovery is plain GET (``accountSummaries``,
 # ``properties/{id}``). ``analytics.edit`` and the full ``analytics`` permission are never
 # requested, and no request uses PATCH, PUT or DELETE.
-ANALYTICS_PROVIDER_DIRS = ("google_analytics",)
+ANALYTICS_PROVIDER_DIRS = ("google", "google_analytics")  # google: shared sign-in
 ALLOWED_ANALYTICS_METHODS = {"runReport", "batchRunReports"}
 _ANALYTICS_METHOD = re.compile(r"""[\w}"']:([a-zA-Z]+)\b""")
 _ANALYTICS_WRITES = re.compile(
@@ -243,3 +243,15 @@ def test_analytics_providers_declare_no_write_capability():
         if rel.split("/")[1] in ANALYTICS_PROVIDER_DIRS:
             src = path.read_text(encoding="utf-8")
             assert not any(f"Capability.{c.name}" in src for c in writes), rel
+
+
+def test_google_analytics_requests_all_pass_the_read_only_guard():
+    folder = APP / "providers" / "google_analytics"
+    sources = {p.name: p.read_text(encoding="utf-8") for p in folder.rglob("*.py")}
+    calls = {name: src.count(".request(") for name, src in sources.items() if ".request(" in src}
+    assert calls == {"client.py": 1}
+    client = sources["client.py"]
+    send = client[client.index("    def _send(") :]
+    send = send[: send.index("\n    def ", 10)]
+    assert "_allowed(host, method, path" in send
+    assert send.index("_allowed(") < send.index(".request(")

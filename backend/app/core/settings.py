@@ -182,6 +182,15 @@ class Settings(BaseSettings):
     META_LOGIN_CONFIG_ID: str | None = Field(default=None, pattern=r"^[0-9]{5,20}$")
     META_API_VERSION: str = Field(default="v26.0", pattern=r"^v[0-9]{2,3}\.0$")  # Q-4-1
 
+    # --- Google Analytics 4 (Phase 5, read-only; PHASE_05_PLAN) -------------------------
+    # Offered only when switched on AND the Google Cloud OAuth client is configured. It is
+    # the **same** OAuth client as Google Ads (GOOGLE_ADS_CLIENT_ID / _SECRET, Q-5-2): one
+    # consent screen and one verification; each product is still its own connection with its
+    # own permission (``analytics.readonly``). No developer token is needed.
+    GOOGLE_ANALYTICS_ENABLED: bool = False
+    # Data API and Admin API version (Q-5-1): the stable ``v1beta``; alpha is never used.
+    GOOGLE_ANALYTICS_API_VERSION: str = Field(default="v1beta", pattern=r"^v1(beta)?$")
+
     # --- Advertising import (Phase 3; PHASE_03_PLAN §9) ---------------------------------
     ADS_HISTORY_WINDOW: timedelta = timedelta(days=395)  # 13 months on first link (Q-3-6)
     # Ongoing sync (Q-3-5, task 3-07): every 3 hours structure + today and yesterday; nightly

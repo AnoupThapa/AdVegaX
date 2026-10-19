@@ -60,7 +60,37 @@ def build_registry(
         registry.register(build_google_ads(settings, clock or SystemClock(), outbound))
     if meta_ads_configured(settings) and outbound is not None:
         registry.register(build_meta_ads(settings, clock or SystemClock(), outbound))
+    if google_analytics_configured(settings) and outbound is not None:
+        registry.register(build_google_analytics(settings, clock or SystemClock(), outbound))
     return registry
+
+
+def google_analytics_configured(settings: Settings) -> bool:
+    """GA4 uses the Google Ads OAuth client (Q-5-2) but no developer token."""
+    return bool(
+        settings.GOOGLE_ANALYTICS_ENABLED
+        and settings.GOOGLE_ADS_CLIENT_ID
+        and settings.GOOGLE_ADS_CLIENT_SECRET is not None
+    )
+
+
+def build_google_analytics(
+    settings: Settings, clock: Clock, outbound: OutboundPolicy
+) -> PlatformProvider:
+    """Google Analytics 4, read-only (Phase 5): fixed Google hosts through the SSRF-safe
+    client."""
+    from app.providers.google_analytics.provider import GoogleAnalyticsProvider
+    from app.providers.http.client import SafeHttpClient
+
+    assert settings.GOOGLE_ADS_CLIENT_ID is not None
+    assert settings.GOOGLE_ADS_CLIENT_SECRET is not None
+    return GoogleAnalyticsProvider(
+        client_id=settings.GOOGLE_ADS_CLIENT_ID,
+        client_secret=settings.GOOGLE_ADS_CLIENT_SECRET.get_secret_value(),
+        api_version=settings.GOOGLE_ANALYTICS_API_VERSION,
+        http_factory=lambda: SafeHttpClient(outbound),
+        clock=clock,
+    )
 
 
 def meta_ads_configured(settings: Settings) -> bool:

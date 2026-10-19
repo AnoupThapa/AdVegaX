@@ -162,6 +162,11 @@ Tests: `tests/providers/test_woocommerce_client.py` (74 cases: addresses, auth, 
 - **Read-only by construction:** a static test allows only three Google Ads read methods in advertising providers, and refuses any write capability.
 - Disconnect revokes the token at Google and always deletes our copy, even if Google cannot be reached.
 
+### Google Analytics sign-in (Phase 5)
+- The Google sign-in code is shared with Google Ads (one hardened implementation: PKCE, offline access, ID-token checks, refresh, revocation). The connection asks only for `analytics.readonly` and `openid`; the edit permission is never requested (static test).
+- Every request passes one read-only gate (discovery reads and the report methods only; static test). The token is sent in the `Authorization` header only; property ids are checked before they enter an address.
+- Only Google's stable account id is kept, to recognise a reconnect. Reports are aggregates: no user ids, client ids, IP addresses or demographics are requested.
+
 ### Meta sign-in (Phase 4)
 - Facebook Login for Business with a configuration id (`ads_read`, `business_management`), PKCE (S256) and single-use state; the code is exchanged on the server for a long-lived token (about 60 days).
 - **Secrets never in an address:** the token travels in the `Authorization` header and the app secret only in the body of the token exchange. Every Graph call carries `appsecret_proof` (HMAC-SHA256 of the token with the app secret). Meta's `debug_token` is not used, because it carries the token in the URL; the person and the permissions come from `/me` and `/me/permissions`.

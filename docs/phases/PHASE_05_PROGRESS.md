@@ -6,7 +6,7 @@ Plan: `PHASE_05_PLAN.md` (approved 2026-10-19, A23, all recommendations; Q11 set
 |---|---|
 | 5-01 Step 0 on the demo property and one of your properties | ⏸ Waiting — needs the Google OAuth client (with the Analytics APIs enabled) and network access to Google's Analytics APIs (Q-5-9, option C) |
 | 5-02 Analytics model, interface, read-only rule | ✅ Done — awaiting review |
-| 5-03 Google Analytics sign-in, client, simulator | Not started |
+| 5-03 Google Analytics sign-in, client, simulator | ✅ Done — awaiting review |
 | 5-04 Discovery and linking rules | Not started |
 | 5-05 Daily import | Not started |
 | 5-06 Ongoing sync, quota pacing, health | Not started |
@@ -66,4 +66,51 @@ The rest of Phase 5 is built against Google's documentation and a GA4 simulator 
 **Blocked:** Step 0 (5-01): needs the Google OAuth client with the Analytics APIs enabled, and network access to Google's Analytics APIs.
 
 **Next task:** 5-03 — the Google Analytics sign-in (shared with the Google Ads sign-in code), the Admin and Data API client (quota, errors, paging), and the GA4 simulator.
+
+## 5-03 — Google Analytics sign-in, API client and simulator (2026-10-19)
+
+**Completed**
+- **One Google sign-in for both Google products.** The Google sign-in code from Phase 3 now lives in one shared place (`providers/google`): PKCE, offline access, the account-id check, refresh before expiry and revocation on disconnect. Google Ads uses it unchanged (all 225 Google Ads tests pass), and Google Analytics uses the same code with its own permission.
+- **Google Analytics connection:** "Connect Google Analytics" asks only for `analytics.readonly` (plus Google's account id). It uses the same Google Cloud OAuth client as Google Ads and needs no developer token.
+  - The same Google account connected to Google Ads and to Google Analytics is **two separate connections**; disconnecting one leaves the other working (tested).
+  - A refused refresh shows "Needs reconnecting"; reconnecting with the same Google account reuses the connection.
+  - The sign-in renews itself, so no end date is shown (unlike Meta).
+- **GA4 API client** with a **read-only gate**: every request passes one check that allows only the discovery reads (account summaries, one property, metadata) and the report methods (`runReport`, `batchRunReports`). Anything else (editing a property, access reports, realtime, alpha versions, other hosts) is refused before it is sent. A static test checks the gate is the only way out.
+- **Google's errors in plain codes:**
+  - sign-in rejected → "Needs reconnecting";
+  - the Analytics APIs are not enabled in the Google Cloud project → a set-up problem;
+  - the permission is missing;
+  - no access to a property;
+  - a property's quota is used up → only that property waits;
+  - a bad request; Google's temporary errors are retried.
+
+  Google's own messages never travel on.
+- **Quota:** every report asks Google for the property's remaining allowance (per day, per hour, per project per hour), and the client keeps the latest figures for pacing in 5-06.
+- **GA4 simulator** for tests, which:
+  - shares the Google sign-in with the Google Ads simulator;
+  - offers account summaries with paging, a property's details (a property in the bin is marked), and batch reports with Google's quota block;
+  - refuses unknown or expired tokens, a missing permission, a project without the APIs enabled, and tokens in addresses.
+
+**Files changed** (20)
+- New (9): `app/providers/google/{__init__,oauth}.py`, `app/providers/google_analytics/{__init__,client,provider}.py`, `tests/google_oauth_sim.py`, `tests/ga4_sim.py`, `tests/providers/test_google_analytics_client.py` (50 tests), `tests/api/test_google_analytics_connect.py` (12 tests).
+- Modified (11): `app/providers/google_ads/{client,provider}.py` (now use the shared sign-in; their old names still work), `app/core/settings.py` (`GOOGLE_ANALYTICS_ENABLED`, `GOOGLE_ANALYTICS_API_VERSION`), `app/providers/base/registry.py`, `tests/google_ads_sim.py` (sign-in moved to the shared simulator), `tests/security/test_static_rules.py` (1 new rule; the shared folder is checked by both read-only rules), `.env.example`, docs `INTEGRATION_GUIDES.md`, `SECURITY.md`, this report and `PROJECT_STATUS.md`.
+- Deleted: none. No migration.
+
+**Tests**
+- **63 new.**
+- **Backend `make check`: 1,384 passed**, coverage 97 % (GA4 client 99 %, provider 100 %, shared sign-in 99 %).
+- **Frontend:** no changes (Google Analytics is off by default; its wording comes in 5-08).
+
+**Security**
+- The edit permission is never requested. The read-only rule is strict enough that it flagged a docstring naming it, which was reworded.
+- The token travels only in the `Authorization` header (tested on every request); property ids are checked before they enter an address.
+- No token or the client secret appears in responses, the audit log or the logs (tested).
+
+**Deviations**
+1. **The shared OAuth client keeps its Google Ads setting names** (`GOOGLE_ADS_CLIENT_ID` / `_SECRET`) so nothing already set up changes; the settings and `.env.example` say it is shared.
+2. **In the simulator, a refresh now returns the permissions granted at sign-in** (it used to return the Google Ads permission every time). Google Ads tests are unaffected.
+
+**Blocked:** Step 0 (5-01): needs the Analytics APIs enabled in the Google Cloud project, a Google account with access to a GA4 property, and network access to Google's Analytics APIs.
+
+**Next task:** 5-04: finding properties by Analytics account (account summaries, each property's currency and time zone), the reasons a property cannot be linked, and linking.
 

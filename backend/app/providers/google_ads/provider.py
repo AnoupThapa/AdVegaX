@@ -15,23 +15,18 @@ checked. Discovery, structure and performance follow in tasks 3-04 … 3-06.
 
 from __future__ import annotations
 
-import base64
-import json
 import logging
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 from datetime import date
 from typing import Any
-from urllib.parse import urlencode
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from app.core.clock import Clock
 from app.providers.base.capabilities import Capability, ProviderCapabilities
 from app.providers.base.errors import (
-    AuthExpiredError,
     InvalidConnectParamsError,
     InvalidRequestError,
-    MissingScopesError,
     UnsupportedOperationError,
 )
 from app.providers.base.interfaces import Secrets
@@ -51,17 +46,15 @@ from app.providers.base.types import (
     SyncSummary,
     WebhookDelivery,
 )
+from app.providers.google.oauth import GoogleOAuth
 from app.providers.google_ads import mapping, queries
 from app.providers.google_ads.client import (
-    AUTHORIZE_URL,
     AccountNotEnabledError,
     DeveloperTokenNotApprovedError,
     GoogleAdsClient,
-    GoogleSignIn,
     HttpFactory,
     NoAccountAccessError,
     NotAdsUserError,
-    SignInRejectedError,
     UnexpectedResponseError,
     valid_customer_id,
 )
@@ -71,7 +64,6 @@ logger = logging.getLogger("advegax.providers.google_ads")
 
 ADS_SCOPE = "https://www.googleapis.com/auth/adwords"
 SCOPES = (ADS_SCOPE, "openid")
-ISSUERS = frozenset({"accounts.google.com", "https://accounts.google.com"})
 # Discovery limits: each manager read costs one operation of the shared daily allowance.
 MAX_DIRECT_ACCOUNTS = 500
 MAX_MANAGERS = 200
@@ -184,9 +176,16 @@ class GoogleAdsProvider:
             raise ValueError("Google Ads needs a client id, client secret and developer token")
         self._client_id = client_id
         self.shared_daily_operations = daily_operations
-        self._client_secret = client_secret
         self._clock = clock
-        self._sign_in = GoogleSignIn(http_factory)
+        self._oauth = GoogleOAuth(
+            client_id=client_id,
+            client_secret=client_secret,
+            http_factory=http_factory,
+            clock=clock,
+            product_scope=ADS_SCOPE,
+            label="Google Ads",
+        )
+        self._sign_in = self._oauth.sign_in
         self.ads = GoogleAdsClient(http_factory, api_version, developer_token)
 
     # ------------------------------------------------------------------ connect
@@ -196,21 +195,7 @@ class GoogleAdsProvider:
         return PreparedConnect()
 
     def authorization_url(self, request: AuthorizationRequest) -> str:
-        if not request.code_challenge:
-            raise InvalidRequestError()  # PKCE is required for this provider
-        query = {
-            "client_id": self._client_id,
-            "redirect_uri": request.redirect_uri,
-            "response_type": "code",
-            "scope": " ".join(SCOPES),
-            "access_type": "offline",  # a refresh token, for syncs while the person is away
-            "prompt": "consent",  # a reconnect gets a new refresh token (to confirm live)
-            "include_granted_scopes": "false",  # GA4 (Phase 5) is a separate grant
-            "state": request.state,
-            "code_challenge": request.code_challenge,
-            "code_challenge_method": "S256",
-        }
-        return f"{AUTHORIZE_URL}?{urlencode(query)}"
+        return self._oauth.authorization_url(request)
 
     def complete_authorization(
         self,
@@ -220,102 +205,23 @@ class GoogleAdsProvider:
         code_verifier: str | None,
         provider_params: Mapping[str, str],  # noqa: ARG002 - nothing is typed for Google
     ) -> ConnectResult:
-        code = params.get("code", "")
-        if not code or len(code) > 1024 or not code_verifier:
-            raise InvalidRequestError()
-        # Granular consent: a person may untick Google Ads on the consent screen.
-        if ADS_SCOPE not in params.get("scope", "").split():
-            raise MissingScopesError()
-        token = self._sign_in.token(
-            {
-                "code": code,
-                "client_id": self._client_id,
-                "client_secret": self._client_secret,
-                "redirect_uri": redirect_uri,
-                "grant_type": "authorization_code",
-                "code_verifier": code_verifier,
-            }
-        )
-        access, refresh = token.get("access_token"), token.get("refresh_token")
-        if not isinstance(access, str) or not access or not isinstance(refresh, str) or not refresh:
-            raise InvalidRequestError()
-        granted = tuple(sorted(str(token.get("scope", "")).split()))
-        if ADS_SCOPE not in granted:
-            raise MissingScopesError()
-        subject = self._subject(token.get("id_token"))
-        return ConnectResult(
-            secrets={"access_token": access, "refresh_token": refresh},
-            granted_scopes=granted,
-            account_label="Google Ads",
-            token_expires_in_seconds=_positive_int(token.get("expires_in")),
-            refresh_expires_in_seconds=_positive_int(token.get("refresh_token_expires_in")),
-            external_account_id=subject,
-            account_per_organization=True,  # the same Google sign-in may serve two (Q-3-11)
-        )
+        return self._oauth.complete(params, redirect_uri=redirect_uri, code_verifier=code_verifier)
 
     def _subject(self, id_token: Any) -> str:
-        """The stable Google account id from the ID token (claims only; see module doc)."""
-        if not isinstance(id_token, str) or id_token.count(".") != 2 or len(id_token) > 8192:
-            raise InvalidRequestError()
-        payload = id_token.split(".")[1]
-        try:
-            claims = json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))
-        except (ValueError, UnicodeDecodeError):
-            raise InvalidRequestError() from None
-        if not isinstance(claims, dict):
-            raise InvalidRequestError()
-        subject, expires = claims.get("sub"), claims.get("exp")
-        if (
-            claims.get("iss") not in ISSUERS
-            or claims.get("aud") != self._client_id
-            or not isinstance(expires, int | float)
-            or expires < self._clock.now().timestamp()
-            or not isinstance(subject, str)
-            or not subject.isdigit()
-            or len(subject) > 64
-        ):
-            raise InvalidRequestError()
-        return subject
+        """The stable Google account id from the ID token (shared Google sign-in)."""
+        return self._oauth.subject(id_token)
 
     def verify_install(self, params: Mapping[str, str]) -> str:  # noqa: ARG002
         raise UnsupportedOperationError()
 
     # ------------------------------------------------------------------ token lifecycle
     def refresh_credentials(self, secrets: Secrets) -> ConnectResult:
-        """A new access token from the refresh token. Google usually keeps the same refresh
-        token; when it sends a new one, that one is saved."""
-        refresh = secrets.get("refresh_token")
-        if not isinstance(refresh, str) or not refresh:
-            raise AuthExpiredError("refresh_unavailable")
-        try:
-            token = self._sign_in.token(
-                {
-                    "client_id": self._client_id,
-                    "client_secret": self._client_secret,
-                    "grant_type": "refresh_token",
-                    "refresh_token": refresh,
-                }
-            )
-        except InvalidRequestError:
-            raise SignInRejectedError() from None
-        access = token.get("access_token")
-        if not isinstance(access, str) or not access:
-            raise SignInRejectedError()
-        new_refresh = token.get("refresh_token")
-        kept = new_refresh if isinstance(new_refresh, str) and new_refresh else refresh
-        return ConnectResult(
-            secrets={"access_token": access, "refresh_token": kept},
-            granted_scopes=tuple(sorted(str(token.get("scope", "")).split())),
-            account_label="Google Ads",
-            token_expires_in_seconds=_positive_int(token.get("expires_in")),
-            refresh_expires_in_seconds=_positive_int(token.get("refresh_token_expires_in")),
-        )
+        """A new access token from the refresh token (shared Google sign-in)."""
+        return self._oauth.refresh(secrets)
 
     def revoke(self, secrets: Secrets) -> None:
         """Disconnect: revoking the refresh token at Google also ends its access tokens."""
-        token = secrets.get("refresh_token") or secrets.get("access_token")
-        if isinstance(token, str) and token:
-            self._sign_in.revoke(token)
+        self._oauth.revoke(secrets)
 
     # ------------------------------------------------------------------ not used by Google Ads
     def parse_webhook(self, headers: Mapping[str, str], body: bytes) -> WebhookDelivery:  # noqa: ARG002
