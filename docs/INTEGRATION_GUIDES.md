@@ -210,6 +210,7 @@ Add one section per provider when its phase is implemented.
 
   To confirm live (Step 0 item 4).
 - **Usage headers:** `x-fb-ads-insights-throttle`, `x-app-usage` and `x-business-use-case-usage` are read on every answer (highest percentage, regain estimate, access tier) for pacing in 4-06.
+- **Discovery (4-03):** `GET /me/adaccounts` with `id,name,currency,timezone_name,account_status,business{id,name}`, 200 a page, following the `after` cursor (at most 5,000 accounts). Accounts are grouped by the business that owns them (`group_path` = business name; none for a personal account). `account_status` → reason shown before linking: 1, 9, 201 usable; 2 → `account_not_enabled` (disabled); 3, 8 → `account_unsettled` (unpaid balance); 7 → `account_under_review`; 100, 101, 202 and any unknown value → `account_not_enabled`. A missing or unreadable currency or time zone → `account_details_missing`. Rows without an `act_<digits>` id are skipped and counted. Linking reads the account with `GET /act_<id>` (same fields); an account the person can no longer reach is `no_account_access`. *To confirm live (Step 0 item 2): whether `me/adaccounts` includes every account reached through a business.*
 - **Disconnect:** `DELETE /me/permissions`, then our copy of the token is deleted (also when Meta cannot be reached).
 
 ### Fake provider (`fake`) — test/local only

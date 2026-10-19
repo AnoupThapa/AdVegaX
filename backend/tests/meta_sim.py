@@ -8,6 +8,8 @@ resolver returns a public address; the transport is ``httpx.MockTransport``):
 * ``POST /oauth/access_token``: code exchange (PKCE verifier and app secret checked) and the
   long-lived exchange (``fb_exchange_token``, about 60 days);
 * ``GET /me``, ``GET /me/permissions`` and ``DELETE /me/permissions``;
+* ``GET /me/adaccounts`` (``limit`` / ``after`` cursor paging) and ``GET /act_<id>`` for the
+  ad accounts a user can reach (task 4-03);
 * every other call: the token must be known and unexpired and ``appsecret_proof`` must match;
   errors use Meta's ``{"error": {"code", "error_subcode", "type", "message"}}`` shape; usage
   headers can be set per answer.
@@ -22,6 +24,7 @@ import base64
 import hashlib
 import hmac
 import json
+import re
 import secrets
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -55,6 +58,31 @@ class MetaUser:
 
 
 @dataclass
+class AdAccount:
+    id: str  # "act_123"
+    name: str = "Shop account"
+    currency: str | None = "EUR"
+    timezone_name: str | None = "Europe/Berlin"
+    account_status: int = 1
+    business: tuple[str, str] | None = ("555000111", "Eve Zone Business")
+    users: set[str] = field(default_factory=set)
+
+    def row(self) -> dict[str, Any]:
+        row: dict[str, Any] = {
+            "id": self.id,
+            "name": self.name,
+            "account_status": self.account_status,
+        }
+        if self.currency is not None:
+            row["currency"] = self.currency
+        if self.timezone_name is not None:
+            row["timezone_name"] = self.timezone_name
+        if self.business is not None:
+            row["business"] = {"id": self.business[0], "name": self.business[1]}
+        return row
+
+
+@dataclass
 class MetaSim:
     clock: Clock
     users: dict[str, MetaUser] = field(default_factory=dict)
@@ -66,6 +94,8 @@ class MetaSim:
     fail_next: list[tuple[int, int, int | None]] = field(default_factory=list)
     usage_headers: dict[str, str] = field(default_factory=dict)
     token_expiry_seconds: int = LONG_LIVED_SECONDS
+    accounts: dict[str, AdAccount] = field(default_factory=dict)
+    extra_rows: list[dict[str, Any]] = field(default_factory=list)  # odd rows for skip tests
     _codes: dict[str, dict[str, str]] = field(default_factory=dict)
     issued: int = 0
 
@@ -74,6 +104,11 @@ class MetaSim:
         user = MetaUser(user_id, list(granted) if granted else ["ads_read", "business_management"])
         self.users[user_id] = user
         return user
+
+    def add_account(self, account_id: str, *users: str, **fields: Any) -> AdAccount:
+        account = AdAccount(account_id, users=set(users), **fields)
+        self.accounts[account_id] = account
+        return account
 
     def calls(self, part: str) -> list[httpx.Request]:
         return [r for r in self.requests if part in r.url.path]
@@ -176,9 +211,29 @@ class MetaSim:
             rows += [{"permission": p, "status": "declined"} for p in user.declined]
             return httpx.Response(200, json={"data": rows})
         handler = self.routes.get(f"{request.method} {route}")
-        if handler is None:
-            return self.error(400, 100)
-        return handler(self, request, user_id)
+        if handler is not None:
+            return handler(self, request, user_id)
+        if route == "/me/adaccounts" and request.method == "GET":
+            return self._ad_accounts(query, user_id)
+        if request.method == "GET" and re.fullmatch(r"/act_[0-9]+", route):
+            account = self.accounts.get(route[1:])
+            if account is None or user_id not in account.users:
+                return self.error(400, 100, 33)
+            return httpx.Response(200, json=account.row())
+        return self.error(400, 100)
+
+    def _ad_accounts(self, query: dict[str, str], user_id: str) -> httpx.Response:
+        rows = [a.row() for a in self.accounts.values() if user_id in a.users] + self.extra_rows
+        limit = int(query.get("limit", "25"))
+        start = int(query["after"].removeprefix("cur")) if "after" in query else 0
+        page = rows[start : start + limit]
+        body: dict[str, Any] = {"data": page}
+        if start + limit < len(rows):
+            body["paging"] = {
+                "cursors": {"before": f"cur{start}", "after": f"cur{start + limit}"},
+                "next": "https://graph.facebook.com/v26.0/me/adaccounts?after=elided",
+            }
+        return httpx.Response(200, json=body)
 
     def _exchange(self, request: httpx.Request) -> httpx.Response:
         if request.url.query:

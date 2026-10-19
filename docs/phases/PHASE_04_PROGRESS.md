@@ -6,7 +6,7 @@ Plan: `PHASE_04_PLAN.md` (approved 2026-10-18, A22, all recommendations). One re
 |---|---|
 | 4-01 Step 0 on the sandbox and one real account | ⏸ Waiting — needs the Meta app, a sandbox ad account and network access to Meta's API (Q-4-10, option C) |
 | 4-02 Meta sign-in, Graph client, simulator, read-only guard | ✅ Done — awaiting review |
-| 4-03 Discovery and linking rules | Not started |
+| 4-03 Discovery and linking rules | ✅ Done — awaiting review |
 | 4-04 Structure import | Not started |
 | 4-05 Insights import | Not started |
 | 4-06 Ongoing sync, rate limits, token expiry | Not started |
@@ -77,4 +77,42 @@ Until then, work follows option C: build against Meta's documentation and a simu
 - the person's ad accounts, grouped by the business that owns them;
 - status, currency and time zone;
 - which accounts cannot be linked, and why.
+
+## 4-03 — Discovery and linking rules (2026-10-19)
+
+**Completed**
+- **Finding ad accounts:** after connecting, AdVegaX lists every ad account the person can use (Meta's `me/adaccounts`), page by page with Meta's cursor, up to 5,000 accounts.
+- **Each account shows** its name, currency, time zone and the business that owns it ("grouped by business"; a personal account has no group). The same account listed twice appears once.
+- **Accounts that cannot be linked are still listed, with a plain reason:**
+  - disabled, closed, closing, or a status AdVegaX does not recognise → "not enabled";
+  - an unpaid balance → `account_unsettled` (new reason);
+  - under Meta's review → `account_under_review` (new reason);
+  - missing or unreadable currency or time zone → "details missing".
+  - Linking one of these is refused (409 `RESOURCE_UNAVAILABLE` with the reason).
+- **Linking** reads the account once (`GET /act_<id>`), checks that Meta answered about the same account, and creates the ad account with its currency and time zone. An account the person can no longer reach gives `no_account_access`.
+- **Rediscovery** updates reasons and businesses and keeps existing links; a token Meta no longer accepts marks the connection "Needs reconnecting".
+- Rows AdVegaX cannot read are skipped and counted in the logs, never guessed.
+
+**Files changed** (7)
+- New (2): `app/providers/meta_ads/mapping.py`, `tests/api/test_meta_ads_discovery.py` (22 tests).
+- Modified (5): `app/providers/meta_ads/provider.py`, `tests/meta_sim.py` (ad accounts, `me/adaccounts` paging, `GET /act_<id>`), `tests/providers/test_meta_ads_client.py` (6 new tests; the 4-02 placeholder test now expects a token), `docs/INTEGRATION_GUIDES.md`, this report.
+- Deleted: none. No migration.
+
+**Tests**
+- **28 new.**
+- **Backend `make check`: 1,190 passed**, coverage 97 % (Meta mapping 100 %, provider 99 %).
+- **Frontend `npm run check`: 358 passed** (unchanged).
+
+**Security**
+- Account ids are checked (`act_<digits>`) before they enter any address; the token stays in the header (the tests check the address).
+- Only ad-account fields are requested; no people, pages or payment details.
+- Tenant isolation unchanged: discovered accounts belong to the connection's organization.
+
+**Deviations**
+1. **Linking a Meta account now starts the import, which stops with `unsupported`** until campaigns are read (4-04). Expected; nothing is shown as 0.
+2. **The web app does not yet have words for the two new reasons** (`account_unsettled`, `account_under_review`); they are added with the other Meta wording in 4-07, as planned.
+
+**Blocked:** Step 0 (4-01): needs the Meta app, a sandbox ad account and network access to Meta.
+
+**Next task:** 4-04 — structure import: campaigns, ad sets and ads (including archived and deleted), with budgets converted using each currency's offset.
 

@@ -2,7 +2,7 @@
 
 The read-only guard, ``appsecret_proof`` on every call, no token or secret in any address,
 Meta's ``after`` cursor (never its ``next`` URL), Meta's error codes as plain codes, usage
-headers, and the ``debug_token`` checks.
+headers, the sign-in checks, and reading one ad account (task 4-03).
 """
 
 from __future__ import annotations
@@ -430,13 +430,15 @@ def test_operations_not_used_by_meta_or_not_built_yet(provider):
 
     from app.providers.base.types import AdAccountRef, AdLevel, ResourceDescriptor
 
-    assert provider.discover_resources({}) == []  # task 4-03
+    with pytest.raises(MetaSignInRejectedError):  # discovery needs a token (task 4-03)
+        provider.discover_resources({})
+    with pytest.raises(MetaSignInRejectedError):
+        provider.read_account({}, AdAccountRef("act_1"))
 
     for call in (
         lambda: provider.verify_install({}),
         lambda: provider.parse_webhook({}, b""),
         lambda: provider.sync_resource({}, ResourceDescriptor(kind="ad_account", external_id="1")),
-        lambda: provider.read_account({}, AdAccountRef("act_1")),
         lambda: provider.read_structure({}, AdAccountRef("act_1")),
         lambda: provider.read_performance(
             {}, AdAccountRef("act_1"), AdLevel.ACCOUNT, date(2026, 10, 1), date(2026, 10, 1)
@@ -465,3 +467,71 @@ def test_list_rows_that_are_not_objects_are_skipped(sim, graph, token):
         200, json={"data": ["x", {"id": "1"}]}
     )
     assert list(graph.get_all(token, "/me/things")) == [{"id": "1"}]
+
+
+# ------------------------------------------------------------------ one ad account (4-03)
+def _account_token(sim):
+    token = sim.new_token(USER)
+    sim.add_account("act_77", USER, name="Shop", currency="JPY", timezone_name="Asia/Tokyo")
+    return {"access_token": token}
+
+
+def test_read_account_returns_its_details(sim, provider):
+    from app.providers.base.types import AdAccountRef
+
+    state = provider.read_account(_account_token(sim), AdAccountRef("act_77"))
+    assert (state.external_id, state.name, state.currency, state.timezone) == (
+        "act_77",
+        "Shop",
+        "JPY",
+        "Asia/Tokyo",
+    )
+    assert state.platform_status == "active"
+    (call,) = sim.calls("/act_77")
+    assert call.method == "GET" and "access_token" not in call.url.query.decode()
+
+
+@pytest.mark.parametrize(
+    ("status", "expected"), [(2, "suspended"), (3, "not_enabled"), (101, "closed")]
+)
+def test_read_account_reports_metas_status(sim, provider, status, expected):
+    from app.providers.base.types import AdAccountRef
+
+    secrets = _account_token(sim)
+    sim.accounts["act_77"].account_status = status
+    assert provider.read_account(secrets, AdAccountRef("act_77")).platform_status == expected
+
+
+def test_read_account_refuses_odd_ids_and_answers(sim, provider):
+    from app.providers.base.types import AdAccountRef
+
+    secrets = _account_token(sim)
+    with pytest.raises(InvalidRequestError):
+        provider.read_account(secrets, AdAccountRef("act_77/campaigns"))
+    assert sim.calls("/act_") == []
+    with pytest.raises(NoAccountAccessError):  # no longer reachable by this person
+        provider.read_account(secrets, AdAccountRef("act_78"))
+    sim.accounts["act_77"].currency = None
+    with pytest.raises(UnexpectedResponseError):
+        provider.read_account(secrets, AdAccountRef("act_77"))
+    sim.accounts["act_77"].currency = "JPY"
+    sim.routes["GET /act_77"] = lambda s, r, u: httpx.Response(
+        200, json={"id": "act_99", "currency": "JPY", "timezone_name": "Asia/Tokyo"}
+    )
+    with pytest.raises(UnexpectedResponseError):  # an answer about another account
+        provider.read_account(secrets, AdAccountRef("act_77"))
+
+
+def test_mapping_skips_rows_it_cannot_read():
+    from app.providers.meta_ads import mapping
+
+    assert mapping.ad_account({"id": 12}) is None
+    assert mapping.ad_account({"id": "12"}) is None
+    row = mapping.ad_account({"id": "act_5", "account_status": True, "business": "x"})
+    assert row is not None
+    assert (row.unavailable_reason, row.group_path, row.display_name) == (
+        "account_not_enabled",
+        None,
+        None,
+    )
+    assert mapping.zone("x" * 65) is None and mapping.text("x" * 300) == "x" * 255

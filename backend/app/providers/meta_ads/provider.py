@@ -52,12 +52,14 @@ from app.providers.base.types import (
     SyncSummary,
     WebhookDelivery,
 )
+from app.providers.meta_ads import mapping
 from app.providers.meta_ads.client import (
     LOGIN_DIALOG,
     HttpFactory,
     MetaGraphClient,
     MetaSignInRejectedError,
     UnexpectedResponseError,
+    valid_node,
 )
 
 logger = logging.getLogger("advegax.providers.meta_ads")
@@ -65,6 +67,8 @@ logger = logging.getLogger("advegax.providers.meta_ads")
 ADS_READ = "ads_read"
 REQUIRED_SCOPES = frozenset({ADS_READ})
 WANTED_SCOPES = frozenset({ADS_READ, "business_management"})
+ACCOUNT_FIELDS = "id,name,currency,timezone_name,account_status,business{id,name}"
+MAX_ACCOUNTS = 5000
 
 
 class MetaAdsProvider:
@@ -198,11 +202,44 @@ class MetaAdsProvider:
         raise UnsupportedOperationError()  # ad accounts are imported by the core
 
     # ------------------------------------------------------------------ reads (4-03 … 4-05)
-    def discover_resources(self, secrets: Secrets) -> list[ResourceDescriptor]:  # noqa: ARG002
-        return []  # task 4-03
+    def discover_resources(self, secrets: Secrets) -> list[ResourceDescriptor]:
+        """Every ad account the person can reach (``me/adaccounts``, which includes accounts
+        reached through the businesses they belong to — to confirm live, Step 0 item 2),
+        grouped by the business that owns it. Accounts that cannot be used carry a plain
+        reason (Q-4-3). Rows AdVegaX cannot read are skipped and counted."""
+        token = _token(secrets)
+        found: dict[str, ResourceDescriptor] = {}
+        skipped = 0
+        for row in self.graph.get_all(
+            token, "/me/adaccounts", {"fields": ACCOUNT_FIELDS, "limit": "200"}
+        ):
+            descriptor = mapping.ad_account(row)
+            if descriptor is None:
+                skipped += 1
+                continue
+            found.setdefault(descriptor.external_id, descriptor)
+            if len(found) >= MAX_ACCOUNTS:
+                logger.warning("meta_ads_account_limit_reached", extra={"count": len(found)})
+                break
+        if skipped:
+            logger.warning("meta_ads_rows_skipped", extra={"count": skipped})
+        return list(found.values())
 
-    def read_account(self, secrets: Secrets, account: AdAccountRef) -> AdAccountState:  # noqa: ARG002
-        raise UnsupportedOperationError()  # task 4-04
+    def read_account(self, secrets: Secrets, account: AdAccountRef) -> AdAccountState:
+        """The account's name, currency, time zone and status (one call)."""
+        node = valid_node(account.external_id)
+        row = self.graph.get(_token(secrets), f"/{node}", {"fields": ACCOUNT_FIELDS})
+        money, tz = mapping.currency(row.get("currency")), mapping.zone(row.get("timezone_name"))
+        if mapping.account_id(row.get("id")) != node or money is None or tz is None:
+            raise UnexpectedResponseError()
+        platform_status, _ = mapping.account_status(row.get("account_status"))
+        return AdAccountState(
+            external_id=node,
+            name=mapping.text(row.get("name")),
+            currency=money,
+            timezone=tz,
+            platform_status=platform_status,
+        )
 
     def read_structure(
         self,
@@ -220,6 +257,13 @@ class MetaAdsProvider:
         last_day: date,  # noqa: ARG002
     ) -> Iterator[AdPerformanceRecord]:
         raise UnsupportedOperationError()  # task 4-05
+
+
+def _token(secrets: Secrets) -> str:
+    token = secrets.get("access_token")
+    if not isinstance(token, str) or not token:
+        raise MetaSignInRejectedError()
+    return token
 
 
 def _positive_int(value: Any) -> int | None:
