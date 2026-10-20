@@ -50,6 +50,10 @@ celery_app.conf.update(
             "task": "advegax.schedule.ads_sync",
             "schedule": _settings.SCHEDULE_ADS_SYNC_TICK.total_seconds(),
         },
+        "fx-rates": {
+            "task": "advegax.schedule.fx_rates",
+            "schedule": _settings.SCHEDULE_FX_INTERVAL.total_seconds(),
+        },
         "analytics-sync": {
             "task": "advegax.schedule.analytics_sync",
             "schedule": _settings.SCHEDULE_ANALYTICS_SYNC_TICK.total_seconds(),

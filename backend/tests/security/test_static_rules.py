@@ -255,3 +255,18 @@ def test_google_analytics_requests_all_pass_the_read_only_guard():
     send = send[: send.index("\n    def ", 10)]
     assert "_allowed(host, method, path" in send
     assert send.index("_allowed(") < send.index(".request(")
+
+
+def test_exchange_rates_are_read_with_get_from_two_fixed_addresses_only():
+    """Phase 6 (6-03): one request in the exchange-rate code, a GET, after the address check."""
+    folder = APP / "domains" / "fx"
+    sources = {p.name: p.read_text(encoding="utf-8") for p in folder.rglob("*.py")}
+    calls = {name: src.count(".request(") for name, src in sources.items() if ".request(" in src}
+    assert calls == {"sources.py": 1}
+    src = sources["sources.py"]
+    get = src[src.index("def _get(") :]
+    get = get[: get.index("\nclass ")]
+    assert get.index("refused exchange-rate address") < get.index(".request(")
+    assert '"GET",' in get and "follow_redirects=False" in get
+    for verb in ('"POST"', '"PUT"', '"PATCH"', '"DELETE"'):
+        assert verb not in src

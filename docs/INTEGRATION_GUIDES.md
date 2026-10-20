@@ -231,6 +231,15 @@ Add one section per provider when its phase is implemented.
 - **Health on the property:** `no_property_access`, `property_deleted`, `property_details_changed`, `rate_limited`; each clears when the property answers normally again. A refused sign-in marks the connection "Needs reconnecting" and stops its properties' runs until reconnected.
 - *To confirm live (Step 0, `PHASE_05_PLAN` §4.2): the JSON shapes, the demo account, errors for a removed permission and an exhausted quota, the consent screen marking for `analytics.readonly`.*
 
+### Exchange rates (`app/domains/fx`) — Phase 6, built against recorded answers (live Step 0 pending)
+- **Not a platform connection:** public reference data, no account, no key, no tenant data. Read by a scheduled task (`advegax.schedule.fx_rates`, every `SCHEDULE_FX_INTERVAL`, 6 h) when `FX_ENABLED=true`; written by the system role only (`fx_rates`).
+- **European Central Bank:** `GET https://data-api.ecb.europa.eu/service/data/EXR/D..EUR.SP00.A?startPeriod&endPeriod&format=csvdata&detail=dataonly` — every currency against the euro, read by the column names `CURRENCY`, `CURRENCY_DENOM` (must be `EUR`), `TIME_PERIOD`, `OBS_VALUE`. A 404 means "no rates in that period" (weekends, holidays).
+- **Nepal Rastra Bank:** `GET https://www.nrb.org.np/api/forex/v1/rates?page&per_page=100&from&to` — `data.payload[] {date, rates[] {currency {iso3, unit}, buy, sell}}` and `pagination.pages`; AdVegaX stores the middle rate `(buy + sell) / 2` with NRB's `unit` (JPY per 10, INR per 100), quoted in NPR.
+- **Reading:** the first run reads `FX_HISTORY_WINDOW` (400 days) in `FX_FETCH_SLICE` (92-day) slices; later runs read again from `FX_REFRESH_DAYS` (10) before the newest stored day and replace what changed. Rows that cannot be read are skipped and counted; an answer in another format stops that source's run only; a 5xx or 429 is retried at the next run.
+- **Converting** (`FxTable`, the one place): each figure's own day; on weekends and holidays the last published rate, at most `FX_MAX_STALE_DAYS` (7) old; ECB currencies through the euro on the same ECB day; NPR through NRB, or through USD (NRB + ECB) when NRB does not quote the other currency; 34 significant digits, no rounding (display only). No rate → `None` → "not available — no exchange rate".
+- **Read-only, one gate:** one `GET` in `sources.py`, after a check that the address is one of the two above; no redirects followed (static test).
+- *To confirm live (Step 0, `PHASE_06_PLAN` §4.2): both formats, the 404 for empty periods, NRB's units, a holiday and a Saturday, and a fixed week against the published tables.*
+
 ### Fake provider (`fake`) — test/local only
 - **Category / auth scheme:** advertising / OAuth 2 with PKCE.
 - **Resources:** two ad accounts (AUD, USD) and one store (NPR) by default; configurable.

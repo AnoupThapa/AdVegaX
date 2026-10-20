@@ -220,6 +220,17 @@ class Settings(BaseSettings):
     # The last days are shown as "still being processed by Google" (Q-5-6, 5-07).
     ANALYTICS_PROCESSING_DAYS: int = Field(default=3, ge=0, le=30)
 
+    # --- Exchange rates (Phase 6, 6-03; PHASE_06_PLAN Q-6-3) -----------------------------
+    # The ECB's daily reference rates and Nepal Rastra Bank's NPR rates, read by a scheduled
+    # task. Off until switched on (the deployment must allow the two public addresses).
+    FX_ENABLED: bool = False
+    FX_HISTORY_WINDOW: timedelta = timedelta(days=400)  # the first read: 13 months and margin
+    FX_REFRESH_DAYS: timedelta = timedelta(days=10)  # later reads go back this far
+    FX_FETCH_SLICE: timedelta = timedelta(days=92)  # days per request
+    # A weekend or holiday uses the last published rate, at most this old; else "no rate".
+    FX_MAX_STALE_DAYS: timedelta = timedelta(days=7)
+    SCHEDULE_FX_INTERVAL: timedelta = timedelta(hours=6)
+
     # --- Advertising import (Phase 3; PHASE_03_PLAN §9) ---------------------------------
     ADS_HISTORY_WINDOW: timedelta = timedelta(days=395)  # 13 months on first link (Q-3-6)
     # Ongoing sync (Q-3-5, task 3-07): every 3 hours structure + today and yesterday; nightly
@@ -327,6 +338,11 @@ class Settings(BaseSettings):
             "ADS_QUOTA_WAIT": self.ADS_QUOTA_WAIT,
             "ADS_ACCOUNT_BUSY_WAIT": self.ADS_ACCOUNT_BUSY_WAIT,
             "ANALYTICS_HISTORY_WINDOW": self.ANALYTICS_HISTORY_WINDOW,
+            "FX_HISTORY_WINDOW": self.FX_HISTORY_WINDOW,
+            "FX_REFRESH_DAYS": self.FX_REFRESH_DAYS,
+            "FX_FETCH_SLICE": self.FX_FETCH_SLICE,
+            "FX_MAX_STALE_DAYS": self.FX_MAX_STALE_DAYS,
+            "SCHEDULE_FX_INTERVAL": self.SCHEDULE_FX_INTERVAL,
             "ANALYTICS_QUICK_WINDOW": self.ANALYTICS_QUICK_WINDOW,
             "ANALYTICS_NIGHTLY_WINDOW": self.ANALYTICS_NIGHTLY_WINDOW,
             "ANALYTICS_WEEKLY_WINDOW": self.ANALYTICS_WEEKLY_WINDOW,

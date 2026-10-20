@@ -129,3 +129,13 @@ def analytics_sync_task() -> int | None:
     return run_singleton(
         rt.redis, "analytics_sync", ttl, lambda: analytics_importer.enqueue_analytics_syncs(rt)
     )
+
+
+@celery_app.task(name="advegax.schedule.fx_rates")  # type: ignore[untyped-decorator]
+def fx_rates_task() -> int | None:
+    """Read the exchange rates published since the last read (6-03)."""
+    from app.domains.fx.service import refresh_rates
+
+    rt = worker_runtime()
+    ttl = int(rt.settings.SCHEDULE_FX_INTERVAL.total_seconds() * 0.9)
+    return run_singleton(rt.redis, "fx_rates", ttl, lambda: refresh_rates(rt))

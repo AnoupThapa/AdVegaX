@@ -48,6 +48,7 @@ from sqlalchemy import Engine, create_engine, text  # noqa: E402
 from tests.helpers import ApiClient  # noqa: E402
 
 TABLES = (
+    "fx_rates",  # shared reference data (Phase 6), cleared like the rest between tests
     "job_runs",
     "organization_resource_links",
     "external_resources",

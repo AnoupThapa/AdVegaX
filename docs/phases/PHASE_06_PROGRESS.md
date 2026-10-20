@@ -6,7 +6,7 @@ Plan: `PHASE_06_PLAN.md` (approved 2026-10-20, A24, all recommendations; complet
 |---|---|
 | 6-01 Step 0: live ECB and NRB feeds | ⏸ Waiting for network access to `data-api.ecb.europa.eu` and `www.nrb.org.np` |
 | 6-02 Migration 0016, reporting settings, store assignment | ✅ Done — awaiting review |
-| 6-03 Exchange rates: clients, daily job, conversion rules | Not started |
+| 6-03 Exchange rates: clients, daily job, conversion rules | ✅ Done — awaiting review |
 | 6-04 Metric registry `analytics-v1` and its inputs | Not started |
 | 6-05 Overview and channels API | Not started |
 | 6-06 Campaigns (with GA4 match) and products API | Not started |
@@ -48,3 +48,40 @@ Plan: `PHASE_06_PLAN.md` (approved 2026-10-20, A24, all recommendations; complet
 **Blocked:** Step 0 (6-01) — network access to the two rate feeds.
 
 **Next task:** 6-03 — exchange rates: the ECB and Nepal Rastra Bank clients (recorded answers in tests), the daily job, and the one conversion function (each day's rate, the last published rate on weekends and holidays, cross rates through EUR, "not available" without a rate).
+
+## 6-03 — Exchange rates: reading, storing, converting (2026-10-20)
+
+**Completed**
+- **Reading the two sources** (built against their documented formats; Step 0 confirms them live):
+  - **European Central Bank:** every currency against the euro for a period, as a table read by its column names (so a change in column order does not matter). A period without rates (a weekend, a holiday) is simply empty.
+  - **Nepal Rastra Bank:** NPR buy and sell rates per day, page by page. AdVegaX keeps the middle of the two with NRB's unit (it quotes the yen per 10 and the Indian rupee per 100).
+  - Rows that cannot be read are skipped and counted; an answer in another format stops only that source; a temporary error is tried again at the next run.
+- **A scheduled task every 6 hours** (once switched on with `FX_ENABLED`): the first run reads 400 days (13 months of figures plus margin) in 92-day pieces; later runs read again from 10 days before the newest stored day, so a corrected rate replaces the old one. One bank failing never stops the other.
+- **One conversion function** for the whole product:
+  - each figure uses **its own day's rate**; on a weekend or holiday the **last published** rate (Friday's for Saturday and Sunday), at most 7 days old;
+  - currencies the ECB publishes convert **through the euro** on the same ECB day (AUD → USD = USD rate ÷ AUD rate);
+  - **NPR** converts with Nepal Rastra Bank's rate, or **through the US dollar** when NRB does not quote the other currency (e.g. NPR → NZD);
+  - a currency without any rate is "not available", never guessed;
+  - exact decimals (34 significant digits); rounding only for display, as everywhere.
+- **Read-only, one gate:** the code has exactly one request, a GET, after a check that the address is one of the two banks' (static test). No credentials, no redirects followed.
+
+**Files changed** (11)
+- New (4): `app/domains/fx/{sources,service}.py`, `tests/fx_sim.py` (recorded-format answers for both banks), `tests/api/test_fx_rates.py` (24 tests).
+- Modified (7): `app/core/settings.py` (`FX_*`, `SCHEDULE_FX_INTERVAL`), `app/workers/{job_tasks,celery_app}.py` (the scheduled task), `tests/conftest.py` (rates cleared between tests), `tests/security/test_static_rules.py` (1 rule), `.env.example`, docs `INTEGRATION_GUIDES.md`, `SECURITY.md`, this report, `PROJECT_STATUS.md`.
+- Deleted: none. No migration.
+
+**Tests**
+- **25 new.**
+- **Backend `make check`: 1,534 passed**, coverage 96 % (exchange rates 92–100 %).
+- Frontend: no changes.
+
+**Security**
+- Two fixed public addresses, GET only, nothing sent that identifies an organization; written by the system role only.
+
+**Deviations**
+1. **Off by default** (`FX_ENABLED=false`), like the platforms: the deployment switches it on once the two addresses are allowed. Until then conversions say "not available — no exchange rate".
+2. **The ECB is read through its Data Portal as CSV** (plan §4.1 named the SDMX series); the daily XML files are an alternative if Step 0 finds the CSV unsuitable.
+
+**Blocked:** Step 0 (6-01) — network access to the two rate feeds.
+
+**Next task:** 6-04 — the metric registry `analytics-v1`: every unified figure defined once (inputs, formula, unit, availability rules, sources), reading store, advertising and Google Analytics daily figures and converting them to the reporting currency.
