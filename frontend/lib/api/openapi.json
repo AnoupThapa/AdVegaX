@@ -2043,6 +2043,177 @@
         "title": "AuthorizationStartOut",
         "type": "object"
       },
+      "CampaignOut": {
+        "properties": {
+          "ad_account_id": {
+            "format": "uuid",
+            "title": "Ad Account Id",
+            "type": "string"
+          },
+          "analytics": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/FigureOut"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Analytics"
+          },
+          "analytics_missing": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FigureOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "budget_period": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budget Period"
+          },
+          "figures": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/FigureOut"
+            },
+            "title": "Figures",
+            "type": "object"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ad_account_id",
+          "provider",
+          "source",
+          "name",
+          "status",
+          "budget_period",
+          "figures",
+          "analytics",
+          "analytics_missing"
+        ],
+        "title": "CampaignOut",
+        "type": "object"
+      },
+      "CampaignsOut": {
+        "properties": {
+          "conversions": {
+            "items": {
+              "$ref": "#/components/schemas/ConversionOut"
+            },
+            "title": "Conversions",
+            "type": "array"
+          },
+          "currency_minor_units": {
+            "title": "Currency Minor Units",
+            "type": "integer"
+          },
+          "definition_version": {
+            "title": "Definition Version",
+            "type": "string"
+          },
+          "from_day": {
+            "format": "date",
+            "title": "From Day",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CampaignOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "reporting_currency": {
+            "title": "Reporting Currency",
+            "type": "string"
+          },
+          "reporting_timezone": {
+            "title": "Reporting Timezone",
+            "type": "string"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceOut"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "store_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Store Id"
+          },
+          "to_day": {
+            "format": "date",
+            "title": "To Day",
+            "type": "string"
+          }
+        },
+        "required": [
+          "definition_version",
+          "reporting_currency",
+          "currency_minor_units",
+          "reporting_timezone",
+          "store_id",
+          "from_day",
+          "to_day",
+          "sources",
+          "conversions",
+          "notes",
+          "items"
+        ],
+        "title": "CampaignsOut",
+        "type": "object"
+      },
       "ChangePasswordRequest": {
         "additionalProperties": false,
         "properties": {
@@ -2823,6 +2994,22 @@
         "title": "Envelope[AuthorizationStartOut]",
         "type": "object"
       },
+      "Envelope_CampaignsOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/CampaignsOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[CampaignsOut]",
+        "type": "object"
+      },
       "Envelope_ChannelsOut_": {
         "properties": {
           "data": {
@@ -3045,6 +3232,22 @@
           "meta"
         ],
         "title": "Envelope[ProductPage]",
+        "type": "object"
+      },
+      "Envelope_ProductsOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ProductsOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[ProductsOut]",
         "type": "object"
       },
       "Envelope_ResyncOut_": {
@@ -4258,6 +4461,53 @@
         "title": "PlatformOut",
         "type": "object"
       },
+      "ProductFiguresOut": {
+        "properties": {
+          "figures": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/FigureOut"
+            },
+            "title": "Figures",
+            "type": "object"
+          },
+          "product_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Id"
+          },
+          "store_id": {
+            "format": "uuid",
+            "title": "Store Id",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "product_id",
+          "store_id",
+          "title",
+          "figures"
+        ],
+        "title": "ProductFiguresOut",
+        "type": "object"
+      },
       "ProductOut": {
         "properties": {
           "external_id": {
@@ -4370,6 +4620,107 @@
           "next_cursor"
         ],
         "title": "ProductPage",
+        "type": "object"
+      },
+      "ProductsOut": {
+        "properties": {
+          "conversions": {
+            "items": {
+              "$ref": "#/components/schemas/ConversionOut"
+            },
+            "title": "Conversions",
+            "type": "array"
+          },
+          "currency_minor_units": {
+            "title": "Currency Minor Units",
+            "type": "integer"
+          },
+          "definition_version": {
+            "title": "Definition Version",
+            "type": "string"
+          },
+          "from_day": {
+            "format": "date",
+            "title": "From Day",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ProductFiguresOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "items_missing": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FigureOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "other_currency_lines": {
+            "title": "Other Currency Lines",
+            "type": "integer"
+          },
+          "reporting_currency": {
+            "title": "Reporting Currency",
+            "type": "string"
+          },
+          "reporting_timezone": {
+            "title": "Reporting Timezone",
+            "type": "string"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceOut"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "store_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Store Id"
+          },
+          "to_day": {
+            "format": "date",
+            "title": "To Day",
+            "type": "string"
+          }
+        },
+        "required": [
+          "definition_version",
+          "reporting_currency",
+          "currency_minor_units",
+          "reporting_timezone",
+          "store_id",
+          "from_day",
+          "to_day",
+          "sources",
+          "conversions",
+          "notes",
+          "items",
+          "items_missing",
+          "other_currency_lines"
+        ],
+        "title": "ProductsOut",
         "type": "object"
       },
       "ProviderOut": {
@@ -6777,6 +7128,101 @@
         ]
       }
     },
+    "/api/v1/organizations/{organization_id}/analytics/campaigns": {
+      "get": {
+        "description": "Every campaign's platform-reported figures, budget use against today's budget, and\nGoogle Analytics' figures for the campaign of the same name.",
+        "operationId": "analytics_campaigns_api_v1_organizations__organization_id__analytics_campaigns_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "store_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Store Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_CampaignsOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Analytics Campaigns",
+        "tags": [
+          "unified analytics"
+        ]
+      }
+    },
     "/api/v1/organizations/{organization_id}/analytics/channels": {
       "get": {
         "description": "Each ad platform's own reported figures, and Google Analytics' channels.",
@@ -6962,6 +7408,101 @@
           }
         },
         "summary": "Analytics Overview",
+        "tags": [
+          "unified analytics"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/analytics/products": {
+      "get": {
+        "description": "Every product sold: units, net sales, product cost, gross profit and margin.",
+        "operationId": "analytics_products_api_v1_organizations__organization_id__analytics_products_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "store_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Store Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ProductsOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Analytics Products",
         "tags": [
           "unified analytics"
         ]

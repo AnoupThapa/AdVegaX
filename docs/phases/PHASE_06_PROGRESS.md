@@ -146,3 +146,30 @@ Plan: `PHASE_06_PLAN.md` (approved 2026-10-20, A24, all recommendations; complet
 **Blocked:** Step 0 (6-01) — network access to the two rate feeds.
 
 **Next task:** 6-06 — campaigns and products API: every ad campaign with its platform-reported figures, the matching Google Analytics campaign figures (exact name match, Q-6-9) and budget use against today's budget (Q-6-11); every product with net sales, units, product cost, gross profit and margin (Q-6-10).
+
+## 6-06 — Campaigns and products API (2026-10-20)
+
+**Completed**
+- **`GET /analytics/campaigns`** — every Google Ads and Meta campaign, by name, with the platform's own reported figures for the period (spend, clicks, impressions, conversions, conversion value, the platform's ROAS, cost per click, cost per conversion — labelled "platform reported"), spend converted to the reporting currency with each day's rate. With it:
+  - **budget use** = spend ÷ (today's daily budget × days in the period); a lifetime budget is "not a daily budget", a shared budget and no budget are named, never 0;
+  - **Google Analytics' figures for the campaign of exactly the same name** (sessions, purchases, purchase revenue): Google campaigns match google / cpc traffic, Meta campaigns facebook or instagram / paid or cpc; "no match" when Google Analytics has none, "no property" or "not synced yet" otherwise;
+  - a campaign that was read but had no activity shows a real 0 spend; a period not read says "not synced yet".
+- **`GET /analytics/products`** — every product sold in the period, most net sales first: units, net sales, product cost, gross profit and gross margin (finance-v1, per product); product cost is "not available" when a sold line has no cost; lines in another currency are counted and left out, never summed. No ad spend per product (Q-6-10).
+- Every member can read; another organization's data or store is "not found".
+
+**Files changed** (11)
+- New (2): `app/domains/metrics/campaigns.py`, `tests/api/test_campaigns_products_api.py` (7 tests).
+- Modified (9): `app/domains/metrics/{schemas,read_service,router}.py`, `frontend/lib/api/{openapi.json,schema.d.ts}` (generated), docs `API_SPECIFICATION.md` (§19F), this report, `PROJECT_STATUS.md`.
+- Deleted: none. No migration.
+
+**Tests**
+- **7 new**; the tenant-isolation sweep covers the two new routes.
+- **Backend `make check`: 1,571 passed**, coverage 97 %. **Frontend `npm run check`: 387 passed** (types regenerated).
+
+**Security:** reads only; membership on the server; row-level security plus explicit organization filters; a foreign `store_id` is a 404.
+
+**Deviations:** the products' answer type is named `ProductFiguresOut` because the store catalogue already has a `ProductOut`.
+
+**Blocked:** Step 0 (6-01) — network access to the two rate feeds.
+
+**Next task:** 6-07 — web app: the Analytics Overview (headline figures, day-by-day chart, sources and freshness, currencies converted) and the settings for reporting currency, time zone and which store each ad account and property belongs to.

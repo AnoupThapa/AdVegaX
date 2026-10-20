@@ -528,6 +528,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/{organization_id}/analytics/campaigns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Analytics Campaigns
+         * @description Every campaign's platform-reported figures, budget use against today's budget, and
+         *     Google Analytics' figures for the campaign of the same name.
+         */
+        get: operations["analytics_campaigns_api_v1_organizations__organization_id__analytics_campaigns_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizations/{organization_id}/analytics/channels": {
         parameters: {
             query?: never;
@@ -561,6 +582,26 @@ export interface paths {
          *     and for the period, with sources, freshness and the exchange rates used.
          */
         get: operations["analytics_overview_api_v1_organizations__organization_id__analytics_overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/analytics/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Analytics Products
+         * @description Every product sold: units, net sales, product cost, gross profit and margin.
+         */
+        get: operations["analytics_products_api_v1_organizations__organization_id__analytics_products_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1650,6 +1691,69 @@ export interface components {
             /** Expires In Seconds */
             expires_in_seconds: number;
         };
+        /** CampaignOut */
+        CampaignOut: {
+            /**
+             * Ad Account Id
+             * Format: uuid
+             */
+            ad_account_id: string;
+            /** Analytics */
+            analytics: {
+                [key: string]: components["schemas"]["FigureOut"];
+            } | null;
+            analytics_missing: components["schemas"]["FigureOut"] | null;
+            /** Budget Period */
+            budget_period: string | null;
+            /** Figures */
+            figures: {
+                [key: string]: components["schemas"]["FigureOut"];
+            };
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Provider */
+            provider: string;
+            /** Source */
+            source: string;
+            /** Status */
+            status: string;
+        };
+        /** CampaignsOut */
+        CampaignsOut: {
+            /** Conversions */
+            conversions: components["schemas"]["ConversionOut"][];
+            /** Currency Minor Units */
+            currency_minor_units: number;
+            /** Definition Version */
+            definition_version: string;
+            /**
+             * From Day
+             * Format: date
+             */
+            from_day: string;
+            /** Items */
+            items: components["schemas"]["CampaignOut"][];
+            /** Notes */
+            notes: string[];
+            /** Reporting Currency */
+            reporting_currency: string;
+            /** Reporting Timezone */
+            reporting_timezone: string;
+            /** Sources */
+            sources: components["schemas"]["SourceOut"][];
+            /** Store Id */
+            store_id: string | null;
+            /**
+             * To Day
+             * Format: date
+             */
+            to_day: string;
+        };
         /** ChangePasswordRequest */
         ChangePasswordRequest: {
             /** Current Password */
@@ -1881,6 +1985,11 @@ export interface components {
             data: components["schemas"]["AuthorizationStartOut"];
             meta: components["schemas"]["Meta"];
         };
+        /** Envelope[CampaignsOut] */
+        Envelope_CampaignsOut_: {
+            data: components["schemas"]["CampaignsOut"];
+            meta: components["schemas"]["Meta"];
+        };
         /** Envelope[ChannelsOut] */
         Envelope_ChannelsOut_: {
             data: components["schemas"]["ChannelsOut"];
@@ -1949,6 +2058,11 @@ export interface components {
         /** Envelope[ProductPage] */
         Envelope_ProductPage_: {
             data: components["schemas"]["ProductPage"];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[ProductsOut] */
+        Envelope_ProductsOut_: {
+            data: components["schemas"]["ProductsOut"];
             meta: components["schemas"]["Meta"];
         };
         /** Envelope[ResyncOut] */
@@ -2369,6 +2483,22 @@ export interface components {
             /** Source */
             source: string;
         };
+        /** ProductFiguresOut */
+        ProductFiguresOut: {
+            /** Figures */
+            figures: {
+                [key: string]: components["schemas"]["FigureOut"];
+            };
+            /** Product Id */
+            product_id: string | null;
+            /**
+             * Store Id
+             * Format: uuid
+             */
+            store_id: string;
+            /** Title */
+            title: string | null;
+        };
         /** ProductOut */
         ProductOut: {
             /** External Id */
@@ -2399,6 +2529,40 @@ export interface components {
             items: components["schemas"]["ProductOut"][];
             /** Next Cursor */
             next_cursor: string | null;
+        };
+        /** ProductsOut */
+        ProductsOut: {
+            /** Conversions */
+            conversions: components["schemas"]["ConversionOut"][];
+            /** Currency Minor Units */
+            currency_minor_units: number;
+            /** Definition Version */
+            definition_version: string;
+            /**
+             * From Day
+             * Format: date
+             */
+            from_day: string;
+            /** Items */
+            items: components["schemas"]["ProductFiguresOut"][];
+            items_missing: components["schemas"]["FigureOut"] | null;
+            /** Notes */
+            notes: string[];
+            /** Other Currency Lines */
+            other_currency_lines: number;
+            /** Reporting Currency */
+            reporting_currency: string;
+            /** Reporting Timezone */
+            reporting_timezone: string;
+            /** Sources */
+            sources: components["schemas"]["SourceOut"][];
+            /** Store Id */
+            store_id: string | null;
+            /**
+             * To Day
+             * Format: date
+             */
+            to_day: string;
         };
         /**
          * ProviderOut
@@ -3636,6 +3800,41 @@ export interface operations {
             };
         };
     };
+    analytics_campaigns_api_v1_organizations__organization_id__analytics_campaigns_get: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+                store_id?: string | null;
+            };
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_CampaignsOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     analytics_channels_api_v1_organizations__organization_id__analytics_channels_get: {
         parameters: {
             query?: {
@@ -3693,6 +3892,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Envelope_OverviewOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    analytics_products_api_v1_organizations__organization_id__analytics_products_get: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+                store_id?: string | null;
+            };
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ProductsOut_"];
                 };
             };
             /** @description Validation Error */

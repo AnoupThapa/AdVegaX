@@ -505,6 +505,15 @@ Every answer carries `definition_version` (`analytics-v1`), `reporting_currency`
 | `GET /analytics/overview` | `totals` and `days[] {day, figures}` with every registry figure: `net_sales`, `orders`, `product_cost`, `gross_profit`, `gross_margin`, `ad_spend`, `profit_after_ad_spend`, `blended_roas`, `cost_per_order`, `ad_spend_share`, `sessions`, `analytics_purchases`, `analytics_revenue`, `store_conversion_rate`, and — not provided in v1 — `shipping_cost`, `payment_fees` (`unsupported` / `not_provided_by_platform`), `contribution_profit` (`unsupported` / `costs_not_entered`), `customer_acquisition_cost` (`unavailable` / `customer_key_not_collected`). Reasons include `not_synchronized`, `missing_product_costs`, `other_currency_orders`, `no_exchange_rate`, `no_store`, `no_ad_account`, `no_analytics_property`, `not_every_store_measured` and the zero divisors `no_net_sales`, `no_ad_spend`, `no_orders`, `no_sessions`. `definitions[] {key, label, unit, formula, note, sources}` from the registry |
 | `GET /analytics/channels` | `ad_spend` (all platforms — the only figure added across them); `platforms[] {provider, source: platform_reported, ad_accounts, figures {spend, clicks, impressions, conversions, conversion_value, platform_roas, cost_per_click, cost_per_conversion}}` (each platform's own, never added across platforms); `analytics_channels[] {channel, figures {sessions, engaged_sessions, engagement_rate, key_events, purchases, purchase_revenue}}` most sessions first, or `analytics_channels_missing` saying why there are none |
 
+## 19F. Campaigns and products — as built (6-06)
+
+Same base, permission, query and context fields as §19E.
+
+| Method & path | Notes |
+|---|---|
+| `GET /analytics/campaigns` | `items[] {id, ad_account_id, provider, source: platform_reported, name, status, budget_period, figures {spend, clicks, impressions, conversions, conversion_value, platform_roas, cost_per_click, cost_per_conversion, budget_use}, analytics, analytics_missing}` by name. Spend converted to the reporting currency with each day's rate; a campaign read with no activity has a real 0 spend. `budget_use` = spend / (today's daily budget x days) — `unsupported` / `not_a_daily_budget` for a lifetime budget, `unavailable` / `shared_budget` or `no_budget`. `analytics {sessions, purchases, purchase_revenue}`: Google Analytics' figures for the campaign of exactly the same name (Google: google / cpc; Meta: facebook or instagram / paid or cpc) — `unavailable` / `no_match` when none; `analytics` null with `analytics_missing` (`no_analytics_property`, `not_synchronized`) |
+| `GET /analytics/products` | `items[] {product_id, store_id, title, figures {units, net_sales, product_cost, gross_profit, gross_margin}}` most net sales first (finance-v1 per product; `product_cost` `unavailable` / `missing_product_costs` when a sold line has no cost); no ad spend per product. `items_missing` says why there are none (`no_store`, `not_synchronized`); `other_currency_lines` counts sold lines in another currency, left out |
+
 ## 20. Webhooks
 
 Provider webhooks must:

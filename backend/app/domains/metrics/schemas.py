@@ -86,3 +86,35 @@ class ChannelsOut(AnalyticsContextOut):
     platforms: list[PlatformOut]
     analytics_channels: list[AnalyticsChannelOut]
     analytics_channels_missing: FigureOut | None  # why there are no channels, if none
+
+
+class CampaignOut(BaseModel):
+    id: uuid.UUID
+    ad_account_id: uuid.UUID
+    provider: str  # google_ads | meta_ads
+    source: str  # platform_reported
+    name: str
+    status: str
+    budget_period: str | None  # daily | lifetime; budget use is against today's budget
+    figures: dict[str, FigureOut]
+    # Google Analytics' figures for the campaign of the same name (Q-6-9); null with
+    # ``analytics_missing`` when no property is in scope or a day was not read.
+    analytics: dict[str, FigureOut] | None
+    analytics_missing: FigureOut | None
+
+
+class CampaignsOut(AnalyticsContextOut):
+    items: list[CampaignOut]
+
+
+class ProductFiguresOut(BaseModel):
+    product_id: uuid.UUID | None  # null: sold lines AdVegaX could not match to a product
+    store_id: uuid.UUID
+    title: str | None
+    figures: dict[str, FigureOut]
+
+
+class ProductsOut(AnalyticsContextOut):
+    items: list[ProductFiguresOut]  # most net sales first
+    items_missing: FigureOut | None  # why there are none (no store, a day not read)
+    other_currency_lines: int  # sold lines in another currency, left out (never summed)

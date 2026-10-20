@@ -19,17 +19,22 @@ from app.domains.commerce.models import Store
 from app.domains.commerce.schemas import FigureOut
 from app.domains.finance.definitions import minor_units
 from app.domains.fx.service import FxTable
+from app.domains.metrics import campaigns as campaign_figures
 from app.domains.metrics import channels as channel_figures
 from app.domains.metrics.engine import Figure, Inputs, Scope, compute, load_inputs, load_scope
 from app.domains.metrics.registry import DEFINITION_VERSION, METRICS
 from app.domains.metrics.schemas import (
     AnalyticsChannelOut,
+    CampaignOut,
+    CampaignsOut,
     ChannelsOut,
     ConversionOut,
     MetricDefinitionOut,
     OverviewDayOut,
     OverviewOut,
     PlatformOut,
+    ProductFiguresOut,
+    ProductsOut,
     SourceOut,
 )
 from app.domains.organizations.models import Organization
@@ -198,6 +203,72 @@ class MetricsReadService:
                     for c in ga
                 ],
                 analytics_channels_missing=figure_out(ga_missing) if ga_missing else None,
+            )
+
+    def campaigns(
+        self,
+        ctx: TenantContext,
+        *,
+        from_day: date | None,
+        to_day: date | None,
+        store_id: uuid.UUID | None,
+    ) -> CampaignsOut:
+        authorize(ctx, Permission.ANALYTICS_VIEW)
+        with self.rt.db.transaction(org_id=ctx.organization_id, user_id=ctx.user_id) as session:
+            scope, inputs, fx = self._prepare(session, ctx, from_day, to_day, store_id)
+            found = campaign_figures.campaigns(session, scope, inputs.first, inputs.last, fx)
+            return CampaignsOut(
+                **self._context(scope, inputs, fx, store_id),
+                items=[
+                    CampaignOut(
+                        id=c.id,
+                        ad_account_id=c.ad_account_id,
+                        provider=c.provider,
+                        source="platform_reported",
+                        name=c.name,
+                        status=c.status,
+                        budget_period=c.budget_period,
+                        figures={k: figure_out(v) for k, v in c.figures.items()},
+                        analytics=(
+                            {k: figure_out(v) for k, v in c.analytics.items()}
+                            if c.analytics is not None
+                            else None
+                        ),
+                        analytics_missing=(
+                            figure_out(c.analytics_missing) if c.analytics_missing else None
+                        ),
+                    )
+                    for c in found
+                ],
+            )
+
+    def products(
+        self,
+        ctx: TenantContext,
+        *,
+        from_day: date | None,
+        to_day: date | None,
+        store_id: uuid.UUID | None,
+    ) -> ProductsOut:
+        authorize(ctx, Permission.ANALYTICS_VIEW)
+        with self.rt.db.transaction(org_id=ctx.organization_id, user_id=ctx.user_id) as session:
+            scope, inputs, fx = self._prepare(session, ctx, from_day, to_day, store_id)
+            found, why, foreign = campaign_figures.products(
+                session, scope, inputs.first, inputs.last, fx
+            )
+            return ProductsOut(
+                **self._context(scope, inputs, fx, store_id),
+                items=[
+                    ProductFiguresOut(
+                        product_id=p.product_id,
+                        store_id=p.store_id,
+                        title=p.title,
+                        figures={k: figure_out(v) for k, v in p.figures.items()},
+                    )
+                    for p in found
+                ],
+                items_missing=figure_out(why) if why else None,
+                other_currency_lines=foreign,
             )
 
 
