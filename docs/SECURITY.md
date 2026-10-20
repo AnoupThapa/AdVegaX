@@ -167,6 +167,10 @@ Tests: `tests/providers/test_woocommerce_client.py` (74 cases: addresses, auth, 
 - Every request passes one read-only gate (discovery reads and the report methods only; static test). The token is sent in the `Authorization` header only; property ids are checked before they enter an address.
 - Only Google's stable account id is kept, to recognise a reconnect. Reports are aggregates: no user ids, client ids, IP addresses or demographics are requested.
 - **Scheduled runs (5-06):** the scheduler's system role reads four columns of `analytics_properties` (id, organization, platform, first import time) and nothing else; every read and write of figures runs under the property's own organization with forced row-level security. "Sync now" is limited per property and recorded in the audit log.
+- **Privacy (5-09):** GA4's privacy thresholds are respected, never worked around: AdVegaX asks for no demographic or user-level dimensions, and stores and shows Google's "withheld for privacy", "(other)", sampling and truncation notes instead of hiding them. Users are distinct counts and are never added across days or views.
+- **Separate permissions:** the same Google account connected to Google Ads and to Google Analytics is two connections with their own tokens; disconnecting one revokes only its permission (tested).
+- **Before real customers connect:** Google's API Services User Data Policy applies through the shared app verification (Q-5-11, one review for Google Ads and Google Analytics); the privacy policy must describe Google Analytics data use and deletion.
+- **Tests and helpers never ship:** the GA4 simulator and the browser-test helper (`tests/e2e_google_analytics.py`) live in `backend/tests`, which is excluded from the Docker image; the helper refuses staging and production. CI switches Google Analytics on with placeholder settings only to show the pages; nothing calls Google.
 
 ### Meta sign-in (Phase 4)
 - Facebook Login for Business with a configuration id (`ads_read`, `business_management`), PKCE (S256) and single-use state; the code is exchanged on the server for a long-lived token (about 60 days).

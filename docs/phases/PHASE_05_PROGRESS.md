@@ -12,7 +12,7 @@ Plan: `PHASE_05_PLAN.md` (approved 2026-10-19, A23, all recommendations; Q11 set
 | 5-06 Ongoing sync, quota pacing, health | ✅ Done — awaiting review |
 | 5-07 Read API | ✅ Done — awaiting review |
 | 5-08 Web app | ✅ Done — awaiting review |
-| 5-09 Journey test, browser test, docs, report | Not started |
+| 5-09 Journey test, browser test, docs, report | ✅ Done — awaiting review |
 
 ## 5-01 — Step 0 on the demo property and one of your properties
 
@@ -299,3 +299,29 @@ The rest of Phase 5 is built against Google's documentation and a GA4 simulator 
 **Blocked:** Step 0 (5-01) — unchanged.
 
 **Next task:** 5-09 — whole-journey test, browser test with a simulated Google Analytics property and accessibility checks, security notes, and `PHASE_05_REPORT.md`.
+
+## 5-09 — Whole journey, browser test, security notes, Phase 5 report (2026-10-20)
+
+**Completed**
+- **Whole-journey test** (`test_google_analytics_journey.py`), through the real API, database, job runner and simulator: connect → properties grouped by Analytics account, one without a currency refused → link an AUD (Sydney) and a USD (Los Angeles) property → 13-month import in three views → the 3-hour run → Google corrects a past day and the nightly run picks it up → Google's quota for one property used up: only that property pauses, then continues → Analytics access to one property removed: a plain reason on it only → the person removes AdVegaX in their Google account: "Needs reconnecting", no runs → reconnect: same connection, links and figures → "Sync now" (viewers can read, not sync) → disconnect: permission revoked at Google, links ended, figures still readable. Throughout: users never added across days, every Analytics call a read, and no token or the client secret in any response, the audit log or the logs.
+- **Browser test** (`e2e/google-analytics.spec.ts`) with a simulated GA4 property: Connections offers Google Analytics as read-only; the connection page groups properties by Analytics account and explains the one that cannot be linked; the Analytics tab; the property page with "Reported by Google Analytics", users "Shown per day only", revenue net of a refund, the processing and privacy notes, by channel and by source / medium / campaign, "Sync now". **Every page passes the accessibility check**; no Google token on any page.
+- **Browser-test helper** (`tests/e2e_google_analytics.py`) runs the real sign-in → discovery → link → import with the simulator in-process; refuses deployed environments; never ships (4 tests).
+- **CI:** the browser job switches Google Analytics on with the Google Ads placeholder settings, only to show the pages; nothing calls Google.
+- **Security notes** (`SECURITY.md`): privacy thresholds respected and shown, separate permissions for Google Ads and Google Analytics, Google's user data policy before real customers, helpers never ship.
+- **`PHASE_05_REPORT.md`**, and the status, roadmap and integration guide updated.
+
+**Files changed** (13)
+- New (5): `tests/api/test_google_analytics_journey.py`, `tests/e2e_google_analytics.py`, `frontend/e2e/google-analytics.spec.ts`, `frontend/e2e/support/google_analytics.ts`, `docs/phases/PHASE_05_REPORT.md`.
+- Modified (8): `tests/api/test_e2e_seed.py` (4 tests), `.github/workflows/ci.yml`, docs `SECURITY.md`, `INTEGRATION_GUIDES.md`, `ROADMAP.md`, this report, `PROJECT_STATUS.md`.
+- Deleted: none. No migration.
+
+**Tests**
+- **Backend `make check`: 1,488 passed**, coverage 97 %.
+- **Frontend `npm run check`: 387 passed.**
+- **End-to-end + accessibility: 14 passed** (the new one and the 13 before it).
+
+**Deviations:** none new. (The local development database had to be migrated to 0015 before the browser test; CI migrates by itself.)
+
+**Blocked:** Step 0 (5-01) — unchanged.
+
+**Next:** product-owner review of `PHASE_05_REPORT.md`; Step 0 for Google Analytics, Google Ads and Meta when the set-ups and network access exist; then Phase 6.

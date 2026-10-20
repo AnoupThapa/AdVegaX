@@ -123,6 +123,9 @@ jobs:
       META_APP_ID: "1234567890123"
       META_APP_SECRET: "ci-not-a-secret"
       META_LOGIN_CONFIG_ID: "9876543210"
+      # And Google Analytics (5-09): it uses the Google Ads OAuth placeholders above; the
+      # browser test connects through the in-process GA4 simulator, and nothing calls Google.
+      GOOGLE_ANALYTICS_ENABLED: "true"
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6

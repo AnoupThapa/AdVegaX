@@ -283,3 +283,88 @@ def test_the_meta_seed_reports_a_wrong_password(make_client, capsys):
     args = ["--email", "seed-meta-pw@example.com", "--organization", org]
     assert meta.main([*args, "--password", "wrong password here"]) == 1
     assert "sign-in failed" in capsys.readouterr().err
+
+
+# ------------------------------------------------------------------ Google Analytics (5-09)
+def test_connects_and_imports_a_simulated_ga4_property(make_client, admin_engine, capsys):
+    from datetime import UTC, date, datetime
+    from decimal import Decimal
+    from zoneinfo import ZoneInfo
+
+    from sqlalchemy import text
+
+    from tests import e2e_google_analytics as ga
+
+    owner = make_client()
+    owner.signup("seed-ga@example.com")
+    org = owner.create_org("Seed GA")["id"]
+    assert ga.main(["--email", "seed-ga@example.com", "--organization", org]) == 0, (
+        capsys.readouterr().err
+    )
+    out = json.loads(capsys.readouterr().out)
+    (prop,) = owner.get(f"/organizations/{org}/analytics-properties").json()["data"]
+    assert (prop["id"], prop["provider"], prop["status"], prop["account_name"]) == (
+        out["property_id"],
+        "google_analytics",
+        "active",
+        "Eve Zone",
+    )
+    resources = owner.get(f"/organizations/{org}/connections/{out['connection_id']}/resources")
+    reasons = {r["external_id"]: r["unavailable_reason"] for r in resources.json()["data"]}
+    assert reasons == {ga.AU: None, ga.NZ: None, ga.NO_DETAILS: "property_details_missing"}
+    # The helper runs on the real clock (the test API on a fixed one): read its day from the
+    # database.
+    today = datetime.now(UTC).astimezone(ZoneInfo("Australia/Sydney")).date()
+    busy = date.fromordinal(today.toordinal() - 3)
+    with admin_engine.begin() as db:
+        (row,) = db.execute(
+            text(
+                "SELECT sessions, total_users, purchase_revenue, thresholded FROM analytics_daily "
+                "WHERE breakdown = 'total' AND day = :d"
+            ),
+            {"d": busy},
+        ).all()
+    assert tuple(row) == (150, 118, Decimal("310.400000"), True)
+
+
+def test_the_ga4_seed_refuses_deployed_environments(settings, monkeypatch, capsys):
+    from tests import e2e_google_analytics as ga
+
+    deployed = settings.model_copy(update={"ENVIRONMENT": Environment.PRODUCTION})
+    monkeypatch.setattr(ga, "get_settings", lambda: deployed)
+    assert ga.main(["--email", "a@example.com", "--organization", "x"]) == 1
+    assert "deployed" in capsys.readouterr().err
+
+
+def test_the_ga4_seed_replaces_the_real_provider_when_switched_on(
+    make_client, settings, monkeypatch, capsys
+):
+    from pydantic import SecretStr
+
+    from tests import e2e_google_analytics as ga
+
+    switched_on = settings.model_copy(
+        update={
+            "GOOGLE_ANALYTICS_ENABLED": True,
+            "GOOGLE_ADS_CLIENT_ID": "ci-not-a-real-client.apps.googleusercontent.com",
+            "GOOGLE_ADS_CLIENT_SECRET": SecretStr("ci-not-a-secret"),
+        }
+    )
+    monkeypatch.setattr(ga, "get_settings", lambda: switched_on)
+    owner = make_client()
+    owner.signup("seed-ga-on@example.com")
+    org = owner.create_org("Seed GA On")["id"]
+    assert ga.main(["--email", "seed-ga-on@example.com", "--organization", org]) == 0, (
+        capsys.readouterr().err
+    )
+
+
+def test_the_ga4_seed_reports_a_wrong_password(make_client, capsys):
+    from tests import e2e_google_analytics as ga
+
+    owner = make_client()
+    owner.signup("seed-ga-pw@example.com")
+    org = owner.create_org("Seed GA Pw")["id"]
+    args = ["--email", "seed-ga-pw@example.com", "--organization", org]
+    assert ga.main([*args, "--password", "wrong password here"]) == 1
+    assert "sign-in failed" in capsys.readouterr().err

@@ -1,8 +1,8 @@
 # AdVegaX — Project Status & Progress Log
 
-**Last updated:** 2026-10-18
-**Current phase:** Phase 4 (Meta Ads, read-only) implemented against the simulator — awaiting product-owner review (`phases/PHASE_04_REPORT.md`; Step 0 live checks pending) · Phase 3 (Google Ads, read-only) implemented against the simulator — awaiting product-owner review (`phases/PHASE_03_REPORT.md`; Step 0 live checks pending) · Phases 2A and 2B implemented against simulators and reviewed (A20; live checks pending) · Phase 1 (1A, 1B, 1C) implemented — awaiting product-owner review
-**Code written:** Phase 1A + 1B backend, Phase 1C web application, Phase 2A (Shopify), 2B (WooCommerce) and 3 (Google Ads) · **Migrations:** 0001–0013 · **Integrations:** Shopify, WooCommerce and Google Ads connectors (simulator-tested; not yet tried live) · test (fake) platform
+**Last updated:** 2026-10-20
+**Current phase:** Phase 5 (Google Analytics 4, read-only) implemented against the simulator — awaiting product-owner review (`phases/PHASE_05_REPORT.md`; Step 0 live checks pending) · Phase 4 (Meta Ads, read-only) implemented against the simulator — awaiting product-owner review (`phases/PHASE_04_REPORT.md`; Step 0 live checks pending) · Phase 3 (Google Ads, read-only) implemented against the simulator — awaiting product-owner review (`phases/PHASE_03_REPORT.md`; Step 0 live checks pending) · Phases 2A and 2B implemented against simulators and reviewed (A20; live checks pending) · Phase 1 (1A, 1B, 1C) implemented — awaiting product-owner review
+**Code written:** Phase 1A + 1B backend, Phase 1C web application, Phase 2A (Shopify), 2B (WooCommerce), 3 (Google Ads), 4 (Meta) and 5 (Google Analytics) · **Migrations:** 0001–0015 · **Integrations:** Shopify, WooCommerce, Google Ads, Meta and Google Analytics connectors (simulator-tested; not yet tried live) · test (fake) platform
 
 Update this file at the end of every phase and every approved sub-phase (ROADMAP §5, step 13).
 
@@ -20,7 +20,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | 2B | WooCommerce (read-only) | ✅ **Implemented against the WooCommerce simulator — reviewed (A20)**; live Step 0 (2B-01) waits for WordPress downloads to be allowed | 799 backend + 343 frontend + 11 end-to-end tests; `phases/PHASE_02B_REPORT.md` |
 | 3 | Google Ads (read-only) | ✅ **Implemented against the Google Ads simulator — awaiting review**; Step 0 (3-01) waits for Google credentials and network access | 1,062 backend + 358 frontend + 12 end-to-end tests; `phases/PHASE_03_REPORT.md` |
 | 4 | Meta (read-only) | ✅ **Implemented against the Meta simulator — awaiting review**; Step 0 (4-01) waits for the Meta app and network access | 1,301 backend + 370 frontend + 13 end-to-end tests; `phases/PHASE_04_REPORT.md` |
-| 5 | GA4 (read-only) | **Approved (A23) — in progress** (Step 0 waits for Google access) | `phases/PHASE_05_PLAN.md`, `phases/PHASE_05_PROGRESS.md` |
+| 5 | GA4 (read-only) | ✅ **Implemented against the GA4 simulator — awaiting review**; Step 0 (5-01) waits for the Analytics APIs, a GA4 property and network access | 1,488 backend + 387 frontend + 14 end-to-end tests; `phases/PHASE_05_REPORT.md` |
 | 6 | Unified analytics & financial engine | Not started | Needs signed-off metric definitions (Q7) |
 | 7 | Funnel intelligence | Not started | |
 | 8 | AI campaign planner | Not started | Needs Q12 |
@@ -117,6 +117,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | 2026-10-20 | **5-06** GA4 ongoing sync: 3-hour (2 days), nightly (14 days), weekly (90 days), scheduler every 5 minutes with the four-column system read; "Sync now" (14 days, 6 an hour); pacing from Google's remaining allowance (slow below 25 %, pause to the next hour below 10 %, per property, no retry used); plain health codes that clear by themselves; fix: frontend error-code check (GA4 status from 5-03); 33 tests; 1,460 backend + 370 frontend tests pass | `phases/PHASE_05_PROGRESS.md`, `INTEGRATION_GUIDES.md`, `SECURITY.md` |
 | 2026-10-20 | **5-07** Analytics read API: properties list/detail (sync, waiting for Google's allowance, health), daily figures in total / channel / source views with period totals, users per day only, derived rates with reasons, processing (3 days) and data-quality notes, "Sync now"; `analytics.view` / `analytics.manage`; tenant sweep extended; 23 tests; 1,483 backend + 370 frontend tests pass | `phases/PHASE_05_PROGRESS.md`, `API_SPECIFICATION.md` §19C |
 | 2026-10-20 | **5-08** Web app: "Connect Google Analytics" (read-only, separate from Google Ads), properties grouped by Analytics account with plain reasons; Analytics tab; property page (period tiles, users per day only, by day with processing and data-quality notes, by channel and by source / medium / campaign, health with fixes, Sync now); 17 tests; 387 frontend + 13 end-to-end tests pass | `phases/PHASE_05_PROGRESS.md` |
+| 2026-10-20 | **5-09 / Phase 5 complete (simulator)** Whole-journey test, browser test with a simulated GA4 property and accessibility checks, browser helper, CI switch, security notes; 1,488 backend + 387 frontend + 14 end-to-end tests | `phases/PHASE_05_REPORT.md`, `phases/PHASE_05_PROGRESS.md` |
 | 2026-10-08 | **Phase 1B implemented**: connections/resources/links, encrypted credentials, SSRF-safe client, rate limiter, provider framework + fake platform, jobs with retry/dead-letter, single scheduler, audited denials | `backend/`, `phases/PHASE_01B_REPORT.md`, `SECURITY.md`, `INTEGRATION_GUIDES.md` |
 
 ## 3. Decision log
@@ -143,7 +144,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | A17 | Phase 1C plan with all §15 recommendations; task-by-task delivery | Approved — implemented, awaiting review |
 | A19 | Phase 2B plan with all §2 recommendations (Q10a, Q10b, Q-2B-1…7); test environment A recommended, C-style until WordPress downloads are allowed | Approved 2026-10-14 ("go ahead") — in progress |
 | A22 | Phase 4 plan with all §2 recommendations (Q-4-1 … Q-4-12); live-testing option C | Approved 2026-10-18 ("Approve all") — implemented 2026-10-19 (`phases/PHASE_04_REPORT.md`) |
-| A23 | Phase 5 plan with all §2 recommendations (Q11 settled: daily aggregates + Admin API discovery; Q-5-1 … Q-5-11); live-testing option C | Approved 2026-10-19 ("Approve all") — in progress |
+| A23 | Phase 5 plan with all §2 recommendations (Q11 settled: daily aggregates + Admin API discovery; Q-5-1 … Q-5-11); live-testing option C | Approved 2026-10-19 ("Approve all") — implemented 2026-10-20 (`phases/PHASE_05_REPORT.md`) |
 | A21 | Phase 3 plan with all §2 recommendations (Q-3-1 … Q-3-11); live-testing option C | Approved 2026-10-15 ("Approve all") — implemented 2026-10-18, awaiting review |
 | A20 | Phase 2A and 2B reports reviewed by the product owner; continue to Phase 3 planning | Reviewed 2026-10-15 ("reviewed pls continue") |
 | A18 | Phase 2A plan v2 with all §2 recommendations (Q5–Q9, D-2A-1…3); live-testing option C | Approved 2026-10-13 — implemented, awaiting review (live checks pending) |
@@ -151,7 +152,8 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 ## 4. Open items
 
 **Awaiting product owner now**
-- Review of Phase 4: `phases/PHASE_04_REPORT.md` (deviations §8, not verified §9, risks §10), and of Phase 3: `phases/PHASE_03_REPORT.md`.
+- Review of Phase 5: `phases/PHASE_05_REPORT.md` (deviations §8, not verified §9, risks §10), of Phase 4: `phases/PHASE_04_REPORT.md`, and of Phase 3: `phases/PHASE_03_REPORT.md`.
+- Google Analytics set-up for Step 0 (5-01): in the Google Ads Google Cloud project, switch on the Google Analytics Data and Admin APIs and add `analytics.readonly` to the consent screen; a Google account with Viewer access to a GA4 property; allow `analyticsdata.googleapis.com`, `analyticsadmin.googleapis.com`, `oauth2.googleapis.com` and `accounts.google.com`.
 - Meta set-up for Step 0 (4-01): developer app with Login for Business and a configuration (`ads_read`, `business_management`), a sandbox ad account; app id, secret and configuration id only in the local untracked settings file; allow `graph.facebook.com` and `www.facebook.com` in Claude's network settings. Start Business Verification and App Review.
 - Google set-up for Step 0 (3-01): developer token, OAuth client; allow Google's API hosts.
 - Apply the pending work (`advegax-pending.bundle`) to the desktop folder when it is available again, then push.
@@ -168,7 +170,7 @@ Q5 Shopify public-app approach (2A production) · Q6 same store/account in two o
 
 ## 5. Next actions
 
-0. **Now:** review `phases/PHASE_04_REPORT.md` and `phases/PHASE_03_REPORT.md`; do the Meta and Google set-ups so both Step 0 checks can run; apply `advegax-pending.bundle` to the desktop folder and open a pull request so GitHub CI runs. Phase 5 (GA4) is approved (A23) and in progress.
+0. **Now:** review `phases/PHASE_05_REPORT.md`, `phases/PHASE_04_REPORT.md` and `phases/PHASE_03_REPORT.md`; do the Google (Ads and Analytics) and Meta set-ups so the three Step 0 checks can run; apply `advegax-pending.bundle` to the desktop folder and open a pull request so GitHub CI runs. Phase 6 needs the signed-off metric definitions (Q7).
 1. Product owner reviews Phase 1 (`PHASE_01A_REPORT.md`, `PHASE_01B_REPORT.md`, `PHASE_01C_REPORT.md`) and Phase 2A (`PHASE_02A_REPORT.md`).
 2. Open a pull request `feature/phase-1a → main` so GitHub CI runs every job (CI does not run on pushes to the feature branch alone).
 3. Live Shopify checks (2A-01): Shopify Partner account + development store + app in the Dev Dashboard, and a reachable public HTTPS address (Shopify domains allowed in Claude network settings plus a tunnel, or a staging server).

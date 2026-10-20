@@ -31,7 +31,7 @@ This roadmap splits AdVegaX into phases. Each phase has its own plan in `docs/ph
 | 2B | Commerce — WooCommerce (read-only) | Connect WooCommerce stores safely; same normalized models; proves abstraction | 2A | **Implemented against the WooCommerce simulator — awaiting review** (A19); live Step 0 pending |
 | 3 | Advertising — Google Ads (read-only) | Accounts, structure, daily performance | 1 | Implemented against the simulator — awaiting review; live Step 0 pending (`phases/PHASE_03_REPORT.md`) |
 | 4 | Advertising — Meta (read-only) | Accounts, structure, insights | 1 | Implemented against the simulator — awaiting review; live Step 0 pending (`phases/PHASE_04_REPORT.md`) |
-| 5 | Analytics — GA4 (read-only) | Property discovery, aggregated behaviour data | 1 | Not started |
+| 5 | Analytics — GA4 (read-only) | Property discovery, aggregated behaviour data | 1 | Implemented against the simulator — awaiting review; live Step 0 pending (`phases/PHASE_05_REPORT.md`) |
 | 6 | Unified analytics & financial engine | One trustworthy cross-source view of revenue, spend, cost and profit | 2A, 3, 4, 5 (2B recommended) | Not started |
 | 7 | Funnel intelligence | Source-labelled funnel stages and conversion rates | 6 | Not started |
 | 8 | AI campaign planner | Schema-validated AI strategies grounded in deterministic data | 2A, 6 | Not started |
