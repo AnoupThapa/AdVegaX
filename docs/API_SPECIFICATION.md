@@ -485,6 +485,15 @@ All under `/organizations/{organization_id}`; same rules as §19A and §19B (ser
 | `POST /analytics-properties/{property_id}/resync` | owner, admin, manager | "Sync now": the last 14 days (the first import again if it did not finish). 202 `{property_id, job_id, mode}`; 409 `SYNC_IN_PROGRESS`; 409 `ANALYTICS_PROPERTY_NOT_SYNCING` (unlinked / connection not active); 429 above `THROTTLE_ANALYTICS_PROPERTY_RESYNC_PER_HOUR` per property |
 | `GET /analytics-properties/{property_id}/metrics/daily?from&to&breakdown&limit` | all members | Default the last 30 property-local days, at most `METRICS_MAX_DAYS`; `breakdown` `total` (default), `channel` or `source`; `limit` 1–500 (default 100) items for a breakdown; 422 `VALIDATION_ERROR` otherwise. `synced_from`, `processing_from` (days from it on are `processing: true` — still being processed by Google; `ANALYTICS_PROCESSING_DAYS`, 3). **Total:** `days[]` and `totals`. **Breakdown:** `items[]` (`key`, `channel_group` or `source` / `medium` / `campaign`, `figures` for the period from that value's own rows; most sessions first), `item_count`, and the property's `totals` (never added up from the items); no items when part of the period was not read. Figures: `sessions`, `engaged_sessions`, `new_users`, `key_events`, `purchases`, `purchase_revenue` (purchases minus refunds; can be negative), `total_users` (a figure: the day's count for one day; **`unavailable` with `users_per_day_only` for a period of several days** — users are never added across days or views), the derived `engagement_rate`, `key_events_per_session`, `purchase_conversion_rate`, `revenue_per_session` (six decimals, half-even; `unavailable` with `no_sessions` when there were none), and `quality {other_row, thresholded, sampled, truncated}` (for a period: any day). A day not read is `not_synchronized` with null values, and so are the totals of a period containing one. A day read with no activity has real zeros |
 
+## 19D. Store assignment — as built (6-02)
+
+| Method & path | Who | Notes |
+|---|---|---|
+| `PUT /ad-accounts/{ad_account_id}/store` | owner, admin | Body `{store_id}` (a store of the organization, or `null` = the whole organization). 200 with the ad account (now carrying `store_id`); 422 `VALIDATION_ERROR` `{field: store_id, issue: unknown_store}` for a store that is not the organization's; audited as `ad_account.store_assigned` (only when it changes) |
+| `PUT /analytics-properties/{property_id}/store` | owner, admin | The same for an analytics property (`analytics_property.store_assigned`) |
+
+`GET /ad-accounts…` and `GET /analytics-properties…` now include `store_id`. The reporting currency and time zone are the organization's `default_currency` and `default_timezone` (`PATCH /organizations/{organization_id}`, owner and admin).
+
 ## 20. Webhooks
 
 Provider webhooks must:

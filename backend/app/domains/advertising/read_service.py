@@ -62,6 +62,7 @@ from app.domains.integrations.models import (
     OrganizationResourceLink,
 )
 from app.domains.integrations.tokens import sign_in_ends_at
+from app.domains.metrics.assignment import assign_store
 from app.domains.organizations.permissions import Permission, authorize
 from app.domains.organizations.tenancy import TenantContext
 from app.runtime import Runtime
@@ -300,6 +301,7 @@ class AdvertisingReadService:
                 if account.health_checked_at is not None
                 else None
             ),
+            store_id=account.store_id,
             created_at=account.created_at,
         )
 
@@ -311,6 +313,16 @@ class AdvertisingReadService:
     def get_account(self, ctx: TenantContext, account_id: uuid.UUID) -> AdAccountOut:
         authorize(ctx, Permission.ADS_VIEW)
         with self.rt.db.transaction(org_id=ctx.organization_id, user_id=ctx.user_id) as session:
+            return self._account_out(self._one(session, ctx, account_id))
+
+    def assign_store(
+        self, ctx: TenantContext, account_id: uuid.UUID, store_id: uuid.UUID | None
+    ) -> AdAccountOut:
+        """Which store the account's spend belongs to (owners and admins, Q-6-1)."""
+        authorize(ctx, Permission.ORG_UPDATE)
+        with self.rt.db.transaction(org_id=ctx.organization_id, user_id=ctx.user_id) as session:
+            row = self._one(session, ctx, account_id)
+            assign_store(session, ctx, row.account, store_id, resource_type="ad_account")
             return self._account_out(self._one(session, ctx, account_id))
 
     def resync(self, ctx: TenantContext, account_id: uuid.UUID) -> AdResyncOut:

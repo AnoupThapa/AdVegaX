@@ -122,6 +122,18 @@
             "title": "Status",
             "type": "string"
           },
+          "store_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Store Id"
+          },
           "sync": {
             "$ref": "#/components/schemas/AdSyncOut"
           },
@@ -1663,6 +1675,18 @@
           "status": {
             "title": "Status",
             "type": "string"
+          },
+          "store_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Store Id"
           },
           "sync": {
             "$ref": "#/components/schemas/AnalyticsSyncOut"
@@ -4262,6 +4286,28 @@
         "title": "StatusOut",
         "type": "object"
       },
+      "StoreAssignmentIn": {
+        "description": "Which store this belongs to; null = the whole organization (Phase 6, Q-6-1).",
+        "properties": {
+          "store_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Store Id"
+          }
+        },
+        "required": [
+          "store_id"
+        ],
+        "title": "StoreAssignmentIn",
+        "type": "object"
+      },
       "StoreOut": {
         "properties": {
           "connection_status": {
@@ -5849,6 +5895,70 @@
         ]
       }
     },
+    "/api/v1/organizations/{organization_id}/ad-accounts/{ad_account_id}/store": {
+      "put": {
+        "description": "Which store the account's spend belongs to; null = the whole organization (Phase 6).",
+        "operationId": "assign_ad_account_store_api_v1_organizations__organization_id__ad_accounts__ad_account_id__store_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ad_account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ad Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoreAssignmentIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AdAccountOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Assign Ad Account Store",
+        "tags": [
+          "advertising"
+        ]
+      }
+    },
     "/api/v1/organizations/{organization_id}/analytics-properties": {
       "get": {
         "description": "Analytics properties of this organization with their sync status and health.",
@@ -6110,6 +6220,70 @@
           }
         },
         "summary": "Resync Analytics Property",
+        "tags": [
+          "analytics"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/analytics-properties/{property_id}/store": {
+      "put": {
+        "description": "Which store the property measures; null = the whole organization (Phase 6).",
+        "operationId": "assign_analytics_property_store_api_v1_organizations__organization_id__analytics_properties__property_id__store_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoreAssignmentIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AnalyticsPropertyOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Assign Analytics Property Store",
         "tags": [
           "analytics"
         ]

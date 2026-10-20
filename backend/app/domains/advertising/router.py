@@ -17,6 +17,7 @@ from app.domains.advertising.schemas import (
     AdCampaignListOut,
     AdDailyMetricsOut,
     AdResyncOut,
+    StoreAssignmentIn,
 )
 
 router = APIRouter(tags=["advertising"])
@@ -42,6 +43,14 @@ def list_ad_accounts(ctx: TenantDep, svc: AdsDep) -> Envelope[list[AdAccountOut]
 @router.get(ACCOUNT, response_model=Envelope[AdAccountOut])
 def get_ad_account(ad_account_id: uuid.UUID, ctx: TenantDep, svc: AdsDep) -> Envelope[AdAccountOut]:
     return ok(svc.get_account(ctx, ad_account_id))
+
+
+@router.put(f"{ACCOUNT}/store", response_model=Envelope[AdAccountOut])
+def assign_ad_account_store(
+    ad_account_id: uuid.UUID, body: StoreAssignmentIn, ctx: TenantDep, svc: AdsDep
+) -> Envelope[AdAccountOut]:
+    """Which store the account's spend belongs to; null = the whole organization (Phase 6)."""
+    return ok(svc.assign_store(ctx, ad_account_id, body.store_id))
 
 
 @router.post(

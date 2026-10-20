@@ -59,6 +59,8 @@ class AdAccountOut(BaseModel):
     first_import_completed_at: datetime | None
     sync: AdSyncOut
     health: AdHealthOut | None
+    # Phase 6 (Q-6-1): the store it belongs to; null = the whole organization.
+    store_id: uuid.UUID | None = None
     created_at: datetime
 
 
@@ -164,3 +166,9 @@ class AdResyncOut(BaseModel):
     ad_account_id: uuid.UUID
     job_id: uuid.UUID
     mode: str
+
+
+class StoreAssignmentIn(BaseModel):
+    """Which store this belongs to; null = the whole organization (Phase 6, Q-6-1)."""
+
+    store_id: uuid.UUID | None

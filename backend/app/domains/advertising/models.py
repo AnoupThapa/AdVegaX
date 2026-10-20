@@ -96,6 +96,12 @@ class AdAccount(UUIDPrimaryKey, Timestamps, Base):
             _in("platform_status", AD_ACCOUNT_PLATFORM_STATUSES), name="platform_status"
         ),
         CheckConstraint("char_length(currency) = 3", name="currency"),
+        ForeignKeyConstraint(
+            ["organization_id", "store_id"],
+            ["stores.organization_id", "stores.id"],
+            ondelete="SET NULL (store_id)",
+            name="fk_ad_accounts_store",
+        ),
     )
 
     organization_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
@@ -113,6 +119,9 @@ class AdAccount(UUIDPrimaryKey, Timestamps, Base):
     # raw platform error.
     health_code: Mapped[str | None] = mapped_column(String(64))
     health_checked_at: Mapped[datetime | None] = mapped_column(TZ)
+    # The store this account's spend belongs to when the organization has several (Q-6-1);
+    # None = the whole organization. With one store, everything counts for it on read.
+    store_id: Mapped[uuid.UUID | None] = mapped_column()
 
 
 class AdBudget(UUIDPrimaryKey, Timestamps, Base):

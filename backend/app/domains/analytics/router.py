@@ -15,6 +15,7 @@ from app.domains.analytics.schemas import (
     AnalyticsDailyMetricsOut,
     AnalyticsPropertyOut,
     AnalyticsResyncOut,
+    StoreAssignmentIn,
 )
 
 router = APIRouter(tags=["analytics"])
@@ -46,6 +47,14 @@ def get_analytics_property(
     property_id: uuid.UUID, ctx: TenantDep, svc: AnalyticsDep
 ) -> Envelope[AnalyticsPropertyOut]:
     return ok(svc.get_property(ctx, property_id))
+
+
+@router.put(f"{PROPERTY}/store", response_model=Envelope[AnalyticsPropertyOut])
+def assign_analytics_property_store(
+    property_id: uuid.UUID, body: StoreAssignmentIn, ctx: TenantDep, svc: AnalyticsDep
+) -> Envelope[AnalyticsPropertyOut]:
+    """Which store the property measures; null = the whole organization (Phase 6)."""
+    return ok(svc.assign_store(ctx, property_id, body.store_id))
 
 
 @router.post(

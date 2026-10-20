@@ -409,6 +409,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/{organization_id}/ad-accounts/{ad_account_id}/store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Assign Ad Account Store
+         * @description Which store the account's spend belongs to; null = the whole organization (Phase 6).
+         */
+        put: operations["assign_ad_account_store_api_v1_organizations__organization_id__ad_accounts__ad_account_id__store_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizations/{organization_id}/analytics-properties": {
         parameters: {
             query?: never;
@@ -482,6 +502,26 @@ export interface paths {
          * @description "Sync now": the last 14 days (limited per property).
          */
         post: operations["resync_analytics_property_api_v1_organizations__organization_id__analytics_properties__property_id__resync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/analytics-properties/{property_id}/store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Assign Analytics Property Store
+         * @description Which store the property measures; null = the whole organization (Phase 6).
+         */
+        put: operations["assign_analytics_property_store_api_v1_organizations__organization_id__analytics_properties__property_id__store_put"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -963,6 +1003,8 @@ export interface components {
             source: string;
             /** Status */
             status: string;
+            /** Store Id */
+            store_id?: string | null;
             sync: components["schemas"]["AdSyncOut"];
             /** Timezone */
             timezone: string;
@@ -1444,6 +1486,8 @@ export interface components {
             source: string;
             /** Status */
             status: string;
+            /** Store Id */
+            store_id?: string | null;
             sync: components["schemas"]["AnalyticsSyncOut"];
             /** Timezone */
             timezone: string;
@@ -2293,6 +2337,14 @@ export interface components {
         StatusOut: {
             /** Status */
             status: string;
+        };
+        /**
+         * StoreAssignmentIn
+         * @description Which store this belongs to; null = the whole organization (Phase 6, Q-6-1).
+         */
+        StoreAssignmentIn: {
+            /** Store Id */
+            store_id: string | null;
         };
         /** StoreOut */
         StoreOut: {
@@ -3170,6 +3222,42 @@ export interface operations {
             };
         };
     };
+    assign_ad_account_store_api_v1_organizations__organization_id__ad_accounts__ad_account_id__store_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ad_account_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StoreAssignmentIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AdAccountOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_analytics_properties_api_v1_organizations__organization_id__analytics_properties_get: {
         parameters: {
             query?: never;
@@ -3289,6 +3377,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Envelope_AnalyticsResyncOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    assign_analytics_property_store_api_v1_organizations__organization_id__analytics_properties__property_id__store_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StoreAssignmentIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AnalyticsPropertyOut_"];
                 };
             };
             /** @description Validation Error */

@@ -25,6 +25,7 @@ from app.domains.commerce.models import (
     Store,
 )
 from app.domains.finance.models import FinancialDaily
+from app.domains.fx.models import FxRate
 from app.domains.identity.models import User, UserActionToken, UserPasswordCredential, UserSession
 from app.domains.integrations.models import (
     ExternalConnection,
@@ -56,6 +57,7 @@ __all__ = [
     "ExternalConnectionCredential",
     "ExternalResource",
     "FinancialDaily",
+    "FxRate",
     "Invitation",
     "JobRun",
     "Membership",

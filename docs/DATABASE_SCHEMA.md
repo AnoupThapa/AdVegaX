@@ -13,7 +13,7 @@ This document is the **target data model**. Tables are created only in the phase
 | 2A / 2B | **as built (migrations 0007–0011):** stores, products, product_variants (incl. inventory), product_cost_history, orders (incl. hashed customer key), order_items, sales_entries, refunds, refund_items, commerce_sync_state, webhook_events, financial_daily (store components) — see §4A |
 | 3–4 | **as built (migrations 0012–0013):** ad_accounts (resource extension), ad_budgets, ad_campaigns, ad_groups, ads, ad_performance_daily, ad_sync_state — see §4B. Keywords and audience_targets come with the phases that use them |
 | 5 | **as built (migrations 0014, 0015):** analytics_properties (resource extension), analytics_daily (daily aggregates in three views), analytics_sync_state — see §12 (decision Q11, A23) |
-| 6 | fx_rates, metric_definitions, store_cost_rules; financial_daily gains ad-spend components |
+| 6 | **as built (migration 0016, A24):** fx_rates (shared reference data), `store_id` on ad_accounts and analytics_properties — see §13A. The metric registry is code (`analytics-v1`), not a table; unified figures are computed on read (Q-6-13), so financial_daily gains no ad-spend columns; store_cost_rules waits for the cost-entry option (Q-6-7) |
 | 7 | funnel_daily |
 | 8–9 | ai_models, prompt_versions, ai_runs, campaign_strategies, creatives |
 | 10A | actions, approvals, idempotency_keys |
@@ -569,6 +569,17 @@ GA4's Data API returns **aggregated reports, not events**, so AdVegaX stores dai
 - order_count
 
 Financial aggregates are derived by deterministic application logic. They store additive, measurable components only; ROAS, CPA, margins, profit margin and budget utilization are calculated on read (A5). Any cached derived value must be reproducible from these components.
+
+## 13A. Unified analytics — as built (Phase 6, migration 0016; A24)
+
+**fx_rates** — published exchange rates, one per source, currency pair and day (unique), exactly as published
+- id, source (`ecb` | `nrb`), base, quote, rate_date, rate (exact decimal, 24.10), unit (the source's quotation unit: Nepal Rastra Bank quotes JPY per 10 and INR per 100), fetched_at
+- meaning: `unit` units of `base` are worth `rate` units of `quote` (ECB: base EUR; NRB: quote NPR, middle of buy and sell)
+- **Not tenant data:** no organization column and no RLS; the app role may only `SELECT`, the system role (the daily job) `SELECT`, `INSERT`, `UPDATE`
+
+**ad_accounts.store_id**, **analytics_properties.store_id** — optional: the store an account's spend or a property's visits belong to when an organization has several stores (Q-6-1); composite tenant key to `stores`, `ON DELETE SET NULL (store_id)`. NULL = the whole organization; with one store, everything counts for it on read.
+
+The reporting currency and time zone are the organization's existing `default_currency` and `default_timezone` (Q-6-2).
 
 ## 14. AI Tables
 

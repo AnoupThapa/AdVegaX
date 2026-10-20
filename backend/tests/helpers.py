@@ -72,6 +72,9 @@ class ApiClient:
     def patch(self, path: str, json: Any = None, headers: dict[str, str] | None = None) -> Any:
         return self._send("PATCH", path, json, headers)
 
+    def put(self, path: str, json: Any = None, headers: dict[str, str] | None = None) -> Any:
+        return self._send("PUT", path, json, headers)
+
     def delete(self, path: str, headers: dict[str, str] | None = None) -> Any:
         return self._send("DELETE", path, None, headers)
 

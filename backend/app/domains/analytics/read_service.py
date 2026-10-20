@@ -57,6 +57,7 @@ from app.domains.integrations.models import (
     ExternalResource,
     OrganizationResourceLink,
 )
+from app.domains.metrics.assignment import assign_store
 from app.domains.organizations.permissions import Permission, authorize
 from app.domains.organizations.tenancy import TenantContext
 from app.runtime import Runtime
@@ -290,6 +291,7 @@ class AnalyticsReadService:
                 if prop.health_checked_at is not None
                 else None
             ),
+            store_id=prop.store_id,
             created_at=prop.created_at,
         )
 
@@ -301,6 +303,16 @@ class AnalyticsReadService:
     def get_property(self, ctx: TenantContext, property_id: uuid.UUID) -> AnalyticsPropertyOut:
         authorize(ctx, Permission.ANALYTICS_VIEW)
         with self.rt.db.transaction(org_id=ctx.organization_id, user_id=ctx.user_id) as session:
+            return self._property_out(self._one(session, ctx, property_id))
+
+    def assign_store(
+        self, ctx: TenantContext, property_id: uuid.UUID, store_id: uuid.UUID | None
+    ) -> AnalyticsPropertyOut:
+        """Which store the property measures (owners and admins, Q-6-1)."""
+        authorize(ctx, Permission.ORG_UPDATE)
+        with self.rt.db.transaction(org_id=ctx.organization_id, user_id=ctx.user_id) as session:
+            row = self._one(session, ctx, property_id)
+            assign_store(session, ctx, row.prop, store_id, resource_type="analytics_property")
             return self._property_out(self._one(session, ctx, property_id))
 
     def resync(self, ctx: TenantContext, property_id: uuid.UUID) -> AnalyticsResyncOut:

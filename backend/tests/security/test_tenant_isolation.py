@@ -14,6 +14,12 @@ import pytest
 from tests.helpers import connected, last_email
 
 BODIES = {
+    ("put", "/organizations/{organization_id}/ad-accounts/{ad_account_id}/store"): {
+        "store_id": None
+    },
+    ("put", "/organizations/{organization_id}/analytics-properties/{property_id}/store"): {
+        "store_id": None
+    },
     ("patch", "/organizations/{organization_id}"): {"name": "Hijacked"},
     ("patch", "/organizations/{organization_id}/members/{member_id}"): {"role": "viewer"},
     ("post", "/organizations/{organization_id}/invitations"): {
