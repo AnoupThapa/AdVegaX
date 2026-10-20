@@ -73,7 +73,7 @@ const CONNECT_ERRORS: Readonly<Record<string, string>> = {
     "The platform gave an answer AdVegaX could not understand. Please try again.",
   // Google Ads (3-09).
   google_sign_in_rejected:
-    "Google no longer accepts AdVegaX's permission (it was removed or expired). Please reconnect Google Ads.",
+    "Google no longer accepts AdVegaX's permission (it was removed or expired). Please reconnect on the Connections page.",
   not_ads_user:
     "This Google account has no Google Ads account. Sign in with the Google account you use for Google Ads.",
   developer_token_invalid:
@@ -87,6 +87,16 @@ const CONNECT_ERRORS: Readonly<Record<string, string>> = {
   quota_exhausted:
     "Google Ads is limiting how much AdVegaX can read right now. It continues by itself later.",
   bad_query: "Google Ads did not accept AdVegaX's request. Please contact AdVegaX support.",
+  // Google Analytics (5-08).
+  analytics_api_disabled:
+    "Google Analytics is not switched on for AdVegaX's Google Cloud project yet. Please contact AdVegaX support.",
+  analytics_permission_missing:
+    "Google's permission to read Google Analytics was not granted. Please connect Google Analytics again and allow AdVegaX to see your Analytics data.",
+  no_property_access:
+    "This Google account no longer has access to that Google Analytics property. Ask its administrator for access, then check again.",
+  property_deleted: "The property was deleted in Google Analytics, so it cannot be read.",
+  property_details_missing:
+    "Google Analytics did not give the property's currency or time zone, so it cannot be read.",
   // Meta (4-07).
   meta_sign_in_rejected:
     "Meta no longer accepts AdVegaX's permission (it was removed, expired or the password changed). Please reconnect Meta.",
@@ -143,11 +153,19 @@ const META_UNAVAILABLE_REASONS: Readonly<Record<string, string>> = {
   no_account_access: "This Facebook account cannot read it",
 };
 
+const ANALYTICS_UNAVAILABLE_REASONS: Readonly<Record<string, string>> = {
+  property_details_missing: "Google Analytics did not give its currency or time zone",
+  property_deleted: "Deleted in Google Analytics",
+  no_property_access: "This Google account cannot read it",
+};
+
 export function unavailableReason(
   reason: string | null | undefined,
   provider?: string | null,
 ): string | null {
   if (!reason) return null;
+  if (provider === "google_analytics")
+    return ANALYTICS_UNAVAILABLE_REASONS[reason] ?? "This property cannot be linked";
   const reasons = provider === "meta_ads" ? META_UNAVAILABLE_REASONS : UNAVAILABLE_REASONS;
   return reasons[reason] ?? "This account cannot be linked";
 }

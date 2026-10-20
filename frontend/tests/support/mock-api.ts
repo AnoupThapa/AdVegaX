@@ -4,7 +4,14 @@
  */
 import { vi } from "vitest";
 
-export type MockCall = { method: string; path: string; body: unknown; csrf: string | null };
+export type MockCall = {
+  method: string;
+  path: string;
+  body: unknown;
+  csrf: string | null;
+  /** The query string's values (e.g. `breakdown`), for routes answered by one handler. */
+  query: URLSearchParams;
+};
 type Handler = (call: MockCall) => Response | Promise<Response>;
 
 export function json(status: number, body: unknown): Response {
@@ -41,6 +48,7 @@ export function mockApi(routes: Record<string, Handler | Response>) {
       path: url.pathname,
       body: text ? JSON.parse(text) : null,
       csrf: request.headers.get("X-CSRF-Token"),
+      query: url.searchParams,
     };
     calls.push(call);
     const handler = handlers.get(`${call.method} ${call.path}`);

@@ -709,3 +709,83 @@ describe("Meta on the Connections pages (4-07)", () => {
     expect(screen.queryByText("Sign-in ends")).not.toBeInTheDocument();
   });
 });
+
+describe("Google Analytics on the Connections pages (5-08)", () => {
+  const ga = {
+    code: "google_analytics",
+    display_name: "Google Analytics",
+    category: "analytics",
+    auth_scheme: "oauth2",
+    capabilities: { pkce: true, token_refresh: true, token_revocation: true },
+    test_only: false,
+  };
+
+  it("offers Google Analytics as read-only and separate from Google Ads", async () => {
+    baseApi("owner", {
+      "GET /api/v1/providers": ok([ga]),
+      [`GET ${ORG_PATH}/connections`]: ok([]),
+    });
+    renderWithProviders(inShell(<ConnectionsPage />, `/orgs/${ORG_ID}/connections`), {
+      session: me,
+    });
+    expect(
+      await screen.findByRole("button", { name: "Connect Google Analytics" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/never changes anything in Google Analytics/)).toBeInTheDocument();
+    expect(screen.getByText(/separate from Google Ads/)).toBeInTheDocument();
+  });
+
+  it("groups properties by Analytics account and explains why one cannot be linked", async () => {
+    detail("owner", {
+      "GET /api/v1/providers": ok([ga]),
+      [`GET ${ORG_PATH}/connections/${CONN}`]: ok(
+        connection({ provider: "google_analytics", account_label: "Google Analytics" }),
+      ),
+      [`GET ${ORG_PATH}/connections/${CONN}/resources`]: ok([
+        resource("111", {
+          provider: "google_analytics",
+          kind: "analytics_property",
+          group_path: "Eve Zone",
+          display_name: "Eve Zone AU",
+        }),
+        resource("112", {
+          provider: "google_analytics",
+          kind: "analytics_property",
+          group_path: "Eve Zone",
+          display_name: "Eve Zone NZ",
+          unavailable_reason: "property_deleted",
+        }),
+        resource("211", {
+          provider: "google_analytics",
+          kind: "analytics_property",
+          group_path: "Mediflex",
+          display_name: "Mediflex",
+          unavailable_reason: "property_details_missing",
+        }),
+      ]),
+    });
+    const eveZone = await screen.findByRole("table", { name: "Analytics account: Eve Zone" });
+    const deleted = within(eveZone).getByRole("row", { name: /Eve Zone NZ/ });
+    expect(deleted).toHaveTextContent("Deleted in Google Analytics");
+    expect(deleted).toHaveTextContent("Analytics property");
+    expect(within(deleted).queryByRole("button", { name: "Link Eve Zone NZ" })).toBeNull();
+    expect(within(eveZone).getByRole("button", { name: "Link Eve Zone AU" })).toBeInTheDocument();
+    const mediflex = screen.getByRole("table", { name: "Analytics account: Mediflex" });
+    expect(mediflex).toHaveTextContent("did not give its currency or time zone");
+  });
+
+  it("says disconnecting leaves Google Ads alone", async () => {
+    detail("owner", {
+      "GET /api/v1/providers": ok([ga]),
+      [`GET ${ORG_PATH}/connections/${CONN}`]: ok(
+        connection({ provider: "google_analytics", account_label: "Google Analytics" }),
+      ),
+      [`GET ${ORG_PATH}/connections/${CONN}/resources`]: ok([]),
+    });
+    click(await screen.findByRole("button", { name: "Disconnect Google Analytics" }));
+    const dialog = screen.getByRole("dialog", { name: "Disconnect Google Analytics?" });
+    expect(
+      within(dialog).getByText(/Google Ads connection, if any, is not affected/),
+    ).toBeInTheDocument();
+  });
+});

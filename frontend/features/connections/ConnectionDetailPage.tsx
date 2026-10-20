@@ -46,13 +46,22 @@ export function groupByPath(resources: readonly Resource[]) {
 
 function groupCaption(all: readonly Resource[], count: number, provider: string): string {
   const grouped = all.some((r) => r.group_path);
-  const n = count === 1 ? "1 account" : `${count} accounts`;
+  const n =
+    provider === "google_analytics"
+      ? count === 1
+        ? "1 property"
+        : `${count} properties`
+      : count === 1
+        ? "1 account"
+        : `${count} accounts`;
   if (!grouped) return n;
+  if (provider === "google_analytics") return `Without an Analytics account: ${n}`;
   return provider === "meta_ads" ? `Not in a business: ${n}` : `Directly accessible: ${n}`;
 }
 
 function pathCaption(path: string, provider: string): string {
   const shown = path.replaceAll(" > ", " › ");
+  if (provider === "google_analytics") return `Analytics account: ${shown}`;
   return provider === "meta_ads" ? `Business: ${shown}` : `Through ${shown}`;
 }
 
@@ -332,6 +341,13 @@ function Detail({ connectionId }: { connectionId: string }) {
           <p>
             AdVegaX also asks Google to remove its access. You can check this in your Google account
             (Security → Third-party connections).
+          </p>
+        ) : null}
+        {c.provider === "google_analytics" ? (
+          <p>
+            AdVegaX also asks Google to remove its access to Google Analytics. Your Google Ads
+            connection, if any, is not affected. You can check this in your Google account (Security
+            → Third-party connections).
           </p>
         ) : null}
         {c.provider === "meta_ads" ? (

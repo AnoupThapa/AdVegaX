@@ -78,6 +78,9 @@ const REASONS: Readonly<Record<string, string>> = {
   no_conversions: "No conversions",
   no_cost: "No spend",
   not_provided: "Not provided by the platform",
+  // Analytics (5-08): rates without sessions, and users, which are counted per day (Q-5-5).
+  no_sessions: "No sessions",
+  users_per_day_only: "Shown per day only",
 };
 
 /** Why a figure is not shown, in plain words. */

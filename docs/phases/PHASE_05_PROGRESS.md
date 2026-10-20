@@ -11,7 +11,7 @@ Plan: `PHASE_05_PLAN.md` (approved 2026-10-19, A23, all recommendations; Q11 set
 | 5-05 Daily import | ✅ Done — awaiting review |
 | 5-06 Ongoing sync, quota pacing, health | ✅ Done — awaiting review |
 | 5-07 Read API | ✅ Done — awaiting review |
-| 5-08 Web app | Not started |
+| 5-08 Web app | ✅ Done — awaiting review |
 | 5-09 Journey test, browser test, docs, report | Not started |
 
 ## 5-01 — Step 0 on the demo property and one of your properties
@@ -264,3 +264,38 @@ The rest of Phase 5 is built against Google's documentation and a GA4 simulator 
 **Blocked:** Step 0 (5-01) — unchanged.
 
 **Next task:** 5-08 — web app: "Connect Google Analytics" on Connections, an Analytics tab with the linked properties, and the property page (period totals, by day, by channel, by source / medium / campaign, processing and data-quality notes, "Sync now"), with accessibility checks.
+
+## 5-08 — Web app: Connections, Analytics tab and property page (2026-10-20)
+
+**Completed**
+- **Connections page:** "Connect Google Analytics", with a note that AdVegaX only reads and that it is separate from Google Ads (either can be removed alone). Found properties are grouped under their **Analytics account** ("Analytics account: Eve Zone"), and a property that cannot be linked says why: "Deleted in Google Analytics", "Google Analytics did not give its currency or time zone", "This Google account cannot read it". The disconnect dialog says the Google Ads connection is not affected.
+- **New "Analytics" tab** with the linked properties: Analytics account, currency, time zone, status (Up to date, Importing 40 %, Waiting, Needs reconnecting, …) and when they were last updated. An empty tab explains how to add one.
+- **Property page:**
+  - **Visits and sales** for the last 7, 30 or 90 days: sessions, engaged sessions, users, new users, key events, purchases and purchase revenue, plus engagement rate, purchase conversion rate, key events per session and revenue per session — labelled "Reported by Google Analytics", in the property's currency.
+  - **Users say "Shown per day only"** for a period, with a one-line explanation; each day in the table shows that day's users.
+  - **By day**, newest first; the last 3 days are marked "still being processed", and each day carries Google's notes in plain words ("Google withheld some small numbers to protect visitors' privacy", "(other)", sampling, truncation).
+  - **Where visits came from:** by channel, or by source / medium / campaign, most sessions first ("Showing the 100 largest of 640" when there are more).
+  - **Health in plain words with the fix:** no access any more, deleted (restore from the Google Analytics trash within 35 days), currency or time zone changed, "Google is limiting how much AdVegaX can read — no action is needed". "Needs reconnecting" links to Connections.
+  - **"Sync now"** for owners, admins and managers (the last 14 days), with the result or the reason it was refused. Viewers read only; unlinked properties stay readable.
+  - Missing figures say "Not synced yet" or "No sessions" — never 0.
+
+**Files changed** (16)
+- New (7): `features/analytics/{api,labels,Figures,AnalyticsPropertiesPage,AnalyticsPropertyPage}.ts(x)`, `app/orgs/[organizationId]/analytics/{page,[propertyId]/page}.tsx`, `tests/features/analytics.test.tsx` (14 tests).
+- Modified (7): `features/connections/{labels,connect-fields,ConnectionDetailPage}.ts(x)` (Google Analytics wording, grouping, reasons, disconnect note), `features/organizations/OrganizationShell.tsx` (Analytics tab), `lib/format/money.ts` (two reasons), `tests/features/connections.test.tsx` (3 tests), `tests/support/mock-api.ts` (query values for tests), and docs (this report, `PROJECT_STATUS.md`).
+- Deleted: none. Backend unchanged; no migration.
+
+**Tests**
+- **17 new.** **Frontend `npm run check`: 387 passed** (lint, types, unit and page tests). Production build passes.
+- **End-to-end (existing 13 browser tests, with the new tab in the navigation): 13 passed.**
+- Backend: no changes in this task (last full run 1,483 passed, 5-07).
+
+**Security**
+- No token or secret reaches the web app: it only receives the API answers above (checked in 5-07). Sync now uses the CSRF token (tested).
+
+**Deviations**
+1. **The browser test with accessibility checks for the new pages comes in 5-09** with the whole-journey test (as for Phases 3 and 4); 5-08 has the page tests above.
+2. **Google Ads sign-in wording:** "Google no longer accepts AdVegaX's permission … Please reconnect on the Connections page" (it said "reconnect Google Ads", which is now also used for Google Analytics).
+
+**Blocked:** Step 0 (5-01) — unchanged.
+
+**Next task:** 5-09 — whole-journey test, browser test with a simulated Google Analytics property and accessibility checks, security notes, and `PHASE_05_REPORT.md`.
