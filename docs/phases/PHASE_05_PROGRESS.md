@@ -10,7 +10,7 @@ Plan: `PHASE_05_PLAN.md` (approved 2026-10-19, A23, all recommendations; Q11 set
 | 5-04 Discovery and linking rules | ✅ Done — awaiting review |
 | 5-05 Daily import | ✅ Done — awaiting review |
 | 5-06 Ongoing sync, quota pacing, health | ✅ Done — awaiting review |
-| 5-07 Read API | Not started |
+| 5-07 Read API | ✅ Done — awaiting review |
 | 5-08 Web app | Not started |
 | 5-09 Journey test, browser test, docs, report | Not started |
 
@@ -227,3 +227,40 @@ The rest of Phase 5 is built against Google's documentation and a GA4 simulator 
 **Blocked:** Step 0 (5-01) — unchanged.
 
 **Next task:** 5-07 — read API: the properties list and page, daily figures in three views with period totals (users per day only), derived rates with reasons, data-quality and "still being processed" notes, and "Sync now".
+
+## 5-07 — Read API for analytics properties (2026-10-20)
+
+**Completed**
+- **Four new routes** (same rules as stores and ad accounts: every member reads, owners, admins and managers "Sync now", another organization's property is "not found"):
+  - the list of linked properties, and one property: name, Analytics account, currency, time zone, status, sync progress, "Google is limiting reads" (shown as waiting, not as an error) and health in plain codes;
+  - **daily figures**: 30 days by default, in the property's own days and currency, labelled "Reported by Google Analytics";
+  - **"Sync now"**: the last 14 days.
+- **Daily figures in three views:**
+  - **total**: every day plus period totals;
+  - **by channel** and **by source / medium / campaign**: each value's own totals for the period, most sessions first (up to 500 values; the full count is given).
+- **Users are given per day only.** For one day you see that day's users; for a longer period the users figure says "per day only" instead of an added-up number (Q-5-5). The other figures (sessions, engaged sessions, new users, key events, purchases, revenue) are added up for the period.
+- **Rates worked out on read:** engagement rate, key events per session, purchase conversion rate and revenue per session (six decimals). On a day with no sessions each says "no sessions" instead of 0.
+- **Honest gaps:** days not read yet are "not synchronized", never 0, and so are the totals of a period containing one. The last 3 days are marked "still being processed by Google". Google's data-quality notes ("(other)", privacy thresholds, sampling, truncation) come with each day and with the period.
+- Golden values tested in two currencies and time zones (AUD in Sydney, USD in Los Angeles), including a refund day with negative revenue.
+
+**Files changed** (14)
+- New (4): `app/domains/analytics/{schemas,read_service,router}.py`, `tests/api/test_analytics_properties_api.py` (23 tests).
+- Modified (10): `app/api/router.py`, `app/domains/organizations/permissions.py` (`analytics.view`, `analytics.manage`), `app/core/settings.py` (`ANALYTICS_PROCESSING_DAYS`), `tests/security/test_tenant_isolation.py` (the new routes are swept), `frontend/lib/api/{openapi.json,schema.d.ts}` (generated), docs `API_SPECIFICATION.md` (§19C), this report, `PROJECT_STATUS.md`.
+- Deleted: none. No migration.
+
+**Tests**
+- **23 new**; the tenant-isolation sweep now covers the four routes for non-members.
+- **Backend `make check`: 1,483 passed**, coverage 97 % (read service 95 %). The first run found the sweep had no value for the new `{property_id}`; added and re-run (4 passed).
+- **Frontend `npm run check`: 370 passed** (types regenerated).
+
+**Security**
+- Membership checked on the server, row-level security plus explicit organization filters; another organization's property, figures or "Sync now" → 404 (tested and swept).
+- No token or the client secret in any answer (tested).
+
+**Deviations**
+1. **Breakdown values are capped at 500 per answer** (`limit`, default 100) with `item_count` giving the full number — the plan did not say how many to return.
+2. **For a one-day period, users are given** (that day's count, also per channel or source); for longer periods they are "per day only". This follows Q-5-5 while still answering "how many users yesterday?".
+
+**Blocked:** Step 0 (5-01) — unchanged.
+
+**Next task:** 5-08 — web app: "Connect Google Analytics" on Connections, an Analytics tab with the linked properties, and the property page (period totals, by day, by channel, by source / medium / campaign, processing and data-quality notes, "Sync now"), with accessibility checks.

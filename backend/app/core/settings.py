@@ -217,6 +217,8 @@ class Settings(BaseSettings):
     # The source / medium / campaign view keeps this many values a day (most sessions first);
     # the rest are added into one "(other)" row, marked, with users left unknown (Q-5-5).
     ANALYTICS_SOURCE_ROWS_PER_DAY: int = Field(default=500, ge=10, le=10_000)
+    # The last days are shown as "still being processed by Google" (Q-5-6, 5-07).
+    ANALYTICS_PROCESSING_DAYS: int = Field(default=3, ge=0, le=30)
 
     # --- Advertising import (Phase 3; PHASE_03_PLAN §9) ---------------------------------
     ADS_HISTORY_WINDOW: timedelta = timedelta(days=395)  # 13 months on first link (Q-3-6)

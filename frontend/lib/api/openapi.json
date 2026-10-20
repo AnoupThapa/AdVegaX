@@ -1092,6 +1092,770 @@
         "title": "AdSyncOut",
         "type": "object"
       },
+      "AnalyticsDailyMetricsOut": {
+        "properties": {
+          "breakdown": {
+            "title": "Breakdown",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "currency_minor_units": {
+            "title": "Currency Minor Units",
+            "type": "integer"
+          },
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/AnalyticsDayOut"
+            },
+            "title": "Days",
+            "type": "array"
+          },
+          "from_day": {
+            "format": "date",
+            "title": "From Day",
+            "type": "string"
+          },
+          "item_count": {
+            "title": "Item Count",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AnalyticsItemOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "processing_from": {
+            "format": "date",
+            "title": "Processing From",
+            "type": "string"
+          },
+          "property_id": {
+            "format": "uuid",
+            "title": "Property Id",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "synced_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Synced From"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          },
+          "to_day": {
+            "format": "date",
+            "title": "To Day",
+            "type": "string"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/AnalyticsFiguresOut"
+          }
+        },
+        "required": [
+          "property_id",
+          "source",
+          "breakdown",
+          "currency",
+          "currency_minor_units",
+          "timezone",
+          "from_day",
+          "to_day",
+          "synced_from",
+          "processing_from",
+          "totals",
+          "days",
+          "items",
+          "item_count"
+        ],
+        "title": "AnalyticsDailyMetricsOut",
+        "type": "object"
+      },
+      "AnalyticsDayOut": {
+        "properties": {
+          "availability": {
+            "enum": [
+              "available",
+              "unavailable",
+              "unsupported",
+              "not_synchronized"
+            ],
+            "title": "Availability",
+            "type": "string"
+          },
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "engaged_sessions": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engaged Sessions"
+          },
+          "engagement_rate": {
+            "$ref": "#/components/schemas/FigureOut"
+          },
+          "key_events": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key Events"
+          },
+          "key_events_per_session": {
+            "$ref": "#/components/schemas/FigureOut"
+          },
+          "new_users": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Users"
+          },
+          "processing": {
+            "title": "Processing",
+            "type": "boolean"
+          },
+          "purchase_conversion_rate": {
+            "$ref": "#/components/schemas/FigureOut"
+          },
+          "purchase_revenue": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purchase Revenue"
+          },
+          "purchases": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purchases"
+          },
+          "quality": {
+            "$ref": "#/components/schemas/AnalyticsQualityOut"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "revenue_per_session": {
+            "$ref": "#/components/schemas/FigureOut"
+          },
+          "sessions": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sessions"
+          },
+          "total_users": {
+            "$ref": "#/components/schemas/FigureOut"
+          }
+        },
+        "required": [
+          "availability",
+          "sessions",
+          "engaged_sessions",
+          "total_users",
+          "new_users",
+          "key_events",
+          "purchases",
+          "purchase_revenue",
+          "engagement_rate",
+          "key_events_per_session",
+          "purchase_conversion_rate",
+          "revenue_per_session",
+          "quality",
+          "day",
+          "processing"
+        ],
+        "title": "AnalyticsDayOut",
+        "type": "object"
+      },
+      "AnalyticsFiguresOut": {
+        "description": "Platform-reported measures for a day or a period, and the rates derived from them.",
+        "properties": {
+          "availability": {
+            "enum": [
+              "available",
+              "unavailable",
+              "unsupported",
+              "not_synchronized"
+            ],
+            "title": "Availability",
+            "type": "string"
+          },
+          "engaged_sessions": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engaged Sessions"
+          },
+          "engagement_rate": {
+            "$ref": "#/components/schemas/FigureOut"
+          },
+          "key_events": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key Events"
+          },
+          "key_events_per_session": {
+            "$ref": "#/components/schemas/FigureOut"
+          },
+          "new_users": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Users"
+          },
+          "purchase_conversion_rate": {
+            "$ref": "#/components/schemas/FigureOut"
+          },
+          "purchase_revenue": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purchase Revenue"
+          },
+          "purchases": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purchases"
+          },
+          "quality": {
+            "$ref": "#/components/schemas/AnalyticsQualityOut"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "revenue_per_session": {
+            "$ref": "#/components/schemas/FigureOut"
+          },
+          "sessions": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sessions"
+          },
+          "total_users": {
+            "$ref": "#/components/schemas/FigureOut"
+          }
+        },
+        "required": [
+          "availability",
+          "sessions",
+          "engaged_sessions",
+          "total_users",
+          "new_users",
+          "key_events",
+          "purchases",
+          "purchase_revenue",
+          "engagement_rate",
+          "key_events_per_session",
+          "purchase_conversion_rate",
+          "revenue_per_session",
+          "quality"
+        ],
+        "title": "AnalyticsFiguresOut",
+        "type": "object"
+      },
+      "AnalyticsHealthOut": {
+        "description": "A plain message key (``no_property_access``, ``property_deleted``,\n``property_details_changed``, ``rate_limited``), or None when all is well.",
+        "properties": {
+          "checked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checked At"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          }
+        },
+        "required": [
+          "code",
+          "checked_at"
+        ],
+        "title": "AnalyticsHealthOut",
+        "type": "object"
+      },
+      "AnalyticsItemOut": {
+        "description": "One channel, or one source / medium / campaign, with its figures for the period.",
+        "properties": {
+          "campaign": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Campaign"
+          },
+          "channel_group": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Channel Group"
+          },
+          "figures": {
+            "$ref": "#/components/schemas/AnalyticsFiguresOut"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "medium": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Medium"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          }
+        },
+        "required": [
+          "key",
+          "channel_group",
+          "source",
+          "medium",
+          "campaign",
+          "figures"
+        ],
+        "title": "AnalyticsItemOut",
+        "type": "object"
+      },
+      "AnalyticsPropertyOut": {
+        "properties": {
+          "account_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Name"
+          },
+          "connection_status": {
+            "title": "Connection Status",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "currency_minor_units": {
+            "title": "Currency Minor Units",
+            "type": "integer"
+          },
+          "external_property_id": {
+            "title": "External Property Id",
+            "type": "string"
+          },
+          "first_import_completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Import Completed At"
+          },
+          "health": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AnalyticsHealthOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "history_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "History From"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "linked": {
+            "title": "Linked",
+            "type": "boolean"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "platform_status": {
+            "title": "Platform Status",
+            "type": "string"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "resource_id": {
+            "format": "uuid",
+            "title": "Resource Id",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "sync": {
+            "$ref": "#/components/schemas/AnalyticsSyncOut"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "resource_id",
+          "provider",
+          "source",
+          "external_property_id",
+          "name",
+          "account_name",
+          "currency",
+          "currency_minor_units",
+          "timezone",
+          "status",
+          "platform_status",
+          "linked",
+          "connection_status",
+          "history_from",
+          "first_import_completed_at",
+          "sync",
+          "health",
+          "created_at"
+        ],
+        "title": "AnalyticsPropertyOut",
+        "type": "object"
+      },
+      "AnalyticsQualityOut": {
+        "description": "What the platform said about the figures (Q-5-8): shown, never hidden.",
+        "properties": {
+          "other_row": {
+            "title": "Other Row",
+            "type": "boolean"
+          },
+          "sampled": {
+            "title": "Sampled",
+            "type": "boolean"
+          },
+          "thresholded": {
+            "title": "Thresholded",
+            "type": "boolean"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "other_row",
+          "thresholded",
+          "sampled",
+          "truncated"
+        ],
+        "title": "AnalyticsQualityOut",
+        "type": "object"
+      },
+      "AnalyticsResyncOut": {
+        "properties": {
+          "job_id": {
+            "format": "uuid",
+            "title": "Job Id",
+            "type": "string"
+          },
+          "mode": {
+            "title": "Mode",
+            "type": "string"
+          },
+          "property_id": {
+            "format": "uuid",
+            "title": "Property Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "property_id",
+          "job_id",
+          "mode"
+        ],
+        "title": "AnalyticsResyncOut",
+        "type": "object"
+      },
+      "AnalyticsSyncOut": {
+        "properties": {
+          "last_error_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error At"
+          },
+          "last_error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error Code"
+          },
+          "last_nightly_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Nightly At"
+          },
+          "last_quick_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Quick At"
+          },
+          "last_weekly_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Weekly At"
+          },
+          "mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mode"
+          },
+          "progress": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Progress"
+          },
+          "running": {
+            "title": "Running",
+            "type": "boolean"
+          },
+          "waiting_for_allowance": {
+            "title": "Waiting For Allowance",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "running",
+          "mode",
+          "progress",
+          "waiting_for_allowance",
+          "last_quick_at",
+          "last_nightly_at",
+          "last_weekly_at",
+          "last_error_code",
+          "last_error_at"
+        ],
+        "title": "AnalyticsSyncOut",
+        "type": "object"
+      },
       "AuditLogOut": {
         "properties": {
           "action": {
@@ -1789,6 +2553,54 @@
         "title": "Envelope[AdResyncOut]",
         "type": "object"
       },
+      "Envelope_AnalyticsDailyMetricsOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AnalyticsDailyMetricsOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[AnalyticsDailyMetricsOut]",
+        "type": "object"
+      },
+      "Envelope_AnalyticsPropertyOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AnalyticsPropertyOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[AnalyticsPropertyOut]",
+        "type": "object"
+      },
+      "Envelope_AnalyticsResyncOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AnalyticsResyncOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[AnalyticsResyncOut]",
+        "type": "object"
+      },
       "Envelope_AuthorizationStartOut_": {
         "properties": {
           "data": {
@@ -2079,6 +2891,26 @@
           "meta"
         ],
         "title": "Envelope[list[AdAccountOut]]",
+        "type": "object"
+      },
+      "Envelope_list_AnalyticsPropertyOut__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/AnalyticsPropertyOut"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[list[AnalyticsPropertyOut]]",
         "type": "object"
       },
       "Envelope_list_ConnectionOut__": {
@@ -5014,6 +5846,272 @@
         "summary": "Resync Ad Account",
         "tags": [
           "advertising"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/analytics-properties": {
+      "get": {
+        "description": "Analytics properties of this organization with their sync status and health.",
+        "operationId": "list_analytics_properties_api_v1_organizations__organization_id__analytics_properties_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_AnalyticsPropertyOut__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Analytics Properties",
+        "tags": [
+          "analytics"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/analytics-properties/{property_id}": {
+      "get": {
+        "operationId": "get_analytics_property_api_v1_organizations__organization_id__analytics_properties__property_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AnalyticsPropertyOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Analytics Property",
+        "tags": [
+          "analytics"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/analytics-properties/{property_id}/metrics/daily": {
+      "get": {
+        "description": "Daily figures in the property's time zone, reported by the platform (30 days by\ndefault): the total view day by day, or a breakdown by channel or by source / medium /\ncampaign. Users are given per day only.",
+        "operationId": "analytics_property_daily_metrics_api_v1_organizations__organization_id__analytics_properties__property_id__metrics_daily_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "breakdown",
+            "required": false,
+            "schema": {
+              "default": "total",
+              "enum": [
+                "total",
+                "channel",
+                "source"
+              ],
+              "title": "Breakdown",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AnalyticsDailyMetricsOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Analytics Property Daily Metrics",
+        "tags": [
+          "analytics"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/analytics-properties/{property_id}/resync": {
+      "post": {
+        "description": "\"Sync now\": the last 14 days (limited per property).",
+        "operationId": "resync_analytics_property_api_v1_organizations__organization_id__analytics_properties__property_id__resync_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AnalyticsResyncOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resync Analytics Property",
+        "tags": [
+          "analytics"
         ]
       }
     },

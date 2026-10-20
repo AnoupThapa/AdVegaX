@@ -409,6 +409,85 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/{organization_id}/analytics-properties": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Analytics Properties
+         * @description Analytics properties of this organization with their sync status and health.
+         */
+        get: operations["list_analytics_properties_api_v1_organizations__organization_id__analytics_properties_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/analytics-properties/{property_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Analytics Property */
+        get: operations["get_analytics_property_api_v1_organizations__organization_id__analytics_properties__property_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/analytics-properties/{property_id}/metrics/daily": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Analytics Property Daily Metrics
+         * @description Daily figures in the property's time zone, reported by the platform (30 days by
+         *     default): the total view day by day, or a breakdown by channel or by source / medium /
+         *     campaign. Users are given per day only.
+         */
+        get: operations["analytics_property_daily_metrics_api_v1_organizations__organization_id__analytics_properties__property_id__metrics_daily_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/analytics-properties/{property_id}/resync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resync Analytics Property
+         * @description "Sync now": the last 14 days (limited per property).
+         */
+        post: operations["resync_analytics_property_api_v1_organizations__organization_id__analytics_properties__property_id__resync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizations/{organization_id}/audit-logs": {
         parameters: {
             query?: never;
@@ -1185,6 +1264,240 @@ export interface components {
             /** Waiting For Allowance */
             waiting_for_allowance: boolean;
         };
+        /** AnalyticsDailyMetricsOut */
+        AnalyticsDailyMetricsOut: {
+            /** Breakdown */
+            breakdown: string;
+            /** Currency */
+            currency: string;
+            /** Currency Minor Units */
+            currency_minor_units: number;
+            /** Days */
+            days: components["schemas"]["AnalyticsDayOut"][];
+            /**
+             * From Day
+             * Format: date
+             */
+            from_day: string;
+            /** Item Count */
+            item_count: number;
+            /** Items */
+            items: components["schemas"]["AnalyticsItemOut"][];
+            /**
+             * Processing From
+             * Format: date
+             */
+            processing_from: string;
+            /**
+             * Property Id
+             * Format: uuid
+             */
+            property_id: string;
+            /** Source */
+            source: string;
+            /** Synced From */
+            synced_from: string | null;
+            /** Timezone */
+            timezone: string;
+            /**
+             * To Day
+             * Format: date
+             */
+            to_day: string;
+            totals: components["schemas"]["AnalyticsFiguresOut"];
+        };
+        /** AnalyticsDayOut */
+        AnalyticsDayOut: {
+            /**
+             * Availability
+             * @enum {string}
+             */
+            availability: "available" | "unavailable" | "unsupported" | "not_synchronized";
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Engaged Sessions */
+            engaged_sessions: number | null;
+            engagement_rate: components["schemas"]["FigureOut"];
+            /** Key Events */
+            key_events: string | null;
+            key_events_per_session: components["schemas"]["FigureOut"];
+            /** New Users */
+            new_users: number | null;
+            /** Processing */
+            processing: boolean;
+            purchase_conversion_rate: components["schemas"]["FigureOut"];
+            /** Purchase Revenue */
+            purchase_revenue: string | null;
+            /** Purchases */
+            purchases: number | null;
+            quality: components["schemas"]["AnalyticsQualityOut"];
+            /** Reason */
+            reason?: string | null;
+            revenue_per_session: components["schemas"]["FigureOut"];
+            /** Sessions */
+            sessions: number | null;
+            total_users: components["schemas"]["FigureOut"];
+        };
+        /**
+         * AnalyticsFiguresOut
+         * @description Platform-reported measures for a day or a period, and the rates derived from them.
+         */
+        AnalyticsFiguresOut: {
+            /**
+             * Availability
+             * @enum {string}
+             */
+            availability: "available" | "unavailable" | "unsupported" | "not_synchronized";
+            /** Engaged Sessions */
+            engaged_sessions: number | null;
+            engagement_rate: components["schemas"]["FigureOut"];
+            /** Key Events */
+            key_events: string | null;
+            key_events_per_session: components["schemas"]["FigureOut"];
+            /** New Users */
+            new_users: number | null;
+            purchase_conversion_rate: components["schemas"]["FigureOut"];
+            /** Purchase Revenue */
+            purchase_revenue: string | null;
+            /** Purchases */
+            purchases: number | null;
+            quality: components["schemas"]["AnalyticsQualityOut"];
+            /** Reason */
+            reason?: string | null;
+            revenue_per_session: components["schemas"]["FigureOut"];
+            /** Sessions */
+            sessions: number | null;
+            total_users: components["schemas"]["FigureOut"];
+        };
+        /**
+         * AnalyticsHealthOut
+         * @description A plain message key (``no_property_access``, ``property_deleted``,
+         *     ``property_details_changed``, ``rate_limited``), or None when all is well.
+         */
+        AnalyticsHealthOut: {
+            /** Checked At */
+            checked_at: string | null;
+            /** Code */
+            code: string | null;
+        };
+        /**
+         * AnalyticsItemOut
+         * @description One channel, or one source / medium / campaign, with its figures for the period.
+         */
+        AnalyticsItemOut: {
+            /** Campaign */
+            campaign: string | null;
+            /** Channel Group */
+            channel_group: string | null;
+            figures: components["schemas"]["AnalyticsFiguresOut"];
+            /** Key */
+            key: string;
+            /** Medium */
+            medium: string | null;
+            /** Source */
+            source: string | null;
+        };
+        /** AnalyticsPropertyOut */
+        AnalyticsPropertyOut: {
+            /** Account Name */
+            account_name: string | null;
+            /** Connection Status */
+            connection_status: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Currency */
+            currency: string;
+            /** Currency Minor Units */
+            currency_minor_units: number;
+            /** External Property Id */
+            external_property_id: string;
+            /** First Import Completed At */
+            first_import_completed_at: string | null;
+            health: components["schemas"]["AnalyticsHealthOut"] | null;
+            /** History From */
+            history_from: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Linked */
+            linked: boolean;
+            /** Name */
+            name: string | null;
+            /** Platform Status */
+            platform_status: string;
+            /** Provider */
+            provider: string;
+            /**
+             * Resource Id
+             * Format: uuid
+             */
+            resource_id: string;
+            /** Source */
+            source: string;
+            /** Status */
+            status: string;
+            sync: components["schemas"]["AnalyticsSyncOut"];
+            /** Timezone */
+            timezone: string;
+        };
+        /**
+         * AnalyticsQualityOut
+         * @description What the platform said about the figures (Q-5-8): shown, never hidden.
+         */
+        AnalyticsQualityOut: {
+            /** Other Row */
+            other_row: boolean;
+            /** Sampled */
+            sampled: boolean;
+            /** Thresholded */
+            thresholded: boolean;
+            /** Truncated */
+            truncated: boolean;
+        };
+        /** AnalyticsResyncOut */
+        AnalyticsResyncOut: {
+            /**
+             * Job Id
+             * Format: uuid
+             */
+            job_id: string;
+            /** Mode */
+            mode: string;
+            /**
+             * Property Id
+             * Format: uuid
+             */
+            property_id: string;
+        };
+        /** AnalyticsSyncOut */
+        AnalyticsSyncOut: {
+            /** Last Error At */
+            last_error_at: string | null;
+            /** Last Error Code */
+            last_error_code: string | null;
+            /** Last Nightly At */
+            last_nightly_at: string | null;
+            /** Last Quick At */
+            last_quick_at: string | null;
+            /** Last Weekly At */
+            last_weekly_at: string | null;
+            /** Mode */
+            mode: string | null;
+            /** Progress */
+            progress: number | null;
+            /** Running */
+            running: boolean;
+            /** Waiting For Allowance */
+            waiting_for_allowance: boolean;
+        };
         /** AuditLogOut */
         AuditLogOut: {
             /** Action */
@@ -1403,6 +1716,21 @@ export interface components {
             data: components["schemas"]["AdResyncOut"];
             meta: components["schemas"]["Meta"];
         };
+        /** Envelope[AnalyticsDailyMetricsOut] */
+        Envelope_AnalyticsDailyMetricsOut_: {
+            data: components["schemas"]["AnalyticsDailyMetricsOut"];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[AnalyticsPropertyOut] */
+        Envelope_AnalyticsPropertyOut_: {
+            data: components["schemas"]["AnalyticsPropertyOut"];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[AnalyticsResyncOut] */
+        Envelope_AnalyticsResyncOut_: {
+            data: components["schemas"]["AnalyticsResyncOut"];
+            meta: components["schemas"]["Meta"];
+        };
         /** Envelope[AuthorizationStartOut] */
         Envelope_AuthorizationStartOut_: {
             data: components["schemas"]["AuthorizationStartOut"];
@@ -1492,6 +1820,12 @@ export interface components {
         Envelope_list_AdAccountOut__: {
             /** Data */
             data: components["schemas"]["AdAccountOut"][];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[list[AnalyticsPropertyOut]] */
+        Envelope_list_AnalyticsPropertyOut__: {
+            /** Data */
+            data: components["schemas"]["AnalyticsPropertyOut"][];
             meta: components["schemas"]["Meta"];
         };
         /** Envelope[list[ConnectionOut]] */
@@ -2823,6 +3157,138 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Envelope_AdResyncOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_analytics_properties_api_v1_organizations__organization_id__analytics_properties_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_list_AnalyticsPropertyOut__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_analytics_property_api_v1_organizations__organization_id__analytics_properties__property_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AnalyticsPropertyOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    analytics_property_daily_metrics_api_v1_organizations__organization_id__analytics_properties__property_id__metrics_daily_get: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+                breakdown?: "total" | "channel" | "source";
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                property_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AnalyticsDailyMetricsOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resync_analytics_property_api_v1_organizations__organization_id__analytics_properties__property_id__resync_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AnalyticsResyncOut_"];
                 };
             };
             /** @description Validation Error */
