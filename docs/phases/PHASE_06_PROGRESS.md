@@ -7,7 +7,7 @@ Plan: `PHASE_06_PLAN.md` (approved 2026-10-20, A24, all recommendations; complet
 | 6-01 Step 0: live ECB and NRB feeds | ⏸ Waiting for network access to `data-api.ecb.europa.eu` and `www.nrb.org.np` |
 | 6-02 Migration 0016, reporting settings, store assignment | ✅ Done — awaiting review |
 | 6-03 Exchange rates: clients, daily job, conversion rules | ✅ Done — awaiting review |
-| 6-04 Metric registry `analytics-v1` and its inputs | Not started |
+| 6-04 Metric registry `analytics-v1` and its inputs | ✅ Done — awaiting review |
 | 6-05 Overview and channels API | Not started |
 | 6-06 Campaigns (with GA4 match) and products API | Not started |
 | 6-07 Web app: Overview, settings | Not started |
@@ -85,3 +85,35 @@ Plan: `PHASE_06_PLAN.md` (approved 2026-10-20, A24, all recommendations; complet
 **Blocked:** Step 0 (6-01) — network access to the two rate feeds.
 
 **Next task:** 6-04 — the metric registry `analytics-v1`: every unified figure defined once (inputs, formula, unit, availability rules, sources), reading store, advertising and Google Analytics daily figures and converting them to the reporting currency.
+
+## 6-04 — The metric registry `analytics-v1` and its inputs (2026-10-20)
+
+**Completed**
+- **One registry** (`app/domains/metrics/registry.py`) defines every unified figure once, with its label, unit, formula in plain words and the sources it needs. The API (6-05) and the "How is this calculated?" text (6-08) come from it; no page has its own formula. 18 figures:
+  - from the stores: net sales, orders, product cost, gross profit, gross margin;
+  - from the ad platforms: ad spend (Google Ads and Meta together);
+  - combined: profit after ad spend (named "before shipping costs and payment fees"), blended ROAS, cost per order, ad spend share of sales;
+  - from Google Analytics: sessions, purchases and purchase revenue (never added to store figures), and the store conversion rate (store orders ÷ sessions, only when every store has a property);
+  - not provided yet, and saying so: shipping cost, payment fees, contribution profit, customer acquisition cost.
+- **The calculation** (`engine.py`) reads what the earlier phases store — the stores' daily finance-v1 figures, each ad account's daily account-level spend, each property's daily total — converts every source's day with that day's exchange rate (6-03), then applies the formulas for a day or a period. Computed on read, so a late refund, a platform correction or a cost edit shows at once.
+- **Honest gaps, never 0:** a day a source has not read yet makes the period "not synchronized"; an uncosted product makes product cost and every profit "not available — some products have no cost" (never a partial profit); orders in another currency, a missing exchange rate, or nothing connected of a kind ("no ad account", "no Google Analytics property") each say so; a zero divisor names itself ("no orders", "no ad spend").
+- **Scope (Q-6-1):** the whole organization, or one store. With one store, every ad account and property counts for it; with several, only what is assigned to that store, and unassigned ones count for the whole organization.
+
+**Golden dataset** (worked out by hand, in the test file's header): an AUD store, Google Ads in AUD and Meta in USD (ECB rates 1.6 and 1.5 AUD per USD, the second also used for the next day as on a holiday), and a Google Analytics property — net sales A$1,500.50, product cost A$600.20, gross profit A$900.30, ad spend A$204.50, profit after ad spend A$695.80, blended ROAS 7.337408, cost per order A$13.633333, store conversion rate 0.025. Reproduced to the cent, and in USD as the reporting currency.
+
+**Files changed** (5)
+- New (3): `app/domains/metrics/{registry,engine}.py`, `tests/api/test_metrics_engine.py` (15 tests).
+- Modified (2): docs (this report, `PROJECT_STATUS.md`).
+- Deleted: none. No migration. Frontend: no changes.
+
+**Tests**
+- **15 new**, including another organization's figures never being included.
+- **Backend `make check`: 1,549 passed**, coverage 96 % (metrics 97–100 %).
+
+**Security:** reads only, under the organization's own row-level security; exchange rates are shared read-only data.
+
+**Deviations:** none. (Budget use, Q-6-11, is a per-campaign figure and comes with the campaigns answer in 6-06.)
+
+**Blocked:** Step 0 (6-01) — network access to the two rate feeds.
+
+**Next task:** 6-05 — the overview and channels API: `GET /analytics/overview` (every registry figure for a period, by day and in total, with definition version, reporting currency, sources and their freshness, conversions used) and `GET /analytics/channels` (per ad platform with its own reported figures, and per Google Analytics channel).
