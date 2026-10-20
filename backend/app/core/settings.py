@@ -91,6 +91,7 @@ class Settings(BaseSettings):
     # "Sync now" on a store (2A-09): each run is a full deep check, so it is limited per store.
     THROTTLE_STORE_RESYNC_PER_HOUR: int = Field(default=6, ge=1)
     THROTTLE_AD_ACCOUNT_RESYNC_PER_HOUR: int = Field(default=6, ge=1)
+    THROTTLE_ANALYTICS_PROPERTY_RESYNC_PER_HOUR: int = Field(default=6, ge=1)
 
     # --- Passwords ------------------------------------------------------------------
     PASSWORD_MIN_LENGTH: int = Field(default=12, ge=8)
@@ -199,6 +200,18 @@ class Settings(BaseSettings):
     ANALYTICS_NIGHTLY_WINDOW: timedelta = timedelta(days=14)
     ANALYTICS_WEEKLY_WINDOW: timedelta = timedelta(days=90)
     ANALYTICS_CHAIN_STALE_AFTER: timedelta = timedelta(hours=6)
+    # The schedule (5-06): each imported property is due 3 hours after its last 3-hour run,
+    # nightly after 24 hours and weekly after 7 days; the scheduler looks every tick.
+    ANALYTICS_QUICK_INTERVAL: timedelta = timedelta(hours=3)
+    ANALYTICS_NIGHTLY_INTERVAL: timedelta = timedelta(hours=24)
+    ANALYTICS_WEEKLY_INTERVAL: timedelta = timedelta(days=7)
+    SCHEDULE_ANALYTICS_SYNC_TICK: timedelta = timedelta(minutes=5)
+    # Pacing from Google's remaining allowance per property (Q-5-7): below the slow share of
+    # the hour's or day's tokens each step waits ANALYTICS_QUOTA_SLOW_WAIT; below the pause
+    # share the property's run pauses until the next full hour, then continues by itself.
+    ANALYTICS_QUOTA_SLOW_SHARE: float = Field(default=0.25, gt=0, le=1)
+    ANALYTICS_QUOTA_PAUSE_SHARE: float = Field(default=0.10, gt=0, le=1)
+    ANALYTICS_QUOTA_SLOW_WAIT: timedelta = timedelta(minutes=2)
     # Google says a property's quota is used up without saying for how long: it waits this.
     ANALYTICS_PROPERTY_BUSY_WAIT: timedelta = timedelta(minutes=15)
     # The source / medium / campaign view keeps this many values a day (most sessions first);
@@ -317,6 +330,11 @@ class Settings(BaseSettings):
             "ANALYTICS_WEEKLY_WINDOW": self.ANALYTICS_WEEKLY_WINDOW,
             "ANALYTICS_CHAIN_STALE_AFTER": self.ANALYTICS_CHAIN_STALE_AFTER,
             "ANALYTICS_PROPERTY_BUSY_WAIT": self.ANALYTICS_PROPERTY_BUSY_WAIT,
+            "ANALYTICS_QUICK_INTERVAL": self.ANALYTICS_QUICK_INTERVAL,
+            "ANALYTICS_NIGHTLY_INTERVAL": self.ANALYTICS_NIGHTLY_INTERVAL,
+            "ANALYTICS_WEEKLY_INTERVAL": self.ANALYTICS_WEEKLY_INTERVAL,
+            "SCHEDULE_ANALYTICS_SYNC_TICK": self.SCHEDULE_ANALYTICS_SYNC_TICK,
+            "ANALYTICS_QUOTA_SLOW_WAIT": self.ANALYTICS_QUOTA_SLOW_WAIT,
             "SHOPIFY_DEFAULT_ORDER_HISTORY": self.SHOPIFY_DEFAULT_ORDER_HISTORY,
             "SCHEDULE_COMMERCE_RECONCILE_INTERVAL": self.SCHEDULE_COMMERCE_RECONCILE_INTERVAL,
             "SCHEDULE_COMMERCE_DEEP_INTERVAL": self.SCHEDULE_COMMERCE_DEEP_INTERVAL,

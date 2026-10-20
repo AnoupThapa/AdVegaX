@@ -231,3 +231,26 @@ def test_an_empty_period_reads_nothing(provider, sim, secrets):
 def test_reversed_days_are_refused(provider, secrets):
     with pytest.raises(ValueError, match="first_day"):
         _read(provider, secrets, LAST, FIRST)
+
+
+def test_what_is_left_of_the_propertys_allowance_is_kept_per_property(provider, sim, secrets):
+    assert provider.quota_left(PROP) is None  # nothing read yet
+    sim.hour_used["111"], sim.day_used["111"] = 6_970, 49_970
+    _read(provider, secrets)  # Google's block on the batch: after its first 10-token report
+    left = provider.quota_left(PROP)
+    assert left.hour == pytest.approx(7_020 / 14_000)  # AdVegaX's share of the hour is smaller
+    assert left.day == pytest.approx(150_020 / 200_000)
+    assert provider.quota_left(AnalyticsPropertyRef("211")) is None
+
+
+def test_larger_allowances_count_as_fully_available():
+    from app.providers.google_analytics.client import Quota
+
+    class Client:
+        def quota_for(self, _pid):
+            return Quota(day_remaining=2_000_000, hour_remaining=None, project_hour_remaining=None)
+
+    provider = ga_provider.GoogleAnalyticsProvider.__new__(ga_provider.GoogleAnalyticsProvider)
+    provider.analytics = Client()
+    left = provider.quota_left(PROP)
+    assert (left.hour, left.day) == (None, 1.0)

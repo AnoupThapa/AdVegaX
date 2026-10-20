@@ -14,7 +14,7 @@ PHASE_05_PLAN §4.1, §7 (facts checked 2026-10-19; "to confirm live" in INTEGRA
 * Google's errors (``{"error": {"code", "status", "details": [{"reason"}]}}``) become plain
   codes. Google's messages, response bodies and tokens never enter exceptions or logs.
 * Each report asks for the property's remaining quota (``returnPropertyQuota``); the last one
-  seen is kept for pacing (task 5-06).
+  seen for each property is kept for pacing (task 5-06).
 """
 
 from __future__ import annotations
@@ -150,7 +150,11 @@ def raise_for_google(response: SafeResponse) -> None:
         raise AnalyticsPermissionMissingError()
     if status == 429 or state == "RESOURCE_EXHAUSTED":
         raise PropertyQuotaError()
-    if status in (403, 404) or state in ("PERMISSION_DENIED", "NOT_FOUND"):
+    if status in (403, 404) or state in {
+        # Google's statuses, not AdVegaX error codes (the web app's code scan skips these)
+        "PERMISSION_DENIED",
+        "NOT_FOUND",
+    }:
         raise NoPropertyAccessError()
     if status == 400 or state == "INVALID_ARGUMENT":
         raise BadQueryError()
@@ -186,6 +190,7 @@ class GoogleAnalyticsClient:
         self._http_factory = http_factory
         self.version = version
         self.last_quota: Quota | None = None
+        self._quota_by_property: dict[str, Quota] = {}
 
     def _send(
         self,
@@ -266,7 +271,7 @@ class GoogleAnalyticsClient:
             token=token,
             body=body,
         )
-        self.last_quota = read_quota(answer) or self.last_quota
+        self._keep_quota(pid, read_quota(answer))
         reports = answer.get("reports")
         if not isinstance(reports, list) or len(reports) != len(requests):
             raise UnexpectedResponseError()
@@ -283,5 +288,14 @@ class GoogleAnalyticsClient:
             token=token,
             body={**request, "returnPropertyQuota": True},
         )
-        self.last_quota = read_quota(answer) or self.last_quota
+        self._keep_quota(pid, read_quota(answer))
         return answer
+
+    def _keep_quota(self, pid: str, quota: Quota | None) -> None:
+        if quota is not None:
+            self.last_quota = quota
+            self._quota_by_property[pid] = quota
+
+    def quota_for(self, property_id: str) -> Quota | None:
+        """The last remaining allowance Google reported for this property (this process)."""
+        return self._quota_by_property.get(valid_property_id(property_id))

@@ -198,8 +198,9 @@ class AnalyticsProvider(PlatformProvider, Protocol):
     linked property, reached through its ``AnalyticsPropertyRef``. Nothing here changes
     anything at the platform.
 
-    Optional attribute: ``quota_floor`` (share of the platform's hourly or daily allowance
-    below which a run waits; None = no allowance to watch)."""
+    Optional method: ``quota_left(prop) -> AnalyticsQuotaLeft | None`` — what the platform
+    said is left of the property's allowance after the last read (None = nothing to watch);
+    the core paces a property's run from it (Q-5-7)."""
 
     def read_property(self, secrets: Secrets, prop: AnalyticsPropertyRef) -> AnalyticsPropertyState:
         """The property's current name, currency, time zone and platform status."""

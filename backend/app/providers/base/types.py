@@ -464,6 +464,15 @@ class AnalyticsQuality:
 
 
 @dataclass(frozen=True)
+class AnalyticsQuotaLeft:
+    """How much of a property's platform allowance is left, as shares (0 … 1) of the hour
+    and of the day; None when the platform did not say. Used for pacing (Q-5-7)."""
+
+    hour: float | None = None
+    day: float | None = None
+
+
+@dataclass(frozen=True)
 class AnalyticsDailyRecord:
     """One property's figures for one day and one view value (property time zone).
 

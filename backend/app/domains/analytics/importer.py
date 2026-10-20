@@ -18,8 +18,14 @@ Users are distinct counts per day and view: they are **never added up** — not 
 across views, and not when the source view's rare values are combined into "(other)" (their
 users are left unknown, Q-5-5).
 
-The 3-hour, nightly (14 days) and weekly (90 days) re-reads, quota pacing and health are
-task 5-06; the windows they use are defined here.
+Ongoing sync (5-06, Q-5-6): every 3 hours today and yesterday; nightly the last 14 days
+(Google's late data and changing key-event credit); weekly the last 90; "Sync now" re-reads
+14 days. Each run reads the property first, so access problems show on the property.
+
+Pacing (Q-5-7): every report says how much of the property's hourly and daily tokens is left.
+Below a quarter the next step waits a little; below a tenth the run pauses until the next full
+hour and continues by itself, without using a retry. Google's "quota exhausted" answer pauses
+the same way. Only that property waits; its health says Google is limiting AdVegaX.
 """
 
 from __future__ import annotations
@@ -37,6 +43,8 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
+from app.core.errors import Conflict
+from app.core.security.throttle import Limit
 from app.domains.analytics.models import (
     TOTAL_KEY,
     AnalyticsDaily,
@@ -54,6 +62,7 @@ from app.domains.integrations.tokens import AccountBusy, account_lock, usable_se
 from app.domains.jobs.service import ClaimedJob, JobSubjectGoneError, create_job
 from app.providers.base.errors import AccountBusyError, ProviderError, ResourceUnavailableError
 from app.providers.base.interfaces import AnalyticsProvider, PlatformProvider
+from app.providers.base.registry import UnknownProvider
 from app.providers.base.types import (
     AnalyticsBreakdown,
     AnalyticsDailyRecord,
@@ -73,8 +82,10 @@ STEP_PROPERTY = "property"
 STEP_DAYS = "days"
 STEP_DONE = "done"
 WAITING = "quota_waiting"  # last_error_code while a step waits for the property's allowance
+RATE_LIMITED = "rate_limited"  # health: "Google is limiting how much AdVegaX can read"
 OTHER = "(other)"
 NOT_SET = "(not set)"
+HOUR = 3600
 
 
 class SyncMode(StrEnum):
@@ -240,6 +251,123 @@ def _schedule(
     return job.id
 
 
+# ------------------------------------------------------------------ schedule and "Sync now"
+class AnalyticsSyncInProgress(Conflict):
+    code = "SYNC_IN_PROGRESS"
+    message = "This property is already being synchronized."
+
+
+class AnalyticsPropertyNotSyncing(Conflict):
+    code = "ANALYTICS_PROPERTY_NOT_SYNCING"
+    message = "This property is not linked to an active connection."
+
+
+def due_mode(rt: Runtime, state: AnalyticsSyncState | None) -> SyncMode | None:
+    """The run an imported property needs now, the longest first: weekly (90 days), nightly
+    (14 days), then the 3-hour run (today and yesterday)."""
+    now = rt.clock.now()
+    settings = rt.settings
+
+    def due(last: datetime | None, interval: timedelta) -> bool:
+        return last is None or last <= now - interval
+
+    if due(state.last_weekly_at if state else None, settings.ANALYTICS_WEEKLY_INTERVAL):
+        return SyncMode.WEEKLY
+    if due(state.last_nightly_at if state else None, settings.ANALYTICS_NIGHTLY_INTERVAL):
+        return SyncMode.NIGHTLY
+    if due(state.last_quick_at if state else None, settings.ANALYTICS_QUICK_INTERVAL):
+        return SyncMode.QUICK
+    return None
+
+
+def _syncable(session: Session, prop: AnalyticsProperty) -> bool:
+    """Linked, through an active connection."""
+    row = session.execute(
+        select(ExternalConnection.status)
+        .join(ExternalResource, ExternalResource.connection_id == ExternalConnection.id)
+        .join(
+            OrganizationResourceLink,
+            OrganizationResourceLink.external_resource_id == ExternalResource.id,
+        )
+        .where(
+            ExternalResource.id == prop.external_resource_id,
+            OrganizationResourceLink.status == "active",
+        )
+    ).first()
+    return row is not None and row[0] == "active"
+
+
+def enqueue_analytics_syncs(rt: Runtime) -> int:
+    """Start the run each imported property is due for (every tick of the scheduler).
+    Properties come due at their own times, so runs spread over the day. Returns how many
+    were started.
+
+    The property list comes from a narrow system-role read of ``analytics_properties`` (0014
+    grant: four columns); everything else runs under each property's tenant context."""
+    with rt.db.transaction(system=True) as session:
+        properties = session.execute(
+            select(
+                AnalyticsProperty.id,
+                AnalyticsProperty.organization_id,
+                AnalyticsProperty.provider,
+            ).where(AnalyticsProperty.first_import_completed_at.is_not(None))
+        ).all()
+    available: dict[str, bool] = {}
+    started = 0
+    for property_id, org_id, provider_code in properties:
+        if provider_code not in available:
+            available[provider_code] = _available(rt, provider_code)
+        if not available[provider_code]:
+            continue
+        with rt.db.transaction(org_id=org_id) as session:
+            prop = session.get(AnalyticsProperty, property_id)
+            state = session.get(AnalyticsSyncState, property_id, with_for_update=True)
+            if prop is None or (state is not None and chain_running(rt, state)):
+                continue
+            if not _syncable(session, prop):
+                continue
+            mode = due_mode(rt, state)
+            if mode is None:
+                continue
+            start_sync(session, rt, prop, mode)
+            started += 1
+    if started:
+        logger.info("analytics_syncs_started", extra={"count": started})
+    return started
+
+
+def _available(rt: Runtime, provider_code: str) -> bool:
+    try:
+        return analytics_provider(rt.providers.get(provider_code)) is not None
+    except UnknownProvider:
+        return False
+
+
+def request_sync(
+    session: Session, rt: Runtime, prop: AnalyticsProperty, *, requested_by: uuid.UUID
+) -> tuple[uuid.UUID, SyncMode]:
+    """ "Sync now": the last 14 days (or the first import again, when it did not finish).
+    Limited per property, not per person."""
+    if not _syncable(session, prop):
+        raise AnalyticsPropertyNotSyncing()
+    state = session.get(AnalyticsSyncState, prop.id, with_for_update=True)
+    if state is not None and chain_running(rt, state):
+        raise AnalyticsSyncInProgress()
+    rt.throttler.hit(
+        Limit(
+            "analytics_property_resync",
+            rt.settings.THROTTLE_ANALYTICS_PROPERTY_RESYNC_PER_HOUR,
+            HOUR,
+        ),
+        str(prop.id),
+    )
+    if prop.first_import_completed_at is None:
+        return start_import(session, rt, prop, requested_by=requested_by), SyncMode.INITIAL
+    return start_sync(session, rt, prop, SyncMode.NIGHTLY, requested_by=requested_by), (
+        SyncMode.NIGHTLY
+    )
+
+
 # ------------------------------------------------------------------ the step
 @dataclass(frozen=True)
 class _Context:
@@ -264,16 +392,37 @@ def import_step(rt: Runtime, job: ClaimedJob) -> None:
             wait_seconds=0,
             ttl_seconds=IMPORT_LOCK_TTL_SECONDS,
         ):
-            again = _step(rt, job, org_id, property_id)
+            following = _step(rt, job, org_id, property_id)
     except AccountBusy:
         logger.info("analytics_import_step_busy", extra={"property_id": str(property_id)})
         return
-    if again:
-        with rt.db.transaction(org_id=org_id) as session:
-            prop = session.get(AnalyticsProperty, property_id)
-            state = session.get(AnalyticsSyncState, property_id, with_for_update=True)
-            if prop is not None and state is not None and state.import_job_id == job.id:
-                _schedule(session, rt, prop, state, requested_by=job.requested_by_user_id)
+    if following is None:
+        return
+    with rt.db.transaction(org_id=org_id) as session:
+        prop = session.get(AnalyticsProperty, property_id)
+        state = session.get(AnalyticsSyncState, property_id, with_for_update=True)
+        if prop is None or state is None or state.import_job_id != job.id:
+            return
+        # A person's "Sync now" stays theirs through the chain.
+        _schedule(
+            session,
+            rt,
+            prop,
+            state,
+            requested_by=job.requested_by_user_id,
+            delay_seconds=int(following.delay),
+        )
+        if following.paused:
+            state.last_error_code, state.last_error_at = WAITING, rt.clock.now()
+            prop.health_code, prop.health_checked_at = RATE_LIMITED, rt.clock.now()
+
+
+@dataclass(frozen=True)
+class _Next:
+    """The step that follows: at once, a little later (slowing down) or after a pause."""
+
+    delay: float = 0
+    paused: bool = False
 
 
 def _load(
@@ -327,23 +476,23 @@ def _mode(value: str | None, prop: AnalyticsProperty) -> SyncMode:
     return SyncMode.INITIAL if prop.first_import_completed_at is None else SyncMode.NIGHTLY
 
 
-def _step(rt: Runtime, job: ClaimedJob, org_id: uuid.UUID, property_id: uuid.UUID) -> bool:
-    """Run one step; ``True`` when another step follows. Temporary platform errors propagate
+def _step(rt: Runtime, job: ClaimedJob, org_id: uuid.UUID, property_id: uuid.UUID) -> _Next | None:
+    """Run one step; what follows, or None at the end. Temporary platform errors propagate
     (the job framework retries with back-off); an unusable property or a permanent error (or
     the last retry) ends the chain with a plain code on the property."""
     ctx, provider = _load(rt, job, org_id, property_id)
     if ctx is None or provider is None:
-        return False
+        return None
     try:
         if ctx.step == STEP_PROPERTY:
             return _property(rt, ctx, provider)
         if (span := days_cursor(ctx.step)) is not None:
             return _days(rt, ctx, provider, *span)
         _finish(rt, ctx)
-        return False
+        return None
     except ResourceUnavailableError as exc:
         _fail(rt, ctx, exc.code, health=True)
-        return False
+        return None
     except AccountBusyError as exc:  # the property's quota is used up: only it waits
         delay = exc.retry_after_seconds or rt.settings.ANALYTICS_PROPERTY_BUSY_WAIT.total_seconds()
         logger.info(
@@ -351,7 +500,7 @@ def _step(rt: Runtime, job: ClaimedJob, org_id: uuid.UUID, property_id: uuid.UUI
             extra={"property_id": str(ctx.property_id), "retry_after_seconds": int(delay)},
         )
         _wait(rt, ctx, job, delay)
-        return False
+        return None
     except ProviderError as exc:
         if not exc.retryable or job.attempts >= job.max_attempts:
             _fail(rt, ctx, exc.code, health=False)
@@ -378,14 +527,43 @@ def _wait(rt: Runtime, ctx: _Context, job: ClaimedJob, seconds: float) -> None:
             delay_seconds=max(1, int(seconds)),
         )
         state.last_error_code, state.last_error_at = WAITING, rt.clock.now()
+        prop.health_code, prop.health_checked_at = RATE_LIMITED, rt.clock.now()
 
 
-def _clear_waiting(state: AnalyticsSyncState) -> None:
+def _clear_waiting(state: AnalyticsSyncState, prop: AnalyticsProperty | None = None) -> None:
     if state.last_error_code == WAITING:
         state.last_error_code = state.last_error_at = None
+    if prop is not None and prop.health_code == RATE_LIMITED:  # Google let AdVegaX read again
+        prop.health_code = None
 
 
-def _property(rt: Runtime, ctx: _Context, provider: AnalyticsProvider) -> bool:
+def _pace(rt: Runtime, ctx: _Context, provider: AnalyticsProvider, *, more: bool) -> _Next:
+    """Pacing from what the platform said is left of the property's allowance (Q-5-7):
+    below the slow share the next step waits a little; below the pause share it waits for
+    the next full hour, when Google's hourly tokens are renewed."""
+    if not more:
+        return _Next()  # the last step calls nobody
+    reader = getattr(provider, "quota_left", None)
+    left = reader(ctx.ref) if callable(reader) else None
+    shares = [x for x in (left.hour, left.day) if x is not None] if left is not None else []
+    if not shares:
+        return _Next()
+    lowest = min(shares)
+    settings = rt.settings
+    if lowest < settings.ANALYTICS_QUOTA_PAUSE_SHARE:
+        now = rt.clock.now()
+        seconds = 3600 - (now.minute * 60 + now.second) + 60
+        logger.info(
+            "analytics_quota_low_pausing",
+            extra={"property_id": str(ctx.property_id), "share_left": round(lowest, 3)},
+        )
+        return _Next(delay=seconds, paused=True)
+    if lowest < settings.ANALYTICS_QUOTA_SLOW_SHARE:
+        return _Next(delay=settings.ANALYTICS_QUOTA_SLOW_WAIT.total_seconds())
+    return _Next()
+
+
+def _property(rt: Runtime, ctx: _Context, provider: AnalyticsProvider) -> _Next | None:
     secrets = usable_secrets(rt, ctx.org_id, ctx.connection_id)
     found = _call(rt, ctx, provider, lambda: provider.read_property(secrets, ctx.ref))
     with rt.db.transaction(org_id=ctx.org_id) as session:
@@ -399,22 +577,24 @@ def _property(rt: Runtime, ctx: _Context, provider: AnalyticsProvider) -> bool:
         # A property's currency and time zone can be changed in GA4. Stored days keep the
         # values they were read with; a change is recorded for the property page (5-06/5-08),
         # never applied silently to figures already stored.
+        # The property answered: earlier access problems are over. A quota pause stays
+        # until Google lets AdVegaX read reports again (the reports are what it limits).
+        waiting = prop.health_code == RATE_LIMITED
         if found.platform_status != "active":
             prop.health_code = found.unavailable_reason or "property_deleted"
         elif (found.currency, found.timezone) != (prop.currency, prop.timezone):
             prop.health_code = "property_details_changed"
         else:
-            prop.health_code = None
+            prop.health_code = RATE_LIMITED if waiting else None
         if found.platform_status == "active":
             state.import_cursor = _cursor(*window(rt, prop, ctx.mode))
-            _clear_waiting(state)
             state.updated_at = rt.clock.now()
             if ctx.first_import:
                 state.import_progress = 5
     if found.platform_status != "active":
         _fail(rt, ctx, found.unavailable_reason or "property_deleted", health=True)
-        return False
-    return True
+        return None
+    return _Next()
 
 
 # ------------------------------------------------------------------ daily figures
@@ -440,7 +620,9 @@ def month_slice(first: date, last: date) -> date:
     return min(last, _shift(next_month, -1))
 
 
-def _days(rt: Runtime, ctx: _Context, provider: AnalyticsProvider, first: date, last: date) -> bool:
+def _days(
+    rt: Runtime, ctx: _Context, provider: AnalyticsProvider, first: date, last: date
+) -> _Next:
     # The first import reads calendar months; a re-read (2, 14 or 90 days) is one step.
     end = month_slice(first, last) if ctx.mode is SyncMode.INITIAL else last
     secrets = usable_secrets(rt, ctx.org_id, ctx.connection_id)
@@ -455,7 +637,7 @@ def _days(rt: Runtime, ctx: _Context, provider: AnalyticsProvider, first: date, 
         written = apply_daily(session, rt, prop, first, end, records)
         more = end < last
         state.import_cursor = _cursor(_shift(end, 1), last) if more else STEP_DONE
-        _clear_waiting(state)
+        _clear_waiting(state, prop)
         if ctx.first_import:
             start = history_start(rt, prop)
             span = max(1, (last - start).days + 1)
@@ -466,7 +648,7 @@ def _days(rt: Runtime, ctx: _Context, provider: AnalyticsProvider, first: date, 
         "analytics_days_imported",
         extra={"property_id": str(ctx.property_id), "first": str(first), "rows": written},
     )
-    return True
+    return _pace(rt, ctx, provider, more=more)
 
 
 def dimension_key(record: AnalyticsDailyRecord) -> str:
@@ -660,6 +842,8 @@ def _finish(rt: Runtime, ctx: _Context) -> None:
                 resource_id=ctx.property_id,
             )
         prop.status = "active"
+        if prop.health_code == RATE_LIMITED:
+            prop.health_code, prop.health_checked_at = None, now
         state.import_progress = 100
         if ctx.mode is SyncMode.INITIAL:
             state.last_quick_at = state.last_nightly_at = state.last_weekly_at = now

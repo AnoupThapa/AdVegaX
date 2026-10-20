@@ -9,7 +9,7 @@ Plan: `PHASE_05_PLAN.md` (approved 2026-10-19, A23, all recommendations; Q11 set
 | 5-03 Google Analytics sign-in, client, simulator | ✅ Done — awaiting review |
 | 5-04 Discovery and linking rules | ✅ Done — awaiting review |
 | 5-05 Daily import | ✅ Done — awaiting review |
-| 5-06 Ongoing sync, quota pacing, health | Not started |
+| 5-06 Ongoing sync, quota pacing, health | ✅ Done — awaiting review |
 | 5-07 Read API | Not started |
 | 5-08 Web app | Not started |
 | 5-09 Journey test, browser test, docs, report | Not started |
@@ -186,3 +186,44 @@ The rest of Phase 5 is built against Google's documentation and a GA4 simulator 
 **Blocked:** Step 0 (5-01) — unchanged.
 
 **Next task:** 5-06 — sync and health: the 3-hour, nightly (14 days) and weekly (90 days) runs, "Sync now", quota pacing from Google's remaining allowance, and the property health messages.
+
+## 5-06 — Keeping properties up to date, Google's limits and health (2026-10-20)
+
+**Completed**
+- **Properties stay up to date by themselves:**
+  - every 3 hours: today and yesterday;
+  - nightly: the last 14 days (Google's late data and changing key-event credit — tested: a correction Google makes to a day 10 days back is picked up overnight);
+  - weekly: the last 90 days.
+
+  Each run reads the property's details first, and properties come due at their own times, so runs spread over the day. Unlinked properties, disconnected Google accounts and first imports still running are left alone.
+- **"Sync now"** (the button arrives in 5-08): re-reads the last 14 days, or restarts a first import that failed. It is limited to 6 an hour per property, refused while a run is going, and recorded in the audit log.
+- **Google's limits (Q-5-7):** every report tells AdVegaX how much of the property's hourly and daily allowance is left.
+  - Below a quarter: each step waits 2 minutes (slower, never stopped).
+  - Below a tenth: the property pauses until just after the next full hour and continues by itself. Its page will say "Google is limiting how much AdVegaX can read — figures will update later".
+  - Google's "quota used up" answer pauses it 15 minutes the same way.
+
+  No retry attempt is used, figures already imported stay visible, and other properties carry on. AdVegaX's share of the hour (14,000 tokens) is watched as well as the property's (40,000).
+- **Health on the property, in plain words:** no access any more, deleted in Google Analytics, currency or time zone changed, Google limiting reads. Each clears by itself when the property answers normally again. A Google sign-in that is no longer accepted shows "Needs reconnecting" on the connection, and its properties wait until it is reconnected.
+- **Fix:** a Google error status in the GA4 client from 5-03 was read by the web app's error-code check as an AdVegaX code (the frontend check failed; I had not run it in 5-03 because the frontend had not changed). It is now written so the check skips it, and the frontend check passes.
+
+**Files changed** (16)
+- New (1): `tests/api/test_google_analytics_sync.py` (31 tests).
+- Modified (15): `app/domains/analytics/importer.py` (schedule, "Sync now", pacing, health), `app/providers/google_analytics/{client,provider}.py` (remaining allowance kept per property), `app/providers/base/{types,interfaces}.py` (`AnalyticsQuotaLeft`, optional `quota_left`), `app/core/settings.py` (`ANALYTICS_*` intervals and pacing, `THROTTLE_ANALYTICS_PROPERTY_RESYNC_PER_HOUR`), `app/workers/{job_tasks,celery_app}.py` (scheduled task every 5 minutes), `frontend/lib/api/errors.ts` (message for `ANALYTICS_PROPERTY_NOT_SYNCING`), `tests/providers/test_google_analytics_reports.py` (2 tests), docs `INTEGRATION_GUIDES.md`, `SECURITY.md`, this report, `PROJECT_STATUS.md`.
+- Deleted: none. No migration.
+
+**Tests**
+- **33 new.**
+- **Backend `make check`: 1,460 passed**, coverage 97 % (importer 91 %).
+- **Frontend `npm run check`: 370 passed** (lint, types, unit tests).
+
+**Security**
+- The scheduler reads only four columns of other organizations' properties (tested: the property name is refused); everything else runs under each property's own organization.
+- Reads only; no token in logs or the audit log.
+
+**Deviations**
+1. **The plan said "below 10 % … waits until the window moves on".** I paused until the next full hour for both the hour and the day: Google does not say when a property's day starts again, so a low day is checked again hourly (one small report each time) instead of guessed.
+2. **Slowing down below 25 %** (2 minutes between steps) is added, as Q-5-7 says "slows down and pauses".
+
+**Blocked:** Step 0 (5-01) — unchanged.
+
+**Next task:** 5-07 — read API: the properties list and page, daily figures in three views with period totals (users per day only), derived rates with reasons, data-quality and "still being processed" notes, and "Sync now".

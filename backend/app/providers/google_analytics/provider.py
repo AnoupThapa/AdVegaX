@@ -25,6 +25,7 @@ from app.providers.base.types import (
     AnalyticsPropertyRef,
     AnalyticsPropertyState,
     AnalyticsQuality,
+    AnalyticsQuotaLeft,
     AuthorizationRequest,
     AuthScheme,
     ConnectResult,
@@ -51,6 +52,8 @@ logger = logging.getLogger("advegax.providers.google_analytics")
 
 ANALYTICS_SCOPE = "https://www.googleapis.com/auth/analytics.readonly"
 MAX_PROPERTIES = 500  # one properties.get each; more than any one business has
+# A standard property's tokens (checked 2026-10-19; Analytics 360 allows more).
+DAY_TOKENS, HOUR_TOKENS, PROJECT_HOUR_TOKENS = 200_000, 40_000, 14_000
 MAX_REPORT_PAGES = 25  # 250,000 rows of one view in one slice; the rest is marked truncated
 
 
@@ -206,6 +209,29 @@ class GoogleAnalyticsProvider:
                 yield replace(record, quality=mapping.merge_quality(record.quality, quality))
         if skipped:
             logger.warning("google_analytics_rows_skipped", extra={"count": skipped})
+
+    def quota_left(self, prop: AnalyticsPropertyRef) -> AnalyticsQuotaLeft | None:
+        """The share of the property's tokens left this hour and today, from Google's last
+        answer (Q-5-7). The hour share is the smaller of the property's and AdVegaX's share
+        of it; Analytics 360 properties have larger limits and count as fully available."""
+        quota = self.analytics.quota_for(prop.external_id)
+        if quota is None:
+            return None
+        hours = [
+            share
+            for share in (
+                _share(quota.hour_remaining, HOUR_TOKENS),
+                _share(quota.project_hour_remaining, PROJECT_HOUR_TOKENS),
+            )
+            if share is not None
+        ]
+        return AnalyticsQuotaLeft(
+            hour=min(hours) if hours else None, day=_share(quota.day_remaining, DAY_TOKENS)
+        )
+
+
+def _share(remaining: int | None, limit: int) -> float | None:
+    return None if remaining is None else min(1.0, remaining / limit)
 
 
 def _parsed(

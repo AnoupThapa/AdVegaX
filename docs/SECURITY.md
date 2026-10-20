@@ -166,6 +166,7 @@ Tests: `tests/providers/test_woocommerce_client.py` (74 cases: addresses, auth, 
 - The Google sign-in code is shared with Google Ads (one hardened implementation: PKCE, offline access, ID-token checks, refresh, revocation). The connection asks only for `analytics.readonly` and `openid`; the edit permission is never requested (static test).
 - Every request passes one read-only gate (discovery reads and the report methods only; static test). The token is sent in the `Authorization` header only; property ids are checked before they enter an address.
 - Only Google's stable account id is kept, to recognise a reconnect. Reports are aggregates: no user ids, client ids, IP addresses or demographics are requested.
+- **Scheduled runs (5-06):** the scheduler's system role reads four columns of `analytics_properties` (id, organization, platform, first import time) and nothing else; every read and write of figures runs under the property's own organization with forced row-level security. "Sync now" is limited per property and recorded in the audit log.
 
 ### Meta sign-in (Phase 4)
 - Facebook Login for Business with a configuration id (`ads_read`, `business_management`), PKCE (S256) and single-use state; the code is exchanged on the server for a long-lived token (about 60 days).

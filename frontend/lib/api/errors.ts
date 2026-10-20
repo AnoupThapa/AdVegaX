@@ -114,6 +114,8 @@ const MESSAGES: Readonly<Record<string, string>> = {
     "This store is not linked to an active connection. Link or reconnect it first.",
   AD_ACCOUNT_NOT_SYNCING:
     "This ad account is not linked to an active connection. Link or reconnect it first.",
+  ANALYTICS_PROPERTY_NOT_SYNCING:
+    "This Google Analytics property is not linked to an active connection. Link or reconnect it first.",
   // Platform-to-AdVegaX webhook answers; a person should never see these, but keep them friendly.
   INVALID_SIGNATURE: "The request could not be verified.",
   INVALID_WEBHOOK: "The request could not be processed.",

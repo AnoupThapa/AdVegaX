@@ -119,3 +119,13 @@ def ads_sync_task() -> int | None:
     rt = worker_runtime()
     ttl = int(rt.settings.SCHEDULE_ADS_SYNC_TICK.total_seconds() * 0.9)
     return run_singleton(rt.redis, "ads_sync", ttl, lambda: ad_importer.enqueue_ad_syncs(rt))
+
+
+@celery_app.task(name="advegax.schedule.analytics_sync")  # type: ignore[untyped-decorator]
+def analytics_sync_task() -> int | None:
+    """Start the 3-hour, nightly and weekly analytics property runs that are due (5-06)."""
+    rt = worker_runtime()
+    ttl = int(rt.settings.SCHEDULE_ANALYTICS_SYNC_TICK.total_seconds() * 0.9)
+    return run_singleton(
+        rt.redis, "analytics_sync", ttl, lambda: analytics_importer.enqueue_analytics_syncs(rt)
+    )
