@@ -8,7 +8,7 @@ Plan: `PHASE_06_PLAN.md` (approved 2026-10-20, A24, all recommendations; complet
 | 6-02 Migration 0016, reporting settings, store assignment | ✅ Done — awaiting review |
 | 6-03 Exchange rates: clients, daily job, conversion rules | ✅ Done — awaiting review |
 | 6-04 Metric registry `analytics-v1` and its inputs | ✅ Done — awaiting review |
-| 6-05 Overview and channels API | Not started |
+| 6-05 Overview and channels API | ✅ Done — awaiting review |
 | 6-06 Campaigns (with GA4 match) and products API | Not started |
 | 6-07 Web app: Overview, settings | Not started |
 | 6-08 Web app: channels, campaigns, products, "how is this calculated?" | Not started |
@@ -117,3 +117,32 @@ Plan: `PHASE_06_PLAN.md` (approved 2026-10-20, A24, all recommendations; complet
 **Blocked:** Step 0 (6-01) — network access to the two rate feeds.
 
 **Next task:** 6-05 — the overview and channels API: `GET /analytics/overview` (every registry figure for a period, by day and in total, with definition version, reporting currency, sources and their freshness, conversions used) and `GET /analytics/channels` (per ad platform with its own reported figures, and per Google Analytics channel).
+
+## 6-05 — Overview and channels API (2026-10-20)
+
+**Completed**
+- **`GET /analytics/overview`** — for a period (30 days by default, in your reporting time zone), for the whole organization or one store: every figure of the registry, **for the period and day by day**, in the reporting currency. With it:
+  - **where the numbers come from:** each store, ad account and property used, with its currency, time zone, the first day it has figures for, and when it was last brought up to date;
+  - **which currencies were converted**, with which bank's rates and their dates (a weekend shows Friday's date), and how many days had no rate;
+  - a note when the sources' **time zones differ** from the reporting one;
+  - the **definitions** themselves (label, formula, what is not included), straight from the registry, for "How is this calculated?".
+- **`GET /analytics/channels`** — each **ad platform's own reported figures** (spend, clicks, impressions, conversions, conversion value, the platform's ROAS, cost per click, cost per conversion, labelled "platform reported"), added up only within each platform; the only figure added across platforms is total ad spend. And **Google Analytics' channels** (Organic Search, Paid Search, …) with sessions, engagement rate, key events, purchases and revenue, most sessions first — or the reason there are none ("no property", "not synced yet").
+- Every member can read; another organization's data or store is "not found"; invalid periods are refused.
+- Golden values through the API: net sales A$1,500.50, ad spend A$204.50, profit after ad spend A$695.80, blended ROAS 7.337408, cost per order A$13.633333; in USD after changing the reporting currency.
+
+**Files changed** (11)
+- New (5): `app/domains/metrics/{channels,schemas,read_service,router}.py`, `tests/api/test_unified_analytics_api.py` (15 tests).
+- Modified (6): `app/domains/metrics/engine.py` (sources carry when they were last updated), `app/api/router.py`, `frontend/lib/api/{openapi.json,schema.d.ts}` (generated), docs `API_SPECIFICATION.md` (§19E), this report, `PROJECT_STATUS.md`.
+- Deleted: none. No migration.
+
+**Tests**
+- **15 new**; the tenant-isolation sweep covers the two new routes.
+- **Backend `make check`: 1,564 passed**, coverage 97 %. **Frontend `npm run check`: 387 passed** (types regenerated).
+
+**Security:** reads only; membership on the server; row-level security plus explicit organization filters; a foreign `store_id` is a 404.
+
+**Deviations:** none.
+
+**Blocked:** Step 0 (6-01) — network access to the two rate feeds.
+
+**Next task:** 6-06 — campaigns and products API: every ad campaign with its platform-reported figures, the matching Google Analytics campaign figures (exact name match, Q-6-9) and budget use against today's budget (Q-6-11); every product with net sales, units, product cost, gross profit and margin (Q-6-10).

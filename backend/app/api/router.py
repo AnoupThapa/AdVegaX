@@ -11,6 +11,7 @@ from app.domains.audit.router import router as audit_router
 from app.domains.commerce.router import router as commerce_router
 from app.domains.identity.router import router as identity_router
 from app.domains.integrations.router import router as integrations_router
+from app.domains.metrics.router import router as metrics_router
 from app.domains.organizations.router import router as organizations_router
 from app.domains.webhooks.router import router as webhooks_router
 
@@ -23,4 +24,5 @@ api_router.include_router(integrations_router)
 api_router.include_router(commerce_router)
 api_router.include_router(advertising_router)
 api_router.include_router(analytics_router)
+api_router.include_router(metrics_router)
 api_router.include_router(webhooks_router)

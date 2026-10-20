@@ -1104,6 +1104,27 @@
         "title": "AdSyncOut",
         "type": "object"
       },
+      "AnalyticsChannelOut": {
+        "properties": {
+          "channel": {
+            "title": "Channel",
+            "type": "string"
+          },
+          "figures": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/FigureOut"
+            },
+            "title": "Figures",
+            "type": "object"
+          }
+        },
+        "required": [
+          "channel",
+          "figures"
+        ],
+        "title": "AnalyticsChannelOut",
+        "type": "object"
+      },
       "AnalyticsDailyMetricsOut": {
         "properties": {
           "breakdown": {
@@ -2045,6 +2066,114 @@
         "title": "ChangePasswordRequest",
         "type": "object"
       },
+      "ChannelsOut": {
+        "properties": {
+          "ad_spend": {
+            "$ref": "#/components/schemas/FigureOut"
+          },
+          "analytics_channels": {
+            "items": {
+              "$ref": "#/components/schemas/AnalyticsChannelOut"
+            },
+            "title": "Analytics Channels",
+            "type": "array"
+          },
+          "analytics_channels_missing": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FigureOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "conversions": {
+            "items": {
+              "$ref": "#/components/schemas/ConversionOut"
+            },
+            "title": "Conversions",
+            "type": "array"
+          },
+          "currency_minor_units": {
+            "title": "Currency Minor Units",
+            "type": "integer"
+          },
+          "definition_version": {
+            "title": "Definition Version",
+            "type": "string"
+          },
+          "from_day": {
+            "format": "date",
+            "title": "From Day",
+            "type": "string"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "platforms": {
+            "items": {
+              "$ref": "#/components/schemas/PlatformOut"
+            },
+            "title": "Platforms",
+            "type": "array"
+          },
+          "reporting_currency": {
+            "title": "Reporting Currency",
+            "type": "string"
+          },
+          "reporting_timezone": {
+            "title": "Reporting Timezone",
+            "type": "string"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceOut"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "store_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Store Id"
+          },
+          "to_day": {
+            "format": "date",
+            "title": "To Day",
+            "type": "string"
+          }
+        },
+        "required": [
+          "definition_version",
+          "reporting_currency",
+          "currency_minor_units",
+          "reporting_timezone",
+          "store_id",
+          "from_day",
+          "to_day",
+          "sources",
+          "conversions",
+          "notes",
+          "ad_spend",
+          "platforms",
+          "analytics_channels",
+          "analytics_channels_missing"
+        ],
+        "title": "ChannelsOut",
+        "type": "object"
+      },
       "ConnectionOut": {
         "properties": {
           "account_label": {
@@ -2148,6 +2277,59 @@
           "revoked_at"
         ],
         "title": "ConnectionOut",
+        "type": "object"
+      },
+      "ConversionOut": {
+        "description": "A currency converted into the reporting currency in this answer.",
+        "properties": {
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "days_without_rate": {
+            "title": "Days Without Rate",
+            "type": "integer"
+          },
+          "first_rate_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Rate Date"
+          },
+          "last_rate_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Rate Date"
+          },
+          "rate_sources": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Rate Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "currency",
+          "rate_sources",
+          "first_rate_date",
+          "last_rate_date",
+          "days_without_rate"
+        ],
+        "title": "ConversionOut",
         "type": "object"
       },
       "CostOut": {
@@ -2641,6 +2823,22 @@
         "title": "Envelope[AuthorizationStartOut]",
         "type": "object"
       },
+      "Envelope_ChannelsOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ChannelsOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[ChannelsOut]",
+        "type": "object"
+      },
       "Envelope_ConnectionOut_": {
         "properties": {
           "data": {
@@ -2799,6 +2997,22 @@
           "meta"
         ],
         "title": "Envelope[OrganizationOut]",
+        "type": "object"
+      },
+      "Envelope_OverviewOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/OverviewOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[OverviewOut]",
         "type": "object"
       },
       "Envelope_ProductOut_": {
@@ -3703,6 +3917,54 @@
         "title": "Meta",
         "type": "object"
       },
+      "MetricDefinitionOut": {
+        "properties": {
+          "formula": {
+            "title": "Formula",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "sources": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "unit",
+          "formula",
+          "note",
+          "sources"
+        ],
+        "title": "MetricDefinitionOut",
+        "type": "object"
+      },
       "OrganizationCreate": {
         "additionalProperties": false,
         "properties": {
@@ -3840,6 +4102,160 @@
           }
         },
         "title": "OrganizationUpdate",
+        "type": "object"
+      },
+      "OverviewDayOut": {
+        "properties": {
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "figures": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/FigureOut"
+            },
+            "title": "Figures",
+            "type": "object"
+          }
+        },
+        "required": [
+          "day",
+          "figures"
+        ],
+        "title": "OverviewDayOut",
+        "type": "object"
+      },
+      "OverviewOut": {
+        "properties": {
+          "conversions": {
+            "items": {
+              "$ref": "#/components/schemas/ConversionOut"
+            },
+            "title": "Conversions",
+            "type": "array"
+          },
+          "currency_minor_units": {
+            "title": "Currency Minor Units",
+            "type": "integer"
+          },
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/OverviewDayOut"
+            },
+            "title": "Days",
+            "type": "array"
+          },
+          "definition_version": {
+            "title": "Definition Version",
+            "type": "string"
+          },
+          "definitions": {
+            "items": {
+              "$ref": "#/components/schemas/MetricDefinitionOut"
+            },
+            "title": "Definitions",
+            "type": "array"
+          },
+          "from_day": {
+            "format": "date",
+            "title": "From Day",
+            "type": "string"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "reporting_currency": {
+            "title": "Reporting Currency",
+            "type": "string"
+          },
+          "reporting_timezone": {
+            "title": "Reporting Timezone",
+            "type": "string"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceOut"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "store_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Store Id"
+          },
+          "to_day": {
+            "format": "date",
+            "title": "To Day",
+            "type": "string"
+          },
+          "totals": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/FigureOut"
+            },
+            "title": "Totals",
+            "type": "object"
+          }
+        },
+        "required": [
+          "definition_version",
+          "reporting_currency",
+          "currency_minor_units",
+          "reporting_timezone",
+          "store_id",
+          "from_day",
+          "to_day",
+          "sources",
+          "conversions",
+          "notes",
+          "totals",
+          "days",
+          "definitions"
+        ],
+        "title": "OverviewOut",
+        "type": "object"
+      },
+      "PlatformOut": {
+        "properties": {
+          "ad_accounts": {
+            "title": "Ad Accounts",
+            "type": "integer"
+          },
+          "figures": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/FigureOut"
+            },
+            "title": "Figures",
+            "type": "object"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "source",
+          "ad_accounts",
+          "figures"
+        ],
+        "title": "PlatformOut",
         "type": "object"
       },
       "ProductOut": {
@@ -4271,6 +4687,78 @@
           "current"
         ],
         "title": "SessionOut",
+        "type": "object"
+      },
+      "SourceOut": {
+        "properties": {
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "synced_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Synced From"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "provider",
+          "name",
+          "currency",
+          "timezone",
+          "synced_from",
+          "updated_at"
+        ],
+        "title": "SourceOut",
         "type": "object"
       },
       "StatusOut": {
@@ -6286,6 +6774,196 @@
         "summary": "Assign Analytics Property Store",
         "tags": [
           "analytics"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/analytics/channels": {
+      "get": {
+        "description": "Each ad platform's own reported figures, and Google Analytics' channels.",
+        "operationId": "analytics_channels_api_v1_organizations__organization_id__analytics_channels_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "store_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Store Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ChannelsOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Analytics Channels",
+        "tags": [
+          "unified analytics"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/analytics/overview": {
+      "get": {
+        "description": "Sales, ad spend and profit together, in the reporting currency (analytics-v1), by day\nand for the period, with sources, freshness and the exchange rates used.",
+        "operationId": "analytics_overview_api_v1_organizations__organization_id__analytics_overview_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "store_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Store Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_OverviewOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Analytics Overview",
+        "tags": [
+          "unified analytics"
         ]
       }
     },

@@ -23,9 +23,14 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.domains.advertising.models import AdAccount, AdPerformanceDaily
-from app.domains.analytics.models import TOTAL_KEY, AnalyticsDaily, AnalyticsProperty
-from app.domains.commerce.models import Store
+from app.domains.advertising.models import AdAccount, AdPerformanceDaily, AdSyncState
+from app.domains.analytics.models import (
+    TOTAL_KEY,
+    AnalyticsDaily,
+    AnalyticsProperty,
+    AnalyticsSyncState,
+)
+from app.domains.commerce.models import CommerceSyncState, Store
 from app.domains.finance.definitions import DEFINITION_VERSION as FINANCE_VERSION
 from app.domains.finance.models import FinancialDaily
 from app.domains.fx.service import FxTable
@@ -103,6 +108,7 @@ class Source:
     timezone: str
     synced_from: date | None  # first fully read day (source time zone); None = not yet
     today: date  # the source's own today
+    updated_at: datetime | None = None  # when its figures were last brought up to date
 
 
 @dataclass(frozen=True)
@@ -158,6 +164,27 @@ def load_scope(
             .order_by(AnalyticsProperty.created_at)
         ).scalars()
     )
+    store_updates = dict(
+        session.execute(
+            select(CommerceSyncState.store_id, CommerceSyncState.last_reconciled_at).where(
+                CommerceSyncState.organization_id == organization_id
+            )
+        ).all()
+    )
+    account_updates = dict(
+        session.execute(
+            select(AdSyncState.ad_account_id, AdSyncState.last_quick_at).where(
+                AdSyncState.organization_id == organization_id
+            )
+        ).all()
+    )
+    property_updates = dict(
+        session.execute(
+            select(AnalyticsSyncState.property_id, AnalyticsSyncState.last_quick_at).where(
+                AnalyticsSyncState.organization_id == organization_id
+            )
+        ).all()
+    )
     if store_id is not None:
         single = len(stores) == 1 and stores[0].id == store_id
         stores = [s for s in stores if s.id == store_id]
@@ -181,6 +208,7 @@ def load_scope(
                 s.timezone,
                 _store_synced_from(s, ZoneInfo(s.timezone)),
                 _today(now, s.timezone),
+                store_updates.get(s.id) or s.first_import_completed_at,
             )
             for s in stores
         ),
@@ -194,6 +222,7 @@ def load_scope(
                 a.timezone,
                 a.history_from if a.first_import_completed_at else None,
                 _today(now, a.timezone),
+                account_updates.get(a.id) or a.first_import_completed_at,
             )
             for a in accounts
         ),
@@ -207,6 +236,7 @@ def load_scope(
                 p.timezone,
                 p.history_from if p.first_import_completed_at else None,
                 _today(now, p.timezone),
+                property_updates.get(p.id) or p.first_import_completed_at,
             )
             for p in props
         ),
@@ -245,7 +275,7 @@ class Inputs:
         return merged
 
 
-def _synced(source: Source, day: date) -> bool:
+def synced(source: Source, day: date) -> bool:
     return source.synced_from is not None and source.synced_from <= day <= source.today
 
 
@@ -287,7 +317,7 @@ def load_inputs(
     )
     for store in scope.stores:
         for day, inputs in days.items():
-            if not _synced(store, day):
+            if not synced(store, day):
                 gap = missing(NOT_SYNCED, NOT_SYNCED)
                 inputs.net_sales.append(gap)
                 inputs.orders.append(gap)
@@ -323,7 +353,7 @@ def load_inputs(
     for account in scope.ad_accounts:
         for day, inputs in days.items():
             perf = spend.get((account.id, day))
-            if not _synced(account, day) or perf is None:
+            if not synced(account, day) or perf is None:
                 inputs.ad_spend.append(missing(NOT_SYNCED, NOT_SYNCED))
                 continue
             cost = perf.cost
@@ -357,7 +387,7 @@ def load_inputs(
     for prop in scope.properties:
         for day, inputs in days.items():
             visit = visits.get((prop.id, day))
-            if not _synced(prop, day) or visit is None:
+            if not synced(prop, day) or visit is None:
                 gap = missing(NOT_SYNCED, NOT_SYNCED)
                 inputs.sessions.append(gap)
                 inputs.analytics_purchases.append(gap)

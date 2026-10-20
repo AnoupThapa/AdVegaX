@@ -528,6 +528,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/{organization_id}/analytics/channels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Analytics Channels
+         * @description Each ad platform's own reported figures, and Google Analytics' channels.
+         */
+        get: operations["analytics_channels_api_v1_organizations__organization_id__analytics_channels_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/analytics/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Analytics Overview
+         * @description Sales, ad spend and profit together, in the reporting currency (analytics-v1), by day
+         *     and for the period, with sources, freshness and the exchange rates used.
+         */
+        get: operations["analytics_overview_api_v1_organizations__organization_id__analytics_overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizations/{organization_id}/audit-logs": {
         parameters: {
             query?: never;
@@ -1306,6 +1347,15 @@ export interface components {
             /** Waiting For Allowance */
             waiting_for_allowance: boolean;
         };
+        /** AnalyticsChannelOut */
+        AnalyticsChannelOut: {
+            /** Channel */
+            channel: string;
+            /** Figures */
+            figures: {
+                [key: string]: components["schemas"]["FigureOut"];
+            };
+        };
         /** AnalyticsDailyMetricsOut */
         AnalyticsDailyMetricsOut: {
             /** Breakdown */
@@ -1607,6 +1657,41 @@ export interface components {
             /** New Password */
             new_password: string;
         };
+        /** ChannelsOut */
+        ChannelsOut: {
+            ad_spend: components["schemas"]["FigureOut"];
+            /** Analytics Channels */
+            analytics_channels: components["schemas"]["AnalyticsChannelOut"][];
+            analytics_channels_missing: components["schemas"]["FigureOut"] | null;
+            /** Conversions */
+            conversions: components["schemas"]["ConversionOut"][];
+            /** Currency Minor Units */
+            currency_minor_units: number;
+            /** Definition Version */
+            definition_version: string;
+            /**
+             * From Day
+             * Format: date
+             */
+            from_day: string;
+            /** Notes */
+            notes: string[];
+            /** Platforms */
+            platforms: components["schemas"]["PlatformOut"][];
+            /** Reporting Currency */
+            reporting_currency: string;
+            /** Reporting Timezone */
+            reporting_timezone: string;
+            /** Sources */
+            sources: components["schemas"]["SourceOut"][];
+            /** Store Id */
+            store_id: string | null;
+            /**
+             * To Day
+             * Format: date
+             */
+            to_day: string;
+        };
         /** ConnectionOut */
         ConnectionOut: {
             /** Account Label */
@@ -1637,6 +1722,22 @@ export interface components {
             sign_in_expires_at?: string | null;
             /** Status */
             status: string;
+        };
+        /**
+         * ConversionOut
+         * @description A currency converted into the reporting currency in this answer.
+         */
+        ConversionOut: {
+            /** Currency */
+            currency: string;
+            /** Days Without Rate */
+            days_without_rate: number;
+            /** First Rate Date */
+            first_rate_date: string | null;
+            /** Last Rate Date */
+            last_rate_date: string | null;
+            /** Rate Sources */
+            rate_sources: string[];
         };
         /** CostOut */
         CostOut: {
@@ -1780,6 +1881,11 @@ export interface components {
             data: components["schemas"]["AuthorizationStartOut"];
             meta: components["schemas"]["Meta"];
         };
+        /** Envelope[ChannelsOut] */
+        Envelope_ChannelsOut_: {
+            data: components["schemas"]["ChannelsOut"];
+            meta: components["schemas"]["Meta"];
+        };
         /** Envelope[ConnectionOut] */
         Envelope_ConnectionOut_: {
             data: components["schemas"]["ConnectionOut"];
@@ -1828,6 +1934,11 @@ export interface components {
         /** Envelope[OrganizationOut] */
         Envelope_OrganizationOut_: {
             data: components["schemas"]["OrganizationOut"];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[OverviewOut] */
+        Envelope_OverviewOut_: {
+            data: components["schemas"]["OverviewOut"];
             meta: components["schemas"]["Meta"];
         };
         /** Envelope[ProductOut] */
@@ -2136,6 +2247,21 @@ export interface components {
             /** Request Id */
             request_id: string | null;
         };
+        /** MetricDefinitionOut */
+        MetricDefinitionOut: {
+            /** Formula */
+            formula: string;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Note */
+            note: string | null;
+            /** Sources */
+            sources: string[];
+            /** Unit */
+            unit: string;
+        };
         /** OrganizationCreate */
         OrganizationCreate: {
             /** Default Currency */
@@ -2180,6 +2306,68 @@ export interface components {
             default_timezone?: string | null;
             /** Name */
             name?: string | null;
+        };
+        /** OverviewDayOut */
+        OverviewDayOut: {
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Figures */
+            figures: {
+                [key: string]: components["schemas"]["FigureOut"];
+            };
+        };
+        /** OverviewOut */
+        OverviewOut: {
+            /** Conversions */
+            conversions: components["schemas"]["ConversionOut"][];
+            /** Currency Minor Units */
+            currency_minor_units: number;
+            /** Days */
+            days: components["schemas"]["OverviewDayOut"][];
+            /** Definition Version */
+            definition_version: string;
+            /** Definitions */
+            definitions: components["schemas"]["MetricDefinitionOut"][];
+            /**
+             * From Day
+             * Format: date
+             */
+            from_day: string;
+            /** Notes */
+            notes: string[];
+            /** Reporting Currency */
+            reporting_currency: string;
+            /** Reporting Timezone */
+            reporting_timezone: string;
+            /** Sources */
+            sources: components["schemas"]["SourceOut"][];
+            /** Store Id */
+            store_id: string | null;
+            /**
+             * To Day
+             * Format: date
+             */
+            to_day: string;
+            /** Totals */
+            totals: {
+                [key: string]: components["schemas"]["FigureOut"];
+            };
+        };
+        /** PlatformOut */
+        PlatformOut: {
+            /** Ad Accounts */
+            ad_accounts: number;
+            /** Figures */
+            figures: {
+                [key: string]: components["schemas"]["FigureOut"];
+            };
+            /** Provider */
+            provider: string;
+            /** Source */
+            source: string;
         };
         /** ProductOut */
         ProductOut: {
@@ -2332,6 +2520,28 @@ export interface components {
             last_used_at: string;
             /** User Agent Summary */
             user_agent_summary: string | null;
+        };
+        /** SourceOut */
+        SourceOut: {
+            /** Currency */
+            currency: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Name */
+            name: string | null;
+            /** Provider */
+            provider: string;
+            /** Synced From */
+            synced_from: string | null;
+            /** Timezone */
+            timezone: string;
+            /** Updated At */
+            updated_at: string | null;
         };
         /** StatusOut */
         StatusOut: {
@@ -3413,6 +3623,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Envelope_AnalyticsPropertyOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    analytics_channels_api_v1_organizations__organization_id__analytics_channels_get: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+                store_id?: string | null;
+            };
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ChannelsOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    analytics_overview_api_v1_organizations__organization_id__analytics_overview_get: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+                store_id?: string | null;
+            };
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_OverviewOut_"];
                 };
             };
             /** @description Validation Error */
