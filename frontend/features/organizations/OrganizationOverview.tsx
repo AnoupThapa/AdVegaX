@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import { PageHeading } from "@/components/ui/PageHeading";
+import { OverviewFigures } from "@/features/overview/OverviewFigures";
 
 import { useCurrentOrganization } from "./OrganizationShell";
 import styles from "./organizations.module.css";
@@ -16,16 +17,7 @@ export function OrganizationOverview() {
       <p className={styles.muted}>
         Your role: <span className={styles.badge}>{roleLabel(org.role)}</span>
       </p>
-      <div className={styles.panel}>
-        <h2>Nothing to show yet</h2>
-        <p>
-          Sales, advertising and profit reports will appear here in a later release, once your store
-          and ad accounts are connected.
-        </p>
-        <p>
-          <Link href={`/orgs/${org.id}/connections`}>See connections</Link>
-        </p>
-      </div>
+      <OverviewFigures org={org} />
       <div className={styles.panel}>
         <h2>Your team</h2>
         <p>

@@ -15,7 +15,7 @@ import { clearCsrfToken } from "@/lib/api/csrf";
 import { click, fill } from "../support/forms";
 import { fail, mockApi, ok } from "../support/mock-api";
 import { navigation, resetNavigation, router } from "../support/navigation";
-import { ORG_ID, ORG_PATH, testOrg } from "../support/organizations";
+import { ORG_ID, ORG_PATH, emptyOrganizationData, testOrg } from "../support/organizations";
 import { renderWithProviders, testUser } from "../support/render";
 
 vi.mock("next/navigation", () => import("../support/navigation"));
@@ -118,9 +118,10 @@ describe("Organization shell", () => {
   });
 
   it("shows owners the manage link", async () => {
-    mockApi({ [`GET ${ORG_PATH}`]: ok(testOrg()) });
+    mockApi({ [`GET ${ORG_PATH}`]: ok(testOrg()), ...emptyOrganizationData() });
     renderWithProviders(inShell(<OrganizationOverview />), { session: testUser() });
-    expect(await screen.findByRole("link", { name: "Manage members" })).toHaveAttribute(
+    expect(await screen.findByRole("heading", { name: "Nothing connected yet" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Manage members" })).toHaveAttribute(
       "href",
       `/orgs/${ORG_ID}/members`,
     );
@@ -235,6 +236,7 @@ describe("Organization settings", () => {
     mockApi({
       [`GET ${ORG_PATH}`]: ok(testOrg({ role: "admin" })),
       [`PATCH ${ORG_PATH}`]: fail(403, "FORBIDDEN"),
+      ...emptyOrganizationData(),
     });
     renderWithProviders(inShell(<OrganizationSettings />), { session: testUser() });
     fill(await screen.findByLabelText("Organization name"), "New name");

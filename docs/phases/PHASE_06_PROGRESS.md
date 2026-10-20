@@ -173,3 +173,34 @@ Plan: `PHASE_06_PLAN.md` (approved 2026-10-20, A24, all recommendations; complet
 **Blocked:** Step 0 (6-01) — network access to the two rate feeds.
 
 **Next task:** 6-07 — web app: the Analytics Overview (headline figures, day-by-day chart, sources and freshness, currencies converted) and the settings for reporting currency, time zone and which store each ad account and property belongs to.
+
+## 6-07 — Web app: Overview and settings (2026-10-20)
+
+**Completed**
+- **The Overview is now the organization's home page.** For the last 7, 30 or 90 days (in your reporting time zone), and for all stores or one store (the store choice appears with more than one store):
+  - **tiles** grouped as *Sales and profit* (net sales, orders, product cost, gross profit, gross margin), *Advertising* (ad spend, profit after ad spend, blended ROAS, cost per order, ad spend share of sales), *Visits (Google Analytics)* (sessions, purchases and revenue as Google Analytics reports them, store conversion rate) and *Not included yet* (shipping cost, payment fees, contribution profit, customer acquisition cost — each with why);
+  - a **day-by-day table**, newest first; a day not read says "Not synced yet", never 0;
+  - **where the numbers come from:** every store, ad account and property used, with its platform, currency, time zone, first day and last update;
+  - **currencies converted**, with which bank's rates and their dates, and how many days had no rate; a **note when time zones differ**; and the definitions version.
+  - Every label and note comes from the registry through the API; the page only formats values. A new static check fails the build if an Overview page does arithmetic on a figure.
+  - With nothing connected: "Nothing connected yet" with a link to Connections.
+- **Settings:** a new section *Stores for ad accounts and properties*. With more than one store, owners and admins choose the store for each ad account and Google Analytics property (or "All stores"); saved straight away with a confirmation. Other roles see the assignments read-only; with one store it says there is nothing to set. The reporting-currency hint now says other currencies are converted with each day's published rate.
+- New plain-words reasons: no store / ad account / property connected, no exchange rate, not every store has Google Analytics, no ad spend, no orders, costs not entered, and (for 6-08) no matching campaign, no / shared / not-a-daily budget.
+
+**Files changed** (11)
+- New (6): `frontend/features/overview/{api.ts,labels.ts,OverviewFigures.tsx,StoreAssignments.tsx,overview.module.css}`, `frontend/tests/features/overview.test.tsx` (8 tests).
+- Modified (5 + docs): `features/organizations/{OrganizationOverview,OrganizationSettings,OrganizationFields}.tsx`, `lib/format/money.ts`, tests `support/organizations.ts`, `features/organizations.test.tsx`, `static/source-rules.test.ts`; this report, `PROJECT_STATUS.md`.
+- Deleted: none. No backend change, no migration.
+
+**Tests**
+- **Frontend `npm run check`: 399 passed** (12 new: 8 page tests, 4 static checks), coverage 96 %.
+- **Browser tests: 14 passed** with accessibility checks (the journey checks the Overview).
+- Backend unchanged since 6-06 (1,571 passed).
+
+**Security:** the page reads only through the API; store assignment uses the existing owner/admin route with CSRF; no data kept in the browser.
+
+**Deviations:** a day-by-day **table** rather than a chart (the plan names a table; a chart can follow in 6-08 if you want one).
+
+**Blocked:** Step 0 (6-01) — network access to the two rate feeds.
+
+**Next task:** 6-08 — web app: Channels, Campaigns (with the Google Analytics match column and budget use) and Products tables, and "How is this calculated?" next to every figure, from the registry.

@@ -58,3 +58,23 @@ describe("frontend source rules (PHASE_01C_PLAN §7)", () => {
     expect([...names]).toEqual(["NEXT_PUBLIC_API_BASE_URL"]);
   });
 });
+
+describe("unified analytics pages compute no formula (PHASE_06_PLAN §13, criterion 5)", () => {
+  const pages = files.filter((f) =>
+    f.includes(`${path.sep}features${path.sep}overview${path.sep}`),
+  );
+  // Arithmetic on a figure's value, or a sum over figures: only the API calculates.
+  const ARITHMETIC = [
+    /\.value\)?\s*[-+*/]\s*[\w(]/,
+    /[\w)]\s*[-+*/]\s*(?:Number\()?[\w.]*\.value\b/,
+    /\.reduce\(/,
+  ];
+
+  it("scans the unified analytics pages", () => {
+    expect(pages.length).toBeGreaterThan(2);
+  });
+
+  it.each(ARITHMETIC)("never uses %s on figures", (pattern) => {
+    expect(pages.filter((file) => pattern.test(readFileSync(file, "utf8")))).toEqual([]);
+  });
+});

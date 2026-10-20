@@ -79,7 +79,7 @@ export function OrganizationFields({ values, onChange, errors, refs, saved }: Pr
       <SelectField
         ref={currencyRef}
         label="Reporting currency"
-        hint="Revenue, spend and profit are reported in this currency."
+        hint="Revenue, spend and profit are reported in this currency. Amounts in other currencies are converted with each day's published exchange rate."
         name="currency"
         required
         placeholder="Choose a currency"

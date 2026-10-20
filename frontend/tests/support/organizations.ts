@@ -41,3 +41,38 @@ export function testInvitation(overrides: Partial<Invitation> = {}): Invitation 
     ...overrides,
   };
 }
+
+/** An answer of the unified analytics API with nothing connected (6-07). */
+export function emptyOverview(overrides: Record<string, unknown> = {}) {
+  return {
+    definition_version: "analytics-v1",
+    reporting_currency: "AUD",
+    currency_minor_units: 2,
+    reporting_timezone: "Australia/Sydney",
+    store_id: null,
+    from_day: "2026-09-15",
+    to_day: "2026-10-14",
+    sources: [],
+    conversions: [],
+    notes: [],
+    totals: {},
+    days: [],
+    definitions: [],
+    ...overrides,
+  };
+}
+
+/** The routes the Overview and Settings read, with nothing connected. */
+export function emptyOrganizationData(): Record<string, Response> {
+  const wrap = (data: unknown) =>
+    new Response(JSON.stringify({ data, meta: { request_id: "req-test" } }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  return {
+    [`GET ${ORG_PATH}/stores`]: wrap([]),
+    [`GET ${ORG_PATH}/ad-accounts`]: wrap([]),
+    [`GET ${ORG_PATH}/analytics-properties`]: wrap([]),
+    [`GET ${ORG_PATH}/analytics/overview`]: wrap(emptyOverview()),
+  };
+}

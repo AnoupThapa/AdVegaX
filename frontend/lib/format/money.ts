@@ -81,6 +81,19 @@ const REASONS: Readonly<Record<string, string>> = {
   // Analytics (5-08): rates without sessions, and users, which are counted per day (Q-5-5).
   no_sessions: "No sessions",
   users_per_day_only: "Shown per day only",
+  // Unified analytics (6-07): what is missing, and the zero divisors of the registry.
+  no_store: "No store connected",
+  no_ad_account: "No ad account connected",
+  no_analytics_property: "No Google Analytics property",
+  no_exchange_rate: "No exchange rate",
+  not_every_store_measured: "Not every store has Google Analytics",
+  no_ad_spend: "No ad spend",
+  no_orders: "No orders",
+  costs_not_entered: "Shipping costs and fees not entered",
+  no_match: "No matching Google Analytics campaign",
+  no_budget: "No budget",
+  shared_budget: "Shared budget",
+  not_a_daily_budget: "Not a daily budget",
 };
 
 /** Why a figure is not shown, in plain words. */
