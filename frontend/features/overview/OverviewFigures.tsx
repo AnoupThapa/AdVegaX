@@ -21,6 +21,7 @@ import {
   FigureCell,
   HowCalculated,
   PeriodLine,
+  ScrollTable,
   Sources,
   reportingCurrency,
   useReportControls,
@@ -57,7 +58,7 @@ function Tiles({ data, currency }: { data: Overview; currency: ReportingCurrency
 function DayTable({ data, currency }: { data: Overview; currency: ReportingCurrency }) {
   const define = definitionsByKey(data.definitions);
   return (
-    <div className={styles.tableWrap}>
+    <ScrollTable label="Figures by day">
       <table className={styles.table}>
         <caption>
           Each day in your reporting time zone ({data.reporting_timezone.replaceAll("_", " ")}),
@@ -91,7 +92,7 @@ function DayTable({ data, currency }: { data: Overview; currency: ReportingCurre
           ))}
         </tbody>
       </table>
-    </div>
+    </ScrollTable>
   );
 }
 

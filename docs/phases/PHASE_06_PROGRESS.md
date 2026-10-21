@@ -9,10 +9,10 @@ Plan: `PHASE_06_PLAN.md` (approved 2026-10-20, A24, all recommendations; complet
 | 6-03 Exchange rates: clients, daily job, conversion rules | ✅ Done — awaiting review |
 | 6-04 Metric registry `analytics-v1` and its inputs | ✅ Done — awaiting review |
 | 6-05 Overview and channels API | ✅ Done — awaiting review |
-| 6-06 Campaigns (with GA4 match) and products API | Not started |
-| 6-07 Web app: Overview, settings | Not started |
-| 6-08 Web app: channels, campaigns, products, "how is this calculated?" | Not started |
-| 6-09 Golden datasets, performance check, browser test, `PHASE_06_REPORT.md` | Not started |
+| 6-06 Campaigns (with GA4 match) and products API | ✅ Done — awaiting review |
+| 6-07 Web app: Overview, settings | ✅ Done — awaiting review |
+| 6-08 Web app: channels, campaigns, products, "how is this calculated?" | ✅ Done — awaiting review |
+| 6-09 Golden datasets, performance check, browser test, `PHASE_06_REPORT.md` | ✅ Done — awaiting review |
 
 ## 6-01 — Step 0 (2026-10-20)
 
@@ -233,3 +233,33 @@ Plan: `PHASE_06_PLAN.md` (approved 2026-10-20, A24, all recommendations; complet
 **Blocked:** Step 0 (6-01) — network access to the two rate feeds.
 
 **Next task:** 6-09 — golden datasets (the NPR store with ads in USD, weekends and an ECB holiday, a refund day, an uncosted product, a period starting before history), property-based checks, a performance check on a large organization, one browser test of the Overview and Reports with real data and accessibility checks, and `PHASE_06_REPORT.md`.
+
+## 6-09 — Golden datasets, performance check, browser test, report (2026-10-21)
+
+**Completed**
+- **Golden dataset "Nepal"**, worked out by hand to the paisa: an organization reporting in NPR with an NPR store, Meta in USD and Google Ads in EUR (through USD, as Nepal Rastra Bank has no EUR here), over Christmas, a weekend and a refund day. Ad spend 7,023.52, net sales 12,500.00, gross profit 5,000.00 and profit after ad spend **-2,023.52** — a loss, shown as such.
+- **Holidays and weekends** use the last published rate (24 December for 25–28 December); a rate **8 days old is not used** ("No exchange rate"); an AUD business over Christmas converts USD with the right day's rate.
+- **A refund day** shows negative sales and profit, never hidden.
+- **Property checks** over seeded random data: totals equal the sum of their days for every sub-period; converting and converting back stays within one minor unit (2,000 cases, four currency pairs).
+- **Computed on read:** a late refund, a cost edit and a Google correction show in the very next answer (acceptance criterion 3).
+- **Performance:** a 390-day Overview for 5 stores, 10 ad accounts and 5 properties answers in about **0.5 s** — no summary table is needed (Q-6-13).
+- **Browser test** `unified-analytics.spec.ts`: a Shopify store, Google Ads (an AUD and an NZD account), Meta and Google Analytics through their simulators, with recorded exchange rates stored by the real daily rate task (`tests/e2e_fx_rates.py`). It checks the Overview (net sales, missing costs said in words, ad spend, sessions, "How is this calculated?", the NZD conversion and the time-zone note) and the three reports, each with an accessibility check, and that no platform token reaches a page.
+- It found and fixed two things: report tables that scroll sideways are now **focusable, labelled regions** (keyboard users can scroll them), and **campaign rows name their ad account** (two accounts can have campaigns of the same name).
+- **`PHASE_06_REPORT.md`** written.
+
+**Files changed** (12)
+- New (5): `backend/tests/api/test_metrics_golden.py` (9 tests), `backend/tests/e2e_fx_rates.py`, `frontend/e2e/unified-analytics.spec.ts`, `frontend/e2e/support/fx.ts`, `docs/phases/PHASE_06_REPORT.md`.
+- Modified (7): `frontend/features/overview/{Shared,ReportsPage,OverviewFigures}.tsx`, `frontend/tests/features/reports.test.tsx`; this report, `PROJECT_STATUS.md`.
+- Deleted: none. No migration.
+
+**Tests**
+- **Backend `make check`: 1,580 passed**, coverage 97 % (the full run had 1,579; the correction test was added during the run and passes on its own with the rest of its file).
+- **Frontend `npm run check`: 404 passed.** **Browser tests: 15 passed.**
+
+**Security:** the new helper refuses to run in a deployed environment and is not in the Docker image (`backend/tests` is excluded); rates come from recorded answers, so CI never calls a bank.
+
+**Deviations:** property checks use seeded random data in plain tests rather than a property-testing library (no new package).
+
+**Blocked:** Step 0 (6-01) — network access to the two rate feeds.
+
+**Next:** your review of Phase 6 (`PHASE_06_REPORT.md`); then Step 0 when access allows; then the Phase 7 plan (funnel intelligence).

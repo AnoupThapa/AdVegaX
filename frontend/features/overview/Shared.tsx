@@ -209,3 +209,12 @@ export function PeriodLine({ data, children }: { data: Context; children?: React
     </p>
   );
 }
+
+/** A table that may scroll sideways on narrow screens: focusable so keyboards can scroll it. */
+export function ScrollTable({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className={styles.tableWrap} role="region" aria-label={label} tabIndex={0}>
+      {children}
+    </div>
+  );
+}

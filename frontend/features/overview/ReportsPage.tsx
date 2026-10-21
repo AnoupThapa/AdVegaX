@@ -27,6 +27,7 @@ import {
   ColumnDefinitions,
   FigureCell,
   PeriodLine,
+  ScrollTable,
   Sources,
   reportingCurrency,
   useReportControls,
@@ -133,7 +134,7 @@ function ChannelsReport({ data }: { data: Channels }) {
         {data.platforms.length === 0 ? (
           <p className={styles.muted}>{figureReason(data.ad_spend as Figure)}.</p>
         ) : (
-          <div className={styles.tableWrap}>
+          <ScrollTable label="Ad platforms">
             <table className={styles.table}>
               <caption>Reported by each platform, in {data.reporting_currency}.</caption>
               <thead>
@@ -157,7 +158,7 @@ function ChannelsReport({ data }: { data: Channels }) {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollTable>
         )}
         <ColumnDefinitions context={data} keys={PLATFORM_COLUMNS} />
       </section>
@@ -173,7 +174,7 @@ function ChannelsReport({ data }: { data: Channels }) {
               : "No visits in this period."}
           </p>
         ) : (
-          <div className={styles.tableWrap}>
+          <ScrollTable label="Google Analytics channels">
             <table className={styles.table}>
               <caption>Google Analytics&apos; default channel groups.</caption>
               <thead>
@@ -191,7 +192,7 @@ function ChannelsReport({ data }: { data: Channels }) {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollTable>
         )}
         <ColumnDefinitions context={data} keys={CHANNEL_COLUMNS} />
       </section>
@@ -200,6 +201,10 @@ function ChannelsReport({ data }: { data: Channels }) {
 }
 
 function CampaignsReport({ data }: { data: Campaigns }) {
+  // Two accounts can have campaigns of the same name: each row says whose it is.
+  const accounts = new Map(
+    data.sources.filter((s) => s.kind === "ad_account").map((s) => [s.id, s.name]),
+  );
   return (
     <section aria-labelledby="report-campaigns" className={styles.section}>
       <h2 id="report-campaigns">Campaigns</h2>
@@ -210,7 +215,7 @@ function CampaignsReport({ data }: { data: Campaigns }) {
       {data.items.length === 0 ? (
         <p className={styles.muted}>No campaigns for this choice.</p>
       ) : (
-        <div className={styles.tableWrap}>
+        <ScrollTable label="Campaigns">
           <table className={styles.table}>
             <caption>
               Platform reported, in {data.reporting_currency}. The last three columns are Google
@@ -233,7 +238,13 @@ function CampaignsReport({ data }: { data: Campaigns }) {
                   <th scope="row">
                     {c.name}
                     <span className={styles.unsettled}>
-                      {providerName(c.provider)} · {entityStatus(c.status).label}
+                      {[
+                        providerName(c.provider),
+                        accounts.get(c.ad_account_id),
+                        entityStatus(c.status).label,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
                     </span>
                   </th>
                   <FigureCells context={data} keys={CAMPAIGN_COLUMNS} figures={c.figures} />
@@ -248,7 +259,7 @@ function CampaignsReport({ data }: { data: Campaigns }) {
               ))}
             </tbody>
           </table>
-        </div>
+        </ScrollTable>
       )}
       <ColumnDefinitions context={data} keys={[...CAMPAIGN_COLUMNS, ...CAMPAIGN_ANALYTICS]} />
       <p className={styles.muted}>
@@ -286,7 +297,7 @@ function ProductsReport({ data }: { data: Products }) {
             : "No products sold in this period."}
         </p>
       ) : (
-        <div className={styles.tableWrap}>
+        <ScrollTable label="Products">
           <table className={styles.table}>
             <caption>From your store platform, in {data.reporting_currency}.</caption>
             <thead>
@@ -306,7 +317,7 @@ function ProductsReport({ data }: { data: Products }) {
               ))}
             </tbody>
           </table>
-        </div>
+        </ScrollTable>
       )}
       <ColumnDefinitions context={data} keys={PRODUCT_COLUMNS} />
     </section>

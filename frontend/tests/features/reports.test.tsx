@@ -161,6 +161,9 @@ const campaigns = (items: unknown[]) =>
       ),
       ...GA_DEFS.filter((d) => ["sessions", "purchases", "purchase_revenue"].includes(d.key)),
     ],
+    sources: [
+      { ...storeSource("a-1", "Eve Zone Ads"), kind: "ad_account", provider: "google_ads" },
+    ],
     items,
   });
 
@@ -288,7 +291,7 @@ describe("Reports", () => {
     expect(rows[1]).toHaveTextContent("Spring Sale");
     expect(rows[1]).toHaveTextContent("83.3%");
     expect(rows[1]).toHaveTextContent("A$150.50");
-    expect(rows[2]).toHaveTextContent("Meta · Paused");
+    expect(rows[2]).toHaveTextContent("Meta · Eve Zone Ads · Paused");
     expect(rows[2]).toHaveTextContent("Not a daily budget");
     expect(rows[2]).toHaveTextContent("No matching Google Analytics campaign");
     expect(
