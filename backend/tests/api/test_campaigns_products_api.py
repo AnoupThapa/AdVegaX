@@ -144,8 +144,11 @@ def test_campaigns_with_their_figures_budget_use_and_google_analytics_match(owne
         admin_engine, owner.org, owner.prop, D5, "facebook", "paid", "Gloves - Sales", 7, "0"
     )
     _ga_source(admin_engine, owner.org, owner.prop, D5, "google", "organic", "Spring Sale", 99, "9")
-    items = {c["name"]: c for c in _get(owner, "campaigns")["items"]}
+    data = _get(owner, "campaigns")
+    items = {c["name"]: c for c in data["items"]}
     assert list(items) == ["Gloves - Sales", "Spring Sale"]  # by name
+    keys = {d["key"] for d in data["definitions"]}
+    assert keys == set(items["Spring Sale"]["figures"]) | set(items["Spring Sale"]["analytics"])
     spring = items["Spring Sale"]
     assert (spring["provider"], spring["source"], spring["budget_period"]) == (
         "google_ads",
@@ -368,6 +371,7 @@ def test_products_with_units_sales_cost_and_margin(owner, admin_engine):
     assert data["other_currency_lines"] == 1  # never summed with AUD
     assert data["items_missing"] is None
     assert "ad_spend" not in g  # never ad spend per product (Q-6-10)
+    assert {d["key"] for d in data["definitions"]} == set(g)  # "How is this calculated?"
 
 
 def test_products_for_a_period_not_read_or_without_a_store(owner, make_client):

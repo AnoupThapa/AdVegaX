@@ -22,7 +22,7 @@ from app.domains.fx.service import FxTable
 from app.domains.metrics import campaigns as campaign_figures
 from app.domains.metrics import channels as channel_figures
 from app.domains.metrics.engine import Figure, Inputs, Scope, compute, load_inputs, load_scope
-from app.domains.metrics.registry import DEFINITION_VERSION, METRICS
+from app.domains.metrics.registry import DEFINITION_VERSION, METRICS, TABLES, Metric
 from app.domains.metrics.schemas import (
     AnalyticsChannelOut,
     CampaignOut,
@@ -53,7 +53,7 @@ def figure_out(figure: Figure) -> FigureOut:
     )
 
 
-def definitions() -> list[MetricDefinitionOut]:
+def definitions(metrics: tuple[Metric, ...] = METRICS) -> list[MetricDefinitionOut]:
     return [
         MetricDefinitionOut(
             key=m.key,
@@ -63,7 +63,7 @@ def definitions() -> list[MetricDefinitionOut]:
             note=m.note,
             sources=list(m.sources),
         )
-        for m in METRICS
+        for m in metrics
     ]
 
 
@@ -109,9 +109,15 @@ class MetricsReadService:
         return scope, load_inputs(session, scope, first, last, fx), fx
 
     def _context(
-        self, scope: Scope, inputs: Inputs, fx: FxTable, store_id: uuid.UUID | None
+        self,
+        scope: Scope,
+        inputs: Inputs,
+        fx: FxTable,
+        store_id: uuid.UUID | None,
+        metrics: tuple[Metric, ...],
     ) -> dict[str, object]:
         return {
+            "definitions": definitions(metrics),
             "definition_version": DEFINITION_VERSION,
             "reporting_currency": scope.currency,
             "currency_minor_units": minor_units(scope.currency),
@@ -162,10 +168,9 @@ class MetricsReadService:
                 for day in sorted(inputs.days)
             ]
             return OverviewOut(
-                **self._context(scope, inputs, fx, store_id),
+                **self._context(scope, inputs, fx, store_id, METRICS),
                 totals={k: figure_out(v) for k, v in totals.items()},
                 days=days,
-                definitions=definitions(),
             )
 
     def channels(
@@ -184,7 +189,7 @@ class MetricsReadService:
                 session, scope, inputs.first, inputs.last, fx
             )
             return ChannelsOut(
-                **self._context(scope, inputs, fx, store_id),
+                **self._context(scope, inputs, fx, store_id, TABLES["channels"]),
                 ad_spend=figure_out(compute(scope, inputs.period())["ad_spend"]),
                 platforms=[
                     PlatformOut(
@@ -218,7 +223,7 @@ class MetricsReadService:
             scope, inputs, fx = self._prepare(session, ctx, from_day, to_day, store_id)
             found = campaign_figures.campaigns(session, scope, inputs.first, inputs.last, fx)
             return CampaignsOut(
-                **self._context(scope, inputs, fx, store_id),
+                **self._context(scope, inputs, fx, store_id, TABLES["campaigns"]),
                 items=[
                     CampaignOut(
                         id=c.id,
@@ -257,7 +262,7 @@ class MetricsReadService:
                 session, scope, inputs.first, inputs.last, fx
             )
             return ProductsOut(
-                **self._context(scope, inputs, fx, store_id),
+                **self._context(scope, inputs, fx, store_id, TABLES["products"]),
                 items=[
                     ProductFiguresOut(
                         product_id=p.product_id,

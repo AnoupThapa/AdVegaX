@@ -204,6 +204,12 @@ describe("Overview", () => {
       screen.getByText(/Amounts in USD are converted to AUD with European Central Bank rates/),
     ).toBeInTheDocument();
     expect(screen.getByText(/definitions “analytics-v1”/)).toBeInTheDocument();
+    // "How is this calculated?" on every tile, from the registry.
+    expect(screen.getAllByText("How is this calculated?")).toHaveLength(DEFINITIONS.length);
+    expect(screen.getByText("Blended ROAS formula")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "See channels, campaigns and products" }),
+    ).toHaveAttribute("href", `/orgs/${ORG_ID}/reports`);
     // A 30-day period ending today in the reporting time zone; no store chosen.
     const call = api.apiCalls().find((c) => c.path.endsWith("/analytics/overview"));
     const from = call?.query.get("from") ?? "";

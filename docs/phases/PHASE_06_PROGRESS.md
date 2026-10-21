@@ -204,3 +204,32 @@ Plan: `PHASE_06_PLAN.md` (approved 2026-10-20, A24, all recommendations; complet
 **Blocked:** Step 0 (6-01) — network access to the two rate feeds.
 
 **Next task:** 6-08 — web app: Channels, Campaigns (with the Google Analytics match column and budget use) and Products tables, and "How is this calculated?" next to every figure, from the registry.
+
+## 6-08 — Web app: channels, campaigns, products, "How is this calculated?" (2026-10-21)
+
+**Completed**
+- **A new Reports page** (in the menu after Overview, and linked from the Overview), with the same period and store choice. Choose **Channels**, **Campaigns** or **Products**; only the chosen report is read.
+  - **Channels:** total ad spend (the only figure added across platforms); a table of **each ad platform's own figures** — spend, clicks, impressions, conversions, conversion value, platform ROAS, cost per click, cost per conversion — labelled "platform reported" with its number of ad accounts, saying conversions are never added across platforms; and **Google Analytics' channels** (sessions, engaged sessions, engagement rate, key events, purchases, revenue), most sessions first. When there are none, it says why ("No ad account connected", "No Google Analytics property").
+  - **Campaigns:** every Google Ads and Meta campaign with its platform, status, platform figures and **budget use**, plus **Google Analytics' sessions, purchases and revenue for the campaign of exactly the same name**; "No matching Google Analytics campaign", "Not a daily budget" or "No Google Analytics property" when they don't apply; the matching rule is written under the table.
+  - **Products:** every product sold, most net sales first — units sold, net sales, product cost, gross profit, gross margin, with the store when there are several; "Some products have no cost" where a cost is missing; sold items in another currency are counted and left out, never added; ad spend is not split by product.
+  - "Where the numbers come from" (sources, currencies converted, notes, definitions version) on every report, as on the Overview.
+- **"How is this calculated?"** next to every figure: on each Overview tile, and under every report table for its columns. The text comes from the registry through the API — never written on a page.
+- **Backend:** the registry now also defines the reports' column figures (`TABLES`: channels, campaigns, products), and every unified-analytics answer carries the definitions of the figures it contains (`definitions[]` moved to the common part of the answer). Tests check each answer's definitions match its figures exactly.
+
+**Files changed** (17)
+- New (4): `frontend/features/overview/{Shared,ReportsPage}.tsx`, `frontend/app/orgs/[organizationId]/reports/page.tsx`, `frontend/tests/features/reports.test.tsx` (5 tests).
+- Modified (13): backend `app/domains/metrics/{registry,schemas,read_service}.py`, tests `test_campaigns_products_api.py`, `test_unified_analytics_api.py`; frontend `features/overview/{api.ts,OverviewFigures.tsx,overview.module.css}`, `features/organizations/OrganizationShell.tsx` (menu), `lib/api/{openapi.json,schema.d.ts}` (generated), tests `overview.test.tsx`, `e2e/journey.spec.ts` (Reports page with accessibility check); docs `API_SPECIFICATION.md` §19E, this report, `PROJECT_STATUS.md`.
+- Deleted: none. No migration.
+
+**Tests**
+- **Backend `make check`: 1,571 passed**, coverage 97 %.
+- **Frontend `npm run check`: 404 passed** (5 new report tests; the Overview test now checks "How is this calculated?" on every tile).
+- **Browser tests: 14 passed**; the journey now also opens Reports with an accessibility check.
+
+**Security:** read-only pages over the existing API; no data kept in the browser; tenant sweeps cover the routes (6-05/6-06).
+
+**Deviations:** "How is this calculated?" for table columns is one expandable list under each table, rather than one per cell, so the tables stay readable.
+
+**Blocked:** Step 0 (6-01) — network access to the two rate feeds.
+
+**Next task:** 6-09 — golden datasets (the NPR store with ads in USD, weekends and an ECB holiday, a refund day, an uncosted product, a period starting before history), property-based checks, a performance check on a large organization, one browser test of the Overview and Reports with real data and accessibility checks, and `PHASE_06_REPORT.md`.

@@ -89,6 +89,7 @@ export function OrganizationNotFound() {
 
 const SECTIONS = [
   { href: "", label: "Overview" },
+  { href: "/reports", label: "Reports" },
   { href: "/stores", label: "Stores" },
   { href: "/advertising", label: "Advertising" },
   { href: "/analytics", label: "Analytics" },

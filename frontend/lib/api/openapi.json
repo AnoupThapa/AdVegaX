@@ -2146,6 +2146,13 @@
             "title": "Definition Version",
             "type": "string"
           },
+          "definitions": {
+            "items": {
+              "$ref": "#/components/schemas/MetricDefinitionOut"
+            },
+            "title": "Definitions",
+            "type": "array"
+          },
           "from_day": {
             "format": "date",
             "title": "From Day",
@@ -2209,6 +2216,7 @@
           "sources",
           "conversions",
           "notes",
+          "definitions",
           "items"
         ],
         "title": "CampaignsOut",
@@ -2274,6 +2282,13 @@
             "title": "Definition Version",
             "type": "string"
           },
+          "definitions": {
+            "items": {
+              "$ref": "#/components/schemas/MetricDefinitionOut"
+            },
+            "title": "Definitions",
+            "type": "array"
+          },
           "from_day": {
             "format": "date",
             "title": "From Day",
@@ -2337,6 +2352,7 @@
           "sources",
           "conversions",
           "notes",
+          "definitions",
           "ad_spend",
           "platforms",
           "analytics_channels",
@@ -4423,9 +4439,9 @@
           "sources",
           "conversions",
           "notes",
+          "definitions",
           "totals",
-          "days",
-          "definitions"
+          "days"
         ],
         "title": "OverviewOut",
         "type": "object"
@@ -4639,6 +4655,13 @@
             "title": "Definition Version",
             "type": "string"
           },
+          "definitions": {
+            "items": {
+              "$ref": "#/components/schemas/MetricDefinitionOut"
+            },
+            "title": "Definitions",
+            "type": "array"
+          },
           "from_day": {
             "format": "date",
             "title": "From Day",
@@ -4716,6 +4739,7 @@
           "sources",
           "conversions",
           "notes",
+          "definitions",
           "items",
           "items_missing",
           "other_currency_lines"

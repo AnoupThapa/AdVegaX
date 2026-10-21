@@ -56,6 +56,8 @@ class AnalyticsContextOut(BaseModel):
     sources: list[SourceOut]
     conversions: list[ConversionOut]
     notes: list[str]  # plain message keys, e.g. time_zones_differ
+    # The registry's definitions of this answer's figures, for "How is this calculated?" (6-08).
+    definitions: list[MetricDefinitionOut]
 
 
 class OverviewDayOut(BaseModel):
@@ -66,7 +68,6 @@ class OverviewDayOut(BaseModel):
 class OverviewOut(AnalyticsContextOut):
     totals: dict[str, FigureOut]
     days: list[OverviewDayOut]
-    definitions: list[MetricDefinitionOut]
 
 
 class PlatformOut(BaseModel):

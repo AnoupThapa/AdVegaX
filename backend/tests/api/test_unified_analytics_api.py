@@ -241,6 +241,8 @@ def test_google_analytics_channels_most_sessions_first(owner, admin_engine):
     )
     assert paid["engagement_rate"]["value"] == "0.050000"
     assert data["analytics_channels_missing"] is None
+    keys = {d["key"] for d in data["definitions"]}
+    assert keys == set(data["platforms"][0]["figures"]) | set(paid)
 
 
 def test_channels_for_a_period_not_read_say_so(owner):

@@ -160,3 +160,125 @@ NOT_PROVIDED: dict[str, tuple[str, str]] = {
     "contribution_profit": ("unsupported", "costs_not_entered"),
     "customer_acquisition_cost": ("unavailable", "customer_key_not_collected"),
 }
+
+# ---------------------------------------------------------------- table figures (6-08)
+# The figures of the channels, campaigns and products tables, defined here too so "How is
+# this calculated?" is never hand-written on a page. Each table's answer carries its own list.
+
+_PLATFORM_FIGURES: tuple[Metric, ...] = (
+    Metric(
+        "spend",
+        "Spend",
+        "money",
+        "What the platform reports as spent, converted to the reporting currency with each "
+        "day's rate and added up.",
+        _ADS,
+    ),
+    Metric("clicks", "Clicks", "count", "Clicks as the platform reports them.", _ADS),
+    Metric(
+        "impressions", "Impressions", "count", "Impressions as the platform reports them.", _ADS
+    ),
+    Metric(
+        "conversions",
+        "Conversions",
+        "decimal",
+        "Conversions as the platform counts them, with its own attribution. Never added "
+        "across platforms or to store orders.",
+        _ADS,
+    ),
+    Metric(
+        "conversion_value",
+        "Conversion value",
+        "money",
+        "The value the platform gives its conversions, converted with each day's rate. Never "
+        "added across platforms or to store sales.",
+        _ADS,
+    ),
+    Metric(
+        "platform_roas",
+        "Platform ROAS",
+        "multiple",
+        "Conversion value / spend, as the platform attributes it. Not comparable with blended "
+        "ROAS, which uses store sales.",
+        _ADS,
+    ),
+    Metric("cost_per_click", "Cost per click", "money", "Spend / clicks.", _ADS),
+    Metric("cost_per_conversion", "Cost per conversion", "money", "Spend / conversions.", _ADS),
+)
+
+_ANALYTICS_FIGURES: tuple[Metric, ...] = (
+    Metric("sessions", "Sessions", "count", "Sessions as Google Analytics reports them.", _GA),
+    Metric(
+        "engaged_sessions",
+        "Engaged sessions",
+        "count",
+        "Sessions Google Analytics counts as engaged.",
+        _GA,
+    ),
+    Metric("engagement_rate", "Engagement rate", "ratio", "Engaged sessions / sessions.", _GA),
+    Metric(
+        "key_events", "Key events", "decimal", "Key events as Google Analytics counts them.", _GA
+    ),
+    Metric(
+        "purchases",
+        "Purchases",
+        "count",
+        "Purchases as Google Analytics reports them. Never added to store orders.",
+        _GA,
+    ),
+    Metric(
+        "purchase_revenue",
+        "Purchase revenue",
+        "money",
+        "Purchase revenue (minus refunds) as Google Analytics reports it, converted with each "
+        "day's rate. Never added to store sales.",
+        _GA,
+    ),
+)
+
+_BUDGET_USE = Metric(
+    "budget_use",
+    "Budget use",
+    "ratio",
+    "Spend in the period / (today's daily budget x days in the period). Not shown for "
+    "lifetime or shared budgets.",
+    _ADS,
+    note="Uses today's budget for every day, as the platforms do not keep budget history.",
+)
+
+_PRODUCT_FIGURES: tuple[Metric, ...] = (
+    Metric(
+        "units",
+        "Units sold",
+        "count",
+        "Quantity sold minus quantity returned in the period.",
+        _STORE,
+    ),
+    Metric(
+        "net_sales",
+        "Net sales",
+        "money",
+        "The product's sales after discounts and returns, before tax and shipping (finance-v1).",
+        _STORE,
+    ),
+    Metric(
+        "product_cost",
+        "Product cost",
+        "money",
+        "Quantity x unit cost, minus returned items. Not available when any sold item has no cost.",
+        _STORE,
+    ),
+    Metric("gross_profit", "Gross profit", "money", "Net sales - product cost.", _STORE),
+    Metric("gross_margin", "Gross margin", "ratio", "Gross profit / net sales.", _STORE),
+)
+
+# The definitions each table's answer carries.
+TABLES: dict[str, tuple[Metric, ...]] = {
+    "channels": _PLATFORM_FIGURES + _ANALYTICS_FIGURES,
+    "campaigns": (
+        *_PLATFORM_FIGURES,
+        _BUDGET_USE,
+        *(m for m in _ANALYTICS_FIGURES if m.key in ("sessions", "purchases", "purchase_revenue")),
+    ),
+    "products": _PRODUCT_FIGURES,
+}

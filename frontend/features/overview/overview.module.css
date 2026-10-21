@@ -10,3 +10,25 @@
   display: grid;
   gap: 0.5rem;
 }
+
+.how {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.how summary {
+  cursor: pointer;
+  color: var(--color-accent);
+}
+
+.definitions {
+  margin: 0.5rem 0 0;
+}
+
+.definitions dt {
+  font-weight: 600;
+}
+
+.definitions dd {
+  margin: 0 0 0.5rem;
+}

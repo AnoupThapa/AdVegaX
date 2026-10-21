@@ -1731,6 +1731,8 @@ export interface components {
             currency_minor_units: number;
             /** Definition Version */
             definition_version: string;
+            /** Definitions */
+            definitions: components["schemas"]["MetricDefinitionOut"][];
             /**
              * From Day
              * Format: date
@@ -1773,6 +1775,8 @@ export interface components {
             currency_minor_units: number;
             /** Definition Version */
             definition_version: string;
+            /** Definitions */
+            definitions: components["schemas"]["MetricDefinitionOut"][];
             /**
              * From Day
              * Format: date
@@ -2538,6 +2542,8 @@ export interface components {
             currency_minor_units: number;
             /** Definition Version */
             definition_version: string;
+            /** Definitions */
+            definitions: components["schemas"]["MetricDefinitionOut"][];
             /**
              * From Day
              * Format: date

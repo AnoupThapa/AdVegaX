@@ -54,6 +54,10 @@ test("the full Phase 1 journey works for an owner and an invited member", async 
     orgUrl = await createOrganization(a, "Journey Test Co");
     await expect(a.getByText("Your role: Owner")).toBeVisible();
     await expectAccessible(a, "organization overview");
+    await a.goto(`${orgUrl}/reports`);
+    await expect(a.getByRole("heading", { level: 1, name: "Reports" })).toBeVisible();
+    await expect(a.getByText("No ad account connected.")).toBeVisible();
+    await expectAccessible(a, "reports (nothing connected)");
     await a.goto(`${orgUrl}/settings`);
     await expectAccessible(a, "organization settings");
     await a.getByLabel("Organization name").fill("Journey Test Company");
