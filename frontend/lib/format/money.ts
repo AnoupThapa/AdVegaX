@@ -94,6 +94,11 @@ const REASONS: Readonly<Record<string, string>> = {
   no_budget: "No budget",
   shared_budget: "Shared budget",
   not_a_daily_budget: "Not a daily budget",
+  // Funnel (7-07): zero divisors and a Google Analytics set-up without ecommerce events.
+  no_product_views: "No product views",
+  no_adds_to_cart: "No adds to cart",
+  no_checkouts: "No checkouts",
+  no_events_reported: "No events reported — check your Google Analytics ecommerce set-up",
 };
 
 /** Why a figure is not shown, in plain words. */

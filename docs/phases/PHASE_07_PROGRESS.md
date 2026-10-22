@@ -10,7 +10,7 @@ Plan: `PHASE_07_PLAN.md` (approved 2026-10-22, A25, all recommendations Q-7-1 �
 | 7-04 Funnel registry `funnel-v1` and engine | ✅ Done — awaiting review |
 | 7-05 Drop-off findings | ✅ Done — awaiting review |
 | 7-06 Funnel API | ✅ Done — awaiting review |
-| 7-07 Web app: Funnel page | Not started |
+| 7-07 Web app: Funnel page | ✅ Done — awaiting review |
 | 7-08 Golden datasets, browser test, `PHASE_07_REPORT.md` | Not started |
 
 ## 7-01 — Step 0 (2026-10-22)
@@ -161,3 +161,34 @@ Plan: `PHASE_07_PLAN.md` (approved 2026-10-22, A25, all recommendations Q-7-1 �
 **Blocked:** Step 0 (7-01) — live GA4 and Meta checks.
 
 **Next task:** 7-07 — web app: the Funnel page (stages as bars with their source, steps with rates or "different sources", findings in plain words, views per platform, channel, campaign and landing page, "How is this calculated?").
+
+## 7-07 — Web app: the Funnel page (2026-10-22)
+
+**Completed**
+- **A Funnel page** (in the menu after Reports), with the same period and store choice as the Overview and Reports, and a "Show" choice:
+  - **Whole business:** the seven stages as **bars with their counts and where each number comes from** ("Google Ads and Meta", "Google Analytics", "Your stores"), "How is this calculated?" on every stage, and the **steps** with their rate — or "Different sources — no rate. Ad clicks and website visits are counted differently." — and the store conversion rate by its own name;
+  - **By ad platform:** each platform's own funnel, "Reported by Google Ads / Meta" with its number of ad accounts; stages a platform does not report say "Not provided by the platform";
+  - **By Google Analytics channel:** a table of each channel's stages and step rates;
+  - **By campaign:** each campaign's own impressions, clicks and purchases and Google Analytics' visits, adds to cart and purchases for the campaign of the same name ("No matching Google Analytics campaign" otherwise), each row naming its platform, ad account and status (and when it shares its match), then **Other traffic** and the **Website** row that they add up to;
+  - **By landing page:** each page's funnel, most visits first ("Not synced yet" until the property's one-time re-read is done).
+- **"Where buyers drop out"** at the top: the findings in plain words — e.g. "Adds to cart fell from 25.0% to 15.0% of product views, compared with 15 Sep to 14 Oct. It is also below its usual 24.0%." — or, when nothing dropped, the rules that were applied.
+- The bars are drawn by the browser against the largest stage (`<meter>`); the page itself calculates nothing — the static check now covers the funnel pages too.
+- "Where the numbers come from" (sources, currencies, notes, definitions version) on every view.
+
+**Files changed** (13)
+- New (7): `frontend/features/funnel/{api.ts,labels.ts,FunnelPage.tsx,funnel.module.css}`, `frontend/app/orgs/[organizationId]/funnel/page.tsx`, `frontend/tests/features/funnel.test.tsx` (7 tests), this report section.
+- Modified (6): `features/organizations/OrganizationShell.tsx` (menu), `lib/format/money.ts` (funnel reasons), `tests/static/source-rules.test.ts`, `e2e/unified-analytics.spec.ts` (the Funnel page with accessibility checks); `PROJECT_STATUS.md`.
+- Deleted: none. No backend change, no migration.
+
+**Tests**
+- **Frontend `npm run check`: 411 passed** (7 new), coverage 96 %.
+- **Browser tests: 15 passed**; the four-platform test now opens the Funnel (whole, by platform, by landing page) with accessibility checks.
+- Backend unchanged since 7-06 (1,622 passed).
+
+**Security:** the page reads only through the API; no data kept in the browser.
+
+**Deviations:** the campaign table shows the three stages every platform reports (impressions, clicks, purchases) and three Google Analytics stages, to stay readable; Meta's full per-platform funnel is in "By ad platform".
+
+**Blocked:** Step 0 (7-01) — live GA4 and Meta checks.
+
+**Next task:** 7-08 — golden datasets (a real drop-off over several weeks through the API), property checks (campaigns + other traffic = website; stage totals = sum of days), reconciliation with the Phase 5 property page and the Phase 6 Overview, and `PHASE_07_REPORT.md`.

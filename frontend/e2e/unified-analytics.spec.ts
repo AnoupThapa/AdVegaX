@@ -91,6 +91,23 @@ test("sales, ad spend and profit are shown together, honestly", async ({ newPers
     pages.push(await page.content());
   });
 
+  await test.step("the funnel shows each stage with its source", async () => {
+    await page.getByRole("link", { name: "Funnel", exact: true }).click();
+    const stages = page.getByRole("list", { name: "Stages" });
+    await expect(stages.getByRole("listitem").first()).toContainText("Google Ads and Meta");
+    await expect(page.getByText(/Different sources — no rate/)).toBeVisible();
+    await expectAccessible(page, "funnel");
+    await page.getByLabel("Show", { exact: true }).selectOption("platforms");
+    await expect(page.getByRole("list", { name: "Google Ads stages" })).toContainText(
+      "Not provided by the platform",
+    );
+    await expectAccessible(page, "funnel by platform");
+    await page.getByLabel("Show", { exact: true }).selectOption("landing-pages");
+    await expect(page.getByRole("heading", { name: "Landing pages" })).toBeVisible();
+    await expectAccessible(page, "funnel by landing page");
+    pages.push(await page.content());
+  });
+
   for (const html of pages) {
     expect(html, "platform tokens never reach a page").not.toMatch(
       /ya29\.|1\/\/sim-refresh|shp(at|rt)_|EAAsim|appsecret_proof/,
