@@ -420,6 +420,11 @@ class AdPerformanceRecord:
     cost: Decimal | None = None
     conversions: Decimal | None = None
     conversion_value: Decimal | None = None
+    # The platform's own funnel actions (Phase 7, Q-7-4); None = not provided (Google Ads).
+    landing_page_views: Decimal | None = None
+    content_views: Decimal | None = None
+    adds_to_cart: Decimal | None = None
+    checkouts_initiated: Decimal | None = None
 
 
 # ------------------------------------------------------------------ analytics (Phase 5)

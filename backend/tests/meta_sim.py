@@ -502,10 +502,24 @@ def sample_structure(account: AdAccount) -> AdAccount:
     return account
 
 
+FUNNEL_TYPES = (
+    "landing_page_view",
+    "omni_view_content",
+    "omni_add_to_cart",
+    "omni_initiated_checkout",
+)
+
+
 def insight(
-    day: str, *, purchases: str | None = None, value: str | None = None, **ids: Any
+    day: str,
+    *,
+    purchases: str | None = None,
+    value: str | None = None,
+    funnel: tuple[str, str, str, str] | None = None,
+    **ids: Any,
 ) -> dict[str, Any]:
-    """One Meta insights row for one day; figures are strings, as Meta sends them."""
+    """One Meta insights row for one day; figures are strings, as Meta sends them. ``funnel``
+    adds the landing page view, content view, add to cart and checkout actions (Phase 7)."""
     row: dict[str, Any] = {"date_start": day, "date_stop": day, **ids}
     row.setdefault("impressions", "1000")
     row.setdefault("inline_link_clicks", "20")
@@ -516,6 +530,10 @@ def insight(
             {"action_type": "offsite_conversion.fb_pixel_purchase", "value": purchases},
             {"action_type": "omni_purchase", "value": purchases},
         ]
+    if funnel is not None:
+        row.setdefault("actions", []).extend(
+            {"action_type": t, "value": v} for t, v in zip(FUNNEL_TYPES, funnel, strict=True)
+        )
     if value is not None:
         row["action_values"] = [
             {"action_type": "offsite_conversion.fb_pixel_purchase", "value": value},
@@ -528,6 +546,7 @@ def sample_insights(account: AdAccount, *days: str) -> AdAccount:
     """Figures for the sample structure on each day: ad 340001 sells, 340003 does not, and
     the deleted ad 340004 (ad set 230003, campaign 120004) still has spend. Parent rows
     include their deleted children, as Meta's do; the account row includes everything."""
+    selling = ("25", "18", "6", "3")  # landing page views, content views, carts, checkouts
     ads = [
         ("340001", "230001", "120001", "ACTIVE", "1500", "30", "40.00", "2", "159.90"),
         ("340003", "230002", "120002", "CAMPAIGN_PAUSED", "500", "5", "7.50", None, None),
@@ -547,7 +566,14 @@ def sample_insights(account: AdAccount, *days: str) -> AdAccount:
                 ("adset", {"adset_id": set_id, "campaign_id": camp_id}),
                 ("campaign", {"campaign_id": camp_id}),
             ):
-                row = insight(day, purchases=buys, value=value, **ids, **figures)
+                row = insight(
+                    day,
+                    purchases=buys,
+                    value=value,
+                    funnel=selling if buys else None,
+                    **ids,
+                    **figures,
+                )
                 row["_status"] = status
                 level_rows[level].append(row)
         level_rows["account"].append(
@@ -555,6 +581,7 @@ def sample_insights(account: AdAccount, *days: str) -> AdAccount:
                 day,
                 purchases="2",
                 value="159.90",
+                funnel=selling,
                 impressions="2100",
                 inline_link_clicks="36",
                 spend="48.75",

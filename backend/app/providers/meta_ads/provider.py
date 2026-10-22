@@ -109,6 +109,7 @@ class MetaAdsProvider:
     capabilities = ProviderCapabilities(frozenset({Capability.PKCE, Capability.TOKEN_REVOCATION}))
     test_only = False
     rate_limit = (5.0, 10)  # per connection; Meta's own usage headers pace the rest (4-06)
+    funnel_actions = True  # reports landing page views, content views, carts, checkouts (7-03)
 
     def __init__(
         self,

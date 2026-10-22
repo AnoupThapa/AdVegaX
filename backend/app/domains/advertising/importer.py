@@ -98,6 +98,9 @@ class SyncMode(StrEnum):
     QUICK = "quick"
     NIGHTLY = "nightly"
     WEEKLY = "weekly"
+    # Phase 7 (Q-7-4): an account of a platform that reports funnel actions, imported before
+    # they were read, is read once more over its whole history (figures only, sliced by month).
+    REREAD = "reread"
 
 
 class AdSyncInProgress(Conflict):
@@ -224,6 +227,7 @@ def window(rt: Runtime, account: AdAccount, mode: SyncMode) -> tuple[date, date]
     start = history_start(rt, account)
     days = {
         SyncMode.INITIAL: None,
+        SyncMode.REREAD: None,
         SyncMode.QUICK: rt.settings.ADS_QUICK_WINDOW.days,
         SyncMode.NIGHTLY: rt.settings.ADS_NIGHTLY_WINDOW.days,
         SyncMode.WEEKLY: rt.settings.ADS_WEEKLY_WINDOW.days,
@@ -321,10 +325,12 @@ def enqueue_ad_syncs(rt: Runtime) -> int:
             )
         ).all()
     defer: dict[str, bool | None] = {}  # per platform; None = not available here
+    funnel: dict[str, bool] = {}  # per platform: does it report funnel actions (Phase 7)?
     started = 0
     for account_id, org_id, provider_code in accounts:
         if provider_code not in defer:
             defer[provider_code] = _defer_rereads(rt, provider_code)
+            funnel[provider_code] = _reports_funnel(rt, provider_code)
         if defer[provider_code] is None:
             continue
         with rt.db.transaction(org_id=org_id) as session:
@@ -335,6 +341,11 @@ def enqueue_ad_syncs(rt: Runtime) -> int:
             if not _syncable(session, account):
                 continue
             mode = due_mode(rt, state, defer_rereads=bool(defer[provider_code]))
+            if mode is None and account.funnel_reread_at is None:
+                if not funnel[provider_code]:
+                    account.funnel_reread_at = rt.clock.now()  # nothing more to read
+                elif not defer[provider_code]:
+                    mode = SyncMode.REREAD  # once, when nothing more urgent is due (Q-7-4)
             if mode is None:
                 continue
             start_sync(session, rt, account, mode)
@@ -342,6 +353,14 @@ def enqueue_ad_syncs(rt: Runtime) -> int:
     if started:
         logger.info("ad_syncs_started", extra={"count": started})
     return started
+
+
+def _reports_funnel(rt: Runtime, provider_code: str) -> bool:
+    """Whether the platform reports funnel actions (an optional provider attribute)."""
+    try:
+        return getattr(rt.providers.get(provider_code), "funnel_actions", False) is True
+    except UnknownProvider:
+        return False
 
 
 def _defer_rereads(rt: Runtime, provider_code: str) -> bool | None:
@@ -542,7 +561,10 @@ def _quota_wait(rt: Runtime, ctx: _Context, provider: AdvertisingProvider) -> fl
     limit = getattr(provider, "shared_daily_operations", None)
     if not isinstance(limit, int) or limit <= 0:
         return None
-    deferrable = ctx.mode in (SyncMode.NIGHTLY, SyncMode.WEEKLY) and ctx.requested_by is None
+    deferrable = (
+        ctx.mode in (SyncMode.NIGHTLY, SyncMode.WEEKLY, SyncMode.REREAD)
+        and ctx.requested_by is None
+    )
     ceiling = int(limit * rt.settings.ADS_QUOTA_DEFER_SHARE) if deferrable else limit
     window_seconds = rt.settings.ADS_QUOTA_WINDOW.total_seconds()
     if quota.reserve(ctx.platform, cost, ceiling=ceiling, window_seconds=window_seconds):
@@ -670,8 +692,10 @@ def history_start(rt: Runtime, account: AdAccount) -> date:
 def _performance(
     rt: Runtime, ctx: _Context, provider: AdvertisingProvider, first: date, last: date
 ) -> bool:
-    # The first import reads calendar months; a re-read (2, 30 or 90 days) is one step.
-    end = month_slice(first, last) if ctx.mode is SyncMode.INITIAL else last
+    # The first import and the one-time re-read read calendar months; a regular re-read (2,
+    # 30 or 90 days) is one step.
+    whole = ctx.mode in (SyncMode.INITIAL, SyncMode.REREAD)
+    end = month_slice(first, last) if whole else last
     secrets = usable_secrets(rt, ctx.org_id, ctx.connection_id)
     records: dict[AdLevel, list[AdPerformanceRecord]] = {}
     for level in AdLevel:
@@ -688,7 +712,15 @@ def _performance(
         sync = session.get(AdSyncState, ctx.account_id, with_for_update=True)
         assert account is not None
         assert sync is not None
-        written = apply_performance(session, rt, account, first, end, records)
+        written = apply_performance(
+            session,
+            rt,
+            account,
+            first,
+            end,
+            records,
+            funnel_actions=getattr(provider, "funnel_actions", False) is True,
+        )
         more = end < last
         sync.import_cursor = _cursor(_shift(end, 1), last) if more else STEP_DONE
         _clear_waiting(sync)
@@ -712,6 +744,8 @@ def apply_performance(
     first: date,
     last: date,
     records: dict[AdLevel, list[AdPerformanceRecord]],
+    *,
+    funnel_actions: bool = False,
 ) -> int:
     """Replace the stored figures of ``first`` … ``last`` for each level read. Rows are
     linked to the structure where it is known; duplicates of one entity and day
@@ -776,6 +810,10 @@ def apply_performance(
                     cost=r.cost,
                     conversions=r.conversions,
                     conversion_value=r.conversion_value,
+                    landing_page_views=r.landing_page_views,
+                    content_views=r.content_views,
+                    adds_to_cart=r.adds_to_cart,
+                    checkouts_initiated=r.checkouts_initiated,
                     currency=account.currency,
                     fetched_at=now,
                 )
@@ -785,7 +823,7 @@ def apply_performance(
             day = first
             while day <= last:
                 if (ACCOUNT_KEY, day) not in seen:
-                    session.add(_zero_day(account, day, now))
+                    session.add(_zero_day(account, day, now, funnel_actions))
                     written += 1
                 day = _shift(day, 1)
     session.flush()
@@ -809,8 +847,13 @@ def _entity_key(record: AdPerformanceRecord) -> str | None:
     return record.entity_external_id
 
 
-def _zero_day(account: AdAccount, day: date, now: Any) -> AdPerformanceDaily:
+def _zero_day(
+    account: AdAccount, day: date, now: Any, funnel_actions: bool = False
+) -> AdPerformanceDaily:
+    """A day the platform sent nothing for: real zeros, and zero funnel actions only for a
+    platform that reports them (otherwise they stay "not provided")."""
     zero = Decimal(0)
+    funnel = zero if funnel_actions else None
     return AdPerformanceDaily(
         organization_id=account.organization_id,
         ad_account_id=account.id,
@@ -822,6 +865,10 @@ def _zero_day(account: AdAccount, day: date, now: Any) -> AdPerformanceDaily:
         cost=zero,
         conversions=zero,
         conversion_value=zero,
+        landing_page_views=funnel,
+        content_views=funnel,
+        adds_to_cart=funnel,
+        checkouts_initiated=funnel,
         currency=account.currency,
         fetched_at=now,
     )
@@ -850,6 +897,8 @@ def _finish(rt: Runtime, ctx: _Context) -> None:
         state.import_progress = 100
         # What this run covered: the first import everything; a 3-hour run the recent days
         # and structure; nightly (incl. "Sync now") 30 days; weekly 90 days.
+        if ctx.mode in (SyncMode.INITIAL, SyncMode.REREAD):
+            account.funnel_reread_at = now  # read with the funnel actions (Q-7-4)
         if ctx.mode is SyncMode.INITIAL:
             state.last_quick_at = state.last_nightly_at = state.last_weekly_at = now
         elif ctx.mode is SyncMode.QUICK:

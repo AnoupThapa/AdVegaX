@@ -6,7 +6,7 @@ Plan: `PHASE_07_PLAN.md` (approved 2026-10-22, A25, all recommendations Q-7-1 �
 |---|---|
 | 7-01 Step 0: live GA4 and Meta checks | ⏸ Waiting for access to Google Analytics, Meta and the network |
 | 7-02 Migration 0017; GA4 import: new metrics, landing-page view, one-time re-read | ✅ Done — awaiting review |
-| 7-03 Meta import: four action types, one-time re-read | Not started |
+| 7-03 Meta import: four action types, one-time re-read | ✅ Done — awaiting review |
 | 7-04 Funnel registry `funnel-v1` and engine | Not started |
 | 7-05 Drop-off findings | Not started |
 | 7-06 Funnel API | Not started |
@@ -44,3 +44,29 @@ Plan: `PHASE_07_PLAN.md` (approved 2026-10-22, A25, all recommendations Q-7-1 �
 **Blocked:** Step 0 (7-01) — live GA4 and Meta checks.
 
 **Next task:** 7-03 — Meta import: landing page views, content views, adds to cart and checkouts initiated (`landing_page_view`, `omni_view_content`, `omni_add_to_cart`, `omni_initiated_checkout`), and the one-time re-read of Meta accounts.
+
+## 7-03 — Meta funnel actions, one-time re-read (2026-10-22)
+
+**Completed**
+- **The Meta import** now also keeps, for every account, campaign, ad set and ad and every day, Meta's own **landing page views, content views, adds to cart and checkouts initiated** — taken from the same `actions` list Phase 4 already reads (`landing_page_view`, `omni_view_content`, `omni_add_to_cart`, `omni_initiated_checkout`), so no extra request is made.
+  - No action listed means Meta recorded none: a real 0. An unreadable value leaves **only that figure** unknown; the row's spend, clicks and purchases are kept.
+  - A day without activity gets zeros for these actions too — for Meta only.
+- **One-time re-read:** a Meta account imported before Phase 7 is read once more over its 13 months (figures only, month by month), when no regular run is due and Meta's shared allowance is not mostly used — exactly like the nightly and weekly re-reads.
+- **Google Ads** has no such actions: they stay "not provided by Google Ads" (never 0), and Google accounts are never re-read for them (they are simply marked as done).
+
+**Files changed** (10)
+- New (1): `tests/api/test_meta_ads_funnel_import.py` (4 tests).
+- Modified (9): `app/providers/base/types.py`, `app/providers/meta_ads/{mapping,provider}.py`, `app/domains/advertising/importer.py`, `tests/meta_sim.py` (funnel actions in the sample figures); docs `INTEGRATION_GUIDES.md`, this report, `PROJECT_STATUS.md`.
+- Deleted: none. No migration (the columns came with 0017 in 7-02).
+
+**Tests**
+- **4 new**; all Meta and Google Ads tests unchanged and passing.
+- **Backend `make check`: 1,592 passed**, coverage 97 %.
+
+**Security:** still read-only at Meta — the same insights request with the same fields; no new permission.
+
+**Deviations:** none.
+
+**Blocked:** Step 0 (7-01) — live GA4 and Meta checks.
+
+**Next task:** 7-04 — the funnel registry `funnel-v1` and engine: each stage with its source, the steps and which have a rate (Q-7-1, Q-7-2), for the whole business, per platform and per channel, with availability on every figure.

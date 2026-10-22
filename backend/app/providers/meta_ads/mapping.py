@@ -269,6 +269,12 @@ def ad(row: dict[str, Any]) -> AdRecord | None:
 
 # ------------------------------------------------------------------ daily figures (4-05)
 PURCHASE = "omni_purchase"  # website, app and offline purchases combined, as Ads Manager (Q-4-5)
+# Meta's own funnel actions (Phase 7, Q-7-4), cross-channel like ``omni_purchase`` where Meta
+# offers it. Names as documented; Step 0 (7-01) confirms them live.
+LANDING_PAGE_VIEW = "landing_page_view"
+CONTENT_VIEW = "omni_view_content"
+ADD_TO_CART = "omni_add_to_cart"
+CHECKOUT = "omni_initiated_checkout"
 _COUNT = re.compile(r"^[0-9]{1,15}$")
 _AMOUNT = re.compile(r"^[0-9]{1,15}(?:\.[0-9]{1,6})?$")
 _DATE = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
@@ -354,4 +360,9 @@ def performance(row: dict[str, Any], level: AdLevel) -> AdPerformanceRecord | No
         cost=spend,
         conversions=purchases,
         conversion_value=value,
+        # An unreadable funnel action leaves only that figure unknown; the row is kept.
+        landing_page_views=action(row.get("actions"), LANDING_PAGE_VIEW),
+        content_views=action(row.get("actions"), CONTENT_VIEW),
+        adds_to_cart=action(row.get("actions"), ADD_TO_CART),
+        checkouts_initiated=action(row.get("actions"), CHECKOUT),
     )
