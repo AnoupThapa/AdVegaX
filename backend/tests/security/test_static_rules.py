@@ -270,3 +270,22 @@ def test_exchange_rates_are_read_with_get_from_two_fixed_addresses_only():
     assert '"GET",' in get and "follow_redirects=False" in get
     for verb in ('"POST"', '"PUT"', '"PATCH"', '"DELETE"'):
         assert verb not in src
+
+
+def test_the_funnel_only_reads():
+    """Phase 7 (7-04): the funnel is computed on read (Q-7-8) — no writes, no outside calls,
+    nothing platform-specific (D19)."""
+    folder = APP / "domains" / "funnel"
+    sources = {p.name: p.read_text(encoding="utf-8") for p in folder.rglob("*.py")}
+    assert {"engine.py", "registry.py"} <= set(sources)
+    for name, src in sources.items():
+        for forbidden in (
+            "session.add(",
+            "session.delete(",
+            "insert(",
+            "update(",
+            "delete(",
+            ".request(",
+            "app.providers",
+        ):
+            assert forbidden not in src, (name, forbidden)

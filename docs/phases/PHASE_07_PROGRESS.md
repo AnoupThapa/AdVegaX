@@ -7,7 +7,7 @@ Plan: `PHASE_07_PLAN.md` (approved 2026-10-22, A25, all recommendations Q-7-1 �
 | 7-01 Step 0: live GA4 and Meta checks | ⏸ Waiting for access to Google Analytics, Meta and the network |
 | 7-02 Migration 0017; GA4 import: new metrics, landing-page view, one-time re-read | ✅ Done — awaiting review |
 | 7-03 Meta import: four action types, one-time re-read | ✅ Done — awaiting review |
-| 7-04 Funnel registry `funnel-v1` and engine | Not started |
+| 7-04 Funnel registry `funnel-v1` and engine | ✅ Done — awaiting review |
 | 7-05 Drop-off findings | Not started |
 | 7-06 Funnel API | Not started |
 | 7-07 Web app: Funnel page | Not started |
@@ -70,3 +70,34 @@ Plan: `PHASE_07_PLAN.md` (approved 2026-10-22, A25, all recommendations Q-7-1 �
 **Blocked:** Step 0 (7-01) — live GA4 and Meta checks.
 
 **Next task:** 7-04 — the funnel registry `funnel-v1` and engine: each stage with its source, the steps and which have a rate (Q-7-1, Q-7-2), for the whole business, per platform and per channel, with availability on every figure.
+
+## 7-04 — The funnel registry `funnel-v1` and engine (2026-10-22)
+
+**Completed**
+- **`app/domains/funnel/registry.py`** — the one place the funnel is defined:
+  - the seven stages of the whole business with **their source** (Q-7-1): impressions and clicks from Google Ads and Meta; landing page views (sessions), product views, adds to cart and checkouts from Google Analytics; purchases = **store orders**, with Google Analytics' purchases beside them (never added to them);
+  - the steps and their kind (Q-7-2): **same source** (with a rate), **different sources** (ad clicks → website visits: no rate) and the one approved cross-source ratio, the **store conversion rate** (orders ÷ sessions);
+  - each ad platform's own funnel: Meta reports every stage (impressions → link clicks → landing page views → content views → adds to cart → checkouts → purchases); Google Ads only impressions → clicks → conversions — the rest is "not provided by the platform";
+  - each Google Analytics channel's funnel (sessions → product views → adds to cart → checkouts → purchases).
+- **`app/domains/funnel/engine.py`** — reads the stored daily figures of every source in scope (the Phase 6 scope: whole organization or one store) and applies the registry to any period or day. Store orders come from the Phase 6 inputs, so the funnel's purchases are exactly the Overview's orders. Computed on read (Q-7-8); events, not people (Q-7-5).
+- **Never 0 for missing data:** a day not read — or not yet re-read with the funnel figures — is "not synced yet"; nothing connected of a kind says so; a property that reports visits but **no ecommerce events at all** says "no events reported" (its Google Analytics set-up does not send them) instead of 0; a step whose earlier stage is 0 names it ("no impressions").
+- A new static check: the funnel code never writes, never calls out and uses nothing platform-specific (D19).
+
+**Golden funnel** (by hand, in the test file): impressions 4,800 → clicks 140 (CTR 2.9 %) → *different sources* → landing page views 500 → product views 200 (40 %) → adds to cart 50 (25 %) → checkouts 20 (40 %) → Google Analytics purchases 10 (50 %); store orders 15, store conversion 3 %. Per platform: Google Ads 1,800 → 80 → 3; Meta 3,000 → 60 → 45 → 30 → 12 → 6 → 4.
+
+**Files changed** (6)
+- New (4): `app/domains/funnel/{__init__,registry,engine}.py`, `tests/api/test_funnel_engine.py` (10 tests).
+- Modified (2): `tests/security/test_static_rules.py` (1 rule); this report (and `PROJECT_STATUS.md`).
+- Deleted: none. No migration.
+
+**Tests**
+- **11 new**.
+- **Backend `make check`: 1,603 passed**, coverage 97 %.
+
+**Security:** reads only; tenant scope from Phase 6 (row-level security plus explicit organization filters).
+
+**Deviations:** "no events reported" (plan §2A, item 3) is decided over the whole period: visits reported but zero product views, adds to cart or checkouts.
+
+**Blocked:** Step 0 (7-01) — live GA4 and Meta checks.
+
+**Next task:** 7-05 — drop-off findings (Q-7-7): a same-source step at least 25 % below the previous equal period **and** below its own 90-day average, with at least 200 events before it, written in plain words.
