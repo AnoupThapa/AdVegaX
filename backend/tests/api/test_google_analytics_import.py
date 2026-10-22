@@ -140,7 +140,7 @@ def _ranges(sim, before=0):
     spans = []
     for call in calls:
         requests = json.loads(call.content)["requests"]
-        assert len(requests) == 3  # the three views in one call
+        assert len(requests) == 4  # the four views in one call (landing pages: Phase 7)
         assert len({json.dumps(r["dateRanges"]) for r in requests}) == 1
         (span,) = requests[0]["dateRanges"]
         spans.append((date.fromisoformat(span["startDate"]), date.fromisoformat(span["endDate"])))

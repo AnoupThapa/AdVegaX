@@ -22,7 +22,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | 4 | Meta (read-only) | ✅ **Implemented against the Meta simulator — awaiting review**; Step 0 (4-01) waits for the Meta app and network access | 1,301 backend + 370 frontend + 13 end-to-end tests; `phases/PHASE_04_REPORT.md` |
 | 5 | GA4 (read-only) | ✅ **Implemented against the GA4 simulator — awaiting review**; Step 0 (5-01) waits for the Analytics APIs, a GA4 property and network access | 1,488 backend + 387 frontend + 14 end-to-end tests; `phases/PHASE_05_REPORT.md` |
 | 6 | Unified analytics & financial engine | ✅ **Implemented against recorded exchange rates — awaiting review**; Step 0 (6-01) waits for network access to the ECB and NRB feeds | 1,580 backend + 404 frontend + 15 end-to-end tests; `phases/PHASE_06_REPORT.md` |
-| 7 | Funnel intelligence | Not started | |
+| 7 | Funnel intelligence | **Approved (A25) — in progress** (Step 0 waits for live GA4 and Meta access) | `phases/PHASE_07_PLAN.md`, `phases/PHASE_07_PROGRESS.md` |
 | 8 | AI campaign planner | Not started | Needs Q12 |
 | 9 | Creative engine | Not started | |
 | 10A | Action Engine | Not started | |
@@ -127,6 +127,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | 2026-10-20 | **6-07** Web app: the Overview becomes the organization's home page (figure tiles by group, day-by-day table, sources and freshness, currencies converted, time-zone note, store and period choice); Settings gain store assignment for ad accounts and properties; static check that pages compute no formula; 399 frontend tests + 14 browser tests pass | `phases/PHASE_06_PROGRESS.md` |
 | 2026-10-21 | **6-08** Web app Reports page: Channels (each platform's own figures, never added across; GA4 channels), Campaigns (budget use, GA4 match by exact name) and Products (units, sales, cost, margin); "How is this calculated?" next to every figure from the registry (`TABLES` added; every answer carries its definitions); 1,571 backend + 404 frontend + 14 browser tests pass | `phases/PHASE_06_PROGRESS.md`, `API_SPECIFICATION.md` §19E |
 | 2026-10-21 | **6-09** Golden datasets (NPR store with USD and EUR ads over Christmas, refund day, stale rate), property checks, computed-on-read check, performance (390 days × 20 sources ≈ 0.5 s, no summary table needed), browser test with all four platforms and recorded rates; **Phase 6 implemented — awaiting review**; 1,580 backend + 404 frontend + 15 browser tests pass | `phases/PHASE_06_REPORT.md` |
+| 2026-10-22 | **Phase 7 approved (A25)**; **7-02** migration 0017 (funnel figures on GA4 days and ad days, the GA4 landing-page view, `funnel_reread_at`, sync mode `reread`); GA4 import reads product views, adds to cart, checkouts and landing pages (paths only); one-time background re-read of properties imported before; 8 tests; 1,588 backend tests pass. 7-01 (live checks) waits for access | `phases/PHASE_07_PROGRESS.md`, `DATABASE_SCHEMA.md` §13B |
 | 2026-10-08 | **Phase 1B implemented**: connections/resources/links, encrypted credentials, SSRF-safe client, rate limiter, provider framework + fake platform, jobs with retry/dead-letter, single scheduler, audited denials | `backend/`, `phases/PHASE_01B_REPORT.md`, `SECURITY.md`, `INTEGRATION_GUIDES.md` |
 
 ## 3. Decision log
@@ -154,7 +155,8 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | A19 | Phase 2B plan with all §2 recommendations (Q10a, Q10b, Q-2B-1…7); test environment A recommended, C-style until WordPress downloads are allowed | Approved 2026-10-14 ("go ahead") — in progress |
 | A22 | Phase 4 plan with all §2 recommendations (Q-4-1 … Q-4-12); live-testing option C | Approved 2026-10-18 ("Approve all") — implemented 2026-10-19 (`phases/PHASE_04_REPORT.md`) |
 | A23 | Phase 5 plan with all §2 recommendations (Q11 settled: daily aggregates + Admin API discovery; Q-5-1 … Q-5-11); live-testing option C | Approved 2026-10-19 ("Approve all") — implemented 2026-10-20 (`phases/PHASE_05_REPORT.md`) |
-| A24 | Phase 6 plan with all §2 recommendations (Q-6-1 … Q-6-13, completing Q7) | Approved 2026-10-20 ("Approve all") — in progress |
+| A24 | Phase 6 plan with all §2 recommendations (Q-6-1 … Q-6-13, completing Q7) | Approved 2026-10-20 ("Approve all") — implemented, awaiting review |
+| A25 | Phase 7 plan with all §2 recommendations (Q-7-1 … Q-7-9) | Approved 2026-10-22 ("Approve all") — in progress |
 | A21 | Phase 3 plan with all §2 recommendations (Q-3-1 … Q-3-11); live-testing option C | Approved 2026-10-15 ("Approve all") — implemented 2026-10-18, awaiting review |
 | A20 | Phase 2A and 2B reports reviewed by the product owner; continue to Phase 3 planning | Reviewed 2026-10-15 ("reviewed pls continue") |
 | A18 | Phase 2A plan v2 with all §2 recommendations (Q5–Q9, D-2A-1…3); live-testing option C | Approved 2026-10-13 — implemented, awaiting review (live checks pending) |

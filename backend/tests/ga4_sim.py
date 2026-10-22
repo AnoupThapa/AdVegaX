@@ -61,6 +61,11 @@ class Visit:
     key_events: Decimal = Decimal("2")
     purchases: int = 1
     revenue: Decimal = Decimal("49.95")
+    landing_page: str = "/"
+    # The funnel's middle (Phase 7): view_item, add_to_cart and begin_checkout events.
+    item_views: int = 4
+    add_to_carts: int = 2
+    checkouts: int = 1
 
 
 @dataclass
@@ -75,7 +80,7 @@ class GA4Property:
     traffic: list[Visit] = field(default_factory=list)
     # Google's distinct users of a whole day (the total view); summed from visits otherwise.
     day_users: dict[date, int] = field(default_factory=dict)
-    # Extra report ``metadata`` per view name ("total", "channel", "source").
+    # Extra report ``metadata`` per view name ("total", "channel", "source", "landing_page").
     metadata: dict[str, dict[str, Any]] = field(default_factory=dict)
 
 
@@ -91,6 +96,7 @@ _DIMENSION = {
     "sessionSource": lambda v: v.source,
     "sessionMedium": lambda v: v.medium,
     "sessionCampaignName": lambda v: v.campaign,
+    "landingPage": lambda v: v.landing_page,
 }
 _METRIC = {
     "sessions": ("sessions", "TYPE_INTEGER"),
@@ -100,11 +106,16 @@ _METRIC = {
     "keyEvents": ("key_events", "TYPE_FLOAT"),
     "ecommercePurchases": ("purchases", "TYPE_INTEGER"),
     "purchaseRevenue": ("revenue", "TYPE_CURRENCY"),
+    "itemViewEvents": ("item_views", "TYPE_INTEGER"),
+    "addToCarts": ("add_to_carts", "TYPE_INTEGER"),
+    "checkouts": ("checkouts", "TYPE_INTEGER"),
 }
+MAX_METRICS = 10  # the Data API's limit per report
 _VIEWS = {
     ("date",): "total",
     ("date", "sessionDefaultChannelGroup"): "channel",
     ("date", "sessionSource", "sessionMedium", "sessionCampaignName"): "source",
+    ("date", "landingPage"): "landing_page",
 }
 
 
@@ -114,6 +125,8 @@ def traffic_report(sim: GA4Sim, property_id: str, request: dict[str, Any]) -> di
     dims = [d["name"] for d in request.get("dimensions", [])]
     mets = [m["name"] for m in request.get("metrics", [])]
     if any(d not in _DIMENSION for d in dims) or any(m not in _METRIC for m in mets):
+        raise BadRequest()
+    if len(mets) > MAX_METRICS:
         raise BadRequest()
     spans = request.get("dateRanges") or [{"startDate": "1970-01-01", "endDate": "1970-01-01"}]
     if len(spans) != 1:

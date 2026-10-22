@@ -52,7 +52,10 @@ PERFORMANCE_LEVELS = ("account", "campaign", "ad_group", "ad")
 # Where a figure comes from. Phase 3 holds only what the platform reports (Q-3-7); AdVegaX's
 # own attribution arrives in Phase 6 and is never mixed into these rows.
 PERFORMANCE_SOURCES = ("platform_reported",)
-SYNC_MODES = ("initial", "quick", "nightly", "weekly")
+# ``reread``: the one-time re-read of an account imported before Phase 7 (Q-7-4).
+SYNC_MODES = ("initial", "quick", "nightly", "weekly", "reread")
+# The funnel actions some platforms report per day (Phase 7, Q-7-4).
+FUNNEL_ACTIONS = ("landing_page_views", "content_views", "adds_to_cart", "checkouts_initiated")
 
 
 def _in(column: str, values: tuple[str, ...]) -> str:
@@ -122,6 +125,9 @@ class AdAccount(UUIDPrimaryKey, Timestamps, Base):
     # The store this account's spend belongs to when the organization has several (Q-6-1);
     # None = the whole organization. With one store, everything counts for it on read.
     store_id: Mapped[uuid.UUID | None] = mapped_column()
+    # When the account was read with the funnel actions (Phase 7): its first import, or the
+    # one-time re-read of an account imported before; None = the re-read is still due.
+    funnel_reread_at: Mapped[datetime | None] = mapped_column(TZ)
 
 
 class AdBudget(UUIDPrimaryKey, Timestamps, Base):
@@ -262,6 +268,7 @@ class AdPerformanceDaily(UUIDPrimaryKey, Base):
         CheckConstraint("(level = 'account') = (entity_key = 'account')", name="entity_key"),
         CheckConstraint("impressions IS NULL OR impressions >= 0", name="impressions"),
         CheckConstraint("clicks IS NULL OR clicks >= 0", name="clicks"),
+        *(CheckConstraint(f"{c} IS NULL OR {c} >= 0", name=c) for c in FUNNEL_ACTIONS),
         CheckConstraint("char_length(currency) = 3", name="currency"),
         Index(
             "ix_ad_performance_daily_organization_id_ad_account_id_day",
@@ -286,6 +293,11 @@ class AdPerformanceDaily(UUIDPrimaryKey, Base):
     cost: Mapped[Decimal | None] = mapped_column(MONEY)
     conversions: Mapped[Decimal | None] = mapped_column(MONEY)  # platforms report fractions
     conversion_value: Mapped[Decimal | None] = mapped_column(MONEY)
+    # The platform's own funnel actions (Phase 7, Q-7-4; Meta). NULL = not provided / not read.
+    landing_page_views: Mapped[Decimal | None] = mapped_column(MONEY)
+    content_views: Mapped[Decimal | None] = mapped_column(MONEY)
+    adds_to_cart: Mapped[Decimal | None] = mapped_column(MONEY)
+    checkouts_initiated: Mapped[Decimal | None] = mapped_column(MONEY)
     currency: Mapped[str] = mapped_column(String(3), nullable=False)
     source: Mapped[str] = mapped_column(
         String(32), nullable=False, server_default="platform_reported"

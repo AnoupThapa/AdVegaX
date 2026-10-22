@@ -1,6 +1,6 @@
 # Phase 7 — Funnel intelligence: Implementation Plan
 
-**Status:** 📝 **Draft — awaiting product-owner approval.** No Phase 7 code is written until you approve. · **Date:** 2026-10-21
+**Status:** ✅ **Approved by the product owner (2026-10-22, A25: "Approve all") with all §2 recommendations (Q-7-1 … Q-7-9).** Implementation authorized for Phase 7 only. · **Date:** 2026-10-21
 
 > **Live data:** Phase 7 reads what Phases 2A–6 store, plus a few more figures from Google Analytics and Meta that the funnel needs (§4). Those are built and tested against the simulators; Step 0 (7-01) checks the exact names with Google and Meta once access allows.
 

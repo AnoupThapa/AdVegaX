@@ -33,7 +33,6 @@ from app.domains.analytics.importer import (
     request_sync,
 )
 from app.domains.analytics.models import (
-    BREAKDOWNS,
     TOTAL_KEY,
     AnalyticsDaily,
     AnalyticsProperty,
@@ -68,6 +67,9 @@ USERS_PER_DAY_ONLY = "users_per_day_only"
 RATE_PLACES = Decimal("0.000001")  # rates and per-session money: six decimals, half-even
 DEFAULT_DAYS = 30
 MAX_ITEMS = 500
+
+# The views the property page offers; the landing-page view is read by the funnel (Phase 7).
+PROPERTY_VIEWS = ("total", "channel", "source")
 
 
 @dataclass(frozen=True)
@@ -349,7 +351,7 @@ class AnalyticsReadService:
         """The total view day by day with period totals, or a breakdown (channel, or source /
         medium / campaign) with each value's period figures, most sessions first."""
         authorize(ctx, Permission.ANALYTICS_VIEW)
-        if breakdown not in BREAKDOWNS:
+        if breakdown not in PROPERTY_VIEWS:
             raise ValidationFailed(details=[{"field": "breakdown", "issue": "invalid"}])
         if not 1 <= limit <= MAX_ITEMS:
             raise ValidationFailed(details=[{"field": "limit", "issue": "out_of_range"}])

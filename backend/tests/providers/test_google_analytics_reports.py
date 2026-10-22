@@ -72,7 +72,7 @@ def _by(records, view):
     return [r for r in records if r.breakdown is view]
 
 
-def test_one_call_holds_the_three_views(provider, sim, secrets):
+def test_one_call_holds_the_four_views(provider, sim, secrets):
     _read(provider, secrets)
     (call,) = sim.calls(":batchRunReports")
     assert sim.calls(":runReport") == []
@@ -81,6 +81,7 @@ def test_one_call_holds_the_three_views(provider, sim, secrets):
         ["date"],
         ["date", "sessionDefaultChannelGroup"],
         ["date", "sessionSource", "sessionMedium", "sessionCampaignName"],
+        ["date", "landingPage"],
     ]
     for request in sent:
         assert request["dateRanges"] == [{"startDate": "2026-10-01", "endDate": "2026-10-31"}]
@@ -134,7 +135,7 @@ def _answer(rows, dims=("date",), count=None, metadata=None, metrics=mapping.MET
 
 
 def test_unreadable_values_are_unknown_never_zero():
-    values = ["12", "", "-3", "x", "1.25", "9", "1e3"]
+    values = ["12", "", "-3", "x", "1.25", "9", "1e3", "4", "-1", ""]
     parsed = mapping.parse_report(
         AnalyticsBreakdown.TOTAL, _answer([(["20261001"], values)]), FIRST, LAST
     )
@@ -143,15 +144,16 @@ def test_unreadable_values_are_unknown_never_zero():
     assert r.sessions == 12
     assert (r.engaged_sessions, r.total_users, r.new_users) == (None, None, None)
     assert (r.key_events, r.purchases, r.purchase_revenue) == (Decimal("1.25"), 9, None)
+    assert (r.item_view_events, r.add_to_carts, r.checkouts) == (4, None, None)
 
 
 def test_rows_that_cannot_be_read_are_skipped_and_counted():
     rows = [
-        (["20261001"], ["1"] * 7),
-        (["2026-10-02"], ["1"] * 7),  # not Google's date format
-        (["20261302"], ["1"] * 7),  # no such day
-        (["20260930"], ["1"] * 7),  # outside the range asked for
-        (["20261004"], ["1"] * 6),  # a value missing
+        (["20261001"], ["1"] * 10),
+        (["2026-10-02"], ["1"] * 10),  # not Google's date format
+        (["20261302"], ["1"] * 10),  # no such day
+        (["20260930"], ["1"] * 10),  # outside the range asked for
+        (["20261004"], ["1"] * 9),  # a value missing
     ]
     parsed = mapping.parse_report(AnalyticsBreakdown.TOTAL, _answer(rows), FIRST, LAST)
     assert parsed is not None
@@ -165,8 +167,8 @@ def test_rows_that_cannot_be_read_are_skipped_and_counted():
 @pytest.mark.parametrize(
     "report",
     [
-        _answer([(["20261001"], ["1"] * 7)], dims=("date", "country")),
-        _answer([(["20261001"], ["1"] * 6)], metrics=mapping.METRICS[:-1]),
+        _answer([(["20261001"], ["1"] * 10)], dims=("date", "country")),
+        _answer([(["20261001"], ["1"] * 9)], metrics=mapping.METRICS[:-1]),
         {"rows": "nope", "rowCount": 1},
         {"rows": [], "rowCount": "1"},
     ],
@@ -177,7 +179,7 @@ def test_a_report_that_is_not_what_was_asked_for_is_refused(report):
 
 def test_an_unexpected_report_stops_the_read(provider, sim, secrets):
     sim.report_handler = lambda s, pid, req: _answer(
-        [(["20261001", "x"], ["1"] * 7)], ("date", "x")
+        [(["20261001", "x"], ["1"] * 10)], ("date", "x")
     )
     with pytest.raises(UnexpectedResponseError):
         _read(provider, secrets)
@@ -208,8 +210,8 @@ def test_large_views_are_read_page_by_page(provider, sim, secrets, monkeypatch):
     records = _read(provider, secrets)
     assert len(_by(records, AnalyticsBreakdown.SOURCE)) == 8
     offsets = [json.loads(c.content).get("offset") for c in sim.calls(":runReport")]
-    # total (3 rows) and channel (4 rows): one more page each; source (8 rows): three more
-    assert offsets == ["2", "2", "2", "4", "6"]
+    # total (3 rows), channel (4) and landing page (3): one more page each; source (8): three
+    assert offsets == ["2", "2", "2", "4", "6", "2"]
     assert not any(r.quality.truncated for r in records)
 
 

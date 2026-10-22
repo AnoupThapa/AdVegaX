@@ -135,11 +135,18 @@ METRICS = (
     "keyEvents",
     "ecommercePurchases",
     "purchaseRevenue",
+    # The funnel's middle (Phase 7, Q-7-3): event-scoped, so compatible with every view.
+    # Ten metrics is the Data API's limit per report.
+    "itemViewEvents",
+    "addToCarts",
+    "checkouts",
 )
 VIEW_DIMENSIONS: dict[AnalyticsBreakdown, tuple[str, ...]] = {
     AnalyticsBreakdown.TOTAL: ("date",),
     AnalyticsBreakdown.CHANNEL: ("date", "sessionDefaultChannelGroup"),
     AnalyticsBreakdown.SOURCE: ("date", "sessionSource", "sessionMedium", "sessionCampaignName"),
+    # The path a session started on, without its query string (no personal data in URLs).
+    AnalyticsBreakdown.LANDING_PAGE: ("date", "landingPage"),
 }
 _INT = re.compile(r"^[0-9]{1,18}$")
 _DECIMAL = re.compile(r"^-?[0-9]{1,14}(\.[0-9]{1,12})?$")
@@ -182,6 +189,12 @@ def _day(value: Any) -> date | None:
         return date(int(found.group(1)), int(found.group(2)), int(found.group(3)))
     except ValueError:
         return None
+
+
+def _path(value: str) -> str:
+    """A landing page as a path only: anything after ``?`` or ``#`` is dropped, in case a
+    property reports it (a query string can hold personal data)."""
+    return value.split("?", 1)[0].split("#", 1)[0] or NOT_SET
 
 
 def _label(value: Any) -> str:
@@ -264,6 +277,7 @@ def parse_report(
                 source=labels[0] if view is AnalyticsBreakdown.SOURCE else None,
                 medium=labels[1] if view is AnalyticsBreakdown.SOURCE else None,
                 campaign=labels[2] if view is AnalyticsBreakdown.SOURCE else None,
+                landing_page=_path(labels[0]) if view is AnalyticsBreakdown.LANDING_PAGE else None,
                 sessions=_count(m["sessions"]),
                 engaged_sessions=_count(m["engagedSessions"]),
                 total_users=_count(m["totalUsers"]),
@@ -272,6 +286,9 @@ def parse_report(
                 purchases=_count(m["ecommercePurchases"]),
                 # Purchases minus refunds: a day with more refunds is negative (0015).
                 purchase_revenue=_amount(m["purchaseRevenue"], negative=True),
+                item_view_events=_count(m["itemViewEvents"]),
+                add_to_carts=_count(m["addToCarts"]),
+                checkouts=_count(m["checkouts"]),
                 quality=AnalyticsQuality(
                     other_row=quality.other_row or OTHER in labels,
                     thresholded=quality.thresholded,

@@ -14,7 +14,7 @@ This document is the **target data model**. Tables are created only in the phase
 | 3–4 | **as built (migrations 0012–0013):** ad_accounts (resource extension), ad_budgets, ad_campaigns, ad_groups, ads, ad_performance_daily, ad_sync_state — see §4B. Keywords and audience_targets come with the phases that use them |
 | 5 | **as built (migrations 0014, 0015):** analytics_properties (resource extension), analytics_daily (daily aggregates in three views), analytics_sync_state — see §12 (decision Q11, A23) |
 | 6 | **as built (migration 0016, A24):** fx_rates (shared reference data), `store_id` on ad_accounts and analytics_properties — see §13A. The metric registry is code (`analytics-v1`), not a table; unified figures are computed on read (Q-6-13), so financial_daily gains no ad-spend columns; store_cost_rules waits for the cost-entry option (Q-6-7) |
-| 7 | funnel_daily |
+| 7 | **as built (migration 0017, A25):** funnel figures on analytics_daily (+ the `landing_page` view) and ad_performance_daily, `funnel_reread_at` on analytics_properties and ad_accounts — see §13B. `funnel_daily` is superseded: the funnel is computed on read (Q-7-8) |
 | 8–9 | ai_models, prompt_versions, ai_runs, campaign_strategies, creatives |
 | 10A | actions, approvals, idempotency_keys |
 | 11 | recommendations |
@@ -534,6 +534,9 @@ GA4's Data API returns **aggregated reports, not events**, so AdVegaX stores dai
 - metadata JSONB
 
 ### funnel_daily
+
+> **Superseded (Phase 7, Q-7-8):** the funnel is computed on read from the columns in §13B; this table is not created.
+
 - id
 - organization_id
 - store_id
@@ -580,6 +583,14 @@ Financial aggregates are derived by deterministic application logic. They store 
 **ad_accounts.store_id**, **analytics_properties.store_id** — optional: the store an account's spend or a property's visits belong to when an organization has several stores (Q-6-1); composite tenant key to `stores`, `ON DELETE SET NULL (store_id)`. NULL = the whole organization; with one store, everything counts for it on read.
 
 The reporting currency and time zone are the organization's existing `default_currency` and `default_timezone` (Q-6-2).
+
+## 13B. Funnel — as built (Phase 7, migration 0017; A25)
+
+**analytics_daily** gains `item_view_events`, `add_to_carts`, `checkouts` (non-negative integers: Google Analytics' `view_item`, `add_to_cart` and `begin_checkout` events; NULL = not read yet) and a fourth `breakdown`, **`landing_page`**, whose `dimension_key` and `landing_page` column hold the path a session started on (never a query string; the largest `ANALYTICS_SOURCE_ROWS_PER_DAY` values a day plus "(other)").
+
+**ad_performance_daily** gains `landing_page_views`, `content_views`, `adds_to_cart`, `checkouts_initiated` (non-negative exact decimals, as Meta reports its actions; NULL = not provided — always for Google Ads — or not read yet).
+
+**analytics_properties.funnel_reread_at**, **ad_accounts.funnel_reread_at** — when the source was read with these figures: its first import, or the one-time background re-read (sync mode `reread`, added to both sync-state checks) of a source imported before Phase 7.
 
 ## 14. AI Tables
 

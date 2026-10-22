@@ -424,11 +424,12 @@ class AdPerformanceRecord:
 
 # ------------------------------------------------------------------ analytics (Phase 5)
 class AnalyticsBreakdown(StrEnum):
-    """The three daily views kept per property (PHASE_05_PLAN Q-5-4)."""
+    """The daily views kept per property (PHASE_05_PLAN Q-5-4; landing page: Q-7-3)."""
 
     TOTAL = "total"
     CHANNEL = "channel"  # default channel group
     SOURCE = "source"  # source / medium / campaign
+    LANDING_PAGE = "landing_page"  # the page a session started on (a path, no query string)
 
 
 @dataclass(frozen=True)
@@ -477,9 +478,9 @@ class AnalyticsDailyRecord:
     """One property's figures for one day and one view value (property time zone).
 
     ``channel_group`` is set for the channel view; ``source``, ``medium`` and ``campaign`` for
-    the source view; none of them for the total. Measures the platform did not provide are
-    None, never 0 (A10). Users count each person once for this day only and are never added
-    across days (Q-5-5)."""
+    the source view; ``landing_page`` for the landing-page view; none of them for the total.
+    Measures the platform did not provide are None, never 0 (A10). Users count each person
+    once for this day only and are never added across days (Q-5-5)."""
 
     breakdown: AnalyticsBreakdown
     day: date
@@ -487,6 +488,7 @@ class AnalyticsDailyRecord:
     source: str | None = None
     medium: str | None = None
     campaign: str | None = None
+    landing_page: str | None = None
     sessions: int | None = None
     engaged_sessions: int | None = None
     total_users: int | None = None
@@ -494,4 +496,8 @@ class AnalyticsDailyRecord:
     key_events: Decimal | None = None
     purchases: int | None = None
     purchase_revenue: Decimal | None = None
+    # The funnel's middle (Phase 7): events, as the platform counts them; None = not provided.
+    item_view_events: int | None = None
+    add_to_carts: int | None = None
+    checkouts: int | None = None
     quality: AnalyticsQuality = AnalyticsQuality()

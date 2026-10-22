@@ -45,10 +45,12 @@ TZ = DateTime(timezone=True)
 PROPERTY_STATUSES = ("importing", "active", "disconnected", "error")
 # The platform's state of the property. Only ``active`` properties can be linked (Q-5-3).
 PROPERTY_PLATFORM_STATUSES = ("active", "deleted")
-# The three views kept per day (Q-5-4). ``total`` has ``dimension_key = 'total'``.
-BREAKDOWNS = ("total", "channel", "source")
+# The views kept per day (Q-5-4; ``landing_page`` since Phase 7, Q-7-3). ``total`` has
+# ``dimension_key = 'total'``.
+BREAKDOWNS = ("total", "channel", "source", "landing_page")
 SOURCES = ("platform_reported",)
-SYNC_MODES = ("initial", "quick", "nightly", "weekly")
+# ``reread``: the one-time re-read of a property imported before Phase 7 (Q-7-3).
+SYNC_MODES = ("initial", "quick", "nightly", "weekly", "reread")
 TOTAL_KEY = "total"
 
 
@@ -119,6 +121,9 @@ class AnalyticsProperty(UUIDPrimaryKey, Timestamps, Base):
     # The store this property measures when the organization has several (Q-6-1); None = the
     # whole organization. With one store, everything counts for it on read.
     store_id: Mapped[uuid.UUID | None] = mapped_column()
+    # When the property was read with the funnel figures (Phase 7): its first import, or the
+    # one-time re-read of a property imported before; None = the re-read is still due.
+    funnel_reread_at: Mapped[datetime | None] = mapped_column(TZ)
 
 
 class AnalyticsDaily(UUIDPrimaryKey, Base):
@@ -155,6 +160,9 @@ class AnalyticsDaily(UUIDPrimaryKey, Base):
                 "new_users",
                 "key_events",
                 "purchases",
+                "item_view_events",
+                "add_to_carts",
+                "checkouts",
             )  # purchase revenue is net of refunds and can be negative (0015)
         ),
         Index(
@@ -174,6 +182,7 @@ class AnalyticsDaily(UUIDPrimaryKey, Base):
     traffic_source: Mapped[str | None] = mapped_column(String(255))
     traffic_medium: Mapped[str | None] = mapped_column(String(255))
     campaign: Mapped[str | None] = mapped_column(String(255))
+    landing_page: Mapped[str | None] = mapped_column(String(1024))  # a path, no query string
     # NULL = not provided by the platform (never 0); a day with no activity has real zeros.
     sessions: Mapped[int | None] = mapped_column(BigInteger)
     engaged_sessions: Mapped[int | None] = mapped_column(BigInteger)
@@ -182,6 +191,10 @@ class AnalyticsDaily(UUIDPrimaryKey, Base):
     key_events: Mapped[Decimal | None] = mapped_column(MONEY)  # platforms report fractions
     purchases: Mapped[int | None] = mapped_column(BigInteger)
     purchase_revenue: Mapped[Decimal | None] = mapped_column(MONEY)  # minus refunds: may be < 0
+    # The funnel's middle (Phase 7, Q-7-3): events, not people. NULL = not read yet.
+    item_view_events: Mapped[int | None] = mapped_column(BigInteger)
+    add_to_carts: Mapped[int | None] = mapped_column(BigInteger)
+    checkouts: Mapped[int | None] = mapped_column(BigInteger)
     currency: Mapped[str] = mapped_column(String(3), nullable=False)
     other_row: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=false())
     thresholded: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=false())

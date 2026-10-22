@@ -33,7 +33,7 @@ from __future__ import annotations
 import logging
 import uuid
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from enum import StrEnum
@@ -93,6 +93,9 @@ class SyncMode(StrEnum):
     QUICK = "quick"
     NIGHTLY = "nightly"
     WEEKLY = "weekly"
+    # Phase 7 (Q-7-3): a property imported before the funnel figures existed is read once
+    # more over its whole history, in the background, sliced and paced like the first import.
+    REREAD = "reread"
 
 
 def analytics_provider(provider: PlatformProvider) -> AnalyticsProvider | None:
@@ -211,6 +214,7 @@ def window(rt: Runtime, prop: AnalyticsProperty, mode: SyncMode) -> tuple[date, 
     start = history_start(rt, prop)
     days = {
         SyncMode.INITIAL: None,
+        SyncMode.REREAD: None,
         SyncMode.QUICK: rt.settings.ANALYTICS_QUICK_WINDOW.days,
         SyncMode.NIGHTLY: rt.settings.ANALYTICS_NIGHTLY_WINDOW.days,
         SyncMode.WEEKLY: rt.settings.ANALYTICS_WEEKLY_WINDOW.days,
@@ -327,6 +331,8 @@ def enqueue_analytics_syncs(rt: Runtime) -> int:
             if not _syncable(session, prop):
                 continue
             mode = due_mode(rt, state)
+            if mode is None and prop.funnel_reread_at is None:
+                mode = SyncMode.REREAD  # once, when nothing more urgent is due (Q-7-3)
             if mode is None:
                 continue
             start_sync(session, rt, prop, mode)
@@ -623,8 +629,10 @@ def month_slice(first: date, last: date) -> date:
 def _days(
     rt: Runtime, ctx: _Context, provider: AnalyticsProvider, first: date, last: date
 ) -> _Next:
-    # The first import reads calendar months; a re-read (2, 14 or 90 days) is one step.
-    end = month_slice(first, last) if ctx.mode is SyncMode.INITIAL else last
+    # The first import and the one-time re-read read calendar months; a regular re-read (2, 14
+    # or 90 days) is one step.
+    whole = ctx.mode in (SyncMode.INITIAL, SyncMode.REREAD)
+    end = month_slice(first, last) if whole else last
     secrets = usable_secrets(rt, ctx.org_id, ctx.connection_id)
     records = _call(
         rt, ctx, provider, lambda: list(provider.read_daily(secrets, ctx.ref, first, end))
@@ -657,6 +665,8 @@ def dimension_key(record: AnalyticsDailyRecord) -> str:
         return TOTAL_KEY
     if record.breakdown is AnalyticsBreakdown.CHANNEL:
         return record.channel_group or NOT_SET
+    if record.breakdown is AnalyticsBreakdown.LANDING_PAGE:
+        return record.landing_page or NOT_SET
     parts = (record.source, record.medium, record.campaign)
     return "|".join((p or NOT_SET).replace("\\", "\\\\").replace("|", "\\|") for p in parts)
 
@@ -671,7 +681,8 @@ def apply_daily(
 ) -> int:
     """Replace the stored figures of ``first`` … ``last`` in every view. Duplicates of one
     value and day are never added together: the first is kept and the rest are counted as
-    skipped. The source view keeps ``ANALYTICS_SOURCE_ROWS_PER_DAY`` values a day."""
+    skipped. The source and landing-page views keep ``ANALYTICS_SOURCE_ROWS_PER_DAY`` values a
+    day."""
     now = rt.clock.now()
     session.execute(
         delete(AnalyticsDaily).where(
@@ -694,8 +705,8 @@ def apply_daily(
     written = 0
     for (view, _day), bucket in kept.items():
         rows = bucket
-        if view is AnalyticsBreakdown.SOURCE:
-            rows = _cap(bucket, rt.settings.ANALYTICS_SOURCE_ROWS_PER_DAY)
+        if view in (AnalyticsBreakdown.SOURCE, AnalyticsBreakdown.LANDING_PAGE):
+            rows = _cap(bucket, rt.settings.ANALYTICS_SOURCE_ROWS_PER_DAY, view)
         elif view is AnalyticsBreakdown.TOTAL:
             total_quality = next(iter(bucket.values())).quality
         for key, r in rows.items():
@@ -715,22 +726,22 @@ def apply_daily(
     return written
 
 
-def _cap(bucket: dict[str, AnalyticsDailyRecord], limit: int) -> dict[str, AnalyticsDailyRecord]:
+def _other(view: AnalyticsBreakdown, day: date) -> AnalyticsDailyRecord:
+    if view is AnalyticsBreakdown.LANDING_PAGE:
+        return AnalyticsDailyRecord(breakdown=view, day=day, landing_page=OTHER)
+    return AnalyticsDailyRecord(breakdown=view, day=day, source=OTHER, medium=OTHER, campaign=OTHER)
+
+
+def _cap(
+    bucket: dict[str, AnalyticsDailyRecord], limit: int, view: AnalyticsBreakdown
+) -> dict[str, AnalyticsDailyRecord]:
     """Keep the ``limit - 1`` values with the most sessions and add the rest (with any
     "(other)" row the platform sent) into one marked "(other)" row. Sessions, engaged
     sessions, key events, purchases and revenue add up; users and new users do not (the same
     person can arrive from several sources), so they are left unknown."""
     if len(bucket) <= limit:
         return bucket
-    other_key = dimension_key(
-        AnalyticsDailyRecord(
-            breakdown=AnalyticsBreakdown.SOURCE,
-            day=date.min,
-            source=OTHER,
-            medium=OTHER,
-            campaign=OTHER,
-        )
-    )
+    other_key = dimension_key(_other(view, date.min))
     ranked = sorted(
         ((k, r) for k, r in bucket.items() if k != other_key),
         key=lambda kr: (-(kr[1].sessions or 0), kr[0]),
@@ -745,12 +756,8 @@ def _cap(bucket: dict[str, AnalyticsDailyRecord], limit: int) -> dict[str, Analy
         sampled=any(r.quality.sampled for r in rest),
         truncated=any(r.quality.truncated for r in rest),
     )
-    combined = AnalyticsDailyRecord(
-        breakdown=AnalyticsBreakdown.SOURCE,
-        day=sample.day,
-        source=OTHER,
-        medium=OTHER,
-        campaign=OTHER,
+    combined = replace(
+        _other(view, sample.day),
         sessions=_sum([r.sessions for r in rest]),
         engaged_sessions=_sum([r.engaged_sessions for r in rest]),
         total_users=None,
@@ -758,6 +765,9 @@ def _cap(bucket: dict[str, AnalyticsDailyRecord], limit: int) -> dict[str, Analy
         key_events=_sum([r.key_events for r in rest]),
         purchases=_sum([r.purchases for r in rest]),
         purchase_revenue=_sum([r.purchase_revenue for r in rest]),
+        item_view_events=_sum([r.item_view_events for r in rest]),
+        add_to_carts=_sum([r.add_to_carts for r in rest]),
+        checkouts=_sum([r.checkouts for r in rest]),
         quality=quality,
     )
     logger.info(
@@ -786,6 +796,9 @@ def _zero_day(day: date, quality: AnalyticsQuality) -> AnalyticsDailyRecord:
         key_events=zero,
         purchases=0,
         purchase_revenue=zero,
+        item_view_events=0,
+        add_to_carts=0,
+        checkouts=0,
         quality=quality,
     )
 
@@ -807,6 +820,7 @@ def _row(
         traffic_source=_text(r.source),
         traffic_medium=_text(r.medium),
         campaign=_text(r.campaign),
+        landing_page=r.landing_page[:1024] if r.landing_page else None,
         sessions=r.sessions,
         engaged_sessions=r.engaged_sessions,
         total_users=r.total_users,
@@ -814,6 +828,9 @@ def _row(
         key_events=r.key_events,
         purchases=r.purchases,
         purchase_revenue=r.purchase_revenue,
+        item_view_events=r.item_view_events,
+        add_to_carts=r.add_to_carts,
+        checkouts=r.checkouts,
         currency=prop.currency,
         other_row=r.quality.other_row,
         thresholded=r.quality.thresholded,
@@ -845,6 +862,8 @@ def _finish(rt: Runtime, ctx: _Context) -> None:
         if prop.health_code == RATE_LIMITED:
             prop.health_code, prop.health_checked_at = None, now
         state.import_progress = 100
+        if ctx.mode in (SyncMode.INITIAL, SyncMode.REREAD):
+            prop.funnel_reread_at = now  # read with the funnel figures (Q-7-3)
         if ctx.mode is SyncMode.INITIAL:
             state.last_quick_at = state.last_nightly_at = state.last_weekly_at = now
         elif ctx.mode is SyncMode.QUICK:
