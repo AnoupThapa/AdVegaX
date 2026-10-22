@@ -569,6 +569,69 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/{organization_id}/analytics/funnel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Analytics Funnel
+         * @description Impression → purchase for the period: each stage with its source, the steps (a rate only
+         *     between stages of the same source), each platform's and channel's own funnel, and the
+         *     drop-offs found by fixed rules (funnel-v1).
+         */
+        get: operations["analytics_funnel_api_v1_organizations__organization_id__analytics_funnel_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/analytics/funnel/campaigns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Analytics Funnel Campaigns
+         * @description Each campaign's funnel as its platform reports it, Google Analytics' funnel for the
+         *     campaign of the same name, and the other traffic.
+         */
+        get: operations["analytics_funnel_campaigns_api_v1_organizations__organization_id__analytics_funnel_campaigns_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/analytics/funnel/landing-pages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Analytics Funnel Landing Pages
+         * @description Google Analytics' funnel for each landing page, most visits first (at most 100).
+         */
+        get: operations["analytics_funnel_landing_pages_api_v1_organizations__organization_id__analytics_funnel_landing_pages_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizations/{organization_id}/analytics/overview": {
         parameters: {
             query?: never;
@@ -1691,6 +1754,87 @@ export interface components {
             /** Expires In Seconds */
             expires_in_seconds: number;
         };
+        /** CampaignFunnelOut */
+        CampaignFunnelOut: {
+            /**
+             * Ad Account Id
+             * Format: uuid
+             */
+            ad_account_id: string;
+            /** Analytics */
+            analytics: {
+                [key: string]: components["schemas"]["FigureOut"];
+            } | null;
+            /** Analytics Steps */
+            analytics_steps: components["schemas"]["StepOut"][];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Provider */
+            provider: string;
+            /** Shared Match */
+            shared_match: boolean;
+            /** Source */
+            source: string;
+            /** Stages */
+            stages: {
+                [key: string]: components["schemas"]["FigureOut"];
+            };
+            /** Status */
+            status: string;
+            /** Steps */
+            steps: components["schemas"]["StepOut"][];
+        };
+        /** CampaignFunnelsOut */
+        CampaignFunnelsOut: {
+            analytics_missing: components["schemas"]["FigureOut"] | null;
+            /** Conversions */
+            conversions: components["schemas"]["ConversionOut"][];
+            /** Currency Minor Units */
+            currency_minor_units: number;
+            /** Definition Version */
+            definition_version: string;
+            /** Definitions */
+            definitions: components["schemas"]["MetricDefinitionOut"][];
+            /**
+             * From Day
+             * Format: date
+             */
+            from_day: string;
+            /** Items */
+            items: components["schemas"]["CampaignFunnelOut"][];
+            /** Notes */
+            notes: string[];
+            /** Other Traffic */
+            other_traffic: {
+                [key: string]: components["schemas"]["FigureOut"];
+            } | null;
+            /** Other Traffic Steps */
+            other_traffic_steps: components["schemas"]["StepOut"][];
+            /** Platform Definitions */
+            platform_definitions: components["schemas"]["MetricDefinitionOut"][];
+            /** Reporting Currency */
+            reporting_currency: string;
+            /** Reporting Timezone */
+            reporting_timezone: string;
+            /** Sources */
+            sources: components["schemas"]["SourceOut"][];
+            /** Store Id */
+            store_id: string | null;
+            /**
+             * To Day
+             * Format: date
+             */
+            to_day: string;
+            /** Website */
+            website: {
+                [key: string]: components["schemas"]["FigureOut"];
+            } | null;
+        };
         /** CampaignOut */
         CampaignOut: {
             /**
@@ -1762,6 +1906,17 @@ export interface components {
             current_password: string;
             /** New Password */
             new_password: string;
+        };
+        /** ChannelFunnelOut */
+        ChannelFunnelOut: {
+            /** Channel */
+            channel: string;
+            /** Stages */
+            stages: {
+                [key: string]: components["schemas"]["FigureOut"];
+            };
+            /** Steps */
+            steps: components["schemas"]["StepOut"][];
         };
         /** ChannelsOut */
         ChannelsOut: {
@@ -1989,6 +2144,11 @@ export interface components {
             data: components["schemas"]["AuthorizationStartOut"];
             meta: components["schemas"]["Meta"];
         };
+        /** Envelope[CampaignFunnelsOut] */
+        Envelope_CampaignFunnelsOut_: {
+            data: components["schemas"]["CampaignFunnelsOut"];
+            meta: components["schemas"]["Meta"];
+        };
         /** Envelope[CampaignsOut] */
         Envelope_CampaignsOut_: {
             data: components["schemas"]["CampaignsOut"];
@@ -2019,6 +2179,11 @@ export interface components {
             data: components["schemas"]["DailyMetricsOut"];
             meta: components["schemas"]["Meta"];
         };
+        /** Envelope[FunnelOut] */
+        Envelope_FunnelOut_: {
+            data: components["schemas"]["FunnelOut"];
+            meta: components["schemas"]["Meta"];
+        };
         /** Envelope[InvitationOut] */
         Envelope_InvitationOut_: {
             data: components["schemas"]["InvitationOut"];
@@ -2027,6 +2192,11 @@ export interface components {
         /** Envelope[JobOut] */
         Envelope_JobOut_: {
             data: components["schemas"]["JobOut"];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[LandingPagesOut] */
+        Envelope_LandingPagesOut_: {
+            data: components["schemas"]["LandingPagesOut"];
             meta: components["schemas"]["Meta"];
         };
         /** Envelope[LinkOut] */
@@ -2167,10 +2337,78 @@ export interface components {
             /** Value */
             value: string | null;
         };
+        /** FindingOut */
+        FindingOut: {
+            /** Baseline Rate */
+            baseline_rate: string;
+            /** Change */
+            change: string;
+            /** Events Before */
+            events_before: string;
+            /** From Stage */
+            from_stage: string;
+            /** Previous Rate */
+            previous_rate: string;
+            /** Rate */
+            rate: string;
+            /** Subject */
+            subject: string | null;
+            /** To Stage */
+            to_stage: string;
+            /** View */
+            view: string;
+        };
         /** ForgotPasswordRequest */
         ForgotPasswordRequest: {
             /** Email */
             email: string;
+        };
+        /** FunnelOut */
+        FunnelOut: {
+            /** Channels */
+            channels: components["schemas"]["ChannelFunnelOut"][];
+            channels_missing: components["schemas"]["FigureOut"] | null;
+            /** Conversions */
+            conversions: components["schemas"]["ConversionOut"][];
+            /** Currency Minor Units */
+            currency_minor_units: number;
+            /** Definition Version */
+            definition_version: string;
+            /** Definitions */
+            definitions: components["schemas"]["MetricDefinitionOut"][];
+            /** Findings */
+            findings: components["schemas"]["FindingOut"][];
+            /**
+             * From Day
+             * Format: date
+             */
+            from_day: string;
+            /** Notes */
+            notes: string[];
+            /** Platform Definitions */
+            platform_definitions: components["schemas"]["MetricDefinitionOut"][];
+            /** Platforms */
+            platforms: components["schemas"]["PlatformFunnelOut"][];
+            /** Reporting Currency */
+            reporting_currency: string;
+            /** Reporting Timezone */
+            reporting_timezone: string;
+            rules: components["schemas"]["RulesOut"];
+            /** Sources */
+            sources: components["schemas"]["SourceOut"][];
+            /** Stages */
+            stages: {
+                [key: string]: components["schemas"]["FigureOut"];
+            };
+            /** Steps */
+            steps: components["schemas"]["StepOut"][];
+            /** Store Id */
+            store_id: string | null;
+            /**
+             * To Day
+             * Format: date
+             */
+            to_day: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -2258,6 +2496,53 @@ export interface components {
             max_attempts: number;
             /** Status */
             status: string;
+        };
+        /** LandingPageFunnelOut */
+        LandingPageFunnelOut: {
+            /** Landing Page */
+            landing_page: string;
+            /** Stages */
+            stages: {
+                [key: string]: components["schemas"]["FigureOut"];
+            };
+            /** Steps */
+            steps: components["schemas"]["StepOut"][];
+        };
+        /** LandingPagesOut */
+        LandingPagesOut: {
+            /** Conversions */
+            conversions: components["schemas"]["ConversionOut"][];
+            /** Currency Minor Units */
+            currency_minor_units: number;
+            /** Definition Version */
+            definition_version: string;
+            /** Definitions */
+            definitions: components["schemas"]["MetricDefinitionOut"][];
+            /**
+             * From Day
+             * Format: date
+             */
+            from_day: string;
+            /** Item Count */
+            item_count: number;
+            /** Items */
+            items: components["schemas"]["LandingPageFunnelOut"][];
+            items_missing: components["schemas"]["FigureOut"] | null;
+            /** Notes */
+            notes: string[];
+            /** Reporting Currency */
+            reporting_currency: string;
+            /** Reporting Timezone */
+            reporting_timezone: string;
+            /** Sources */
+            sources: components["schemas"]["SourceOut"][];
+            /** Store Id */
+            store_id: string | null;
+            /**
+             * To Day
+             * Format: date
+             */
+            to_day: string;
         };
         /** LinkOut */
         LinkOut: {
@@ -2474,6 +2759,21 @@ export interface components {
                 [key: string]: components["schemas"]["FigureOut"];
             };
         };
+        /** PlatformFunnelOut */
+        PlatformFunnelOut: {
+            /** Ad Accounts */
+            ad_accounts: number;
+            /** Provider */
+            provider: string;
+            /** Source */
+            source: string;
+            /** Stages */
+            stages: {
+                [key: string]: components["schemas"]["FigureOut"];
+            };
+            /** Steps */
+            steps: components["schemas"]["StepOut"][];
+        };
         /** PlatformOut */
         PlatformOut: {
             /** Ad Accounts */
@@ -2667,6 +2967,25 @@ export interface components {
              */
             store_id: string;
         };
+        /** RulesOut */
+        RulesOut: {
+            /** Baseline Days */
+            baseline_days: number;
+            /** Drop Share */
+            drop_share: string;
+            /** Min Events */
+            min_events: number;
+            /**
+             * Previous From
+             * Format: date
+             */
+            previous_from: string;
+            /**
+             * Previous To
+             * Format: date
+             */
+            previous_to: string;
+        };
         /** SessionOut */
         SessionOut: {
             /** Auth Method */
@@ -2717,6 +3036,16 @@ export interface components {
         StatusOut: {
             /** Status */
             status: string;
+        };
+        /** StepOut */
+        StepOut: {
+            /** From Stage */
+            from_stage: string;
+            /** Kind */
+            kind: string;
+            rate: components["schemas"]["FigureOut"] | null;
+            /** To Stage */
+            to_stage: string;
         };
         /**
          * StoreAssignmentIn
@@ -3863,6 +4192,111 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Envelope_ChannelsOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    analytics_funnel_api_v1_organizations__organization_id__analytics_funnel_get: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+                store_id?: string | null;
+            };
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_FunnelOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    analytics_funnel_campaigns_api_v1_organizations__organization_id__analytics_funnel_campaigns_get: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+                store_id?: string | null;
+            };
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_CampaignFunnelsOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    analytics_funnel_landing_pages_api_v1_organizations__organization_id__analytics_funnel_landing_pages_get: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+                store_id?: string | null;
+            };
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_LandingPagesOut_"];
                 };
             };
             /** @description Validation Error */

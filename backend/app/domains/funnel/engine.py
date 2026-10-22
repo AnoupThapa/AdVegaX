@@ -73,7 +73,7 @@ PLATFORM_COLUMNS = {
 }
 
 
-def _figure(value: int | Decimal | None) -> Figure:
+def stored_count(value: int | Decimal | None) -> Figure:
     """A stored count: None means not read yet (e.g. before the one-time re-read)."""
     return GAP if value is None else Figure(Decimal(value))
 
@@ -151,10 +151,10 @@ def load_funnel(session: Session, scope: Scope, metrics: Inputs) -> FunnelInputs
                     d.platforms[account.provider][stage].append(GAP)
                 continue
             for stage in ("impressions", "clicks"):
-                d.ads[stage].append(_figure(getattr(perf, PLATFORM_COLUMNS[stage])))
+                d.ads[stage].append(stored_count(getattr(perf, PLATFORM_COLUMNS[stage])))
             for stage in reported:
                 d.platforms[account.provider][stage].append(
-                    _figure(getattr(perf, PLATFORM_COLUMNS[stage]))
+                    stored_count(getattr(perf, PLATFORM_COLUMNS[stage]))
                 )
 
     props = {p.id: p for p in scope.properties}
@@ -181,11 +181,11 @@ def load_funnel(session: Session, scope: Scope, metrics: Inputs) -> FunnelInputs
                 d.channel_gaps.append(GAP)
                 continue
             for stage, column in GA_COLUMNS.items():
-                d.analytics[stage].append(_figure(getattr(total, column)))
+                d.analytics[stage].append(stored_count(getattr(total, column)))
             for row in channel_rows.get((prop.id, day), []):
                 name = row.channel_group or "(not set)"
                 for stage, column in GA_COLUMNS.items():
-                    d.channels[name][stage].append(_figure(getattr(row, column)))
+                    d.channels[name][stage].append(stored_count(getattr(row, column)))
     return FunnelInputs(scope, first, last, days)
 
 
@@ -202,7 +202,7 @@ def _total(figures: list[Figure], present: bool, absent_reason: str) -> Figure:
     return plus(*figures)
 
 
-def _steps(
+def step_rates(
     steps: tuple[Step, ...], stages: dict[str, Figure], *, store_ok: bool
 ) -> list[StepFigure]:
     found = []
@@ -236,7 +236,7 @@ def whole(scope: Scope, day: FunnelDay) -> tuple[dict[str, Figure], list[StepFig
             if stages[stage].ok and stages[stage].value == ZERO:
                 stages[stage] = missing(UNAVAILABLE, "no_events_reported")
     ordered = {s.key: stages[s.key] for s in STAGES}
-    return ordered, _steps(STEPS, ordered, store_ok=scope.every_store_measured)
+    return ordered, step_rates(STEPS, ordered, store_ok=scope.every_store_measured)
 
 
 def platform_steps(provider: str) -> tuple[Step, ...]:
@@ -261,7 +261,12 @@ def platforms(
         }
         accounts = sum(1 for a in scope.ad_accounts if a.provider == provider)
         found.append(
-            (provider, accounts, stages, _steps(platform_steps(provider), stages, store_ok=True))
+            (
+                provider,
+                accounts,
+                stages,
+                step_rates(platform_steps(provider), stages, store_ok=True),
+            )
         )
     return found
 
@@ -277,6 +282,6 @@ def channels(
     found = []
     for name, by_stage in day.channels.items():
         stages = {s.key: plus(*by_stage[s.key]) for s in CHANNEL_STAGES}
-        found.append((name, stages, _steps(CHANNEL_STEPS, stages, store_ok=True)))
+        found.append((name, stages, step_rates(CHANNEL_STEPS, stages, store_ok=True)))
     found.sort(key=lambda c: (-(c[1]["landing_page_views"].value or 0), c[0]))
     return found, None

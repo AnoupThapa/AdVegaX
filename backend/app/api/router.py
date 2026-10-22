@@ -9,6 +9,7 @@ from app.domains.advertising.router import router as advertising_router
 from app.domains.analytics.router import router as analytics_router
 from app.domains.audit.router import router as audit_router
 from app.domains.commerce.router import router as commerce_router
+from app.domains.funnel.router import router as funnel_router
 from app.domains.identity.router import router as identity_router
 from app.domains.integrations.router import router as integrations_router
 from app.domains.metrics.router import router as metrics_router
@@ -25,4 +26,5 @@ api_router.include_router(commerce_router)
 api_router.include_router(advertising_router)
 api_router.include_router(analytics_router)
 api_router.include_router(metrics_router)
+api_router.include_router(funnel_router)
 api_router.include_router(webhooks_router)

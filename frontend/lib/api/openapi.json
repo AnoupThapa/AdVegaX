@@ -2043,6 +2043,240 @@
         "title": "AuthorizationStartOut",
         "type": "object"
       },
+      "CampaignFunnelOut": {
+        "properties": {
+          "ad_account_id": {
+            "format": "uuid",
+            "title": "Ad Account Id",
+            "type": "string"
+          },
+          "analytics": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/FigureOut"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Analytics"
+          },
+          "analytics_steps": {
+            "items": {
+              "$ref": "#/components/schemas/StepOut"
+            },
+            "title": "Analytics Steps",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "shared_match": {
+            "title": "Shared Match",
+            "type": "boolean"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "stages": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/FigureOut"
+            },
+            "title": "Stages",
+            "type": "object"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/StepOut"
+            },
+            "title": "Steps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "ad_account_id",
+          "provider",
+          "source",
+          "name",
+          "status",
+          "stages",
+          "steps",
+          "analytics",
+          "analytics_steps",
+          "shared_match"
+        ],
+        "title": "CampaignFunnelOut",
+        "type": "object"
+      },
+      "CampaignFunnelsOut": {
+        "properties": {
+          "analytics_missing": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FigureOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "conversions": {
+            "items": {
+              "$ref": "#/components/schemas/ConversionOut"
+            },
+            "title": "Conversions",
+            "type": "array"
+          },
+          "currency_minor_units": {
+            "title": "Currency Minor Units",
+            "type": "integer"
+          },
+          "definition_version": {
+            "title": "Definition Version",
+            "type": "string"
+          },
+          "definitions": {
+            "items": {
+              "$ref": "#/components/schemas/MetricDefinitionOut"
+            },
+            "title": "Definitions",
+            "type": "array"
+          },
+          "from_day": {
+            "format": "date",
+            "title": "From Day",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CampaignFunnelOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "other_traffic": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/FigureOut"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Other Traffic"
+          },
+          "other_traffic_steps": {
+            "items": {
+              "$ref": "#/components/schemas/StepOut"
+            },
+            "title": "Other Traffic Steps",
+            "type": "array"
+          },
+          "platform_definitions": {
+            "items": {
+              "$ref": "#/components/schemas/MetricDefinitionOut"
+            },
+            "title": "Platform Definitions",
+            "type": "array"
+          },
+          "reporting_currency": {
+            "title": "Reporting Currency",
+            "type": "string"
+          },
+          "reporting_timezone": {
+            "title": "Reporting Timezone",
+            "type": "string"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceOut"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "store_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Store Id"
+          },
+          "to_day": {
+            "format": "date",
+            "title": "To Day",
+            "type": "string"
+          },
+          "website": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/FigureOut"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Website"
+          }
+        },
+        "required": [
+          "definition_version",
+          "reporting_currency",
+          "currency_minor_units",
+          "reporting_timezone",
+          "store_id",
+          "from_day",
+          "to_day",
+          "sources",
+          "conversions",
+          "notes",
+          "definitions",
+          "items",
+          "other_traffic",
+          "other_traffic_steps",
+          "website",
+          "analytics_missing",
+          "platform_definitions"
+        ],
+        "title": "CampaignFunnelsOut",
+        "type": "object"
+      },
       "CampaignOut": {
         "properties": {
           "ad_account_id": {
@@ -2243,6 +2477,35 @@
           "new_password"
         ],
         "title": "ChangePasswordRequest",
+        "type": "object"
+      },
+      "ChannelFunnelOut": {
+        "properties": {
+          "channel": {
+            "title": "Channel",
+            "type": "string"
+          },
+          "stages": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/FigureOut"
+            },
+            "title": "Stages",
+            "type": "object"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/StepOut"
+            },
+            "title": "Steps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "channel",
+          "stages",
+          "steps"
+        ],
+        "title": "ChannelFunnelOut",
         "type": "object"
       },
       "ChannelsOut": {
@@ -3010,6 +3273,22 @@
         "title": "Envelope[AuthorizationStartOut]",
         "type": "object"
       },
+      "Envelope_CampaignFunnelsOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/CampaignFunnelsOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[CampaignFunnelsOut]",
+        "type": "object"
+      },
       "Envelope_CampaignsOut_": {
         "properties": {
           "data": {
@@ -3106,6 +3385,22 @@
         "title": "Envelope[DailyMetricsOut]",
         "type": "object"
       },
+      "Envelope_FunnelOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/FunnelOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[FunnelOut]",
+        "type": "object"
+      },
       "Envelope_InvitationOut_": {
         "properties": {
           "data": {
@@ -3136,6 +3431,22 @@
           "meta"
         ],
         "title": "Envelope[JobOut]",
+        "type": "object"
+      },
+      "Envelope_LandingPagesOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/LandingPagesOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[LandingPagesOut]",
         "type": "object"
       },
       "Envelope_LinkOut_": {
@@ -3593,6 +3904,71 @@
         "title": "FigureOut",
         "type": "object"
       },
+      "FindingOut": {
+        "properties": {
+          "baseline_rate": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Baseline Rate",
+            "type": "string"
+          },
+          "change": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Change",
+            "type": "string"
+          },
+          "events_before": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Events Before",
+            "type": "string"
+          },
+          "from_stage": {
+            "title": "From Stage",
+            "type": "string"
+          },
+          "previous_rate": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Previous Rate",
+            "type": "string"
+          },
+          "rate": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Rate",
+            "type": "string"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject"
+          },
+          "to_stage": {
+            "title": "To Stage",
+            "type": "string"
+          },
+          "view": {
+            "title": "View",
+            "type": "string"
+          }
+        },
+        "required": [
+          "view",
+          "subject",
+          "from_stage",
+          "to_stage",
+          "rate",
+          "previous_rate",
+          "baseline_rate",
+          "events_before",
+          "change"
+        ],
+        "title": "FindingOut",
+        "type": "object"
+      },
       "ForgotPasswordRequest": {
         "additionalProperties": false,
         "properties": {
@@ -3607,6 +3983,154 @@
           "email"
         ],
         "title": "ForgotPasswordRequest",
+        "type": "object"
+      },
+      "FunnelOut": {
+        "properties": {
+          "channels": {
+            "items": {
+              "$ref": "#/components/schemas/ChannelFunnelOut"
+            },
+            "title": "Channels",
+            "type": "array"
+          },
+          "channels_missing": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FigureOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "conversions": {
+            "items": {
+              "$ref": "#/components/schemas/ConversionOut"
+            },
+            "title": "Conversions",
+            "type": "array"
+          },
+          "currency_minor_units": {
+            "title": "Currency Minor Units",
+            "type": "integer"
+          },
+          "definition_version": {
+            "title": "Definition Version",
+            "type": "string"
+          },
+          "definitions": {
+            "items": {
+              "$ref": "#/components/schemas/MetricDefinitionOut"
+            },
+            "title": "Definitions",
+            "type": "array"
+          },
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/FindingOut"
+            },
+            "title": "Findings",
+            "type": "array"
+          },
+          "from_day": {
+            "format": "date",
+            "title": "From Day",
+            "type": "string"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "platform_definitions": {
+            "items": {
+              "$ref": "#/components/schemas/MetricDefinitionOut"
+            },
+            "title": "Platform Definitions",
+            "type": "array"
+          },
+          "platforms": {
+            "items": {
+              "$ref": "#/components/schemas/PlatformFunnelOut"
+            },
+            "title": "Platforms",
+            "type": "array"
+          },
+          "reporting_currency": {
+            "title": "Reporting Currency",
+            "type": "string"
+          },
+          "reporting_timezone": {
+            "title": "Reporting Timezone",
+            "type": "string"
+          },
+          "rules": {
+            "$ref": "#/components/schemas/RulesOut"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceOut"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "stages": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/FigureOut"
+            },
+            "title": "Stages",
+            "type": "object"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/StepOut"
+            },
+            "title": "Steps",
+            "type": "array"
+          },
+          "store_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Store Id"
+          },
+          "to_day": {
+            "format": "date",
+            "title": "To Day",
+            "type": "string"
+          }
+        },
+        "required": [
+          "definition_version",
+          "reporting_currency",
+          "currency_minor_units",
+          "reporting_timezone",
+          "store_id",
+          "from_day",
+          "to_day",
+          "sources",
+          "conversions",
+          "notes",
+          "definitions",
+          "stages",
+          "steps",
+          "platforms",
+          "platform_definitions",
+          "channels",
+          "channels_missing",
+          "findings",
+          "rules"
+        ],
+        "title": "FunnelOut",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -3841,6 +4365,144 @@
           "last_error_code"
         ],
         "title": "JobOut",
+        "type": "object"
+      },
+      "LandingPageFunnelOut": {
+        "properties": {
+          "landing_page": {
+            "title": "Landing Page",
+            "type": "string"
+          },
+          "stages": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/FigureOut"
+            },
+            "title": "Stages",
+            "type": "object"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/StepOut"
+            },
+            "title": "Steps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "landing_page",
+          "stages",
+          "steps"
+        ],
+        "title": "LandingPageFunnelOut",
+        "type": "object"
+      },
+      "LandingPagesOut": {
+        "properties": {
+          "conversions": {
+            "items": {
+              "$ref": "#/components/schemas/ConversionOut"
+            },
+            "title": "Conversions",
+            "type": "array"
+          },
+          "currency_minor_units": {
+            "title": "Currency Minor Units",
+            "type": "integer"
+          },
+          "definition_version": {
+            "title": "Definition Version",
+            "type": "string"
+          },
+          "definitions": {
+            "items": {
+              "$ref": "#/components/schemas/MetricDefinitionOut"
+            },
+            "title": "Definitions",
+            "type": "array"
+          },
+          "from_day": {
+            "format": "date",
+            "title": "From Day",
+            "type": "string"
+          },
+          "item_count": {
+            "title": "Item Count",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LandingPageFunnelOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "items_missing": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FigureOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "reporting_currency": {
+            "title": "Reporting Currency",
+            "type": "string"
+          },
+          "reporting_timezone": {
+            "title": "Reporting Timezone",
+            "type": "string"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceOut"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "store_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Store Id"
+          },
+          "to_day": {
+            "format": "date",
+            "title": "To Day",
+            "type": "string"
+          }
+        },
+        "required": [
+          "definition_version",
+          "reporting_currency",
+          "currency_minor_units",
+          "reporting_timezone",
+          "store_id",
+          "from_day",
+          "to_day",
+          "sources",
+          "conversions",
+          "notes",
+          "definitions",
+          "items",
+          "item_count",
+          "items_missing"
+        ],
+        "title": "LandingPagesOut",
         "type": "object"
       },
       "LinkOut": {
@@ -4446,6 +5108,45 @@
         "title": "OverviewOut",
         "type": "object"
       },
+      "PlatformFunnelOut": {
+        "properties": {
+          "ad_accounts": {
+            "title": "Ad Accounts",
+            "type": "integer"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "stages": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/FigureOut"
+            },
+            "title": "Stages",
+            "type": "object"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/StepOut"
+            },
+            "title": "Steps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "provider",
+          "source",
+          "ad_accounts",
+          "stages",
+          "steps"
+        ],
+        "title": "PlatformFunnelOut",
+        "type": "object"
+      },
       "PlatformOut": {
         "properties": {
           "ad_accounts": {
@@ -5016,6 +5717,42 @@
         "title": "ResyncOut",
         "type": "object"
       },
+      "RulesOut": {
+        "properties": {
+          "baseline_days": {
+            "title": "Baseline Days",
+            "type": "integer"
+          },
+          "drop_share": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Drop Share",
+            "type": "string"
+          },
+          "min_events": {
+            "title": "Min Events",
+            "type": "integer"
+          },
+          "previous_from": {
+            "format": "date",
+            "title": "Previous From",
+            "type": "string"
+          },
+          "previous_to": {
+            "format": "date",
+            "title": "Previous To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "drop_share",
+          "min_events",
+          "baseline_days",
+          "previous_from",
+          "previous_to"
+        ],
+        "title": "RulesOut",
+        "type": "object"
+      },
       "SessionOut": {
         "properties": {
           "auth_method": {
@@ -5147,6 +5884,40 @@
           "status"
         ],
         "title": "StatusOut",
+        "type": "object"
+      },
+      "StepOut": {
+        "properties": {
+          "from_stage": {
+            "title": "From Stage",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "rate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FigureOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "to_stage": {
+            "title": "To Stage",
+            "type": "string"
+          }
+        },
+        "required": [
+          "from_stage",
+          "to_stage",
+          "kind",
+          "rate"
+        ],
+        "title": "StepOut",
         "type": "object"
       },
       "StoreAssignmentIn": {
@@ -7339,6 +8110,291 @@
         "summary": "Analytics Channels",
         "tags": [
           "unified analytics"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/analytics/funnel": {
+      "get": {
+        "description": "Impression → purchase for the period: each stage with its source, the steps (a rate only\nbetween stages of the same source), each platform's and channel's own funnel, and the\ndrop-offs found by fixed rules (funnel-v1).",
+        "operationId": "analytics_funnel_api_v1_organizations__organization_id__analytics_funnel_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "store_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Store Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_FunnelOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Analytics Funnel",
+        "tags": [
+          "funnel"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/analytics/funnel/campaigns": {
+      "get": {
+        "description": "Each campaign's funnel as its platform reports it, Google Analytics' funnel for the\ncampaign of the same name, and the other traffic.",
+        "operationId": "analytics_funnel_campaigns_api_v1_organizations__organization_id__analytics_funnel_campaigns_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "store_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Store Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_CampaignFunnelsOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Analytics Funnel Campaigns",
+        "tags": [
+          "funnel"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/analytics/funnel/landing-pages": {
+      "get": {
+        "description": "Google Analytics' funnel for each landing page, most visits first (at most 100).",
+        "operationId": "analytics_funnel_landing_pages_api_v1_organizations__organization_id__analytics_funnel_landing_pages_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "store_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Store Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_LandingPagesOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Analytics Funnel Landing Pages",
+        "tags": [
+          "funnel"
         ]
       }
     },

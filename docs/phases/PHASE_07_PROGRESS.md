@@ -9,7 +9,7 @@ Plan: `PHASE_07_PLAN.md` (approved 2026-10-22, A25, all recommendations Q-7-1 �
 | 7-03 Meta import: four action types, one-time re-read | ✅ Done — awaiting review |
 | 7-04 Funnel registry `funnel-v1` and engine | ✅ Done — awaiting review |
 | 7-05 Drop-off findings | ✅ Done — awaiting review |
-| 7-06 Funnel API | Not started |
+| 7-06 Funnel API | ✅ Done — awaiting review |
 | 7-07 Web app: Funnel page | Not started |
 | 7-08 Golden datasets, browser test, `PHASE_07_REPORT.md` | Not started |
 
@@ -131,3 +131,33 @@ Plan: `PHASE_07_PLAN.md` (approved 2026-10-22, A25, all recommendations Q-7-1 �
 **Blocked:** Step 0 (7-01) — live GA4 and Meta checks.
 
 **Next task:** 7-06 — the funnel API: `GET /analytics/funnel` (whole business, per platform, per channel, with findings), `/analytics/funnel/campaigns` (with "Other traffic") and `/analytics/funnel/landing-pages`.
+
+## 7-06 — Funnel API (2026-10-22)
+
+**Completed**
+- **`GET /analytics/funnel`** — for a period (30 days by default, in your reporting time zone), the whole organization or one store:
+  - the **seven stages with their source** and Google Analytics' purchases beside the store orders; the **steps** with their rate, or "different sources — no rate", or the store conversion rate;
+  - **each ad platform's own funnel** (Meta: every stage; Google Ads: impressions → clicks → conversions, the rest "not provided"), labelled "platform reported";
+  - **each Google Analytics channel's funnel**, most visits first;
+  - the **drop-off findings** of 7-05, with the rules used and the previous period's dates;
+  - as every analytics answer: definitions version `funnel-v1`, sources with freshness, currencies, notes, and the stages' definitions for "How is this calculated?".
+- **`GET /analytics/funnel/campaigns`** — each campaign's own funnel as its platform reports it, and Google Analytics' funnel for the campaign of **exactly the same name**; visits that match no campaign are **"Other traffic"**, and the answer includes the **website** total, so campaigns plus other traffic always add up (two campaigns of the same name share their match, counted once, and say so).
+- **`GET /analytics/funnel/landing-pages`** — Google Analytics' funnel for each landing page (paths only), most visits first, at most 100; "not synced yet" until the property's one-time re-read is done.
+- Every member can read; another organization's data or store is "not found"; invalid periods are refused.
+
+**Files changed** (13)
+- New (6): `app/domains/funnel/{breakdowns,schemas,read_service,router}.py`, `tests/api/test_funnel_api.py` (9 tests), docs `API_SPECIFICATION.md` §19G.
+- Modified (7): `app/domains/funnel/{engine,findings}.py` (two helpers made public), `app/api/router.py`, `tests/security/test_static_rules.py` (the read-only rule now checks database write imports precisely), `frontend/lib/api/{openapi.json,schema.d.ts}` (generated); this report and `PROJECT_STATUS.md`.
+- Deleted: none. No migration.
+
+**Tests**
+- **9 new**; the tenant-isolation sweep covers the three new routes.
+- **Backend `make check`: 1,622 passed**, coverage 97 %. **Frontend `npm run check`: 404 passed** (types regenerated).
+
+**Security:** reads only; membership on the server; row-level security plus explicit organization filters; a foreign `store_id` is a 404.
+
+**Deviations:** none.
+
+**Blocked:** Step 0 (7-01) — live GA4 and Meta checks.
+
+**Next task:** 7-07 — web app: the Funnel page (stages as bars with their source, steps with rates or "different sources", findings in plain words, views per platform, channel, campaign and landing page, "How is this calculated?").

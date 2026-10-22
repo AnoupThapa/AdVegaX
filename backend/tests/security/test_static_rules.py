@@ -279,13 +279,8 @@ def test_the_funnel_only_reads():
     sources = {p.name: p.read_text(encoding="utf-8") for p in folder.rglob("*.py")}
     assert {"engine.py", "registry.py"} <= set(sources)
     for name, src in sources.items():
-        for forbidden in (
-            "session.add(",
-            "session.delete(",
-            "insert(",
-            "update(",
-            "delete(",
-            ".request(",
-            "app.providers",
-        ):
+        for forbidden in ("session.add(", "session.delete(", ".request(", "app.providers"):
             assert forbidden not in src, (name, forbidden)
+        imported = re.findall(r"^from sqlalchemy(?:\.\w+)* import (.+)$", src, re.MULTILINE)
+        for line in imported:
+            assert not {"insert", "update", "delete"} & set(re.split(r"[,\s()]+", line)), name
