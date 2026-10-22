@@ -8,7 +8,7 @@ Plan: `PHASE_07_PLAN.md` (approved 2026-10-22, A25, all recommendations Q-7-1 �
 | 7-02 Migration 0017; GA4 import: new metrics, landing-page view, one-time re-read | ✅ Done — awaiting review |
 | 7-03 Meta import: four action types, one-time re-read | ✅ Done — awaiting review |
 | 7-04 Funnel registry `funnel-v1` and engine | ✅ Done — awaiting review |
-| 7-05 Drop-off findings | Not started |
+| 7-05 Drop-off findings | ✅ Done — awaiting review |
 | 7-06 Funnel API | Not started |
 | 7-07 Web app: Funnel page | Not started |
 | 7-08 Golden datasets, browser test, `PHASE_07_REPORT.md` | Not started |
@@ -101,3 +101,33 @@ Plan: `PHASE_07_PLAN.md` (approved 2026-10-22, A25, all recommendations Q-7-1 �
 **Blocked:** Step 0 (7-01) — live GA4 and Meta checks.
 
 **Next task:** 7-05 — drop-off findings (Q-7-7): a same-source step at least 25 % below the previous equal period **and** below its own 90-day average, with at least 200 events before it, written in plain words.
+
+## 7-05 — Drop-off findings (2026-10-22)
+
+**Completed**
+- **`app/domains/funnel/findings.py`** — fixed rules, no AI, a business compared **with itself** (Q-7-7). A step is flagged only when:
+  1. both its stages come from the same source (ad clicks → website visits is never judged);
+  2. its earlier stage had **at least 200 events** in the period (small numbers never alarm);
+  3. its rate is **at least 25 % lower** than in the previous period of equal length; **and**
+  4. its rate is **below its own average over the 90 days before the period**.
+- Every rate involved must be available: a missing day, a stage not provided, a zero divisor or a business with less history than needed is **never** flagged.
+- Applied to the whole business, **each ad platform's own funnel** and **each Google Analytics channel**; findings are listed largest fall first.
+- Each finding carries its numbers — the step, its rate now, in the previous period and on average, the events before it and the change — so the web app can say it in plain words ("Adds to cart fell from 25 % to 15 % of product views, compared with the previous 7 days") and Phase 8/11 can read it later.
+- The three numbers are settings: `FUNNEL_DROP_SHARE` (0.25), `FUNNEL_MIN_EVENTS` (200), `FUNNEL_BASELINE_DAYS` (90).
+
+**Files changed** (5)
+- New (2): `app/domains/funnel/findings.py`, `tests/unit/test_funnel_findings.py` (11 tests).
+- Modified (3): `app/core/settings.py`; this report, `PROJECT_STATUS.md`.
+- Deleted: none. No migration.
+
+**Tests**
+- **11 new**: a clear drop with its numbers, a steady funnel, a small drop, small numbers, a fall that stays above the usual level, a platform's own drop, missing days, too little history, ordering, settings.
+- **Backend `make check`: 1,614 passed**, coverage 97 %.
+
+**Security:** computation only; the funnel's read-only static check covers this file.
+
+**Deviations:** the "own 90-day average" is the 90 days **before** the period (so the period is never compared with itself), and it includes the previous period.
+
+**Blocked:** Step 0 (7-01) — live GA4 and Meta checks.
+
+**Next task:** 7-06 — the funnel API: `GET /analytics/funnel` (whole business, per platform, per channel, with findings), `/analytics/funnel/campaigns` (with "Other traffic") and `/analytics/funnel/landing-pages`.

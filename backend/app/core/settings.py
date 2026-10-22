@@ -7,6 +7,7 @@ No other module may hard-code session/token lifetimes or throttling limits.
 from __future__ import annotations
 
 from datetime import timedelta
+from decimal import Decimal
 from enum import StrEnum
 from functools import lru_cache
 from typing import Annotated
@@ -284,6 +285,12 @@ class Settings(BaseSettings):
     COMMERCE_FETCH_COALESCE: timedelta = timedelta(minutes=5)
     # Longest period one daily-figures request may cover (2A-09).
     METRICS_MAX_DAYS: int = Field(default=400, ge=1, le=1000)
+    # Funnel drop-off findings (Phase 7, Q-7-7): a same-source step at least this share lower
+    # than the previous equal period and below its own average over the baseline days before
+    # the period, with at least this many events in its earlier stage.
+    FUNNEL_DROP_SHARE: Decimal = Field(default=Decimal("0.25"), gt=0, lt=1)
+    FUNNEL_MIN_EVENTS: int = Field(default=200, ge=1)
+    FUNNEL_BASELINE_DAYS: int = Field(default=90, ge=7, le=365)
 
     # --- Webhook intake (Phase 2A, 2A-05; PHASE_02A_PLAN §7) ----------------------------
     # Deliveries triggered longer ago than this are refused (replay limit). Shopify retries
