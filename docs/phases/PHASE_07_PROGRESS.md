@@ -92,7 +92,7 @@ Plan: `PHASE_07_PLAN.md` (approved 2026-10-22, A25, all recommendations Q-7-1 â€
 
 **Tests**
 - **11 new**.
-- **Backend `make check`: 1,603 passed**, coverage 97 %.
+- **Backend `make check`: 1,603 passed**, coverage 96 % (the run also counted the not-yet-tested draft of 7-05's findings file).
 
 **Security:** reads only; tenant scope from Phase 6 (row-level security plus explicit organization filters).
 
