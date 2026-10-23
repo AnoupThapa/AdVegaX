@@ -1,8 +1,8 @@
 # AdVegaX — Project Status & Progress Log
 
-**Last updated:** 2026-10-21
-**Current phase:** Phase 6 (unified analytics and financial engine) implemented — awaiting product-owner review (`phases/PHASE_06_REPORT.md`; Step 0 live rate feeds pending) · Phase 5 (Google Analytics 4, read-only) implemented against the simulator — awaiting product-owner review (`phases/PHASE_05_REPORT.md`; Step 0 live checks pending) · Phase 4 (Meta Ads, read-only) implemented against the simulator — awaiting product-owner review (`phases/PHASE_04_REPORT.md`; Step 0 live checks pending) · Phase 3 (Google Ads, read-only) implemented against the simulator — awaiting product-owner review (`phases/PHASE_03_REPORT.md`; Step 0 live checks pending) · Phases 2A and 2B implemented against simulators and reviewed (A20; live checks pending) · Phase 1 (1A, 1B, 1C) implemented — awaiting product-owner review
-**Code written:** Phase 1A + 1B backend, Phase 1C web application, Phase 2A (Shopify), 2B (WooCommerce), 3 (Google Ads), 4 (Meta), 5 (Google Analytics) and 6 (unified analytics) · **Migrations:** 0001–0016 · **Integrations:** Shopify, WooCommerce, Google Ads, Meta and Google Analytics connectors (simulator-tested; not yet tried live) · test (fake) platform
+**Last updated:** 2026-10-23
+**Current phase:** Phase 7 (funnel intelligence) implemented — awaiting product-owner review (`phases/PHASE_07_REPORT.md`; Step 0 live checks pending) · Phase 6 (unified analytics and financial engine) implemented — awaiting product-owner review (`phases/PHASE_06_REPORT.md`; Step 0 live rate feeds pending) · Phase 5 (Google Analytics 4, read-only) implemented against the simulator — awaiting product-owner review (`phases/PHASE_05_REPORT.md`; Step 0 live checks pending) · Phase 4 (Meta Ads, read-only) implemented against the simulator — awaiting product-owner review (`phases/PHASE_04_REPORT.md`; Step 0 live checks pending) · Phase 3 (Google Ads, read-only) implemented against the simulator — awaiting product-owner review (`phases/PHASE_03_REPORT.md`; Step 0 live checks pending) · Phases 2A and 2B implemented against simulators and reviewed (A20; live checks pending) · Phase 1 (1A, 1B, 1C) implemented — awaiting product-owner review
+**Code written:** Phase 1A + 1B backend, Phase 1C web application, Phase 2A (Shopify), 2B (WooCommerce), 3 (Google Ads), 4 (Meta), 5 (Google Analytics), 6 (unified analytics) and 7 (funnel) · **Migrations:** 0001–0017 · **Integrations:** Shopify, WooCommerce, Google Ads, Meta and Google Analytics connectors (simulator-tested; not yet tried live) · test (fake) platform
 
 Update this file at the end of every phase and every approved sub-phase (ROADMAP §5, step 13).
 
@@ -22,7 +22,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | 4 | Meta (read-only) | ✅ **Implemented against the Meta simulator — awaiting review**; Step 0 (4-01) waits for the Meta app and network access | 1,301 backend + 370 frontend + 13 end-to-end tests; `phases/PHASE_04_REPORT.md` |
 | 5 | GA4 (read-only) | ✅ **Implemented against the GA4 simulator — awaiting review**; Step 0 (5-01) waits for the Analytics APIs, a GA4 property and network access | 1,488 backend + 387 frontend + 14 end-to-end tests; `phases/PHASE_05_REPORT.md` |
 | 6 | Unified analytics & financial engine | ✅ **Implemented against recorded exchange rates — awaiting review**; Step 0 (6-01) waits for network access to the ECB and NRB feeds | 1,580 backend + 404 frontend + 15 end-to-end tests; `phases/PHASE_06_REPORT.md` |
-| 7 | Funnel intelligence | **Approved (A25) — in progress** (Step 0 waits for live GA4 and Meta access) | `phases/PHASE_07_PLAN.md`, `phases/PHASE_07_PROGRESS.md` |
+| 7 | Funnel intelligence | ✅ **Implemented against the simulators — awaiting review**; Step 0 (7-01) waits for live GA4 and Meta access | 1,627 backend + 411 frontend + 15 end-to-end tests; `phases/PHASE_07_REPORT.md` |
 | 8 | AI campaign planner | Not started | Needs Q12 |
 | 9 | Creative engine | Not started | |
 | 10A | Action Engine | Not started | |
@@ -133,6 +133,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | 2026-10-22 | **7-05** Drop-off findings (Q-7-7): a same-source step ≥ 25 % below the previous equal period and below its own 90-day average, with ≥ 200 events before it; whole business, each platform, each GA4 channel; never on missing data; settings `FUNNEL_*`; 11 tests; 1,614 backend tests pass | `phases/PHASE_07_PROGRESS.md` |
 | 2026-10-22 | **7-06** Funnel API: `GET /analytics/funnel` (stages with sources, steps, per platform, per GA4 channel, findings and rules), `/analytics/funnel/campaigns` (platform funnel + GA4 match by exact name, "Other traffic", website total that adds up) and `/analytics/funnel/landing-pages`; 9 tests; 1,622 backend + 404 frontend tests pass | `phases/PHASE_07_PROGRESS.md`, `API_SPECIFICATION.md` §19G |
 | 2026-10-22 | **7-07** Web app Funnel page: stages as bars with their sources, steps with rates or "different sources", drop-off findings in plain words, views by platform, GA4 channel, campaign (+ Other traffic, Website) and landing page, "How is this calculated?"; 411 frontend + 15 browser tests pass | `phases/PHASE_07_PROGRESS.md` |
+| 2026-10-23 | **7-08** Golden drop-off dataset through the API, reconciliation with the Overview and the property page, campaigns + other traffic = website, performance (90-day funnel with findings ≈ 0.3 s); **Phase 7 implemented — awaiting review**; 1,627 backend + 411 frontend + 15 browser tests pass | `phases/PHASE_07_REPORT.md` |
 | 2026-10-08 | **Phase 1B implemented**: connections/resources/links, encrypted credentials, SSRF-safe client, rate limiter, provider framework + fake platform, jobs with retry/dead-letter, single scheduler, audited denials | `backend/`, `phases/PHASE_01B_REPORT.md`, `SECURITY.md`, `INTEGRATION_GUIDES.md` |
 
 ## 3. Decision log
@@ -161,7 +162,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | A22 | Phase 4 plan with all §2 recommendations (Q-4-1 … Q-4-12); live-testing option C | Approved 2026-10-18 ("Approve all") — implemented 2026-10-19 (`phases/PHASE_04_REPORT.md`) |
 | A23 | Phase 5 plan with all §2 recommendations (Q11 settled: daily aggregates + Admin API discovery; Q-5-1 … Q-5-11); live-testing option C | Approved 2026-10-19 ("Approve all") — implemented 2026-10-20 (`phases/PHASE_05_REPORT.md`) |
 | A24 | Phase 6 plan with all §2 recommendations (Q-6-1 … Q-6-13, completing Q7) | Approved 2026-10-20 ("Approve all") — implemented, awaiting review |
-| A25 | Phase 7 plan with all §2 recommendations (Q-7-1 … Q-7-9) | Approved 2026-10-22 ("Approve all") — in progress |
+| A25 | Phase 7 plan with all §2 recommendations (Q-7-1 … Q-7-9) | Approved 2026-10-22 ("Approve all") — implemented, awaiting review |
 | A21 | Phase 3 plan with all §2 recommendations (Q-3-1 … Q-3-11); live-testing option C | Approved 2026-10-15 ("Approve all") — implemented 2026-10-18, awaiting review |
 | A20 | Phase 2A and 2B reports reviewed by the product owner; continue to Phase 3 planning | Reviewed 2026-10-15 ("reviewed pls continue") |
 | A18 | Phase 2A plan v2 with all §2 recommendations (Q5–Q9, D-2A-1…3); live-testing option C | Approved 2026-10-13 — implemented, awaiting review (live checks pending) |

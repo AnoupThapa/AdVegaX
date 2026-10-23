@@ -266,6 +266,15 @@ def test_a_large_organization_is_read_quickly(runtime, make_client, admin_engine
     assert data["totals"]["net_sales"]["value"] is not None
     print(f"\n390-day overview, 5 stores / 10 ad accounts / 5 properties: {elapsed:.2f} s")
     assert elapsed < 15  # generous for CI machines; measured times are in PHASE_06_REPORT
+    # Phase 7 (7-08): the funnel of the last 90 days, with its findings (which also read the
+    # previous 90 days and the 90-day baseline before the period).
+    started = time.perf_counter()
+    response = c.get(f"/organizations/{c.org}/analytics/funnel?from={days[-90]}&to={days[-1]}")
+    elapsed = time.perf_counter() - started
+    assert response.status_code == 200, response.text
+    assert response.json()["data"]["stages"]["landing_page_views"]["value"] is not None
+    print(f"90-day funnel with findings, same organization: {elapsed:.2f} s")
+    assert elapsed < 15
 
 
 # ------------------------------------------------------------------ computed on read (criterion 3)
