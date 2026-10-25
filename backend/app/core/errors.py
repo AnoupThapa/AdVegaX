@@ -121,6 +121,30 @@ class ServiceUnavailable(AppError):
     message = "The service is temporarily unavailable."
 
 
+class AiLimitReached(AppError):
+    """Phase 8: the organization's daily number of AI runs is used up (Q-8-8)."""
+
+    status_code = 429
+    code = "AI_LIMIT_REACHED"
+    message = "Today's AI planning limit for this organization is reached. Try again tomorrow."
+
+
+class AiUnavailableError(AppError):
+    """Phase 8: the AI provider did not answer (down, overloaded, time limit, not set up)."""
+
+    status_code = 503
+    code = "AI_UNAVAILABLE"
+    message = "The AI planner is not available right now. Try again later."
+
+
+class AiAnswerRejected(AppError):
+    """Phase 8: the model's answer failed AdVegaX's checks twice; ``details`` say why."""
+
+    status_code = 422
+    code = "AI_ANSWER_REJECTED"
+    message = "The AI's answer did not pass AdVegaX's checks, so nothing was saved."
+
+
 def error_body(
     code: str, message: str, details: list[dict[str, Any]] | None = None
 ) -> dict[str, Any]:

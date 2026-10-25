@@ -284,3 +284,24 @@ def test_the_funnel_only_reads():
         imported = re.findall(r"^from sqlalchemy(?:\.\w+)* import (.+)$", src, re.MULTILINE)
         for line in imported:
             assert not {"insert", "update", "delete"} & set(re.split(r"[,\s()]+", line)), name
+
+
+def test_the_ai_calls_one_fixed_address_and_offers_the_model_no_tools():
+    """Phase 8 (8-02, A12): one request in the AI code, a POST to the Messages API without
+    redirects; the model gets no tools; the API key is read only where the adapter is built."""
+    folder = APP / "domains" / "ai"
+    sources = {p.name: p.read_text(encoding="utf-8") for p in folder.rglob("*.py")}
+    calls = {name: src.count(".request(") for name, src in sources.items() if ".request(" in src}
+    assert calls == {"anthropic.py": 1}
+    src = sources["anthropic.py"]
+    assert 'HOST = "api.anthropic.com"' in src and 'PATH = "/v1/messages"' in src
+    assert '"POST",' in src and "follow_redirects=False" in src
+    assert '"tools"' not in src and "tool_choice" not in src
+    readers = sorted(
+        path.relative_to(APP).as_posix()
+        for path, text_ in _sources()
+        if "ANTHROPIC_API_KEY" in text_
+    )
+    assert readers == ["core/settings.py", "domains/ai/runs.py"]
+    for name, text_ in sources.items():
+        assert "get_secret_value()" not in text_ or name == "anthropic.py", name

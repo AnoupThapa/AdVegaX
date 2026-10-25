@@ -91,6 +91,11 @@ const MESSAGES: Readonly<Record<string, string>> = {
   PAYLOAD_TOO_LARGE: "The request is too large.",
   UNSUPPORTED_MEDIA_TYPE: "This request format is not supported.",
   RATE_LIMITED: "Too many attempts. Please wait a few minutes and try again.",
+  AI_LIMIT_REACHED:
+    "Today's AI planning limit for this organization is reached. Please try again tomorrow.",
+  AI_UNAVAILABLE: "The AI planner is not available right now. Please try again later.",
+  AI_ANSWER_REJECTED:
+    "The AI's answer did not pass AdVegaX's checks, so nothing was saved. Please try again.",
   INTERNAL_ERROR: "Something went wrong on our side. Please try again.",
   SERVICE_UNAVAILABLE: "The service is temporarily unavailable. Please try again shortly.",
   HTTP_ERROR: "This request could not be completed. Please try again.",

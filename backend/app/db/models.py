@@ -10,6 +10,7 @@ from app.domains.advertising.models import (
     AdPerformanceDaily,
     AdSyncState,
 )
+from app.domains.ai.models import AiModel, AiRun, CampaignStrategy, PromptVersion
 from app.domains.analytics.models import AnalyticsDaily, AnalyticsProperty, AnalyticsSyncState
 from app.domains.audit.models import AuditLog, SecurityEvent
 from app.domains.commerce.models import (
@@ -46,11 +47,14 @@ __all__ = [
     "AdGroup",
     "AdPerformanceDaily",
     "AdSyncState",
+    "AiModel",
+    "AiRun",
     "AnalyticsDaily",
     "AnalyticsProperty",
     "AnalyticsSyncState",
     "AuditLog",
     "Base",
+    "CampaignStrategy",
     "CommerceSyncState",
     "EmailOutbox",
     "ExternalConnection",
@@ -68,6 +72,7 @@ __all__ = [
     "Product",
     "ProductCostHistory",
     "ProductVariant",
+    "PromptVersion",
     "Refund",
     "RefundItem",
     "SalesEntry",

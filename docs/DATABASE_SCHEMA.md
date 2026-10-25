@@ -592,6 +592,18 @@ The reporting currency and time zone are the organization's existing `default_cu
 
 **analytics_properties.funnel_reread_at**, **ad_accounts.funnel_reread_at** — when the source was read with these figures: its first import, or the one-time background re-read (sync mode `reread`, added to both sync-state checks) of a source imported before Phase 7.
 
+## 14A. AI planner — as built (Phase 8, migration 0018; A26)
+
+Supersedes the `ai_models`, `prompt_versions` and `ai_runs` outlines in §14 below (kept for history; `recommendations` there is Phase 9).
+
+**ai_models** (reference data, no RLS; the application may read and add rows, never change or delete them) — `provider`, `model_name`, `created_at`; unique (`provider`, `model_name`). A row is added the first time a model is used.
+
+**prompt_versions** (reference data, no RLS; read and add only) — `name`, `version`, `template_hash` (SHA-256 of the system text and the template, 64 characters), `created_at`; unique (`name`, `version`). The prompt text lives in code (`app/domains/ai/prompts.py`), reviewed like code; a run whose text no longer matches the stored hash for its version is refused.
+
+**ai_runs** (tenant-owned, forced RLS; the application may read and insert only — runs are never changed or deleted) — `organization_id`, `user_id` (SET NULL), `model_id`, `prompt_version_id`, `task` (`campaign_strategy`), `context_snapshot` (JSONB: AdVegaX's own aggregated figures sent to the model — never personal data or secrets), `status` (`succeeded` | `rejected` | `failed` | `timed_out`), `output_json` (the accepted answer, else NULL), `rejection_reasons` (JSONB list of plain message keys, never the model's text), `attempts` (1–5; at most `AI_MAX_RETRIES` + 1), `input_tokens`, `output_tokens`, `estimated_cost` (USD, NULL when no price is configured — never 0), `latency_ms`, `created_at` (the application clock; the daily limit counts rows per UTC day). Unique (`organization_id`, `id`) for composite references; index (`organization_id`, `created_at`).
+
+**campaign_strategies** (tenant-owned, forced RLS; read, insert and update — archived, never deleted) — `organization_id`, `product_id` and `ai_run_id` (composite foreign keys within the organization), `status` (`draft` | `ready` | `archived`), `strategy` (JSONB, the validated answer as edited), `budget_amount` (> 0), `budget_period` (`daily` | `monthly`), `budget_currency` (3 letters), `budget_amounts` (JSONB, the amounts AdVegaX computed from the AI's percentages, per platform), `created_by`, `edited_by`, `edited_at`, timestamps; index (`organization_id`, `status`). Used from 8-05.
+
 ## 14. AI Tables
 
 ### ai_models

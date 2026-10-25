@@ -48,6 +48,8 @@ from sqlalchemy import Engine, create_engine, text  # noqa: E402
 from tests.helpers import ApiClient  # noqa: E402
 
 TABLES = (
+    "ai_models",  # shared reference data (Phase 8): which model and prompt version a run used
+    "prompt_versions",
     "fx_rates",  # shared reference data (Phase 6), cleared like the rest between tests
     "job_runs",
     "organization_resource_links",

@@ -232,6 +232,19 @@ class Settings(BaseSettings):
     FX_MAX_STALE_DAYS: timedelta = timedelta(days=7)
     SCHEDULE_FX_INTERVAL: timedelta = timedelta(hours=6)
 
+    # --- AI campaign planner (Phase 8, PHASE_08_PLAN Q-8-1 … Q-8-8; A26) ---------------------
+    # Off until the deployment has an API key. The key lives only in the settings file.
+    AI_ENABLED: bool = False
+    ANTHROPIC_API_KEY: SecretStr | None = None
+    AI_MODEL: str = Field(default="claude-sonnet-5-5", pattern=r"^[a-z0-9][a-z0-9.\-]{2,63}$")
+    AI_MAX_OUTPUT_TOKENS: int = Field(default=4000, ge=256, le=32000)
+    AI_TIMEOUT: timedelta = timedelta(seconds=60)
+    AI_DAILY_RUNS: int = Field(default=20, ge=1, le=10000)  # per organization and UTC day
+    AI_MAX_RETRIES: int = Field(default=1, ge=0, le=2)  # an invalid answer is retried this often
+    # USD per million tokens, for the usage estimate; None = no estimate is shown.
+    AI_PRICE_INPUT_PER_MTOK: Decimal | None = None
+    AI_PRICE_OUTPUT_PER_MTOK: Decimal | None = None
+
     # --- Advertising import (Phase 3; PHASE_03_PLAN §9) ---------------------------------
     ADS_HISTORY_WINDOW: timedelta = timedelta(days=395)  # 13 months on first link (Q-3-6)
     # Ongoing sync (Q-3-5, task 3-07): every 3 hours structure + today and yesterday; nightly
@@ -350,6 +363,7 @@ class Settings(BaseSettings):
             "FX_FETCH_SLICE": self.FX_FETCH_SLICE,
             "FX_MAX_STALE_DAYS": self.FX_MAX_STALE_DAYS,
             "SCHEDULE_FX_INTERVAL": self.SCHEDULE_FX_INTERVAL,
+            "AI_TIMEOUT": self.AI_TIMEOUT,
             "ANALYTICS_QUICK_WINDOW": self.ANALYTICS_QUICK_WINDOW,
             "ANALYTICS_NIGHTLY_WINDOW": self.ANALYTICS_NIGHTLY_WINDOW,
             "ANALYTICS_WEEKLY_WINDOW": self.ANALYTICS_WEEKLY_WINDOW,
