@@ -24,6 +24,8 @@ from dataclasses import dataclass
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 FORMATS = {"JPEG": "image/jpeg", "PNG": "image/png", "WEBP": "image/webp"}
+PNG_MODES = frozenset({"RGB", "RGBA", "L", "LA"})  # kept as they are; others become RGBA
+WEBP_MODES = frozenset({"RGB", "RGBA"})
 
 
 class ImageRejected(Exception):
@@ -72,10 +74,10 @@ def clean_image(data: bytes, *, max_bytes: int, min_side: int, max_pixels: int) 
     if fmt == "JPEG":
         picture.convert("RGB").save(out, format="JPEG", quality=90, optimize=True)
     elif fmt == "PNG":
-        keep = picture if picture.mode in ("RGB", "RGBA", "L", "LA") else picture.convert("RGBA")
+        keep = picture if picture.mode in PNG_MODES else picture.convert("RGBA")
         keep.save(out, format="PNG", optimize=True)
     else:
-        keep = picture if picture.mode in ("RGB", "RGBA") else picture.convert("RGBA")
+        keep = picture if picture.mode in WEBP_MODES else picture.convert("RGBA")
         keep.save(out, format="WEBP", quality=90)
     content = out.getvalue()
     return CleanImage(

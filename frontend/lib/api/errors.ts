@@ -12,6 +12,9 @@ export type ApiErrorDetail = {
   /** AdVegaX's own checks: which field and what is wrong with it (e.g. a strategy, 8-05). */
   readonly field?: string;
   readonly issue?: string;
+  /** More about a check that failed, e.g. the limit or the word (9-05). */
+  readonly detail?: string | null;
+  readonly severity?: string;
 };
 
 export type ApiErrorBody = {

@@ -30,6 +30,15 @@ export const fail = (status: number, code: string, details: unknown[] = []) =>
     meta: { request_id: "req-err" },
   });
 
+/** JSON bodies are parsed; anything else (a multipart upload) is kept as text. */
+function parseBody(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
+
 export function mockApi(routes: Record<string, Handler | Response>) {
   const calls: MockCall[] = [];
   const handlers = new Map<string, Handler>(
@@ -46,7 +55,7 @@ export function mockApi(routes: Record<string, Handler | Response>) {
     const call: MockCall = {
       method: request.method,
       path: url.pathname,
-      body: text ? JSON.parse(text) : null,
+      body: text ? parseBody(text) : null,
       csrf: request.headers.get("X-CSRF-Token"),
       query: url.searchParams,
     };

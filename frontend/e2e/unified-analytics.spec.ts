@@ -1,3 +1,5 @@
+import path from "node:path";
+
 import { createOrganization, registeredUser } from "./support/actions";
 import { uniqueEmail } from "./support/env";
 import { expect, expectAccessible, test } from "./support/fixtures";
@@ -6,6 +8,7 @@ import { connectSimulatedGoogleAds } from "./support/google_ads";
 import { connectSimulatedGoogleAnalytics } from "./support/google_analytics";
 import { connectSimulatedMeta } from "./support/meta_ads";
 import { connectSimulatedStore } from "./support/shopify";
+import { createSimulatedCreatives } from "./support/creatives";
 import { createSimulatedStrategy } from "./support/strategy";
 
 /**
@@ -16,7 +19,9 @@ import { createSimulatedStrategy } from "./support/strategy";
  * time-zone note; Reports show each platform's own figures, the campaigns with their Google
  * Analytics match, and the products. Phase 8 (8-07): a campaign strategy made with the AI
  * simulator shows its amounts and the figures behind it, is edited, marked ready and archived;
- * asking for a new one while this installation's planner is off says so plainly. Every page passes the accessibility check, and no
+ * asking for a new one while this installation's planner is off says so plainly. Phase 9 (9-07):
+ * creatives drafted from a ready strategy are previewed with their checks, one is approved and
+ * one rejected with a reason, and an image is uploaded to the private image library. Every page passes the accessibility check, and no
  * platform token ever reaches a page.
  */
 test("sales, ad spend and profit are shown together, honestly", async ({ newPerson }) => {
@@ -158,6 +163,56 @@ test("sales, ad spend and profit are shown together, honestly", async ({ newPers
       /AI planner is not available right now|cannot be made for this product/,
     );
     await expectAccessible(page, "new strategy refused");
+  });
+
+  await test.step("creatives from a ready strategy are checked, approved or rejected", async () => {
+    const { strategyId, productTitle } = createSimulatedStrategy(email, orgUrl);
+    await page.goto(`${orgUrl}/strategies/${strategyId}`);
+    await page.getByRole("button", { name: "Mark ready for the campaign builder" }).click();
+    await expect(page.getByText("Ready for the campaign builder")).toBeVisible();
+    await page.getByRole("button", { name: "Make creatives" }).click();
+    await expect(page.getByRole("region", { name: "Creatives" }).getByRole("alert")).toContainText(
+      "AI planner is not available right now",
+    );
+    const setId = createSimulatedCreatives(email, orgUrl, strategyId);
+    await page.goto(`${orgUrl}/creatives/${setId}`);
+    await expect(
+      page.getByRole("heading", { name: `Creatives for ${productTitle}` }),
+    ).toBeVisible();
+    const google = page
+      .getByRole("listitem")
+      .filter({ has: page.getByRole("heading", { name: /^Google Ads: / }) });
+    await expect(google.getByLabel("Google Ads preview")).toContainText(
+      "Gloves in Bulk | Order by the Box",
+    );
+    await expect(google).toContainText("Passes every AdVegaX check.");
+    await expectAccessible(page, "creative set");
+    await google.getByRole("button", { name: "Approve" }).click();
+    await expect(google).toContainText("Approved");
+    const meta = page
+      .getByRole("listitem")
+      .filter({ has: page.getByRole("heading", { name: /^Meta: / }) });
+    await meta.getByRole("button", { name: "Reject" }).click();
+    await meta.getByLabel("Why is it rejected?").fill("Too generic for our customers.");
+    await meta.getByRole("button", { name: "Reject this version" }).click();
+    await expect(meta).toContainText("Why it was rejected: Too generic for our customers.");
+    await expectAccessible(page, "creative set after decisions");
+    pages.push(await page.content());
+  });
+
+  await test.step("an image is checked, cleaned and kept private", async () => {
+    await page.getByRole("link", { name: "Creatives", exact: true }).click();
+    await page
+      .getByLabel("Add an image")
+      .setInputFiles(path.join(__dirname, "fixtures", "gloves.png"));
+    const library = page.getByRole("list", { name: "Images" });
+    await expect(library.getByRole("img", { name: "gloves.png" })).toBeVisible();
+    await expect(library).toContainText("700 × 700");
+    await expectAccessible(page, "creatives and images");
+    pages.push(await page.content());
+    await page.getByRole("link", { name: "Settings", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Creative rules" })).toBeVisible();
+    await expectAccessible(page, "settings with creative rules");
   });
 
   for (const html of pages) {

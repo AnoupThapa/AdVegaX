@@ -17,7 +17,8 @@ export function createSimulatedStrategy(
   const output = execFileSync("uv", args, {
     cwd: backend,
     encoding: "utf8",
-    env: { ...process.env, LOG_LEVEL: "WARNING" },
+    // Several helpers sign in as the same person within a minute: allow it in this helper only.
+    env: { ...process.env, LOG_LEVEL: "WARNING", THROTTLE_LOGIN_PER_ACCOUNT_IP_PER_MINUTE: "50" },
     stdio: ["ignore", "pipe", "inherit"],
     timeout: 120_000,
   });

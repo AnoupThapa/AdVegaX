@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useId, useState, type FormEvent } from "react";
 
 import { Alert } from "@/components/ui/Alert";
@@ -20,7 +20,9 @@ import {
 } from "@/features/organizations/OrganizationShell";
 import type { Organization } from "@/features/organizations/api";
 import { formatDateTime } from "@/features/organizations/options";
-import { canManageStrategies } from "@/features/organizations/permissions";
+import { useCreativeSets, useGenerateCreatives } from "@/features/creatives/api";
+import { creativeReasonText } from "@/features/creatives/labels";
+import { canManageCreatives, canManageStrategies } from "@/features/organizations/permissions";
 import { ApiError, messageFor } from "@/lib/api/errors";
 import type { Availability } from "@/lib/format/availability";
 import { formatMoney } from "@/lib/format/money";
@@ -43,6 +45,7 @@ import {
   TARGETS,
   campaignType,
   errorReasons,
+  reasonText,
   statusLabel,
 } from "./labels";
 import own from "./strategies.module.css";
@@ -383,6 +386,70 @@ function Actions({
   );
 }
 
+/** Phase 9: ad copy is drafted from a strategy marked ready; the sets made so far. */
+function StrategyCreatives({ org, strategy }: { org: Organization; strategy: Strategy }) {
+  const router = useRouter();
+  const sets = useCreativeSets(org.id, strategy.id);
+  const generate = useGenerateCreatives(org.id);
+  const error = generate.error;
+  const reasons =
+    error instanceof ApiError
+      ? error.details.map((d) =>
+          d.reason ? (creativeReasonText(d.reason) ?? reasonText(d.reason)) : "",
+        )
+      : [];
+  return (
+    <section aria-labelledby="strategy-creatives" className={styles.section}>
+      <h2 id="strategy-creatives">Creatives</h2>
+      {sets.data && sets.data.length ? (
+        <ul>
+          {sets.data.map((s) => (
+            <li key={s.id}>
+              <Link href={`/orgs/${org.id}/creatives/${s.id}`}>
+                Drafted on {formatDateTime(s.created_at)}
+              </Link>{" "}
+              — {s.approved} of {s.concepts} approved
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className={styles.muted}>No creatives yet.</p>
+      )}
+      {strategy.status !== "ready" ? (
+        <p className={styles.muted}>Mark the strategy ready to make creatives from it.</p>
+      ) : canManageCreatives(org.role) ? (
+        <>
+          {error ? (
+            <Alert tone="error" requestId={error instanceof ApiError ? error.requestId : null}>
+              <p>{messageFor(error)}</p>
+              {reasons.length ? (
+                <ul className={own.reasons}>
+                  {reasons.map((r, i) => (
+                    <li key={`r-${i}`}>{r}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </Alert>
+          ) : null}
+          {generate.isPending ? (
+            <p role="status">Writing and checking the ad copy — this can take up to a minute.</p>
+          ) : null}
+          <Button
+            busy={generate.isPending}
+            onClick={() =>
+              generate.mutate(strategy.id, {
+                onSuccess: (made) => router.push(`/orgs/${org.id}/creatives/${made.id}`),
+              })
+            }
+          >
+            Make creatives
+          </Button>
+        </>
+      ) : null}
+    </section>
+  );
+}
+
 function LoadedStrategy({ org, strategyId }: { org: Organization; strategyId: string }) {
   const query = useStrategy(org.id, strategyId);
   const [editing, setEditing] = useState(false);
@@ -419,6 +486,7 @@ function LoadedStrategy({ org, strategyId }: { org: Organization; strategyId: st
       {manage && !editing ? (
         <Actions org={org} strategy={strategy} onEdit={() => setEditing(true)} />
       ) : null}
+      {!editing ? <StrategyCreatives org={org} strategy={strategy} /> : null}
       {editing ? (
         <EditForm org={org} strategy={strategy} onDone={() => setEditing(false)} />
       ) : (

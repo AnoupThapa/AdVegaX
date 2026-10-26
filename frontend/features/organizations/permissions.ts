@@ -78,3 +78,13 @@ export function canManageConnections(role: string): boolean {
 export function canManageStrategies(role: string): boolean {
   return isRole(role) && role !== "viewer";
 }
+
+/** Everyone but viewers drafts and edits creatives and uploads images (`creatives.manage`). */
+export function canManageCreatives(role: string): boolean {
+  return canManageStrategies(role);
+}
+
+/** Owners, admins and managers approve, reject and archive creatives (`creatives.approve`). */
+export function canApproveCreatives(role: string): boolean {
+  return role === "owner" || role === "admin" || role === "manager";
+}

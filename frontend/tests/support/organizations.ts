@@ -96,5 +96,11 @@ export function emptyOrganizationData(): Record<string, Response> {
     [`GET ${ORG_PATH}/analytics-properties`]: wrap([]),
     [`GET ${ORG_PATH}/analytics/overview`]: wrap(emptyOverview()),
     [`GET ${ORG_PATH}/ai/usage`]: wrap(emptyAiUsage()),
+    [`GET ${ORG_PATH}/creative-rules`]: wrap({
+      prohibited_terms: [],
+      allowed_caps: [],
+      base_prohibited_terms: ["cure", "100% effective", "tga approved"],
+      updated_at: null,
+    }),
   };
 }

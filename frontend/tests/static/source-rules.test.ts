@@ -61,7 +61,7 @@ describe("frontend source rules (PHASE_01C_PLAN §7)", () => {
 
 describe("unified analytics pages compute no formula (PHASE_06_PLAN §13, criterion 5)", () => {
   const pages = files.filter((f) =>
-    ["overview", "funnel", "strategies"].some((d) =>
+    ["overview", "funnel", "strategies", "creatives"].some((d) =>
       f.includes(`${path.sep}features${path.sep}${d}${path.sep}`),
     ),
   );
