@@ -1,6 +1,6 @@
 # Phase 8 — AI campaign planner: Implementation Plan
 
-**Status:** ✅ **Approved by the product owner (2026-10-25, A26: "Approve all") with all §2 recommendations (Q-8-1 … Q-8-10; settles Q12 for Phase 8).** Implementation authorized for Phase 8 only. · **Date:** 2026-10-25
+**Status:** ✅ **Approved by the product owner (2026-10-25, A26: "Approve all") with all §2 recommendations (Q-8-1 … Q-8-10; settles Q12 for Phase 8).** Implementation authorized for Phase 8 only. **Implemented 2026-10-26 — see `PHASE_08_REPORT.md`.** · **Date:** 2026-10-25
 
 > **Live data:** Phase 8 is the first phase that calls an AI model. It is built and tested against an **AI simulator** (recorded-format answers, no network in CI); Step 0 (8-01) makes a few real calls once you add an API key. `api.anthropic.com` is reachable from this environment.
 

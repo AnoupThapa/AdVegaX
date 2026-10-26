@@ -10,7 +10,7 @@ Plan: `PHASE_08_PLAN.md` (approved 2026-10-25, A26, all recommendations Q-8-1 �
 | 8-04 Strategy schema, validation chain, budget | ✅ Done — awaiting review |
 | 8-05 Workflow, API, limits | ✅ Done — awaiting review |
 | 8-06 Web app: Strategies page | ✅ Done — awaiting review |
-| 8-07 Evaluation, browser test, `PHASE_08_REPORT.md` | ⏳ Next |
+| 8-07 Evaluation, browser test, `PHASE_08_REPORT.md` | ✅ Done — Phase 8 awaiting review |
 
 ## 8-01 — Step 0 (2026-10-25)
 
@@ -279,3 +279,22 @@ Plan: `PHASE_08_PLAN.md` (approved 2026-10-25, A26, all recommendations Q-8-1 �
 2. The usage panel is in Settings (as planned), not on the Strategies page.
 
 **Next task:** 8-07 — the evaluation set (golden and hostile cases against the simulator), a browser test of the Strategies page, and `PHASE_08_REPORT.md`.
+
+## 8-07 — Evaluation set, browser test, report (2026-10-26)
+
+**Completed**
+- **Evaluation set** (`tests/api/test_strategy_evaluation.py`, Q-8-10), in CI against the simulator:
+  - **5 golden contexts:** a selling product with margin; no product cost ("margin unknown" must be named, otherwise refused); no stock (never sent); only Google Ads connected; a funnel drop-off reaching the planner with its numbers (a channel's free-text name is not sent);
+  - **13 hostile cases:** budget all on one platform, shares above 100 % or not adding up, an upside-down or far-off target, unknown figures and another product's ID, a money amount slipped in, a platform not asked for, a campaign type from another platform, an empty answer, an endless summary, and a product title trying to close its block and give orders. Each is rejected and nothing is kept.
+- **Browser test:**
+  - `tests/e2e_strategy.py` (the real API with the AI simulator, building its answer from the context AdVegaX sends) makes a strategy for the four-platform organization;
+  - the browser test opens the Strategies list and the strategy (amounts, figures, model and prompt), fails an edit (shares not adding up), saves a correct one, marks it ready, archives it, and asks for a new one while the planner is off (a plain "not available" message);
+  - accessibility is checked on every page, and no platform token appears on any page.
+- **`PHASE_08_REPORT.md`**, with **your review checklist** (§12).
+
+**Files changed** (11)
+- New (4): `tests/api/test_strategy_evaluation.py` (18 tests), `tests/e2e_strategy.py`, `frontend/e2e/support/strategy.ts`, `PHASE_08_REPORT.md`.
+- Modified (7): `tests/api/test_e2e_seed.py` (2 tests), `tests/api/test_strategy_context.py` (the fixture keeps its email), `frontend/e2e/unified-analytics.spec.ts`, `frontend/features/strategies/StrategiesPage.tsx` (the form is named), this file, `PHASE_08_PLAN.md`, `PROJECT_STATUS.md`.
+- Deleted: none.
+
+**Tests:** backend `make check` **1,766 passed** (coverage 97 %), frontend **459 passed**, browser tests **15 passed**.

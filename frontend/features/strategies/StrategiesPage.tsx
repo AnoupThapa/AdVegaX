@@ -97,7 +97,7 @@ function NewStrategy({ org }: { org: Organization }) {
         results and the funnel. You set the budget; AdVegaX works out each platform&apos;s amount.
         Every answer is checked before you see it, and nothing is created at Google or Meta.
       </p>
-      <form className={own.form} onSubmit={submit} noValidate>
+      <form className={own.form} onSubmit={submit} noValidate aria-labelledby="new-strategy">
         {stores.data.length > 1 ? (
           <SelectField
             label="Store"

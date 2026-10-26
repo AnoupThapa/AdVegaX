@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 from app.core.settings import Environment
 
 from tests import e2e_shopify_store as seed
+from tests.api.test_strategy_context import shop  # noqa: F401  (fixture)
 
 
 def test_connects_and_imports_a_simulated_store(make_client, admin_engine, capsys):
@@ -287,7 +288,7 @@ def test_the_meta_seed_reports_a_wrong_password(make_client, capsys):
 
 # ------------------------------------------------------------------ Google Analytics (5-09)
 def test_connects_and_imports_a_simulated_ga4_property(make_client, admin_engine, capsys):
-    from datetime import UTC, date, datetime
+    from datetime import date
     from decimal import Decimal
     from zoneinfo import ZoneInfo
 
@@ -368,3 +369,44 @@ def test_the_ga4_seed_reports_a_wrong_password(make_client, capsys):
     args = ["--email", "seed-ga-pw@example.com", "--organization", org]
     assert ga.main([*args, "--password", "wrong password here"]) == 1
     assert "sign-in failed" in capsys.readouterr().err
+
+
+# ------------------------------------------------------------------ campaign strategy (8-07)
+def test_makes_a_strategy_with_the_ai_simulator(shop, admin_engine, capsys):  # noqa: F811
+    from datetime import date
+    from decimal import Decimal
+
+    from sqlalchemy import text
+
+    from tests import e2e_strategy as strategy_seed
+
+    # The helper runs on the real clock: rates for its recent days (1 USD = 1.6 AUD).
+    today = datetime.now(UTC).date()
+    with admin_engine.begin() as db:
+        for back in range(10):
+            day = date.fromordinal(today.toordinal() - back)
+            for quote, rate in (("AUD", "1.6"), ("USD", "1.0")):
+                db.execute(
+                    text(
+                        "INSERT INTO fx_rates (source, base, quote, rate_date, rate, fetched_at) "
+                        "VALUES ('ecb', 'EUR', :q, :d, :r, now()) ON CONFLICT DO NOTHING"
+                    ),
+                    {"q": quote, "d": day, "r": Decimal(rate)},
+                )
+    args = ["--email", shop.email, "--organization", shop.org]
+    assert strategy_seed.main(args) == 0, capsys.readouterr().err
+    out = json.loads(capsys.readouterr().out)
+    data = shop.get(f"/organizations/{shop.org}/ai/campaign-strategies/{out['strategy_id']}")
+    data = data.json()["data"]
+    assert (data["status"], data["product_title"]) == ("draft", "Nitrile gloves")
+    assert sorted(data["budget_amounts"]) == ["google_ads", "meta_ads"]
+    assert all(e is not None and e["value"] is not None for e in data["evidence"].values())
+
+
+def test_the_strategy_seed_refuses_deployed_environments(settings, monkeypatch, capsys):
+    from tests import e2e_strategy as strategy_seed
+
+    deployed = settings.model_copy(update={"ENVIRONMENT": Environment.PRODUCTION})
+    monkeypatch.setattr(strategy_seed, "get_settings", lambda: deployed)
+    assert strategy_seed.main(["--email", "a@example.com", "--organization", "x"]) == 1
+    assert "deployed" in capsys.readouterr().err

@@ -6,6 +6,7 @@ import { connectSimulatedGoogleAds } from "./support/google_ads";
 import { connectSimulatedGoogleAnalytics } from "./support/google_analytics";
 import { connectSimulatedMeta } from "./support/meta_ads";
 import { connectSimulatedStore } from "./support/shopify";
+import { createSimulatedStrategy } from "./support/strategy";
 
 /**
  * Phase 6 in the browser (task 6-09): one organization with a Shopify store, Google Ads (an
@@ -13,7 +14,9 @@ import { connectSimulatedStore } from "./support/shopify";
  * recorded exchange rates. The Overview shows sales, ad spend and profit together in AUD —
  * never 0 for what is missing — with where the numbers come from, the NZD conversion and the
  * time-zone note; Reports show each platform's own figures, the campaigns with their Google
- * Analytics match, and the products. Every page passes the accessibility check, and no
+ * Analytics match, and the products. Phase 8 (8-07): a campaign strategy made with the AI
+ * simulator shows its amounts and the figures behind it, is edited, marked ready and archived;
+ * asking for a new one while this installation's planner is off says so plainly. Every page passes the accessibility check, and no
  * platform token ever reaches a page.
  */
 test("sales, ad spend and profit are shown together, honestly", async ({ newPerson }) => {
@@ -106,6 +109,55 @@ test("sales, ad spend and profit are shown together, honestly", async ({ newPers
     await expect(page.getByRole("heading", { name: "Landing pages" })).toBeVisible();
     await expectAccessible(page, "funnel by landing page");
     pages.push(await page.content());
+  });
+
+  await test.step("a campaign strategy shows its amounts and the figures behind it", async () => {
+    const { strategyId, productTitle } = createSimulatedStrategy(email, orgUrl);
+    await page.getByRole("link", { name: "Strategies", exact: true }).click();
+    const row = page.getByRole("row", { name: new RegExp(productTitle) });
+    await expect(row).toContainText("Draft");
+    await expectAccessible(page, "strategies list");
+    await row.getByRole("link", { name: productTitle }).click();
+    await expect(page).toHaveURL(new RegExp(`/strategies/${strategyId}$`));
+    await expect(page.getByRole("heading", { name: productTitle, level: 1 })).toBeVisible();
+    await expect(page.getByText(/Drafted by Claude \(claude-sonnet-5-5\)/)).toBeVisible();
+    const google = page.getByRole("heading", { name: /^Google Ads — / }).locator("..");
+    await expect(google).toContainText(/\$60\.00 per day \(60% of the budget\)/);
+    await expect(google.getByRole("list", { name: "Based on" })).not.toContainText(/: 0$/);
+    await expectAccessible(page, "strategy");
+    pages.push(await page.content());
+
+    person.expectFailedRequests(422); // a refused edit, and a product that cannot be planned
+    person.expectFailedRequests(503); // the planner is off in this installation
+    await page.getByRole("button", { name: "Edit" }).click();
+    await page.getByLabel("Share of the budget for Google Ads (%)").fill("70");
+    await page.getByLabel("Share of the budget for Meta (%)").fill("20");
+    await page.getByRole("button", { name: "Save changes" }).click();
+    await expect(
+      page.getByRole("form", { name: "Edit the strategy" }).getByRole("alert"),
+    ).toContainText("The budget shares do not add up to 100%.");
+    await expectAccessible(page, "strategy edit with a failed check");
+    await page.getByLabel("Share of the budget for Meta (%)").fill("30");
+    await page.getByRole("button", { name: "Save changes" }).click();
+    await expect(google).toContainText(/\$70\.00 per day \(70% of the budget\)/);
+
+    await page.getByRole("button", { name: "Mark ready for the campaign builder" }).click();
+    await expect(page.getByText("Ready for the campaign builder")).toBeVisible();
+    await page.getByRole("button", { name: "Archive" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Archive" }).click();
+    await expect(page.getByText(/This strategy is archived/)).toBeVisible();
+    await expectAccessible(page, "archived strategy");
+  });
+
+  await test.step("asking for a strategy when the planner is off says so", async () => {
+    await page.getByRole("link", { name: "All strategies" }).click();
+    await page.getByRole("combobox", { name: "Product" }).selectOption({ index: 1 });
+    await page.getByLabel(/^Budget \(/).fill("50");
+    await page.getByRole("button", { name: "Create strategy" }).click();
+    await expect(page.getByRole("form", { name: "New strategy" }).getByRole("alert")).toContainText(
+      /AI planner is not available right now|cannot be made for this product/,
+    );
+    await expectAccessible(page, "new strategy refused");
   });
 
   for (const html of pages) {

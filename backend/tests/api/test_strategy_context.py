@@ -36,7 +36,8 @@ DAYS = [LAST - timedelta(days=n) for n in range(100)]
 @pytest.fixture
 def shop(make_client, admin_engine):
     c = make_client()
-    c.signup(f"ctx-{uuid.uuid4().hex[:6]}@example.com")
+    c.email = f"ctx-{uuid.uuid4().hex[:6]}@example.com"
+    c.signup(c.email)
     c.org = c.create_org("Eve Zone")["id"]
     seed = Seed(admin_engine, c.org, connected(c, c.org))
     daily = dict.fromkeys(DAYS, ("0.00", 0, "0.00"))
