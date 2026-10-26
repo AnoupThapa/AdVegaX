@@ -6,8 +6,8 @@ Plan: `PHASE_08_PLAN.md` (approved 2026-10-25, A26, all recommendations Q-8-1 �
 |---|---|
 | 8-01 Step 0: live check of the Claude API with AdVegaX's key | ⏸ Waiting for an Anthropic API key in the local settings file |
 | 8-02 Migration 0018; AI platform: adapter, Anthropic adapter, prompts, runs, simulator | ✅ Done — awaiting review |
-| 8-03 Context builder | ⏳ Next |
-| 8-04 Strategy schema, validation chain, budget | — |
+| 8-03 Context builder | ✅ Done — awaiting review |
+| 8-04 Strategy schema, validation chain, budget | ⏳ Next |
 | 8-05 Workflow, API, limits | — |
 | 8-06 Web app: Strategies page | — |
 | 8-07 Evaluation, browser test, `PHASE_08_REPORT.md` | — |
@@ -63,3 +63,48 @@ Plan: `PHASE_08_PLAN.md` (approved 2026-10-25, A26, all recommendations Q-8-1 �
 **Blocked:** 8-01 (Step 0) waits for the API key.
 
 **Next task:** 8-03 — the context builder (the product's figures from Phases 2–7, delimited and minimized, as the data snapshot).
+
+## 8-03 — Context builder (2026-10-26)
+
+**Completed**
+- **`app/domains/strategy/context.py`** builds what the planner shows the model for one product, **only from AdVegaX's own figures** (Q-8-2). It covers the product's store and the ad accounts and Google Analytics property assigned to it.
+- **Period:** the last **90 complete days** (`PLANNER_CONTEXT_DAYS`), plus a recent window of **30 days** (`PLANNER_RECENT_DAYS`). If a source started later, the period is shortened to the days every source has fully read. A source still importing says "not synced" instead.
+- **Evidence figures** — each has a key the model must cite (checked in 8-04), with its label, unit, currency and value. A figure AdVegaX doesn't have shows "unknown" with its reason, never 0:
+  - the product: units, net sales, product cost, gross profit and margin, for the period and recently; lowest and highest price and unit cost; units in stock; variants out of stock;
+  - the business (the product's store): net sales, orders, gross profit and margin, ad spend, profit after ad spend, blended ROAS, sessions, store conversion rate;
+  - each connected ad platform: spend, clicks, impressions, conversions, conversion value, platform ROAS, cost per click, cost per conversion;
+  - the funnel's stages and same-source rates (Phase 7).
+- **Facts:** the reporting currency, the period, the product's status, the store platform, the connected ad platforms (codes only), the number of variants and whether stock is tracked.
+- **Funnel drop-offs:** findings (Q-7-7) for the whole business and each ad platform. Channel findings are left out, because channel names can be free text.
+- **Store text is untrusted:** the product's title, type, vendor and variant names are:
+  - stripped of control and invisible characters (including right-to-left overrides) and shortened;
+  - sent in their own `<store_text>` block, where `<` and `>` are escaped, so a title containing `</store_text>` or "SYSTEM: ignore every rule" stays data inside the block.
+- **Snapshot:** the snapshot (what `ai_runs` records) is exactly what is sent. It holds no customers, orders, emails, addresses, account or campaign names, IDs or secrets.
+
+**Files changed** (7)
+- New (3): `app/domains/strategy/{__init__,context}.py`, `tests/api/test_strategy_context.py` (11 tests).
+- Modified (4): `app/core/settings.py`, `.env.example`, `tests/security/test_static_rules.py` (1 new rule), this file.
+- Deleted: none.
+
+**Tests**
+- **New (11 + 1 static rule):**
+  - the golden context, worked out by hand;
+  - unknown figures stay unknown, never 0;
+  - a product with no sales has real zeros, and its margin says why it has none;
+  - no price, cost or stock tracking each say why;
+  - oversold stock counts as out of stock;
+  - the period is shortened for a new source; a source still importing says "not synced";
+  - another organization's product is "not found";
+  - hostile store text stays inside its block;
+  - no personal data, account names, IDs or secrets are sent;
+  - the snapshot equals what is sent.
+- The static rule checks that the context builder only reads, calls nothing outside, and names no customer, contact or credential field.
+- **Backend `make check`: 1,674 passed**, coverage 97 % (context builder 97 %). No frontend change.
+
+**Security:** follows A12 — only aggregated figures and catalogue facts. Store text is delimited and neutralized. The builder only reads (static rule). Tenant isolation: everything is read inside the organization's row-level security context.
+
+**Deviations**
+1. Product price and unit cost are today's catalogue values, converted at the last day's exchange rate. Past price changes aren't shown.
+2. The window is the product's **store** scope (its assigned ad accounts and property), not the whole organization: the plan is for that store's product.
+
+**Next task:** 8-04 — strategy schema, validation chain (schema → existence → business rules → budget) and budget amounts, plus the versioned planner prompt.

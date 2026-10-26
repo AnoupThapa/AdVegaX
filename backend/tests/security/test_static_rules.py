@@ -305,3 +305,17 @@ def test_the_ai_calls_one_fixed_address_and_offers_the_model_no_tools():
     assert readers == ["core/settings.py", "domains/ai/runs.py"]
     for name, text_ in sources.items():
         assert "get_secret_value()" not in text_ or name == "anthropic.py", name
+
+
+def test_the_planner_context_reads_only_figures_never_personal_data():
+    """Phase 8 (8-03, Q-8-2, A12): the context builder only reads AdVegaX's figures and the
+    catalogue; it names no customer, order, contact or credential field and calls nothing."""
+    src = (APP / "domains" / "strategy" / "context.py").read_text(encoding="utf-8")
+    code = re.sub(r'"""[\s\S]*?"""', "", src).lower()  # docstrings say what is left out
+    words = ("email", "phone", "address", "customer", "billing", "token", "secret", "password")
+    for word in (*words, "credential", "order_item", "orderitem", "ad_account.name"):
+        assert word not in code, word
+    for call in ("session.add(", "session.delete(", ".request(", "app.providers"):
+        assert call not in code, call
+    imported = re.findall(r"^from app\.domains\.commerce\.models import (.+)$", src, re.MULTILINE)
+    assert imported == ["Product, ProductCostHistory, ProductVariant"]

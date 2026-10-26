@@ -244,6 +244,9 @@ class Settings(BaseSettings):
     # USD per million tokens, for the usage estimate; None = no estimate is shown.
     AI_PRICE_INPUT_PER_MTOK: Decimal | None = None
     AI_PRICE_OUTPUT_PER_MTOK: Decimal | None = None
+    # What the planner shows the model (8-03): the last N complete days, and a recent window.
+    PLANNER_CONTEXT_DAYS: int = Field(default=90, ge=14, le=400)
+    PLANNER_RECENT_DAYS: int = Field(default=30, ge=7, le=90)
 
     # --- Advertising import (Phase 3; PHASE_03_PLAN §9) ---------------------------------
     ADS_HISTORY_WINDOW: timedelta = timedelta(days=395)  # 13 months on first link (Q-3-6)
