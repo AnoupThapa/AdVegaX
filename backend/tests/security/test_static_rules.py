@@ -319,3 +319,26 @@ def test_the_planner_context_reads_only_figures_never_personal_data():
         assert call not in code, call
     imported = re.findall(r"^from app\.domains\.commerce\.models import (.+)$", src, re.MULTILINE)
     assert imported == ["Product, ProductCostHistory, ProductVariant"]
+
+
+def test_the_creative_engine_calls_nothing_and_sees_no_personal_data():
+    """Phase 9 (9-04, A12): the creative domain calls no platform and no outside address (the
+    model only through ``run_task``); its context names no customer, contact or credential."""
+    folder = APP / "domains" / "creative"
+    sources = {p.name: p.read_text(encoding="utf-8") for p in folder.rglob("*.py")}
+    assert {"context.py", "generation.py", "policy.py", "images.py", "service.py"} <= set(sources)
+    for name, src in sources.items():
+        for forbidden in (".request(", "app.providers", "httpx", "boto3"):
+            assert forbidden not in src, (name, forbidden)
+    code = re.sub(r'"""[\s\S]*?"""', "", sources["context.py"]).lower()
+    for word in ("email", "phone", "address", "customer", "order", "token", "secret", "password"):
+        assert word not in code, word
+    # Uploaded files never choose their own path: keys come only from new_key().
+    service = sources["service.py"]
+    assert "new_key(" in service and "storage_key=key" in service
+    assert (
+        "original_name"
+        not in re.sub(r"original_name=shown", "", service)
+        .split("def upload")[1]
+        .split("storage_for")[0]
+    )

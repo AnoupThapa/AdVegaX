@@ -522,6 +522,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/{organization_id}/ai/creative-sets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate Creative Set
+         * @description Draft the ad copy for every platform of a strategy marked ready (one AI run). Every
+         *     concept is kept as a draft with its check results; nothing is sent to Google or Meta.
+         *     Errors: STRATEGY_NOT_READY, AI_LIMIT_REACHED, AI_UNAVAILABLE, AI_ANSWER_REJECTED.
+         */
+        post: operations["generate_creative_set_api_v1_organizations__organization_id__ai_creative_sets_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizations/{organization_id}/ai/usage": {
         parameters: {
             query?: never;
@@ -919,6 +941,217 @@ export interface paths {
         put?: never;
         /** Start Connection */
         post: operations["start_connection_api_v1_organizations__organization_id__connections__provider__start_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/creative-assets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Creative Assets */
+        get: operations["list_creative_assets_api_v1_organizations__organization_id__creative_assets_get"];
+        put?: never;
+        /**
+         * Upload Creative Asset
+         * @description An image (JPEG, PNG or WebP). Checked by decoding and re-saved without hidden data.
+         */
+        post: operations["upload_creative_asset_api_v1_organizations__organization_id__creative_assets_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/creative-assets/{asset_id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Archive Creative Asset */
+        post: operations["archive_creative_asset_api_v1_organizations__organization_id__creative_assets__asset_id__archive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/creative-assets/{asset_id}/content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Creative Asset Content
+         * @description The image itself, for members of the organization only (never a public link).
+         */
+        get: operations["creative_asset_content_api_v1_organizations__organization_id__creative_assets__asset_id__content_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/creative-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Creative Rules */
+        get: operations["get_creative_rules_api_v1_organizations__organization_id__creative_rules_get"];
+        /**
+         * Put Creative Rules
+         * @description Owners and admins: the organization's own prohibited and allowed-capitalised words.
+         */
+        put: operations["put_creative_rules_api_v1_organizations__organization_id__creative_rules_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/creative-sets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Creative Sets */
+        get: operations["list_creative_sets_api_v1_organizations__organization_id__creative_sets_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/creative-sets/{set_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Creative Set
+         * @description The newest version of each concept, with its checks and versions.
+         */
+        get: operations["get_creative_set_api_v1_organizations__organization_id__creative_sets__set_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/creatives": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Creatives
+         * @description With ``status=approved``: the creatives the campaign builder may use.
+         */
+        get: operations["list_creatives_api_v1_organizations__organization_id__creatives_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/creatives/{creative_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Creative */
+        get: operations["get_creative_api_v1_organizations__organization_id__creatives__creative_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Creative
+         * @description An edit makes a new draft version; the version edited is kept unchanged.
+         */
+        patch: operations["update_creative_api_v1_organizations__organization_id__creatives__creative_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/creatives/{creative_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve Creative
+         * @description Owners, admins, managers. Checks run again; CREATIVE_CHECKS_FAILED lists what failed.
+         */
+        post: operations["approve_creative_api_v1_organizations__organization_id__creatives__creative_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/creatives/{creative_id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Archive Creative */
+        post: operations["archive_creative_api_v1_organizations__organization_id__creatives__creative_id__archive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/creatives/{creative_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject Creative */
+        post: operations["reject_creative_api_v1_organizations__organization_id__creatives__creative_id__reject_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1830,6 +2063,60 @@ export interface components {
             /** Waiting For Allowance */
             waiting_for_allowance: boolean;
         };
+        /** ApproveIn */
+        ApproveIn: {
+            /**
+             * Confirm Flags
+             * @default false
+             */
+            confirm_flags: boolean;
+        };
+        /** AssetOut */
+        AssetOut: {
+            /** Bytes */
+            bytes: number;
+            /** Content Type */
+            content_type: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Height */
+            height: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Original Name */
+            original_name: string | null;
+            /** Sha256 */
+            sha256: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "active" | "archived";
+            /** Uploaded By */
+            uploaded_by: string | null;
+            /** Width */
+            width: number;
+        };
+        /** AssetRefOut */
+        AssetRefOut: {
+            /** Content Type */
+            content_type: string;
+            /** Height */
+            height: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Width */
+            width: number;
+        };
         /** AuditLogOut */
         AuditLogOut: {
             /** Action */
@@ -1887,6 +2174,11 @@ export interface components {
             authorize_url: string;
             /** Expires In Seconds */
             expires_in_seconds: number;
+        };
+        /** Body_upload_creative_asset_api_v1_organizations__organization_id__creative_assets_post */
+        Body_upload_creative_asset_api_v1_organizations__organization_id__creative_assets_post: {
+            /** File */
+            file: string;
         };
         /**
          * BudgetIn
@@ -2116,6 +2408,23 @@ export interface components {
              */
             to_day: string;
         };
+        /**
+         * CheckOut
+         * @description One fixed check's result: ``block`` must be fixed; ``flag`` must be confirmed.
+         */
+        CheckOut: {
+            /** Code */
+            code: string;
+            /** Detail */
+            detail: string | null;
+            /** Field */
+            field: string;
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "block" | "flag";
+        };
         /** ConnectionOut */
         ConnectionOut: {
             /** Account Label */
@@ -2178,6 +2487,184 @@ export interface components {
             source: string | null;
             /** Unit Cost */
             unit_cost: string | null;
+        };
+        /** CreativeOut */
+        CreativeOut: {
+            /** Angle */
+            angle: string;
+            /** Approvable */
+            approvable: boolean;
+            asset: components["schemas"]["AssetRefOut"] | null;
+            /** Checks */
+            checks: components["schemas"]["CheckOut"][];
+            /** Compliance Notes */
+            compliance_notes: string[];
+            /**
+             * Concept Id
+             * Format: uuid
+             */
+            concept_id: string;
+            /** Content */
+            content: {
+                [key: string]: unknown;
+            };
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By */
+            created_by: string | null;
+            /** Decided At */
+            decided_at: string | null;
+            /** Decided By */
+            decided_by: string | null;
+            /** Decision Reason */
+            decision_reason: string | null;
+            /**
+             * Format
+             * @enum {string}
+             */
+            format: "google_rsa" | "meta_single";
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Latest */
+            latest: boolean;
+            /**
+             * Platform
+             * @enum {string}
+             */
+            platform: "google_ads" | "meta_ads";
+            /**
+             * Product Id
+             * Format: uuid
+             */
+            product_id: string;
+            /** Product Title */
+            product_title: string | null;
+            /** Rationale */
+            rationale: string | null;
+            /**
+             * Set Id
+             * Format: uuid
+             */
+            set_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "approved" | "rejected" | "archived";
+            /**
+             * Strategy Id
+             * Format: uuid
+             */
+            strategy_id: string;
+            /** Version */
+            version: number;
+            /** Versions */
+            versions: components["schemas"]["VersionRefOut"][];
+        };
+        /** CreativeRulesIn */
+        CreativeRulesIn: {
+            /** Allowed Caps */
+            allowed_caps: string[];
+            /** Prohibited Terms */
+            prohibited_terms: string[];
+        };
+        /** CreativeRulesOut */
+        CreativeRulesOut: {
+            /** Allowed Caps */
+            allowed_caps: string[];
+            /** Base Prohibited Terms */
+            base_prohibited_terms: string[];
+            /** Prohibited Terms */
+            prohibited_terms: string[];
+            /** Updated At */
+            updated_at: string | null;
+        };
+        /** CreativeSetCreateIn */
+        CreativeSetCreateIn: {
+            /**
+             * Strategy Id
+             * Format: uuid
+             */
+            strategy_id: string;
+        };
+        /** CreativeSetOut */
+        CreativeSetOut: {
+            /**
+             * Ai Run Id
+             * Format: uuid
+             */
+            ai_run_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Creatives */
+            creatives: components["schemas"]["CreativeOut"][];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Product Id
+             * Format: uuid
+             */
+            product_id: string;
+            /** Product Title */
+            product_title: string | null;
+            /**
+             * Strategy Id
+             * Format: uuid
+             */
+            strategy_id: string;
+        };
+        /** CreativeSetSummaryOut */
+        CreativeSetSummaryOut: {
+            /** Approved */
+            approved: number;
+            /** Concepts */
+            concepts: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Product Title */
+            product_title: string | null;
+            /**
+             * Strategy Id
+             * Format: uuid
+             */
+            strategy_id: string;
+        };
+        /**
+         * CreativeUpdateIn
+         * @description An edit: the whole content as edited and/or the image (Meta). Creates a new version.
+         */
+        CreativeUpdateIn: {
+            /** Asset Id */
+            asset_id?: string | null;
+            /** Content */
+            content?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Remove Asset
+             * @default false
+             */
+            remove_asset: boolean;
         };
         /** CsrfOut */
         CsrfOut: {
@@ -2300,6 +2787,11 @@ export interface components {
             data: components["schemas"]["AnalyticsResyncOut"];
             meta: components["schemas"]["Meta"];
         };
+        /** Envelope[AssetOut] */
+        Envelope_AssetOut_: {
+            data: components["schemas"]["AssetOut"];
+            meta: components["schemas"]["Meta"];
+        };
         /** Envelope[AuthorizationStartOut] */
         Envelope_AuthorizationStartOut_: {
             data: components["schemas"]["AuthorizationStartOut"];
@@ -2323,6 +2815,21 @@ export interface components {
         /** Envelope[ConnectionOut] */
         Envelope_ConnectionOut_: {
             data: components["schemas"]["ConnectionOut"];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[CreativeOut] */
+        Envelope_CreativeOut_: {
+            data: components["schemas"]["CreativeOut"];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[CreativeRulesOut] */
+        Envelope_CreativeRulesOut_: {
+            data: components["schemas"]["CreativeRulesOut"];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[CreativeSetOut] */
+        Envelope_CreativeSetOut_: {
+            data: components["schemas"]["CreativeSetOut"];
             meta: components["schemas"]["Meta"];
         };
         /** Envelope[CsrfOut] */
@@ -2442,10 +2949,28 @@ export interface components {
             data: components["schemas"]["AnalyticsPropertyOut"][];
             meta: components["schemas"]["Meta"];
         };
+        /** Envelope[list[AssetOut]] */
+        Envelope_list_AssetOut__: {
+            /** Data */
+            data: components["schemas"]["AssetOut"][];
+            meta: components["schemas"]["Meta"];
+        };
         /** Envelope[list[ConnectionOut]] */
         Envelope_list_ConnectionOut__: {
             /** Data */
             data: components["schemas"]["ConnectionOut"][];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[list[CreativeOut]] */
+        Envelope_list_CreativeOut__: {
+            /** Data */
+            data: components["schemas"]["CreativeOut"][];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[list[CreativeSetSummaryOut]] */
+        Envelope_list_CreativeSetSummaryOut__: {
+            /** Data */
+            data: components["schemas"]["CreativeSetSummaryOut"][];
             meta: components["schemas"]["Meta"];
         };
         /** Envelope[list[InvitationOut]] */
@@ -3101,6 +3626,11 @@ export interface components {
             /** Password */
             password: string;
         };
+        /** RejectIn */
+        RejectIn: {
+            /** Reason */
+            reason: string;
+        };
         /** ResetPasswordRequest */
         ResetPasswordRequest: {
             /** New Password */
@@ -3556,6 +4086,26 @@ export interface components {
             sku: string | null;
             /** Title */
             title: string | null;
+        };
+        /** VersionRefOut */
+        VersionRefOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "approved" | "rejected" | "archived";
+            /** Version */
+            version: number;
         };
     };
     responses: never;
@@ -4513,6 +5063,41 @@ export interface operations {
             };
         };
     };
+    generate_creative_set_api_v1_organizations__organization_id__ai_creative_sets_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreativeSetCreateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_CreativeSetOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     ai_usage_api_v1_organizations__organization_id__ai_usage_get: {
         parameters: {
             query?: never;
@@ -5214,6 +5799,476 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Envelope_AuthorizationStartOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_creative_assets_api_v1_organizations__organization_id__creative_assets_get: {
+        parameters: {
+            query?: {
+                archived?: boolean;
+            };
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_list_AssetOut__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_creative_asset_api_v1_organizations__organization_id__creative_assets_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_creative_asset_api_v1_organizations__organization_id__creative_assets_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AssetOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    archive_creative_asset_api_v1_organizations__organization_id__creative_assets__asset_id__archive_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                asset_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AssetOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    creative_asset_content_api_v1_organizations__organization_id__creative_assets__asset_id__content_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                asset_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The image */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/*": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_creative_rules_api_v1_organizations__organization_id__creative_rules_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_CreativeRulesOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_creative_rules_api_v1_organizations__organization_id__creative_rules_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreativeRulesIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_CreativeRulesOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_creative_sets_api_v1_organizations__organization_id__creative_sets_get: {
+        parameters: {
+            query?: {
+                strategy_id?: string | null;
+            };
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_list_CreativeSetSummaryOut__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_creative_set_api_v1_organizations__organization_id__creative_sets__set_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                set_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_CreativeSetOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_creatives_api_v1_organizations__organization_id__creatives_get: {
+        parameters: {
+            query?: {
+                status?: ("draft" | "approved" | "rejected" | "archived") | null;
+                platform?: ("google_ads" | "meta_ads") | null;
+                strategy_id?: string | null;
+            };
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_list_CreativeOut__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_creative_api_v1_organizations__organization_id__creatives__creative_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                creative_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_CreativeOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_creative_api_v1_organizations__organization_id__creatives__creative_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                creative_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreativeUpdateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_CreativeOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_creative_api_v1_organizations__organization_id__creatives__creative_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                creative_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApproveIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_CreativeOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    archive_creative_api_v1_organizations__organization_id__creatives__creative_id__archive_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                creative_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_CreativeOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_creative_api_v1_organizations__organization_id__creatives__creative_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                creative_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RejectIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_CreativeOut_"];
                 };
             };
             /** @description Validation Error */

@@ -22,6 +22,10 @@ CSRF_EXEMPT_PATH = re.compile(
     r"/api/v1/webhooks/[a-z0-9_]{1,32}"  # platform webhooks (2A-05)
     r"|/api/v1/connections/[a-z0-9_]{1,32}/credentials"  # platform-posted keys (2B-04)
 )
+# Image uploads (Phase 9, 9-05): the only route that takes a multipart body, with its own size
+# limit (the image limit plus room for the form's own lines). CSRF and Origin still apply.
+UPLOAD_PATH = re.compile(r"/api/v1/organizations/[0-9a-fA-F-]{36}/creative-assets")
+UPLOAD_OVERHEAD = 64 * 1024
 Next = Callable[[Request], Awaitable[Response]]
 
 
@@ -64,17 +68,22 @@ class RequestGuardMiddleware(BaseHTTPMiddleware):
         if request.method in SAFE_METHODS:
             return await call_next(request)
 
+        upload = request.method == "POST" and bool(UPLOAD_PATH.fullmatch(request.url.path))
+        limit = (
+            self._settings.ASSET_MAX_BYTES + UPLOAD_OVERHEAD
+            if upload
+            else self._settings.MAX_REQUEST_BYTES
+        )
         length = request.headers.get("content-length")
-        if length is not None and (
-            not length.isdigit() or int(length) > self._settings.MAX_REQUEST_BYTES
-        ):
+        if length is not None and (not length.isdigit() or int(length) > limit):
             return error_response(PayloadTooLarge())
         body = await request.body()
-        if len(body) > self._settings.MAX_REQUEST_BYTES:
+        if len(body) > limit:
             return error_response(PayloadTooLarge())
         if body:
             content_type = request.headers.get("content-type", "").split(";")[0].strip().lower()
-            if content_type != "application/json":
+            expected = "multipart/form-data" if upload else "application/json"
+            if content_type != expected:
                 return error_response(UnsupportedMediaType())
 
         if request.method == "POST" and CSRF_EXEMPT_PATH.fullmatch(request.url.path):

@@ -282,6 +282,8 @@ Update permitted campaign fields.
 
 ## 10. Creatives
 
+> **Superseded by §19I (as built, Phase 9).** The outline below is kept for history.
+
 ### GET /organizations/{organization_id}/creatives
 
 ### POST /organizations/{organization_id}/creatives
@@ -331,6 +333,8 @@ Example conceptual output:
 AI response must never directly create a campaign.
 
 ## 12. AI Creative Generation
+
+> **Superseded by §19I (as built, Phase 9).** The outline below is kept for history.
 
 ### POST /organizations/{organization_id}/ai/creative-ideas
 
@@ -541,6 +545,24 @@ Base `/organizations/{organization_id}/ai`. Permissions: `strategies.view` (ever
 | `GET /usage` | `{daily_limit, runs_today, remaining_today, ai_enabled, today, last_30_days}`; each period `{runs, succeeded, rejected, failed (incl. timed out), input_tokens, output_tokens, estimated_cost_usd}` — `null` unless every run in the period has a price (prices are settings) |
 
 The strategy object (`strategy`): `{objective, summary, positioning, platforms[] {platform, campaign_type, budget_share_percent, audience, reasoning, evidence[]}, angles[] {angle, evidence[]}, targets[] {metric: roas \| cost_per_order \| cost_per_click \| cost_per_conversion, low, high, evidence[]}, risks[] {code, text}, assumptions[]}` — no money amounts (Q-8-5).
+
+## 19I. Creatives — as built (Phase 9)
+
+Base `/organizations/{organization_id}`. Permissions: `creatives.view` (every role), `creatives.manage` (all but viewers: draft, edit, upload), `creatives.approve` (owner, admin, manager: approve, reject, archive); the organization's rules are changed by owners and admins (`organization.update`). Every change is audited (`creative_set.generated`, `creative.edited | approved | rejected | archived`, `creative_asset.uploaded | archived`, `creative_rules.updated`) — versions, statuses and reasons, never the ad text. Nothing is sent to Google or Meta.
+
+| Method & path | Notes |
+|---|---|
+| `POST /ai/creative-sets` (201) | Body `{strategy_id}` — a **ready** strategy (`STRATEGY_NOT_READY`, 409, otherwise). One AI run drafts every platform of the strategy; every concept is kept as version 1, `draft`, with its `checks`. Errors: `AI_LIMIT_REACHED`, `AI_UNAVAILABLE`, `AI_ANSWER_REJECTED` (`details[] {reason}` like `google_ads[0].too_long:headlines[2]=30`) |
+| `GET /creative-sets[?strategy_id]`, `GET /creative-sets/{set_id}` | Summaries `{id, strategy_id, product_title, created_at, concepts, approved}`; one set with the newest version of each concept |
+| `GET /creatives[?status&platform&strategy_id]` | With `status=approved`: what the campaign builder may use |
+| `GET /creatives/{creative_id}` | `{id, set_id, strategy_id, product_id, product_title, concept_id, version, latest, platform, format, angle, status, content, rationale, compliance_notes, checks[] {code, field, detail, severity: block \| flag}, approvable, asset, decided_by, decided_at, decision_reason, created_by, created_at, versions[]}` |
+| `PATCH /creatives/{creative_id}` | Body `{content?, asset_id?, remove_asset?}`; only the newest, not archived version (`CREATIVE_NOT_EDITABLE`, 409); makes a **new draft version** with fresh checks; `asset_id` only for Meta (`meta_only`) and an active image of the organization |
+| `POST /creatives/{creative_id}/approve` | Body `{confirm_flags}`; checks run again with today's rules and catalogue prices: `CREATIVE_CHECKS_FAILED` (422, `details[] {reason, field, detail, severity}`) for any blocking result, or flagged wording not confirmed; the concept's previously approved version is archived |
+| `POST /creatives/{creative_id}/reject` | Body `{reason}` (3–500 characters); drafts only |
+| `POST /creatives/{creative_id}/archive` | Kept, never deleted |
+| `POST /creative-assets` (201) | `multipart/form-data` with `file` (the only multipart route; size limit `ASSET_MAX_BYTES` + form overhead, else 413). Decoded (JPEG, PNG, WebP), pixel limit, smallest side, re-encoded without metadata; `ASSET_INVALID` (422, `details[] {reason}`: `not_an_image`, `unsupported_type`, `too_small`, `too_large`, `too_many_pixels`, `empty`) |
+| `GET /creative-assets[?archived]`, `GET /creative-assets/{asset_id}/content`, `POST /creative-assets/{asset_id}/archive` | The image itself only through the API, for members (`Cache-Control: private`) |
+| `GET /creative-rules`, `PUT /creative-rules` | `{prohibited_terms[], allowed_caps[], base_prohibited_terms[], updated_at}` |
 
 ## 20. Webhooks
 

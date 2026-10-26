@@ -604,6 +604,20 @@ Supersedes the `ai_models`, `prompt_versions` and `ai_runs` outlines in §14 bel
 
 **campaign_strategies** (tenant-owned, forced RLS; read, insert and update — archived, never deleted) — `organization_id`, `product_id` and `ai_run_id` (composite foreign keys within the organization), `status` (`draft` | `ready` | `archived`), `strategy` (JSONB, the validated answer as edited), `budget_amount` (> 0), `budget_period` (`daily` | `monthly`), `budget_currency` (3 letters), `budget_amounts` (JSONB, the amounts AdVegaX computed from the AI's percentages, per platform), `created_by`, `edited_by`, `edited_at`, timestamps; index (`organization_id`, `status`). Used from 8-05.
 
+## 14B. Creative engine — as built (Phase 9, migration 0019; A27)
+
+Supersedes the `creatives` outline in §9.
+
+**creative_sets** (tenant-owned, forced RLS; read and insert) — `organization_id`, `strategy_id` and `ai_run_id` (composite foreign keys within the organization), `created_by`, `created_at`. One AI drafting of a **ready** strategy.
+
+**creatives** (tenant-owned, forced RLS; read, insert, update — never deleted) — `organization_id`, `set_id`, `concept_id` (shared by every version of one ad concept), `version` (≥ 1; unique with `concept_id`), `replaces_id` (the version it was edited from), `platform` (`google_ads` | `meta_ads`), `format` (`google_rsa` | `meta_single`), `angle`, `status` (`draft` | `approved` | `rejected` | `archived`), `content` (JSONB: the texts — Google: `headlines[]`, `descriptions[]`, `path1`, `path2`; Meta: `primary_texts[]`, `headlines[]`, `descriptions[]`, `call_to_action`), `rationale`, `compliance_notes` (JSONB, the AI's advice), `checks` (JSONB: the fixed checks' results `{code, field, detail, severity}`), `asset_id` (Meta, optional), `decided_by`, `decided_at`, `decision_reason`, `created_by`, timestamps. **At most one approved version per concept** (partial unique index on `concept_id` where `status = 'approved'`).
+
+**creative_assets** (tenant-owned, forced RLS; read, insert, update) — `organization_id`, `storage_key` (random, unique, under `org/<organization>/assets/`), `content_type` (`image/jpeg` | `image/png` | `image/webp`, as re-encoded), `width`, `height`, `bytes`, `sha256`, `original_name` (shown only), `status` (`active` | `archived`), `uploaded_by`, timestamps.
+
+**creative_rules** (tenant-owned, forced RLS; one row per organization) — `prohibited_terms`, `allowed_caps` (JSONB lists), `updated_by`, `updated_at`.
+
+`campaign_strategies` gains unique (`organization_id`, `id`); `ai_runs.task` also allows `creative_copy`.
+
 ## 14. AI Tables
 
 ### ai_models

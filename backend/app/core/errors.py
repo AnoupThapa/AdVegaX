@@ -162,6 +162,38 @@ class StrategyArchived(AppError):
     message = "This strategy is archived and can no longer be changed."
 
 
+class StrategyNotReady(AppError):
+    """Phase 9: creatives are drafted only from a strategy marked ready."""
+
+    status_code = 409
+    code = "STRATEGY_NOT_READY"
+    message = "Mark the strategy ready before making creatives from it."
+
+
+class CreativeChecksFailed(AppError):
+    """Phase 9: approval refused; ``details`` list each check that failed."""
+
+    status_code = 422
+    code = "CREATIVE_CHECKS_FAILED"
+    message = "This creative does not pass AdVegaX's checks yet."
+
+
+class CreativeNotEditable(AppError):
+    """Phase 9: only the latest version of a creative that is not archived can change."""
+
+    status_code = 409
+    code = "CREATIVE_NOT_EDITABLE"
+    message = "This version can no longer be changed."
+
+
+class AssetInvalid(AppError):
+    """Phase 9: an upload that is not an acceptable image; ``details`` say why."""
+
+    status_code = 422
+    code = "ASSET_INVALID"
+    message = "This file is not an image AdVegaX can use."
+
+
 def error_body(
     code: str, message: str, details: list[dict[str, Any]] | None = None
 ) -> dict[str, Any]:

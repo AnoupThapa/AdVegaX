@@ -365,6 +365,7 @@ class StrategyService:
             row.budget_amounts = budgets.out(budget, split)
             row.status = "draft"  # an edited strategy is reviewed again before it is ready
             row.edited_by, row.edited_at = ctx.user_id, self.rt.clock.now()
+            row.updated_at = row.edited_at
             session.flush()
             self._audit(session, ctx, "edited", row, before=before)
             return self._out(session, ctx, row.id)
@@ -379,6 +380,7 @@ class StrategyService:
                 raise StrategyArchived()
             before = _summary(row)
             row.status = to
+            row.updated_at = self.rt.clock.now()
             session.flush()
             self._audit(session, ctx, "ready" if to == "ready" else "archived", row, before=before)
             return self._out(session, ctx, row.id)

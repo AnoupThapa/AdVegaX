@@ -1941,6 +1941,125 @@
         "title": "AnalyticsSyncOut",
         "type": "object"
       },
+      "ApproveIn": {
+        "properties": {
+          "confirm_flags": {
+            "default": false,
+            "title": "Confirm Flags",
+            "type": "boolean"
+          }
+        },
+        "title": "ApproveIn",
+        "type": "object"
+      },
+      "AssetOut": {
+        "properties": {
+          "bytes": {
+            "title": "Bytes",
+            "type": "integer"
+          },
+          "content_type": {
+            "title": "Content Type",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "height": {
+            "title": "Height",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "original_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Name"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "archived"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "uploaded_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uploaded By"
+          },
+          "width": {
+            "title": "Width",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "content_type",
+          "width",
+          "height",
+          "bytes",
+          "sha256",
+          "original_name",
+          "status",
+          "uploaded_by",
+          "created_at"
+        ],
+        "title": "AssetOut",
+        "type": "object"
+      },
+      "AssetRefOut": {
+        "properties": {
+          "content_type": {
+            "title": "Content Type",
+            "type": "string"
+          },
+          "height": {
+            "title": "Height",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "width": {
+            "title": "Width",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "content_type",
+          "width",
+          "height"
+        ],
+        "title": "AssetRefOut",
+        "type": "object"
+      },
       "AuditLogOut": {
         "properties": {
           "action": {
@@ -2081,6 +2200,20 @@
           "expires_in_seconds"
         ],
         "title": "AuthorizationStartOut",
+        "type": "object"
+      },
+      "Body_upload_creative_asset_api_v1_organizations__organization_id__creative_assets_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_creative_asset_api_v1_organizations__organization_id__creative_assets_post",
         "type": "object"
       },
       "BudgetIn": {
@@ -2730,6 +2863,46 @@
         "title": "ChannelsOut",
         "type": "object"
       },
+      "CheckOut": {
+        "description": "One fixed check's result: ``block`` must be fixed; ``flag`` must be confirmed.",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "block",
+              "flag"
+            ],
+            "title": "Severity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "field",
+          "detail",
+          "severity"
+        ],
+        "title": "CheckOut",
+        "type": "object"
+      },
       "ConnectionOut": {
         "properties": {
           "account_label": {
@@ -2954,6 +3127,442 @@
           "effective_from"
         ],
         "title": "CostOut",
+        "type": "object"
+      },
+      "CreativeOut": {
+        "properties": {
+          "angle": {
+            "title": "Angle",
+            "type": "string"
+          },
+          "approvable": {
+            "title": "Approvable",
+            "type": "boolean"
+          },
+          "asset": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AssetRefOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/CheckOut"
+            },
+            "title": "Checks",
+            "type": "array"
+          },
+          "compliance_notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Compliance Notes",
+            "type": "array"
+          },
+          "concept_id": {
+            "format": "uuid",
+            "title": "Concept Id",
+            "type": "string"
+          },
+          "content": {
+            "additionalProperties": true,
+            "title": "Content",
+            "type": "object"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "decided_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided By"
+          },
+          "decision_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Reason"
+          },
+          "format": {
+            "enum": [
+              "google_rsa",
+              "meta_single"
+            ],
+            "title": "Format",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "latest": {
+            "title": "Latest",
+            "type": "boolean"
+          },
+          "platform": {
+            "enum": [
+              "google_ads",
+              "meta_ads"
+            ],
+            "title": "Platform",
+            "type": "string"
+          },
+          "product_id": {
+            "format": "uuid",
+            "title": "Product Id",
+            "type": "string"
+          },
+          "product_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Title"
+          },
+          "rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rationale"
+          },
+          "set_id": {
+            "format": "uuid",
+            "title": "Set Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "approved",
+              "rejected",
+              "archived"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "strategy_id": {
+            "format": "uuid",
+            "title": "Strategy Id",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/VersionRefOut"
+            },
+            "title": "Versions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "set_id",
+          "strategy_id",
+          "product_id",
+          "product_title",
+          "concept_id",
+          "version",
+          "latest",
+          "platform",
+          "format",
+          "angle",
+          "status",
+          "content",
+          "rationale",
+          "compliance_notes",
+          "checks",
+          "approvable",
+          "asset",
+          "decided_by",
+          "decided_at",
+          "decision_reason",
+          "created_by",
+          "created_at",
+          "versions"
+        ],
+        "title": "CreativeOut",
+        "type": "object"
+      },
+      "CreativeRulesIn": {
+        "properties": {
+          "allowed_caps": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Allowed Caps",
+            "type": "array"
+          },
+          "prohibited_terms": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 200,
+            "title": "Prohibited Terms",
+            "type": "array"
+          }
+        },
+        "required": [
+          "prohibited_terms",
+          "allowed_caps"
+        ],
+        "title": "CreativeRulesIn",
+        "type": "object"
+      },
+      "CreativeRulesOut": {
+        "properties": {
+          "allowed_caps": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Allowed Caps",
+            "type": "array"
+          },
+          "base_prohibited_terms": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Base Prohibited Terms",
+            "type": "array"
+          },
+          "prohibited_terms": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Prohibited Terms",
+            "type": "array"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "prohibited_terms",
+          "allowed_caps",
+          "base_prohibited_terms",
+          "updated_at"
+        ],
+        "title": "CreativeRulesOut",
+        "type": "object"
+      },
+      "CreativeSetCreateIn": {
+        "properties": {
+          "strategy_id": {
+            "format": "uuid",
+            "title": "Strategy Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "strategy_id"
+        ],
+        "title": "CreativeSetCreateIn",
+        "type": "object"
+      },
+      "CreativeSetOut": {
+        "properties": {
+          "ai_run_id": {
+            "format": "uuid",
+            "title": "Ai Run Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "creatives": {
+            "items": {
+              "$ref": "#/components/schemas/CreativeOut"
+            },
+            "title": "Creatives",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "product_id": {
+            "format": "uuid",
+            "title": "Product Id",
+            "type": "string"
+          },
+          "product_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Title"
+          },
+          "strategy_id": {
+            "format": "uuid",
+            "title": "Strategy Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "strategy_id",
+          "product_id",
+          "product_title",
+          "created_at",
+          "ai_run_id",
+          "creatives"
+        ],
+        "title": "CreativeSetOut",
+        "type": "object"
+      },
+      "CreativeSetSummaryOut": {
+        "properties": {
+          "approved": {
+            "title": "Approved",
+            "type": "integer"
+          },
+          "concepts": {
+            "title": "Concepts",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "product_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Title"
+          },
+          "strategy_id": {
+            "format": "uuid",
+            "title": "Strategy Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "strategy_id",
+          "product_title",
+          "created_at",
+          "concepts",
+          "approved"
+        ],
+        "title": "CreativeSetSummaryOut",
+        "type": "object"
+      },
+      "CreativeUpdateIn": {
+        "description": "An edit: the whole content as edited and/or the image (Meta). Creates a new version.",
+        "properties": {
+          "asset_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asset Id"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          },
+          "remove_asset": {
+            "default": false,
+            "title": "Remove Asset",
+            "type": "boolean"
+          }
+        },
+        "title": "CreativeUpdateIn",
         "type": "object"
       },
       "CsrfOut": {
@@ -3363,6 +3972,22 @@
         "title": "Envelope[AnalyticsResyncOut]",
         "type": "object"
       },
+      "Envelope_AssetOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AssetOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[AssetOut]",
+        "type": "object"
+      },
       "Envelope_AuthorizationStartOut_": {
         "properties": {
           "data": {
@@ -3441,6 +4066,54 @@
           "meta"
         ],
         "title": "Envelope[ConnectionOut]",
+        "type": "object"
+      },
+      "Envelope_CreativeOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/CreativeOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[CreativeOut]",
+        "type": "object"
+      },
+      "Envelope_CreativeRulesOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/CreativeRulesOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[CreativeRulesOut]",
+        "type": "object"
+      },
+      "Envelope_CreativeSetOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/CreativeSetOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[CreativeSetOut]",
         "type": "object"
       },
       "Envelope_CsrfOut_": {
@@ -3819,6 +4492,26 @@
         "title": "Envelope[list[AnalyticsPropertyOut]]",
         "type": "object"
       },
+      "Envelope_list_AssetOut__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/AssetOut"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[list[AssetOut]]",
+        "type": "object"
+      },
       "Envelope_list_ConnectionOut__": {
         "properties": {
           "data": {
@@ -3837,6 +4530,46 @@
           "meta"
         ],
         "title": "Envelope[list[ConnectionOut]]",
+        "type": "object"
+      },
+      "Envelope_list_CreativeOut__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/CreativeOut"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[list[CreativeOut]]",
+        "type": "object"
+      },
+      "Envelope_list_CreativeSetSummaryOut__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/CreativeSetSummaryOut"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[list[CreativeSetSummaryOut]]",
         "type": "object"
       },
       "Envelope_list_InvitationOut__": {
@@ -5764,6 +6497,21 @@
         "title": "RegisterRequest",
         "type": "object"
       },
+      "RejectIn": {
+        "properties": {
+          "reason": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "RejectIn",
+        "type": "object"
+      },
       "ResetPasswordRequest": {
         "additionalProperties": false,
         "properties": {
@@ -7146,6 +7894,42 @@
           "cost"
         ],
         "title": "VariantOut",
+        "type": "object"
+      },
+      "VersionRefOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "approved",
+              "rejected",
+              "archived"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "status",
+          "created_at"
+        ],
+        "title": "VersionRefOut",
         "type": "object"
       }
     }
@@ -8580,6 +9364,60 @@
         "summary": "Mark Campaign Strategy Ready",
         "tags": [
           "strategies"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/ai/creative-sets": {
+      "post": {
+        "description": "Draft the ad copy for every platform of a strategy marked ready (one AI run). Every\nconcept is kept as a draft with its check results; nothing is sent to Google or Meta.\nErrors: STRATEGY_NOT_READY, AI_LIMIT_REACHED, AI_UNAVAILABLE, AI_ANSWER_REJECTED.",
+        "operationId": "generate_creative_set_api_v1_organizations__organization_id__ai_creative_sets_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreativeSetCreateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_CreativeSetOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Generate Creative Set",
+        "tags": [
+          "creatives"
         ]
       }
     },
@@ -10204,6 +11042,821 @@
         "summary": "Start Connection",
         "tags": [
           "connections"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/creative-assets": {
+      "get": {
+        "operationId": "list_creative_assets_api_v1_organizations__organization_id__creative_assets_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "archived",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Archived",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_AssetOut__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Creative Assets",
+        "tags": [
+          "creatives"
+        ]
+      },
+      "post": {
+        "description": "An image (JPEG, PNG or WebP). Checked by decoding and re-saved without hidden data.",
+        "operationId": "upload_creative_asset_api_v1_organizations__organization_id__creative_assets_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_creative_asset_api_v1_organizations__organization_id__creative_assets_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AssetOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Upload Creative Asset",
+        "tags": [
+          "creatives"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/creative-assets/{asset_id}/archive": {
+      "post": {
+        "operationId": "archive_creative_asset_api_v1_organizations__organization_id__creative_assets__asset_id__archive_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "asset_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Asset Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AssetOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Archive Creative Asset",
+        "tags": [
+          "creatives"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/creative-assets/{asset_id}/content": {
+      "get": {
+        "description": "The image itself, for members of the organization only (never a public link).",
+        "operationId": "creative_asset_content_api_v1_organizations__organization_id__creative_assets__asset_id__content_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "asset_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Asset Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/*": {}
+            },
+            "description": "The image"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Creative Asset Content",
+        "tags": [
+          "creatives"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/creative-rules": {
+      "get": {
+        "operationId": "get_creative_rules_api_v1_organizations__organization_id__creative_rules_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_CreativeRulesOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Creative Rules",
+        "tags": [
+          "creatives"
+        ]
+      },
+      "put": {
+        "description": "Owners and admins: the organization's own prohibited and allowed-capitalised words.",
+        "operationId": "put_creative_rules_api_v1_organizations__organization_id__creative_rules_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreativeRulesIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_CreativeRulesOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Creative Rules",
+        "tags": [
+          "creatives"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/creative-sets": {
+      "get": {
+        "operationId": "list_creative_sets_api_v1_organizations__organization_id__creative_sets_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "strategy_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Strategy Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_CreativeSetSummaryOut__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Creative Sets",
+        "tags": [
+          "creatives"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/creative-sets/{set_id}": {
+      "get": {
+        "description": "The newest version of each concept, with its checks and versions.",
+        "operationId": "get_creative_set_api_v1_organizations__organization_id__creative_sets__set_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "set_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Set Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_CreativeSetOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Creative Set",
+        "tags": [
+          "creatives"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/creatives": {
+      "get": {
+        "description": "With ``status=approved``: the creatives the campaign builder may use.",
+        "operationId": "list_creatives_api_v1_organizations__organization_id__creatives_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "draft",
+                    "approved",
+                    "rejected",
+                    "archived"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "platform",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "google_ads",
+                    "meta_ads"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Platform"
+            }
+          },
+          {
+            "in": "query",
+            "name": "strategy_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Strategy Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_CreativeOut__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Creatives",
+        "tags": [
+          "creatives"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/creatives/{creative_id}": {
+      "get": {
+        "operationId": "get_creative_api_v1_organizations__organization_id__creatives__creative_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "creative_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Creative Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_CreativeOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Creative",
+        "tags": [
+          "creatives"
+        ]
+      },
+      "patch": {
+        "description": "An edit makes a new draft version; the version edited is kept unchanged.",
+        "operationId": "update_creative_api_v1_organizations__organization_id__creatives__creative_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "creative_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Creative Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreativeUpdateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_CreativeOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Creative",
+        "tags": [
+          "creatives"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/creatives/{creative_id}/approve": {
+      "post": {
+        "description": "Owners, admins, managers. Checks run again; CREATIVE_CHECKS_FAILED lists what failed.",
+        "operationId": "approve_creative_api_v1_organizations__organization_id__creatives__creative_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "creative_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Creative Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_CreativeOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Approve Creative",
+        "tags": [
+          "creatives"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/creatives/{creative_id}/archive": {
+      "post": {
+        "operationId": "archive_creative_api_v1_organizations__organization_id__creatives__creative_id__archive_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "creative_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Creative Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_CreativeOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Archive Creative",
+        "tags": [
+          "creatives"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/creatives/{creative_id}/reject": {
+      "post": {
+        "operationId": "reject_creative_api_v1_organizations__organization_id__creatives__creative_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "creative_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Creative Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejectIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_CreativeOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reject Creative",
+        "tags": [
+          "creatives"
         ]
       }
     },

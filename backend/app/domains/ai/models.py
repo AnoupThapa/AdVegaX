@@ -38,7 +38,7 @@ from app.db.base import Base, Timestamps, UUIDPrimaryKey
 
 TZ = DateTime(timezone=True)
 RUN_STATUSES = ("succeeded", "rejected", "failed", "timed_out")
-RUN_TASKS = ("campaign_strategy",)
+RUN_TASKS = ("campaign_strategy", "creative_copy")
 STRATEGY_STATUSES = ("draft", "ready", "archived")
 BUDGET_PERIODS = ("daily", "monthly")
 
@@ -119,6 +119,7 @@ class CampaignStrategy(UUIDPrimaryKey, Timestamps, Base):
             ["ai_runs.organization_id", "ai_runs.id"],
             name="fk_campaign_strategies_ai_run",
         ),
+        UniqueConstraint("organization_id", "id", name="uq_campaign_strategies_organization_id_id"),
         CheckConstraint(_in("status", STRATEGY_STATUSES), name="status"),
         CheckConstraint(_in("budget_period", BUDGET_PERIODS), name="budget_period"),
         CheckConstraint("budget_amount > 0", name="budget_amount"),

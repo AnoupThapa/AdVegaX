@@ -26,6 +26,16 @@ BODIES = {
         "platforms": ["google_ads"],
         "budget": {"amount": "10", "period": "daily"},
     },
+    ("post", "/organizations/{organization_id}/ai/creative-sets"): {
+        "strategy_id": "00000000-0000-4000-8000-000000000000"
+    },
+    ("patch", "/organizations/{organization_id}/creatives/{creative_id}"): {"content": None},
+    ("post", "/organizations/{organization_id}/creatives/{creative_id}/approve"): {},
+    ("post", "/organizations/{organization_id}/creatives/{creative_id}/reject"): {"reason": "no"},
+    ("put", "/organizations/{organization_id}/creative-rules"): {
+        "prohibited_terms": [],
+        "allowed_caps": [],
+    },
     ("patch", "/organizations/{organization_id}/ai/campaign-strategies/{strategy_id}"): {
         "budget": {"amount": "10", "period": "daily"}
     },
@@ -75,6 +85,8 @@ def _org_routes(app):
 
 
 def _call(client, method, path, body):
+    if method == "post" and path.endswith("/creative-assets"):  # multipart upload (9-05)
+        return client.upload(path, "a.png", b"\x89PNG")
     if method == "get":
         return client.get(path)
     if method == "delete":
@@ -102,6 +114,9 @@ def test_every_org_route_returns_404_for_non_members(app, tenants):
             .replace("{campaign_id}", str(uuid.uuid4()))
             .replace("{property_id}", str(uuid.uuid4()))
             .replace("{strategy_id}", str(uuid.uuid4()))
+            .replace("{set_id}", str(uuid.uuid4()))
+            .replace("{creative_id}", str(uuid.uuid4()))
+            .replace("{asset_id}", str(uuid.uuid4()))
         )
         assert not re.search(r"\{\w+\}", path), f"unhandled path parameter in {template}"
         response = _call(tenants["a"], method, path, BODIES.get((method, template), {}))

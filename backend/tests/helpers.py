@@ -78,6 +78,14 @@ class ApiClient:
     def delete(self, path: str, headers: dict[str, str] | None = None) -> Any:
         return self._send("DELETE", path, None, headers)
 
+    def upload(self, path: str, name: str, data: bytes, content_type: str = "image/png") -> Any:
+        """A multipart file upload, as the web app's image library sends it (9-05)."""
+        return self.http.post(
+            f"/api/v1{path}",
+            files={"file": (name, data, content_type)},
+            headers=self._headers(None),
+        )
+
     # -- flows -----------------------------------------------------------------------
     def register(self, email: str, password: str = PASSWORD, name: str | None = None) -> Any:
         body: dict[str, Any] = {"email": email, "password": password}

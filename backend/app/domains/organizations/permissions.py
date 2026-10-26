@@ -54,6 +54,9 @@ class Permission(StrEnum):
     STRATEGIES_VIEW = "strategies.view"  # campaign strategies (Phase 8)
     STRATEGIES_MANAGE = "strategies.manage"  # generate, edit, mark ready, archive (Q-8-7)
     AI_USAGE_VIEW = "ai_usage.view"  # AI runs, tokens and estimated cost (Q-8-8)
+    CREATIVES_VIEW = "creatives.view"  # creatives, images and rules (Phase 9)
+    CREATIVES_MANAGE = "creatives.manage"  # draft, edit, upload images (Q-9-6)
+    CREATIVES_APPROVE = "creatives.approve"  # approve, reject, archive (Q-9-6)
 
 
 _ALL = frozenset(Role)
@@ -80,6 +83,9 @@ PERMISSION_MATRIX: dict[Permission, frozenset[Role]] = {
     Permission.STRATEGIES_VIEW: _ALL,
     Permission.STRATEGIES_MANAGE: _ALL_BUT_VIEWER,
     Permission.AI_USAGE_VIEW: _OWNER_ADMIN,
+    Permission.CREATIVES_VIEW: _ALL,
+    Permission.CREATIVES_MANAGE: _ALL_BUT_VIEWER,
+    Permission.CREATIVES_APPROVE: _OWNER_ADMIN_MANAGER,
 }
 
 

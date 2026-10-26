@@ -1,6 +1,6 @@
 # Phase 9 — Creative engine: Implementation Plan
 
-**Status:** 📝 **Draft for product-owner approval.** Nothing is implemented until you approve (A1). · **Date:** 2026-10-26
+**Status:** ✅ **Approved by the product owner (2026-10-26, A27: "Approve all") with all §2 recommendations (Q-9-1 … Q-9-11; settles Q12 for Phase 9) and the libraries Pillow, python-multipart and boto3.** Implementation authorized for Phase 9 only; one report at the end of the phase. · **Date:** 2026-10-26
 
 > **Live data:** like Phase 8, Phase 9 is built and tested against the **AI simulator** (no AI calls in CI). Step 0 (9-01) makes a few real calls once your Anthropic API key is in place, and checks the platforms' current text limits.
 

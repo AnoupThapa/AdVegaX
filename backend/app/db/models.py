@@ -25,6 +25,7 @@ from app.domains.commerce.models import (
     SalesEntry,
     Store,
 )
+from app.domains.creative.models import Creative, CreativeAsset, CreativeRules, CreativeSet
 from app.domains.finance.models import FinancialDaily
 from app.domains.fx.models import FxRate
 from app.domains.identity.models import User, UserActionToken, UserPasswordCredential, UserSession
@@ -56,6 +57,10 @@ __all__ = [
     "Base",
     "CampaignStrategy",
     "CommerceSyncState",
+    "Creative",
+    "CreativeAsset",
+    "CreativeRules",
+    "CreativeSet",
     "EmailOutbox",
     "ExternalConnection",
     "ExternalConnectionCredential",

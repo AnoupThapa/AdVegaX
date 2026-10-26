@@ -43,7 +43,9 @@ def _fill(path: str, values: dict[str, str]) -> str:
 
 def _request(client, method, path, *, headers):
     kwargs = {"headers": headers}
-    if method in UNSAFE and method != "delete":
+    if method == "post" and path.endswith("/creative-assets"):
+        kwargs["files"] = {"file": ("a.png", b"\x89PNG", "image/png")}  # the upload route (9-05)
+    elif method in UNSAFE and method != "delete":
         kwargs["json"] = {}
     return client.http.request(method.upper(), f"/api/v1{path}", **kwargs)
 

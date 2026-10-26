@@ -10,7 +10,7 @@ from datetime import timedelta
 from decimal import Decimal
 from enum import StrEnum
 from functools import lru_cache
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
@@ -255,6 +255,29 @@ class Settings(BaseSettings):
     PLANNER_MIN_DAILY_GOOGLE_ADS_USD: Decimal = Field(default=Decimal(1), ge=0)
     PLANNER_MIN_DAILY_META_ADS_USD: Decimal = Field(default=Decimal(1), ge=0)
 
+    # --- Creative engine (Phase 9; PHASE_09_PLAN §2, A27) ------------------------------
+    # Drafts per platform and their size (Q-9-3); the platforms' text limits (Q-9-4) live in
+    # app/domains/creative/specs.py and are checked on every save.
+    CREATIVE_CONCEPTS: int = Field(default=3, ge=1, le=5)
+    CREATIVE_GOOGLE_HEADLINES: int = Field(default=10, ge=3, le=15)
+    CREATIVE_GOOGLE_DESCRIPTIONS: int = Field(default=4, ge=2, le=4)
+    CREATIVE_META_PRIMARY_TEXTS: int = Field(default=3, ge=1, le=5)
+    CREATIVE_META_HEADLINES: int = Field(default=3, ge=1, le=5)
+    CREATIVE_META_DESCRIPTIONS: int = Field(default=2, ge=1, le=5)
+    # Uploaded images (Q-9-8): checked by decoding, re-encoded without metadata.
+    ASSET_MAX_BYTES: int = Field(default=10 * 1024 * 1024, ge=1024, le=50 * 1024 * 1024)
+    ASSET_MIN_SIDE: int = Field(default=600, ge=1, le=4000)
+    ASSET_MAX_PIXELS: int = Field(default=40_000_000, ge=1_000_000, le=200_000_000)
+    # Where images are kept (Q-9-9): a local folder (development, tests, one server) or an
+    # S3-compatible store chosen at the production-readiness gate. Keys only in settings.
+    STORAGE_BACKEND: Literal["local", "s3"] = "local"
+    STORAGE_LOCAL_ROOT: str = "var/storage"
+    S3_BUCKET: str | None = None
+    S3_ENDPOINT_URL: str | None = None  # None: AWS; R2 / B2 / MinIO give their own
+    S3_REGION: str | None = None
+    S3_ACCESS_KEY_ID: SecretStr | None = None
+    S3_SECRET_ACCESS_KEY: SecretStr | None = None
+
     # --- Advertising import (Phase 3; PHASE_03_PLAN §9) ---------------------------------
     ADS_HISTORY_WINDOW: timedelta = timedelta(days=395)  # 13 months on first link (Q-3-6)
     # Ongoing sync (Q-3-5, task 3-07): every 3 hours structure + today and yesterday; nightly
@@ -422,6 +445,12 @@ class Settings(BaseSettings):
             raise ValueError("ENCRYPTION_ACTIVE_KEY_VERSION must be present in ENCRYPTION_KEYS")
         if self.PASSWORD_MIN_LENGTH > self.PASSWORD_MAX_LENGTH:
             raise ValueError("PASSWORD_MIN_LENGTH must not exceed PASSWORD_MAX_LENGTH")
+        if self.STORAGE_BACKEND == "s3" and not (
+            self.S3_BUCKET and self.S3_ACCESS_KEY_ID and self.S3_SECRET_ACCESS_KEY
+        ):
+            raise ValueError(
+                "STORAGE_BACKEND=s3 needs S3_BUCKET, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY"
+            )
         if self.is_deployed:
             self._validate_deployed()
         return self

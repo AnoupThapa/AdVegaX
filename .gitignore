@@ -38,3 +38,4 @@ Thumbs.db
 
 # Redis local dumps
 *.rdb
+backend/var/
