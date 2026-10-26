@@ -51,11 +51,15 @@ class Permission(StrEnum):
     ADS_MANAGE = "ads.manage"  # "Sync now" for ad accounts
     ANALYTICS_VIEW = "analytics.view"  # analytics properties and their figures (5-07)
     ANALYTICS_MANAGE = "analytics.manage"  # "Sync now" for analytics properties
+    STRATEGIES_VIEW = "strategies.view"  # campaign strategies (Phase 8)
+    STRATEGIES_MANAGE = "strategies.manage"  # generate, edit, mark ready, archive (Q-8-7)
+    AI_USAGE_VIEW = "ai_usage.view"  # AI runs, tokens and estimated cost (Q-8-8)
 
 
 _ALL = frozenset(Role)
 _OWNER_ADMIN = frozenset({Role.OWNER, Role.ADMIN})
 _OWNER_ADMIN_MANAGER = frozenset({Role.OWNER, Role.ADMIN, Role.MANAGER})
+_ALL_BUT_VIEWER = frozenset(Role) - {Role.VIEWER}
 
 PERMISSION_MATRIX: dict[Permission, frozenset[Role]] = {
     Permission.ORG_VIEW: _ALL,
@@ -73,6 +77,9 @@ PERMISSION_MATRIX: dict[Permission, frozenset[Role]] = {
     Permission.ADS_MANAGE: _OWNER_ADMIN_MANAGER,
     Permission.ANALYTICS_VIEW: _ALL,
     Permission.ANALYTICS_MANAGE: _OWNER_ADMIN_MANAGER,
+    Permission.STRATEGIES_VIEW: _ALL,
+    Permission.STRATEGIES_MANAGE: _ALL_BUT_VIEWER,
+    Permission.AI_USAGE_VIEW: _OWNER_ADMIN,
 }
 
 

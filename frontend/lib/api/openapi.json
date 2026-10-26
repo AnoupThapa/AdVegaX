@@ -1104,6 +1104,46 @@
         "title": "AdSyncOut",
         "type": "object"
       },
+      "AiRunRefOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "prompt_name": {
+            "title": "Prompt Name",
+            "type": "string"
+          },
+          "prompt_version": {
+            "title": "Prompt Version",
+            "type": "string"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "provider",
+          "model",
+          "prompt_name",
+          "prompt_version",
+          "created_at"
+        ],
+        "title": "AiRunRefOut",
+        "type": "object"
+      },
       "AnalyticsChannelOut": {
         "properties": {
           "channel": {
@@ -2041,6 +2081,67 @@
           "expires_in_seconds"
         ],
         "title": "AuthorizationStartOut",
+        "type": "object"
+      },
+      "BudgetIn": {
+        "description": "The merchant's total, in the organization's reporting currency (Q-8-5).",
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 1000000000.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,16}|(?=[\\d.]{1,17}0*$)\\d*\\.\\d*0*$)",
+                "type": "string"
+              }
+            ],
+            "title": "Amount"
+          },
+          "period": {
+            "enum": [
+              "daily",
+              "monthly"
+            ],
+            "title": "Period",
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount",
+          "period"
+        ],
+        "title": "BudgetIn",
+        "type": "object"
+      },
+      "BudgetOut": {
+        "properties": {
+          "amount": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Amount",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "period": {
+            "enum": [
+              "daily",
+              "monthly"
+            ],
+            "title": "Period",
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount",
+          "period",
+          "currency"
+        ],
+        "title": "BudgetOut",
         "type": "object"
       },
       "CampaignFunnelOut": {
@@ -3625,6 +3726,38 @@
         "title": "Envelope[StoreOut]",
         "type": "object"
       },
+      "Envelope_StrategyOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/StrategyOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[StrategyOut]",
+        "type": "object"
+      },
+      "Envelope_UsageOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/UsageOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[UsageOut]",
+        "type": "object"
+      },
       "Envelope_UserOut_": {
         "properties": {
           "data": {
@@ -3859,6 +3992,66 @@
           "meta"
         ],
         "title": "Envelope[list[StoreOut]]",
+        "type": "object"
+      },
+      "EvidenceOut": {
+        "description": "A figure a recommendation relies on, as AdVegaX gave it to the planner.",
+        "properties": {
+          "availability": {
+            "title": "Availability",
+            "type": "string"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "label",
+          "unit",
+          "value",
+          "availability",
+          "reason"
+        ],
+        "title": "EvidenceOut",
         "type": "object"
       },
       "FigureOut": {
@@ -4581,6 +4774,26 @@
         "title": "ListEnvelope[AuditLogOut]",
         "type": "object"
       },
+      "ListEnvelope_StrategySummaryOut_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/StrategySummaryOut"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ListMeta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "ListEnvelope[StrategySummaryOut]",
+        "type": "object"
+      },
       "ListMeta": {
         "properties": {
           "page": {
@@ -5106,6 +5319,26 @@
           "days"
         ],
         "title": "OverviewOut",
+        "type": "object"
+      },
+      "PlatformAmountOut": {
+        "properties": {
+          "amount": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Amount",
+            "type": "string"
+          },
+          "daily": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Daily",
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount",
+          "daily"
+        ],
+        "title": "PlatformAmountOut",
         "type": "object"
       },
       "PlatformFunnelOut": {
@@ -6096,6 +6329,289 @@
         "title": "StoreOut",
         "type": "object"
       },
+      "StrategyCreateIn": {
+        "properties": {
+          "budget": {
+            "$ref": "#/components/schemas/BudgetIn"
+          },
+          "objective": {
+            "anyOf": [
+              {
+                "enum": [
+                  "sales",
+                  "leads",
+                  "awareness"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Objective"
+          },
+          "platforms": {
+            "items": {
+              "enum": [
+                "google_ads",
+                "meta_ads"
+              ],
+              "type": "string"
+            },
+            "maxItems": 2,
+            "minItems": 1,
+            "title": "Platforms",
+            "type": "array"
+          },
+          "product_id": {
+            "format": "uuid",
+            "title": "Product Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "product_id",
+          "platforms",
+          "budget"
+        ],
+        "title": "StrategyCreateIn",
+        "type": "object"
+      },
+      "StrategyOut": {
+        "properties": {
+          "ai_run": {
+            "$ref": "#/components/schemas/AiRunRefOut"
+          },
+          "budget": {
+            "$ref": "#/components/schemas/BudgetOut"
+          },
+          "budget_amounts": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/PlatformAmountOut"
+            },
+            "title": "Budget Amounts",
+            "type": "object"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "edited_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edited At"
+          },
+          "edited_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edited By"
+          },
+          "evidence": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/EvidenceOut"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Evidence",
+            "type": "object"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "product_id": {
+            "format": "uuid",
+            "title": "Product Id",
+            "type": "string"
+          },
+          "product_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Title"
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "ready",
+              "archived"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "strategy": {
+            "additionalProperties": true,
+            "title": "Strategy",
+            "type": "object"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "validated": {
+            "title": "Validated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "product_id",
+          "product_title",
+          "status",
+          "strategy",
+          "budget",
+          "budget_amounts",
+          "evidence",
+          "validated",
+          "ai_run",
+          "created_by",
+          "edited_by",
+          "edited_at",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "StrategyOut",
+        "type": "object"
+      },
+      "StrategySummaryOut": {
+        "properties": {
+          "budget": {
+            "$ref": "#/components/schemas/BudgetOut"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "objective": {
+            "title": "Objective",
+            "type": "string"
+          },
+          "platforms": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Platforms",
+            "type": "array"
+          },
+          "product_id": {
+            "format": "uuid",
+            "title": "Product Id",
+            "type": "string"
+          },
+          "product_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Title"
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "ready",
+              "archived"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "product_id",
+          "product_title",
+          "status",
+          "objective",
+          "platforms",
+          "budget",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "StrategySummaryOut",
+        "type": "object"
+      },
+      "StrategyUpdateIn": {
+        "description": "An edit: the whole strategy as edited and/or a new budget. Re-validated in full.",
+        "properties": {
+          "budget": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BudgetIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "strategy": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strategy"
+          }
+        },
+        "title": "StrategyUpdateIn",
+        "type": "object"
+      },
       "SyncOut": {
         "properties": {
           "last_deep_reconciled_at": {
@@ -6385,6 +6901,93 @@
           "new_vs_returning"
         ],
         "title": "TotalsOut",
+        "type": "object"
+      },
+      "UsageOut": {
+        "properties": {
+          "ai_enabled": {
+            "title": "Ai Enabled",
+            "type": "boolean"
+          },
+          "daily_limit": {
+            "title": "Daily Limit",
+            "type": "integer"
+          },
+          "last_30_days": {
+            "$ref": "#/components/schemas/UsagePeriodOut"
+          },
+          "remaining_today": {
+            "title": "Remaining Today",
+            "type": "integer"
+          },
+          "runs_today": {
+            "title": "Runs Today",
+            "type": "integer"
+          },
+          "today": {
+            "$ref": "#/components/schemas/UsagePeriodOut"
+          }
+        },
+        "required": [
+          "daily_limit",
+          "runs_today",
+          "remaining_today",
+          "today",
+          "last_30_days",
+          "ai_enabled"
+        ],
+        "title": "UsageOut",
+        "type": "object"
+      },
+      "UsagePeriodOut": {
+        "properties": {
+          "estimated_cost_usd": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Cost Usd"
+          },
+          "failed": {
+            "title": "Failed",
+            "type": "integer"
+          },
+          "input_tokens": {
+            "title": "Input Tokens",
+            "type": "integer"
+          },
+          "output_tokens": {
+            "title": "Output Tokens",
+            "type": "integer"
+          },
+          "rejected": {
+            "title": "Rejected",
+            "type": "integer"
+          },
+          "runs": {
+            "title": "Runs",
+            "type": "integer"
+          },
+          "succeeded": {
+            "title": "Succeeded",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "runs",
+          "succeeded",
+          "rejected",
+          "failed",
+          "input_tokens",
+          "output_tokens",
+          "estimated_cost_usd"
+        ],
+        "title": "UsagePeriodOut",
         "type": "object"
       },
       "UserOut": {
@@ -7590,6 +8193,432 @@
         "summary": "Assign Ad Account Store",
         "tags": [
           "advertising"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/ai/campaign-strategies": {
+      "get": {
+        "description": "Strategies, most recently changed first; archived ones only when asked for.",
+        "operationId": "list_campaign_strategies_api_v1_organizations__organization_id__ai_campaign_strategies_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "maximum": 10000,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "draft",
+                    "ready",
+                    "archived"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "product_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Product Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListEnvelope_StrategySummaryOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Campaign Strategies",
+        "tags": [
+          "strategies"
+        ]
+      },
+      "post": {
+        "description": "Ask the planner for a strategy for one product, the chosen platforms and the merchant's\nbudget. The answer is validated before it is kept as a draft; nothing is created at Google\nor Meta. Errors: AI_LIMIT_REACHED, AI_UNAVAILABLE, AI_ANSWER_REJECTED,\nPRODUCT_NOT_PLANNABLE.",
+        "operationId": "generate_campaign_strategy_api_v1_organizations__organization_id__ai_campaign_strategies_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StrategyCreateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_StrategyOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Generate Campaign Strategy",
+        "tags": [
+          "strategies"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/ai/campaign-strategies/{strategy_id}": {
+      "get": {
+        "description": "One strategy with its budget amounts, its evidence (the figures as the planner saw them)\nand the AI run, model and prompt version it came from.",
+        "operationId": "get_campaign_strategy_api_v1_organizations__organization_id__ai_campaign_strategies__strategy_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "strategy_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Strategy Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_StrategyOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Campaign Strategy",
+        "tags": [
+          "strategies"
+        ]
+      },
+      "patch": {
+        "description": "Edit the strategy and/or its budget. Re-validated with the same checks as the planner's\nanswers; an edited strategy is a draft again.",
+        "operationId": "update_campaign_strategy_api_v1_organizations__organization_id__ai_campaign_strategies__strategy_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "strategy_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Strategy Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StrategyUpdateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_StrategyOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Campaign Strategy",
+        "tags": [
+          "strategies"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/ai/campaign-strategies/{strategy_id}/archive": {
+      "post": {
+        "description": "Archive (kept, never deleted; can no longer be changed).",
+        "operationId": "archive_campaign_strategy_api_v1_organizations__organization_id__ai_campaign_strategies__strategy_id__archive_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "strategy_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Strategy Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_StrategyOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Archive Campaign Strategy",
+        "tags": [
+          "strategies"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/ai/campaign-strategies/{strategy_id}/ready": {
+      "post": {
+        "description": "Ready for the campaign builder (Phase 10B). Nothing is created yet.",
+        "operationId": "mark_campaign_strategy_ready_api_v1_organizations__organization_id__ai_campaign_strategies__strategy_id__ready_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "strategy_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Strategy Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_StrategyOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mark Campaign Strategy Ready",
+        "tags": [
+          "strategies"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/ai/usage": {
+      "get": {
+        "description": "AI runs, tokens and estimated cost today and over 30 days (owners and admins).",
+        "operationId": "ai_usage_api_v1_organizations__organization_id__ai_usage_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_UsageOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ai Usage",
+        "tags": [
+          "strategies"
         ]
       }
     },

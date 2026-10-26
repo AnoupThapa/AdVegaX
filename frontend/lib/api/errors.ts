@@ -96,6 +96,8 @@ const MESSAGES: Readonly<Record<string, string>> = {
   AI_UNAVAILABLE: "The AI planner is not available right now. Please try again later.",
   AI_ANSWER_REJECTED:
     "The AI's answer did not pass AdVegaX's checks, so nothing was saved. Please try again.",
+  PRODUCT_NOT_PLANNABLE: "A strategy cannot be made for this product right now.",
+  STRATEGY_ARCHIVED: "This strategy is archived and can no longer be changed.",
   INTERNAL_ERROR: "Something went wrong on our side. Please try again.",
   SERVICE_UNAVAILABLE: "The service is temporarily unavailable. Please try again shortly.",
   HTTP_ERROR: "This request could not be completed. Please try again.",

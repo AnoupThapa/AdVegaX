@@ -36,6 +36,11 @@ def test_matrix_matches_api_spec():
     assert PERMISSION_MATRIX[Permission.AUDIT_VIEW] == {Role.OWNER, Role.ADMIN}
     assert PERMISSION_MATRIX[Permission.MEMBERS_MANAGE] == {Role.OWNER, Role.ADMIN}
     assert PERMISSION_MATRIX[Permission.ORG_VIEW] == set(Role)
+    # Phase 8 (Q-8-7, Q-8-8): everyone reads strategies; viewers cannot generate or change them;
+    # AI usage is for owners and admins.
+    assert PERMISSION_MATRIX[Permission.STRATEGIES_VIEW] == set(Role)
+    assert PERMISSION_MATRIX[Permission.STRATEGIES_MANAGE] == set(Role) - {Role.VIEWER}
+    assert PERMISSION_MATRIX[Permission.AI_USAGE_VIEW] == {Role.OWNER, Role.ADMIN}
     assert not has_permission("unknown-role", Permission.ORG_VIEW)
 
 

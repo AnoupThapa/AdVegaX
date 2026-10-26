@@ -23,6 +23,7 @@ no connected ad platform, is never planned (``PRODUCT_NOT_PLANNABLE``).
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from typing import Any
@@ -44,6 +45,7 @@ from app.domains.strategy.schema import (
 )
 
 LIMITED_HISTORY_DAYS = 30
+_CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")  # tab, newline and return are fine
 _LENGTHS = {"summary": MAX_SUMMARY, "angle": MAX_SHORT, "text": MAX_SHORT}
 _COUNTS = {
     "angles": MAX_ANGLES,
@@ -114,7 +116,9 @@ def _shape(value: Any, schema: dict[str, Any], path: str, reasons: list[str]) ->
             return
         name = path.rsplit(".", 1)[-1].split("[", 1)[0]
         limit = _LENGTHS.get(name, MAX_TEXT)
-        if "enum" not in schema and not value.strip():
+        if _CONTROL.search(value):
+            reasons.append(f"invalid_text:{path}")  # control characters (and NUL) are refused
+        elif "enum" not in schema and not value.strip():
             reasons.append(f"empty:{path}")
         elif len(value) > limit:
             reasons.append(f"too_long:{path}")
@@ -150,7 +154,7 @@ def shape_reasons(answer: Any) -> list[str]:
 
 
 # ------------------------------------------------------------------ 2. existence
-def _evidence_keys(answer: dict[str, Any]) -> list[str]:
+def evidence_keys(answer: dict[str, Any]) -> list[str]:
     keys = [k for p in answer["platforms"] for k in p["evidence"]]
     keys += [k for a in answer["angles"] for k in a["evidence"]]
     keys += [k for t in answer["targets"] for k in t["evidence"]]
@@ -170,7 +174,7 @@ def existence_reasons(
     reasons += [f"platform_missing:{p}" for p in request.platforms if p not in named]
     if request.objective is not None and answer["objective"] != request.objective:
         reasons.append("objective_not_requested")
-    for key in _evidence_keys(answer):
+    for key in evidence_keys(answer):
         figure = context.figures.get(key)
         if figure is None:
             reasons.append(f"unknown_evidence:{key[:80]}")

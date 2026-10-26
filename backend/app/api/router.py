@@ -14,6 +14,7 @@ from app.domains.identity.router import router as identity_router
 from app.domains.integrations.router import router as integrations_router
 from app.domains.metrics.router import router as metrics_router
 from app.domains.organizations.router import router as organizations_router
+from app.domains.strategy.router import router as strategy_router
 from app.domains.webhooks.router import router as webhooks_router
 
 api_router = APIRouter(prefix="/api/v1")
@@ -27,4 +28,5 @@ api_router.include_router(advertising_router)
 api_router.include_router(analytics_router)
 api_router.include_router(metrics_router)
 api_router.include_router(funnel_router)
+api_router.include_router(strategy_router)
 api_router.include_router(webhooks_router)

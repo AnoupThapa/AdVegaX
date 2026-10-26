@@ -145,6 +145,23 @@ class AiAnswerRejected(AppError):
     message = "The AI's answer did not pass AdVegaX's checks, so nothing was saved."
 
 
+class ProductNotPlannable(AppError):
+    """Phase 8: this product cannot be planned now (inactive, out of stock, no ad platform,
+    a budget below the platforms' minimums); ``details`` say why."""
+
+    status_code = 422
+    code = "PRODUCT_NOT_PLANNABLE"
+    message = "A strategy cannot be made for this product right now."
+
+
+class StrategyArchived(AppError):
+    """Phase 8: an archived strategy is kept as it was and cannot be changed."""
+
+    status_code = 409
+    code = "STRATEGY_ARCHIVED"
+    message = "This strategy is archived and can no longer be changed."
+
+
 def error_body(
     code: str, message: str, details: list[dict[str, Any]] | None = None
 ) -> dict[str, Any]:

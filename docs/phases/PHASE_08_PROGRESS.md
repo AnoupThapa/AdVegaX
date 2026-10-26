@@ -8,8 +8,8 @@ Plan: `PHASE_08_PLAN.md` (approved 2026-10-25, A26, all recommendations Q-8-1 �
 | 8-02 Migration 0018; AI platform: adapter, Anthropic adapter, prompts, runs, simulator | ✅ Done — awaiting review |
 | 8-03 Context builder | ✅ Done — awaiting review |
 | 8-04 Strategy schema, validation chain, budget | ✅ Done — awaiting review |
-| 8-05 Workflow, API, limits | ⏳ Next |
-| 8-06 Web app: Strategies page | — |
+| 8-05 Workflow, API, limits | ✅ Done — awaiting review |
+| 8-06 Web app: Strategies page | ⏳ Next |
 | 8-07 Evaluation, browser test, `PHASE_08_REPORT.md` | — |
 
 ## 8-01 — Step 0 (2026-10-25)
@@ -161,3 +161,71 @@ Plan: `PHASE_08_PLAN.md` (approved 2026-10-25, A26, all recommendations Q-8-1 �
 3. The platform minimum daily budgets are AdVegaX settings (1 USD each by default), because the platforms' real minimums depend on currency and bidding. Step 0 compares them with the platforms' figures.
 
 **Next task:** 8-05 — the strategy workflow and API (generate, read, edit with re-validation, draft, mark ready, archive, audit), daily limits and the usage view.
+
+## 8-05 — Strategy workflow and API; limits and usage (2026-10-26)
+
+**Completed**
+- **API** under `/organizations/{id}/ai` (API_SPECIFICATION §19H):
+  - `POST /campaign-strategies` — generate;
+  - `GET /campaign-strategies` (paged; archived only when asked for) and `GET …/{id}`;
+  - `PATCH …/{id}` — edit;
+  - `POST …/{id}/ready`, `POST …/{id}/archive`;
+  - `GET /usage`.
+- **Generate:**
+  1. AdVegaX first checks the request: platforms (1–2, distinct, connected), objective, and a budget in the reporting currency with no more decimals than it has.
+  2. It checks the product can be planned: active, in stock, a connected ad platform, and a total that covers every platform's minimum (1 USD a day each, converted with the latest ECB rate). Otherwise `PRODUCT_NOT_PLANNABLE`, with the reasons — **the model is never called**.
+  3. One model call: daily limit, time limit, one retry.
+  4. The validated answer is kept as a **draft**, with the amounts AdVegaX computed.
+- **Read:** each strategy shows:
+  - its budget and amounts per platform (for the period, and per day);
+  - its **evidence**, resolved to the figures' labels and values as the planner saw them (from the run's snapshot);
+  - its AI run, model and prompt version.
+- **Edit:** the whole strategy and/or the budget.
+  - It is **re-validated with the same four checks** as the model's answers, against today's figures, and the amounts are recomputed.
+  - An edited strategy goes back to draft, so it is reviewed again before it is ready.
+  - Control characters (and the NUL character, which the database refuses) are rejected in any text.
+- **Ready / archive:** archived strategies are kept and can no longer be changed (`STRATEGY_ARCHIVED`, 409). Repeating an action changes nothing.
+- **Who can do what:**
+  - every member can read;
+  - owner, admin, manager and analyst can generate, edit, mark ready and archive (`strategies.manage`);
+  - usage is for owners and admins (`ai_usage.view`).
+- **Audit:** every change is audited — the status, objective, platforms and budget, **never the strategy text**.
+- **Usage:**
+  - the daily limit, runs today and runs left;
+  - today and the last 30 days: runs by outcome, tokens, and the estimated cost in US dollars;
+  - "unknown" (null) unless every run in the period has a price — never 0 by default.
+- New error messages in the web app: `PRODUCT_NOT_PLANNABLE`, `STRATEGY_ARCHIVED`. The API types for the web app are regenerated.
+
+**Files changed** (17)
+- New (4): `app/domains/strategy/{schemas,service,router}.py`, `tests/api/test_strategies_api.py` (27 tests).
+- Modified (13): `app/api/router.py`, `app/core/errors.py`, `app/domains/organizations/permissions.py`, `app/domains/strategy/validation.py` (text check), `tests/security/test_tenant_isolation.py` (the new routes in the sweep), `tests/unit/test_domain_rules.py`, `frontend/lib/api/{errors.ts,openapi.json,schema.d.ts}`, `docs/API_SPECIFICATION.md` (§19H; §11 marked superseded), this file, `PROJECT_STATUS.md`.
+- Deleted: none.
+
+**Tests**
+- **New (27):**
+  - generate (golden amounts daily and monthly, evidence, AI run, audit without text);
+  - every "cannot be planned" reason, with no model call;
+  - bad requests;
+  - another organization's product;
+  - each AI error (answer rejected, provider down, daily limit, switched off), with nothing kept;
+  - list and read, edit with re-validation and recomputed amounts;
+  - five invalid edits, a budget below the minimum;
+  - ready and archive;
+  - roles (a viewer cannot change anything; an analyst can generate; usage only for owners and admins);
+  - outsiders see nothing;
+  - usage counts and cost.
+- The tenant sweep now covers the seven new routes.
+- **Backend `make check`: 1,746 passed**, coverage 97 % (strategy service 98 %, router 100 %). **Frontend `npm run check`: 411 passed.**
+
+**Security**
+- Tenant isolation: row-level security on strategies and runs, and the route sweep.
+- Deny by default for viewers.
+- No strategy text in the audit.
+- The model is still only called after every check AdVegaX can make itself.
+
+**Deviations**
+1. Generating waits for the answer (up to the 60-second limit, twice with the retry) instead of running as a background job. This is simpler for v1, and the page shows progress; it can move to a job later without changing the API's result.
+2. Evidence is shown from the run's snapshot (the figures the planner saw). A key added by an edit that is not in that snapshot shows as unknown. Edits are still validated against today's figures.
+3. Editing a strategy that was ready returns it to draft (the plan didn't say), so a changed plan is always reviewed before the campaign builder uses it.
+
+**Next task:** 8-06 — the Strategies page in the web app.

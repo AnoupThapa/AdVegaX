@@ -296,6 +296,8 @@ Approval must be recorded in audit history.
 
 ## 11. AI Strategy
 
+> **Superseded by §19H (as built, Phase 8, task 8-05).** The outline below is kept for history.
+
 ### POST /organizations/{organization_id}/ai/campaign-strategy
 
 Input:
@@ -523,6 +525,22 @@ Same base, permission, query and context fields as §19E.
 | `GET /analytics/funnel` | `stages` (impressions, clicks, landing_page_views, product_views, adds_to_cart, checkouts, purchases = store orders, analytics_purchases), `steps`; `platforms[] {provider, source: platform_reported, ad_accounts, stages, steps}` (Meta: every stage; Google Ads: impressions → clicks → purchases, the rest `unsupported`), `platform_definitions`; `channels[] {channel, stages, steps}` most visits first, or `channels_missing`; `findings[] {view, subject, from_stage, to_stage, rate, previous_rate, baseline_rate, events_before, change}` largest fall first (Q-7-7), and `rules {drop_share, min_events, baseline_days, previous_from, previous_to}` |
 | `GET /analytics/funnel/campaigns` | `items[] {id, ad_account_id, provider, source, name, status, stages, steps, analytics, analytics_steps, shared_match}` — the platform's own funnel and Google Analytics' funnel for the campaign of exactly the same name (Q-6-9 rules; `no_match` otherwise); `other_traffic`, `other_traffic_steps` and `website` (the source view: matched campaigns, each match counted once, plus other traffic), or `analytics_missing` |
 | `GET /analytics/funnel/landing-pages` | `items[] {landing_page, stages, steps}` — Google Analytics' funnel per landing page (paths only), most visits first, at most 100; `item_count`; `items_missing` (`no_analytics_property`, `not_synchronized`) |
+
+## 19H. Campaign strategies — as built (8-05)
+
+Base `/organizations/{organization_id}/ai`. Permissions: `strategies.view` (every role), `strategies.manage` (owner, admin, manager, analyst — generate, edit, ready, archive), `ai_usage.view` (owner, admin). Every change is audited (`campaign_strategy.generated | edited | ready | archived`; the audit keeps status, objective, platforms and budget — never strategy text). Nothing is created at Google or Meta.
+
+| Method & path | Notes |
+|---|---|
+| `POST /campaign-strategies` (201) | Body `{product_id, platforms: ["google_ads" \| "meta_ads"] (1–2, distinct), objective: "sales" \| "leads" \| "awareness" \| null, budget: {amount > 0 (at most the currency's minor units), period: "daily" \| "monthly"}}` in the reporting currency. Checks before the model: `PRODUCT_NOT_PLANNABLE` (422) with `details[] {reason}` — `product_not_active`, `out_of_stock`, `no_ad_platform`, `platform_not_connected:<p>`, `budget_too_small`, `budget_minimum_not_checkable`. Then one model call (one retry): `AI_LIMIT_REACHED` (429, daily runs per organization), `AI_UNAVAILABLE` (503: switched off, no key, provider down, time limit), `AI_ANSWER_REJECTED` (422, `details[] {reason}`: the validation reasons of the last answer). On success: the strategy, kept as `draft` |
+| `GET /campaign-strategies` | Paged (`page`, `page_size` ≤ 100); `status` (default: all but archived), `product_id`; items `{id, product_id, product_title, status, objective, platforms, budget, created_at, updated_at}`, most recently changed first |
+| `GET /campaign-strategies/{strategy_id}` | `{id, product_id, product_title, status, strategy, budget {amount, period, currency}, budget_amounts {<platform>: {amount, daily}}, evidence {<key>: {label, unit, value, availability, reason, currency} \| null}, validated: true, ai_run {id, provider, model, prompt_name, prompt_version, created_at}, created_by, edited_by, edited_at, created_at, updated_at}`. Evidence is resolved from the run's snapshot (the figures as the planner saw them); `null` = a key not in it |
+| `PATCH /campaign-strategies/{strategy_id}` | Body `{strategy?: <the whole strategy>, budget?: {amount, period}}`; re-validated with the same chain as the model's answers (8-04), against today's figures; failures `VALIDATION_ERROR` with `details[] {field: "strategy" \| "budget.amount", issue}`; amounts recomputed; the strategy becomes `draft` again. `STRATEGY_ARCHIVED` (409) for an archived strategy |
+| `POST /campaign-strategies/{strategy_id}/ready` | `draft → ready` (unchanged when already ready); `STRATEGY_ARCHIVED` (409) |
+| `POST /campaign-strategies/{strategy_id}/archive` | `draft \| ready → archived` (kept, never deleted; unchanged when already archived) |
+| `GET /usage` | `{daily_limit, runs_today, remaining_today, ai_enabled, today, last_30_days}`; each period `{runs, succeeded, rejected, failed (incl. timed out), input_tokens, output_tokens, estimated_cost_usd}` — `null` unless every run in the period has a price (prices are settings) |
+
+The strategy object (`strategy`): `{objective, summary, positioning, platforms[] {platform, campaign_type, budget_share_percent, audience, reasoning, evidence[]}, angles[] {angle, evidence[]}, targets[] {metric: roas \| cost_per_order \| cost_per_click \| cost_per_conversion, low, high, evidence[]}, risks[] {code, text}, assumptions[]}` — no money amounts (Q-8-5).
 
 ## 20. Webhooks
 

@@ -429,6 +429,119 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/{organization_id}/ai/campaign-strategies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Campaign Strategies
+         * @description Strategies, most recently changed first; archived ones only when asked for.
+         */
+        get: operations["list_campaign_strategies_api_v1_organizations__organization_id__ai_campaign_strategies_get"];
+        put?: never;
+        /**
+         * Generate Campaign Strategy
+         * @description Ask the planner for a strategy for one product, the chosen platforms and the merchant's
+         *     budget. The answer is validated before it is kept as a draft; nothing is created at Google
+         *     or Meta. Errors: AI_LIMIT_REACHED, AI_UNAVAILABLE, AI_ANSWER_REJECTED,
+         *     PRODUCT_NOT_PLANNABLE.
+         */
+        post: operations["generate_campaign_strategy_api_v1_organizations__organization_id__ai_campaign_strategies_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/ai/campaign-strategies/{strategy_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Campaign Strategy
+         * @description One strategy with its budget amounts, its evidence (the figures as the planner saw them)
+         *     and the AI run, model and prompt version it came from.
+         */
+        get: operations["get_campaign_strategy_api_v1_organizations__organization_id__ai_campaign_strategies__strategy_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Campaign Strategy
+         * @description Edit the strategy and/or its budget. Re-validated with the same checks as the planner's
+         *     answers; an edited strategy is a draft again.
+         */
+        patch: operations["update_campaign_strategy_api_v1_organizations__organization_id__ai_campaign_strategies__strategy_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/ai/campaign-strategies/{strategy_id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Archive Campaign Strategy
+         * @description Archive (kept, never deleted; can no longer be changed).
+         */
+        post: operations["archive_campaign_strategy_api_v1_organizations__organization_id__ai_campaign_strategies__strategy_id__archive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/ai/campaign-strategies/{strategy_id}/ready": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark Campaign Strategy Ready
+         * @description Ready for the campaign builder (Phase 10B). Nothing is created yet.
+         */
+        post: operations["mark_campaign_strategy_ready_api_v1_organizations__organization_id__ai_campaign_strategies__strategy_id__ready_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/ai/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ai Usage
+         * @description AI runs, tokens and estimated cost today and over 30 days (owners and admins).
+         */
+        get: operations["ai_usage_api_v1_organizations__organization_id__ai_usage_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizations/{organization_id}/analytics-properties": {
         parameters: {
             query?: never;
@@ -1451,6 +1564,27 @@ export interface components {
             /** Waiting For Allowance */
             waiting_for_allowance: boolean;
         };
+        /** AiRunRefOut */
+        AiRunRefOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Model */
+            model: string;
+            /** Prompt Name */
+            prompt_name: string;
+            /** Prompt Version */
+            prompt_version: string;
+            /** Provider */
+            provider: string;
+        };
         /** AnalyticsChannelOut */
         AnalyticsChannelOut: {
             /** Channel */
@@ -1753,6 +1887,31 @@ export interface components {
             authorize_url: string;
             /** Expires In Seconds */
             expires_in_seconds: number;
+        };
+        /**
+         * BudgetIn
+         * @description The merchant's total, in the organization's reporting currency (Q-8-5).
+         */
+        BudgetIn: {
+            /** Amount */
+            amount: number | string;
+            /**
+             * Period
+             * @enum {string}
+             */
+            period: "daily" | "monthly";
+        };
+        /** BudgetOut */
+        BudgetOut: {
+            /** Amount */
+            amount: string;
+            /** Currency */
+            currency: string;
+            /**
+             * Period
+             * @enum {string}
+             */
+            period: "daily" | "monthly";
         };
         /** CampaignFunnelOut */
         CampaignFunnelOut: {
@@ -2254,6 +2413,16 @@ export interface components {
             data: components["schemas"]["StoreOut"];
             meta: components["schemas"]["Meta"];
         };
+        /** Envelope[StrategyOut] */
+        Envelope_StrategyOut_: {
+            data: components["schemas"]["StrategyOut"];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[UsageOut] */
+        Envelope_UsageOut_: {
+            data: components["schemas"]["UsageOut"];
+            meta: components["schemas"]["Meta"];
+        };
         /** Envelope[UserOut] */
         Envelope_UserOut_: {
             data: components["schemas"]["UserOut"];
@@ -2324,6 +2493,24 @@ export interface components {
             /** Data */
             data: components["schemas"]["StoreOut"][];
             meta: components["schemas"]["Meta"];
+        };
+        /**
+         * EvidenceOut
+         * @description A figure a recommendation relies on, as AdVegaX gave it to the planner.
+         */
+        EvidenceOut: {
+            /** Availability */
+            availability: string;
+            /** Currency */
+            currency?: string | null;
+            /** Label */
+            label: string;
+            /** Reason */
+            reason: string | null;
+            /** Unit */
+            unit: string;
+            /** Value */
+            value: string | null;
         };
         /** FigureOut */
         FigureOut: {
@@ -2574,6 +2761,12 @@ export interface components {
             data: components["schemas"]["AuditLogOut"][];
             meta: components["schemas"]["ListMeta"];
         };
+        /** ListEnvelope[StrategySummaryOut] */
+        ListEnvelope_StrategySummaryOut_: {
+            /** Data */
+            data: components["schemas"]["StrategySummaryOut"][];
+            meta: components["schemas"]["ListMeta"];
+        };
         /** ListMeta */
         ListMeta: {
             /** Page */
@@ -2758,6 +2951,13 @@ export interface components {
             totals: {
                 [key: string]: components["schemas"]["FigureOut"];
             };
+        };
+        /** PlatformAmountOut */
+        PlatformAmountOut: {
+            /** Amount */
+            amount: string;
+            /** Daily */
+            daily: string;
         };
         /** PlatformFunnelOut */
         PlatformFunnelOut: {
@@ -3103,6 +3303,117 @@ export interface components {
             /** Timezone */
             timezone: string;
         };
+        /** StrategyCreateIn */
+        StrategyCreateIn: {
+            budget: components["schemas"]["BudgetIn"];
+            /** Objective */
+            objective?: ("sales" | "leads" | "awareness") | null;
+            /** Platforms */
+            platforms: ("google_ads" | "meta_ads")[];
+            /**
+             * Product Id
+             * Format: uuid
+             */
+            product_id: string;
+        };
+        /** StrategyOut */
+        StrategyOut: {
+            ai_run: components["schemas"]["AiRunRefOut"];
+            budget: components["schemas"]["BudgetOut"];
+            /** Budget Amounts */
+            budget_amounts: {
+                [key: string]: components["schemas"]["PlatformAmountOut"];
+            };
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By */
+            created_by: string | null;
+            /** Edited At */
+            edited_at: string | null;
+            /** Edited By */
+            edited_by: string | null;
+            /** Evidence */
+            evidence: {
+                [key: string]: components["schemas"]["EvidenceOut"] | null;
+            };
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Product Id
+             * Format: uuid
+             */
+            product_id: string;
+            /** Product Title */
+            product_title: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "ready" | "archived";
+            /** Strategy */
+            strategy: {
+                [key: string]: unknown;
+            };
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Validated */
+            validated: boolean;
+        };
+        /** StrategySummaryOut */
+        StrategySummaryOut: {
+            budget: components["schemas"]["BudgetOut"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Objective */
+            objective: string;
+            /** Platforms */
+            platforms: string[];
+            /**
+             * Product Id
+             * Format: uuid
+             */
+            product_id: string;
+            /** Product Title */
+            product_title: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "ready" | "archived";
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * StrategyUpdateIn
+         * @description An edit: the whole strategy as edited and/or a new budget. Re-validated in full.
+         */
+        StrategyUpdateIn: {
+            budget?: components["schemas"]["BudgetIn"] | null;
+            /** Strategy */
+            strategy?: {
+                [key: string]: unknown;
+            } | null;
+        };
         /** SyncOut */
         SyncOut: {
             /** Last Deep Reconciled At */
@@ -3161,6 +3472,36 @@ export interface components {
             taxes: string | null;
             /** Total Sales */
             total_sales: string | null;
+        };
+        /** UsageOut */
+        UsageOut: {
+            /** Ai Enabled */
+            ai_enabled: boolean;
+            /** Daily Limit */
+            daily_limit: number;
+            last_30_days: components["schemas"]["UsagePeriodOut"];
+            /** Remaining Today */
+            remaining_today: number;
+            /** Runs Today */
+            runs_today: number;
+            today: components["schemas"]["UsagePeriodOut"];
+        };
+        /** UsagePeriodOut */
+        UsagePeriodOut: {
+            /** Estimated Cost Usd */
+            estimated_cost_usd: string | null;
+            /** Failed */
+            failed: number;
+            /** Input Tokens */
+            input_tokens: number;
+            /** Output Tokens */
+            output_tokens: number;
+            /** Rejected */
+            rejected: number;
+            /** Runs */
+            runs: number;
+            /** Succeeded */
+            succeeded: number;
         };
         /** UserOut */
         UserOut: {
@@ -3954,6 +4295,240 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Envelope_AdAccountOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_campaign_strategies_api_v1_organizations__organization_id__ai_campaign_strategies_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+                status?: ("draft" | "ready" | "archived") | null;
+                product_id?: string | null;
+            };
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListEnvelope_StrategySummaryOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    generate_campaign_strategy_api_v1_organizations__organization_id__ai_campaign_strategies_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StrategyCreateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_StrategyOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_campaign_strategy_api_v1_organizations__organization_id__ai_campaign_strategies__strategy_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                strategy_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_StrategyOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_campaign_strategy_api_v1_organizations__organization_id__ai_campaign_strategies__strategy_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                strategy_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StrategyUpdateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_StrategyOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    archive_campaign_strategy_api_v1_organizations__organization_id__ai_campaign_strategies__strategy_id__archive_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                strategy_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_StrategyOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mark_campaign_strategy_ready_api_v1_organizations__organization_id__ai_campaign_strategies__strategy_id__ready_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                strategy_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_StrategyOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ai_usage_api_v1_organizations__organization_id__ai_usage_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_UsageOut_"];
                 };
             };
             /** @description Validation Error */

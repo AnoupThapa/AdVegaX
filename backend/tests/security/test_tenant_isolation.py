@@ -21,6 +21,14 @@ BODIES = {
         "store_id": None
     },
     ("patch", "/organizations/{organization_id}"): {"name": "Hijacked"},
+    ("post", "/organizations/{organization_id}/ai/campaign-strategies"): {
+        "product_id": "00000000-0000-4000-8000-000000000000",
+        "platforms": ["google_ads"],
+        "budget": {"amount": "10", "period": "daily"},
+    },
+    ("patch", "/organizations/{organization_id}/ai/campaign-strategies/{strategy_id}"): {
+        "budget": {"amount": "10", "period": "daily"}
+    },
     ("patch", "/organizations/{organization_id}/members/{member_id}"): {"role": "viewer"},
     ("post", "/organizations/{organization_id}/invitations"): {
         "email": "evil@example.com",
@@ -93,6 +101,7 @@ def test_every_org_route_returns_404_for_non_members(app, tenants):
             .replace("{ad_account_id}", str(uuid.uuid4()))
             .replace("{campaign_id}", str(uuid.uuid4()))
             .replace("{property_id}", str(uuid.uuid4()))
+            .replace("{strategy_id}", str(uuid.uuid4()))
         )
         assert not re.search(r"\{\w+\}", path), f"unhandled path parameter in {template}"
         response = _call(tenants["a"], method, path, BODIES.get((method, template), {}))
