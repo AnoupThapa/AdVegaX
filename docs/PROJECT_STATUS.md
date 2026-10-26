@@ -25,7 +25,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | 7 | Funnel intelligence | ✅ **Implemented against the simulators — awaiting review**; Step 0 (7-01) waits for live GA4 and Meta access | 1,627 backend + 411 frontend + 15 end-to-end tests; `phases/PHASE_07_REPORT.md` |
 | 8 | AI campaign planner | **Implemented — awaiting review** (A26; Step 0 waits for an Anthropic API key) | `phases/PHASE_08_PLAN.md`, `phases/PHASE_08_PROGRESS.md` |
 | 9 | Creative engine | **Implemented — awaiting review** (A27; Step 0 pending) | `phases/PHASE_09_PLAN.md` |
-| 10A | Action Engine | Not started | |
+| 10A | Action Engine | Plan written — awaiting approval | `PHASE_10A_PLAN.md` |
 | 10B | Campaign builder | Not started | Uses Action Engine only (A13) |
 | 11 | Optimization engine | Not started | |
 | 12 | Controlled autopilot | Not started | Needs Q13 |
