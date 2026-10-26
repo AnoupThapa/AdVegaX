@@ -62,6 +62,27 @@ export function emptyOverview(overrides: Record<string, unknown> = {}) {
   };
 }
 
+/** The AI planner's use with no runs yet and no price set (8-06). */
+export function emptyAiUsage() {
+  const period = {
+    runs: 0,
+    succeeded: 0,
+    rejected: 0,
+    failed: 0,
+    input_tokens: 0,
+    output_tokens: 0,
+    estimated_cost_usd: null,
+  };
+  return {
+    daily_limit: 20,
+    runs_today: 0,
+    remaining_today: 20,
+    ai_enabled: false,
+    today: period,
+    last_30_days: period,
+  };
+}
+
 /** The routes the Overview and Settings read, with nothing connected. */
 export function emptyOrganizationData(): Record<string, Response> {
   const wrap = (data: unknown) =>
@@ -74,5 +95,6 @@ export function emptyOrganizationData(): Record<string, Response> {
     [`GET ${ORG_PATH}/ad-accounts`]: wrap([]),
     [`GET ${ORG_PATH}/analytics-properties`]: wrap([]),
     [`GET ${ORG_PATH}/analytics/overview`]: wrap(emptyOverview()),
+    [`GET ${ORG_PATH}/ai/usage`]: wrap(emptyAiUsage()),
   };
 }

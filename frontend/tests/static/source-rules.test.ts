@@ -61,7 +61,9 @@ describe("frontend source rules (PHASE_01C_PLAN §7)", () => {
 
 describe("unified analytics pages compute no formula (PHASE_06_PLAN §13, criterion 5)", () => {
   const pages = files.filter((f) =>
-    ["overview", "funnel"].some((d) => f.includes(`${path.sep}features${path.sep}${d}${path.sep}`)),
+    ["overview", "funnel", "strategies"].some((d) =>
+      f.includes(`${path.sep}features${path.sep}${d}${path.sep}`),
+    ),
   );
   // Arithmetic on a figure's value, or a sum over figures: only the API calculates.
   const ARITHMETIC = [

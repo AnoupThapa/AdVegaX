@@ -79,7 +79,12 @@ def test_a_strategy_is_generated_validated_and_kept_as_a_draft(owner, admin_engi
     assert data["status"] == "draft" and data["validated"] is True
     assert data["strategy"] == ANSWER
     assert data["product_title"] == "Nitrile gloves"
-    assert data["budget"] == {"amount": "40.00", "period": "daily", "currency": "AUD"}
+    assert data["budget"] == {
+        "amount": "40.00",
+        "period": "daily",
+        "currency": "AUD",
+        "currency_minor_units": 2,
+    }
     assert data["budget_amounts"] == {
         "google_ads": {"amount": "28.00", "daily": "28.00"},
         "meta_ads": {"amount": "12.00", "daily": "12.00"},

@@ -2127,6 +2127,10 @@
             "title": "Currency",
             "type": "string"
           },
+          "currency_minor_units": {
+            "title": "Currency Minor Units",
+            "type": "integer"
+          },
           "period": {
             "enum": [
               "daily",
@@ -2139,7 +2143,8 @@
         "required": [
           "amount",
           "period",
-          "currency"
+          "currency",
+          "currency_minor_units"
         ],
         "title": "BudgetOut",
         "type": "object"

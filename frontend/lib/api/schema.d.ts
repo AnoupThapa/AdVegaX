@@ -1907,6 +1907,8 @@ export interface components {
             amount: string;
             /** Currency */
             currency: string;
+            /** Currency Minor Units */
+            currency_minor_units: number;
             /**
              * Period
              * @enum {string}

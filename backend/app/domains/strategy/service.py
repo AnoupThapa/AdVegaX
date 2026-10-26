@@ -118,6 +118,15 @@ def strategy_row(
     return row, title, run, model, prompt
 
 
+def _budget_out(row: CampaignStrategy) -> BudgetOut:
+    return BudgetOut(
+        amount=for_display(row.budget_amount, row.budget_currency),
+        period=row.budget_period,
+        currency=row.budget_currency,
+        currency_minor_units=minor_units(row.budget_currency),
+    )
+
+
 class StrategyService:
     def __init__(self, runtime: Runtime) -> None:
         self.rt = runtime
@@ -166,11 +175,7 @@ class StrategyService:
             product_title=title,
             status=row.status,
             strategy=row.strategy,
-            budget=BudgetOut(
-                amount=for_display(row.budget_amount, row.budget_currency),
-                period=row.budget_period,
-                currency=row.budget_currency,
-            ),
+            budget=_budget_out(row),
             budget_amounts={
                 p: PlatformAmountOut(amount=Decimal(v["amount"]), daily=Decimal(v["daily"]))
                 for p, v in row.budget_amounts.items()
@@ -315,11 +320,7 @@ class StrategyService:
                     status=row.status,
                     objective=str(row.strategy.get("objective")),
                     platforms=[str(p.get("platform")) for p in row.strategy.get("platforms", [])],
-                    budget=BudgetOut(
-                        amount=for_display(row.budget_amount, row.budget_currency),
-                        period=row.budget_period,
-                        currency=row.budget_currency,
-                    ),
+                    budget=_budget_out(row),
                     created_at=row.created_at,
                     updated_at=row.updated_at,
                 )

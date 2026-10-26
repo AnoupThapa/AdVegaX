@@ -58,6 +58,7 @@ export function useStore(orgId: string, storeId: string) {
 export function useProducts(orgId: string, storeId: string, q: string, status: string) {
   return useInfiniteQuery({
     queryKey: storeKeys.products(orgId, storeId, q, status),
+    enabled: Boolean(storeId),
     initialPageParam: null as string | null,
     queryFn: ({ pageParam }) =>
       unwrap(

@@ -91,6 +91,7 @@ const SECTIONS = [
   { href: "", label: "Overview" },
   { href: "/reports", label: "Reports" },
   { href: "/funnel", label: "Funnel" },
+  { href: "/strategies", label: "Strategies" },
   { href: "/stores", label: "Stores" },
   { href: "/advertising", label: "Advertising" },
   { href: "/analytics", label: "Analytics" },

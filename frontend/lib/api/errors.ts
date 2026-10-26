@@ -9,6 +9,9 @@ export type ApiErrorDetail = {
   readonly type?: string;
   /** A plain code saying why, e.g. why a store could not be reached (2B). */
   readonly reason?: string;
+  /** AdVegaX's own checks: which field and what is wrong with it (e.g. a strategy, 8-05). */
+  readonly field?: string;
+  readonly issue?: string;
 };
 
 export type ApiErrorBody = {

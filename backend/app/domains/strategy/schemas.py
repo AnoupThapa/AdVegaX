@@ -40,6 +40,7 @@ class BudgetOut(BaseModel):
     amount: Decimal
     period: Period
     currency: str
+    currency_minor_units: int
 
 
 class PlatformAmountOut(BaseModel):

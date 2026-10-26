@@ -27,8 +27,8 @@ export const ROLE_LABELS: Readonly<Record<Role, string>> = {
 export const ROLE_DESCRIPTIONS: Readonly<Record<Role, string>> = {
   owner: "Full control, including other owners.",
   admin: "Manages members, invitations, settings and connections.",
-  manager: "Manages connections and linked accounts.",
-  analyst: "Views data.",
+  manager: "Manages connections and linked accounts, and plans campaign strategies.",
+  analyst: "Views data and plans campaign strategies.",
   viewer: "Views data.",
 };
 
@@ -72,4 +72,9 @@ export function canManageMember(actorRole: string, memberRole: string): boolean 
 /** Owners, admins and managers connect platforms and link accounts (`connections.manage`). */
 export function canManageConnections(role: string): boolean {
   return role === "owner" || role === "admin" || role === "manager";
+}
+
+/** Everyone but viewers creates and changes campaign strategies (`strategies.manage`, Q-8-7). */
+export function canManageStrategies(role: string): boolean {
+  return isRole(role) && role !== "viewer";
 }

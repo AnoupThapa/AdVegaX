@@ -9,8 +9,8 @@ Plan: `PHASE_08_PLAN.md` (approved 2026-10-25, A26, all recommendations Q-8-1 �
 | 8-03 Context builder | ✅ Done — awaiting review |
 | 8-04 Strategy schema, validation chain, budget | ✅ Done — awaiting review |
 | 8-05 Workflow, API, limits | ✅ Done — awaiting review |
-| 8-06 Web app: Strategies page | ⏳ Next |
-| 8-07 Evaluation, browser test, `PHASE_08_REPORT.md` | — |
+| 8-06 Web app: Strategies page | ✅ Done — awaiting review |
+| 8-07 Evaluation, browser test, `PHASE_08_REPORT.md` | ⏳ Next |
 
 ## 8-01 — Step 0 (2026-10-25)
 
@@ -229,3 +229,53 @@ Plan: `PHASE_08_PLAN.md` (approved 2026-10-25, A26, all recommendations Q-8-1 �
 3. Editing a strategy that was ready returns it to draft (the plan didn't say), so a changed plan is always reviewed before the campaign builder uses it.
 
 **Next task:** 8-06 — the Strategies page in the web app.
+
+## 8-06 — Web app: the Strategies page (2026-10-26)
+
+**Completed**
+- **Strategies** in the organization's menu (after Funnel).
+- **New strategy** (every role but viewer):
+  - choose the store (when there are several), find and pick an active product, tick Google Ads and/or Meta;
+  - choose an objective or let the planner choose;
+  - enter the budget in the reporting currency, per day or per month.
+  - Missing choices are explained before anything is sent. While the planner works, the page says it can take up to a minute; the strategy then opens.
+  - If the product can't be planned, or the AI's answer was rejected, the page explains why in plain words (e.g. "The product is out of stock.", "It cited a figure AdVegaX does not have (product.reviews).").
+- **The list:** product, platforms, objective, budget, status (Draft / Ready for the campaign builder / Archived), last changed; filter by status.
+- **One strategy:**
+  - the summary, objective, positioning and budget;
+  - each platform with its campaign type, **its amount** (and per day for a monthly budget), its share, who to reach and why;
+  - under every point, **the AdVegaX figures it is based on**, with their values — an unknown figure says why (e.g. "No Google Analytics property"), never 0;
+  - angles, targets as ranges (ROAS as ×, costs in money), risks and assumptions;
+  - which model and prompt version drafted it and when, and that AdVegaX checked it and nothing was created at Google or Meta.
+- **Edit:**
+  - the summary, positioning, and each platform's campaign type, share, audience and reasoning, plus the budget;
+  - the same checks run again, and any failure is listed in plain words.
+- **Mark ready**, and **Archive** after confirming. Viewers see no actions.
+- **Settings → AI planner use** (owners and admins):
+  - the daily limit and what is left today;
+  - for today and the last 30 days: runs (accepted, rejected by AdVegaX's checks, failed), tokens, and the estimated cost — "unknown (no price set)", never 0.
+- The page computes nothing: amounts and checks come from the API. The static "no formula" rule now covers the strategies pages too.
+
+**Files changed** (21)
+- New (10): `features/strategies/{api.ts,labels.ts,StrategiesPage.tsx,StrategyDetail.tsx,AiUsage.tsx,strategies.module.css}`, `app/orgs/[organizationId]/strategies/page.tsx`, `…/strategies/[strategyId]/page.tsx`, `tests/features/strategies.test.tsx` (48 tests).
+- Modified (11):
+  - frontend: `features/organizations/{OrganizationShell,OrganizationSettings,permissions}.tsx/ts`, `features/stores/api.ts` (products only once a store is known), `lib/api/errors.ts` (`field` and `issue` details), `lib/format/money.ts` (stock and price reasons), `lib/api/{openapi.json,schema.d.ts}`, `tests/support/organizations.ts`, `tests/static/source-rules.test.ts`;
+  - backend: `strategy/{schemas,service}.py` (the budget carries its currency's minor units) and its test;
+  - this file.
+- Deleted: none.
+
+**Tests**
+- **Frontend `npm run check`: 459 passed** (48 new).
+- **Browser tests: 15 passed** (the menu's new link, with accessibility checks, on every page). A browser test of the Strategies page itself comes in 8-07.
+- **Backend `make check`: 1,746 passed**, coverage 97 %.
+
+**Security:**
+- Buttons follow the roles (viewers read only); the API still authorizes every action.
+- The model's text is shown as text (React escapes it), never as HTML.
+- No figure is computed in the browser.
+
+**Deviations**
+1. Targets, risks and assumptions are shown but not editable in this version; everything else is. The API accepts edits to all of them, so they can be added to the form later.
+2. The usage panel is in Settings (as planned), not on the Strategies page.
+
+**Next task:** 8-07 — the evaluation set (golden and hostile cases against the simulator), a browser test of the Strategies page, and `PHASE_08_REPORT.md`.

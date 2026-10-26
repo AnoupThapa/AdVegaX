@@ -99,6 +99,11 @@ const REASONS: Readonly<Record<string, string>> = {
   no_adds_to_cart: "No adds to cart",
   no_checkouts: "No checkouts",
   no_events_reported: "No events reported — check your Google Analytics ecommerce set-up",
+  // The planner's product facts (8-03): catalogue values the store does not give.
+  no_price: "No price",
+  no_variants: "No variants",
+  stock_not_tracked: "Stock not tracked",
+  stock_not_read: "Stock not read yet",
 };
 
 /** Why a figure is not shown, in plain words. */
