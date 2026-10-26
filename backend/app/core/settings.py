@@ -247,6 +247,13 @@ class Settings(BaseSettings):
     # What the planner shows the model (8-03): the last N complete days, and a recent window.
     PLANNER_CONTEXT_DAYS: int = Field(default=90, ge=14, le=400)
     PLANNER_RECENT_DAYS: int = Field(default=30, ge=7, le=90)
+    # Strategy checks (8-04): a target may be at most this many times better or worse than the
+    # organization's own history; each platform's minimum daily budget, in US dollars (converted
+    # to the reporting currency with the latest rate). The platforms' minimums vary by currency
+    # and bidding; these are AdVegaX's floor, checked against the platforms in Step 0.
+    PLANNER_TARGET_FACTOR: Decimal = Field(default=Decimal(3), gt=1, le=20)
+    PLANNER_MIN_DAILY_GOOGLE_ADS_USD: Decimal = Field(default=Decimal(1), ge=0)
+    PLANNER_MIN_DAILY_META_ADS_USD: Decimal = Field(default=Decimal(1), ge=0)
 
     # --- Advertising import (Phase 3; PHASE_03_PLAN §9) ---------------------------------
     ADS_HISTORY_WINDOW: timedelta = timedelta(days=395)  # 13 months on first link (Q-3-6)

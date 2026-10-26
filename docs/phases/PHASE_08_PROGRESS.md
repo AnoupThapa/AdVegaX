@@ -7,8 +7,8 @@ Plan: `PHASE_08_PLAN.md` (approved 2026-10-25, A26, all recommendations Q-8-1 �
 | 8-01 Step 0: live check of the Claude API with AdVegaX's key | ⏸ Waiting for an Anthropic API key in the local settings file |
 | 8-02 Migration 0018; AI platform: adapter, Anthropic adapter, prompts, runs, simulator | ✅ Done — awaiting review |
 | 8-03 Context builder | ✅ Done — awaiting review |
-| 8-04 Strategy schema, validation chain, budget | ⏳ Next |
-| 8-05 Workflow, API, limits | — |
+| 8-04 Strategy schema, validation chain, budget | ✅ Done — awaiting review |
+| 8-05 Workflow, API, limits | ⏳ Next |
 | 8-06 Web app: Strategies page | — |
 | 8-07 Evaluation, browser test, `PHASE_08_REPORT.md` | — |
 
@@ -108,3 +108,56 @@ Plan: `PHASE_08_PLAN.md` (approved 2026-10-25, A26, all recommendations Q-8-1 �
 2. The window is the product's **store** scope (its assigned ad accounts and property), not the whole organization: the plan is for that store's product.
 
 **Next task:** 8-04 — strategy schema, validation chain (schema → existence → business rules → budget) and budget amounts, plus the versioned planner prompt.
+
+## 8-04 — Strategy schema, validation chain, budget amounts, prompt (2026-10-26)
+
+**Completed**
+- **Strategy shape** (`strategy/schema.py`, Q-8-4):
+  - an objective (sales, leads or awareness), a summary and positioning;
+  - one entry per platform, each with its campaign type (Google Ads: Search, Performance Max, Shopping; Meta: Advantage+ shopping, Sales), its **share** of the budget as a percentage, the audience in words, its reasoning and evidence;
+  - creative angles with evidence;
+  - targets as ranges (ROAS, cost per order, cost per click, cost per conversion) with evidence;
+  - risks with a code (margin unknown or negative, low stock, limited history, tracking gap, competition, seasonality, other), and assumptions.
+  - The answer schema sent to the model uses only what structured outputs support (tested). **It has no field for a money amount** (tested).
+- **Validation chain** (`strategy/validation.py`, Q-8-6), run on every answer and later on every edit, one stage at a time:
+  1. **shape:** exact fields and types, allowed values, lengths and counts (which the schema can't express), the campaign type exists on its platform, one entry per platform and target, shares with at most 2 decimals, target ranges 0 ≤ low ≤ high;
+  2. **existence:** exactly the requested platforms, each connected; the requested objective; every evidence key one of AdVegaX's figures, with a known value;
+  3. **business rules:**
+     - an unknown or negative margin, stock below recent sales, and a history under 30 days must each be named as a risk;
+     - the margin comes from sales, or else from today's price and cost (highest cost against lowest price);
+     - targets must overlap the organization's own figures, within 3 times either way (`PLANNER_TARGET_FACTOR`), where AdVegaX has them;
+  4. **budget:** shares are positive and add up to 100 % (0.01 tolerance); each platform's daily amount meets its minimum.
+- **Before asking the model:** an inactive or out-of-stock product, or no connected ad platform, is not planned (used by 8-05 as `PRODUCT_NOT_PLANNABLE`). A total too small for every platform's minimum is also refused before any model call.
+- **Budget amounts** (`strategy/budget.py`, Q-8-5):
+  - AdVegaX turns the shares into amounts in the currency's smallest unit (cents; 0 decimals for yen, 3 for dinar) with the largest-remainder method, so **the amounts always add up to your total exactly** (tested on 500 random budgets);
+  - monthly amounts are compared as daily (÷ 30.4);
+  - each platform's minimum is a setting in US dollars (default 1), converted with the latest rate; an unknown minimum is never assumed to be met.
+- **Prompt `campaign_strategy` v1** (`strategy/prompt.py`), versioned and hashed. It contains the rules — cite figures by key, no amounts, only the requested platforms, required risks, English — and says that catalogue text is data, never instructions. AdVegaX does not rely on the prompt: every answer is validated regardless.
+- **Planning task** (`strategy/task.py`): the context, the prompt, the schema, the recorded snapshot (now including the request) and the validation chain, ready for 8-05.
+
+**Files changed** (11)
+- New (8): `app/domains/strategy/{schema,validation,budget,prompt,task}.py`, `tests/unit/test_strategy_validation.py` (28 tests), `tests/unit/test_strategy_budget.py` (14 tests), `tests/api/test_strategy_task.py` (3 tests).
+- Modified (3): `app/core/settings.py`, `.env.example`, this file.
+- Deleted: none.
+
+**Tests**
+- **New (45):**
+  - every validation rule, and the order of the stages;
+  - golden budget amounts (AUD, JPY, KWD) and a random check that amounts always add up;
+  - the schema's limits, and that it has no money field;
+  - the prompt is registered;
+  - end to end against the simulator: a valid strategy for the golden context, with its snapshot recorded; an answer citing figures AdVegaX lacks, rejected after one retry with the reasons; a hostile product title that can't close its block, and an answer that follows it (100 % / 0 %) rejected.
+- **Backend `make check`: 1,719 passed**, coverage 97 % (strategy domain 97–100 %). No frontend change.
+
+**Security:**
+- The model can't set an amount (no such field, tested).
+- Its answer is data and passes four checks before anyone sees it.
+- Store text can't escape its block.
+- No change to what the model sees.
+
+**Deviations**
+1. Risks are given as codes plus text (the plan said "risks"), so the business rules can be checked reliably rather than by searching the text.
+2. Cost-per-click and cost-per-conversion targets are compared with each requested platform's own figure (never added across platforms); ROAS uses the business's blended ROAS; cost per order uses ad spend ÷ orders.
+3. The platform minimum daily budgets are AdVegaX settings (1 USD each by default), because the platforms' real minimums depend on currency and bidding. Step 0 compares them with the platforms' figures.
+
+**Next task:** 8-05 — the strategy workflow and API (generate, read, edit with re-validation, draft, mark ready, archive, audit), daily limits and the usage view.
