@@ -33,6 +33,10 @@ class EmailBackend(StrEnum):
     MEMORY = "memory"
 
 
+# Settings that take comma-separated organization ids.
+ORGANIZATION_LISTS = ["AUTOPILOT_ORGANIZATIONS", "BILLING_COMPLIMENTARY_ORGANIZATIONS"]
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=None, extra="ignore", case_sensitive=False)
 
@@ -338,6 +342,25 @@ class Settings(BaseSettings):
     # Stops itself when the day's limit was reached this many times within the window.
     AUTOPILOT_LIMIT_HITS_TO_STOP: int = Field(default=2, ge=1, le=10)
     AUTOPILOT_LIMIT_HITS_WINDOW: timedelta = timedelta(days=7)
+    # --- Billing (Phase 13; PHASE_13_PLAN §2, A32) ----------------------------------------
+    # Off until switched on: every organization keeps full use (Q-13-12 rollback).
+    BILLING_ENABLED: bool = False
+    STRIPE_SECRET_KEY: SecretStr | None = None
+    STRIPE_WEBHOOK_SECRET: SecretStr | None = None
+    # The Stripe API version AdVegaX was checked against in Step 0 (None: the account's own).
+    STRIPE_API_VERSION: str | None = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}(\.\w+)?$")
+    STRIPE_WEBHOOK_TOLERANCE: timedelta = timedelta(minutes=5)
+    BILLING_CURRENCY: str = Field(default="aud", pattern=r"^[a-z]{3}$")
+    BILLING_TRIAL_DAYS: int = Field(default=14, ge=0, le=90)  # Q-13-2
+    BILLING_TRIAL_PLAN: str = Field(default="growth", pattern=r"^(starter|growth|scale)$")
+    BILLING_PAYMENT_GRACE: timedelta = timedelta(days=7)  # Q-13-7
+    BILLING_TRIAL_REMINDER: timedelta = timedelta(days=3)
+    # Never charged, Scale limits (Q-13-10): comma-separated organization ids.
+    BILLING_COMPLIMENTARY_ORGANIZATIONS: Annotated[list[uuid.UUID], NoDecode] = Field(
+        default_factory=list
+    )
+    BILLING_RECONCILE_INTERVAL: timedelta = timedelta(days=1)  # the nightly check (Q-13-9)
+    SCHEDULE_BILLING_TICK: timedelta = timedelta(hours=1)
     # Meta: the Facebook Login for Business configuration that also asks for
     # ``ads_management`` ("Allow changes", Q-10A-2). None: Meta changes cannot be allowed.
     META_WRITE_LOGIN_CONFIG_ID: str | None = Field(default=None, pattern=r"^[0-9]{5,20}$")
@@ -410,7 +433,7 @@ class Settings(BaseSettings):
     WEBHOOK_RETENTION: timedelta = timedelta(days=30)  # intake metadata is deleted after this
     SCHEDULE_WEBHOOK_PURGE_INTERVAL: timedelta = timedelta(hours=6)
 
-    @field_validator("AUTOPILOT_ORGANIZATIONS", mode="before")
+    @field_validator(*ORGANIZATION_LISTS, mode="before")
     @classmethod
     def _split_organizations(cls, value: object) -> object:
         if isinstance(value, str):  # comma-separated organization ids
@@ -503,6 +526,11 @@ class Settings(BaseSettings):
             "OPTIMIZATION_QUIET_PERIOD": self.OPTIMIZATION_QUIET_PERIOD,
             "OPTIMIZATION_ACTED_PERIOD": self.OPTIMIZATION_ACTED_PERIOD,
             "AUTOPILOT_LIMIT_HITS_WINDOW": self.AUTOPILOT_LIMIT_HITS_WINDOW,
+            "STRIPE_WEBHOOK_TOLERANCE": self.STRIPE_WEBHOOK_TOLERANCE,
+            "BILLING_PAYMENT_GRACE": self.BILLING_PAYMENT_GRACE,
+            "BILLING_TRIAL_REMINDER": self.BILLING_TRIAL_REMINDER,
+            "BILLING_RECONCILE_INTERVAL": self.BILLING_RECONCILE_INTERVAL,
+            "SCHEDULE_BILLING_TICK": self.SCHEDULE_BILLING_TICK,
         }
         for name, value in durations.items():
             if value <= timedelta(0):

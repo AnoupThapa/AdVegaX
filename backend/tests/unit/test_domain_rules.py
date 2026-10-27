@@ -124,6 +124,9 @@ def test_templates_render_and_escape():
             "inviter_name",
             "message",
             "reason",
+            "ends",
+            "grace_ends",
+            "summary",
         )
         variables = {**dict.fromkeys(keys, "<b>&</b>"), "lines": ["<b>&</b>"]}
         subject, text, html = render(name, variables)

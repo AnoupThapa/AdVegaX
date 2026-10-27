@@ -225,6 +225,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/billing/plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Plans
+         * @description The plans, their prices (minor units, GST included) and limits.
+         */
+        get: operations["list_plans_api_v1_billing_plans_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/health/live": {
         parameters: {
             query?: never;
@@ -1115,6 +1135,66 @@ export interface paths {
          * @description Owner, admin or manager; takes effect at once.
          */
         post: operations["stop_autopilot_api_v1_organizations__organization_id__autopilot_stop_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/billing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Billing
+         * @description Every member: the plan in force, its dates, limits and usage.
+         */
+        get: operations["get_billing_api_v1_organizations__organization_id__billing_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/billing/checkout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start Checkout
+         * @description Owners only. Errors: CONFLICT (already subscribed: use the portal), BILLING_UNAVAILABLE.
+         */
+        post: operations["start_checkout_api_v1_organizations__organization_id__billing_checkout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/billing/portal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Open Portal
+         * @description Owners only. Errors: CONFLICT (no Stripe customer yet), BILLING_UNAVAILABLE.
+         */
+        post: operations["open_portal_api_v1_organizations__organization_id__billing_portal_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3085,6 +3165,48 @@ export interface components {
             /** Stopped Reason */
             stopped_reason: string | null;
         };
+        /** BillingOut */
+        BillingOut: {
+            /** Can Manage */
+            can_manage: boolean;
+            /** Cancel At Period End */
+            cancel_at_period_end: boolean;
+            /** Checkout Available */
+            checkout_available: boolean;
+            /** Current Period End */
+            current_period_end: string | null;
+            /** Enabled */
+            enabled: boolean;
+            /** Grace Ends At */
+            grace_ends_at: string | null;
+            /** Interval */
+            interval: ("month" | "year") | null;
+            plan: components["schemas"]["PlanOut"] | null;
+            /** Portal Available */
+            portal_available: boolean;
+            /** Read Only */
+            read_only: boolean;
+            /** Status */
+            status: string;
+            /** Subscribed Plan */
+            subscribed_plan: ("starter" | "growth" | "scale") | null;
+            /** Subscription Status */
+            subscription_status: string;
+            /** Trial Ends At */
+            trial_ends_at: string | null;
+            usage: components["schemas"]["BillingUsageOut"];
+        };
+        /** BillingUsageOut */
+        BillingUsageOut: {
+            /** Ad Accounts */
+            ad_accounts: number;
+            /** Ai Runs Today */
+            ai_runs_today: number;
+            /** Members */
+            members: number;
+            /** Stores */
+            stores: number;
+        };
         /** Body_upload_creative_asset_api_v1_organizations__organization_id__creative_assets_post */
         Body_upload_creative_asset_api_v1_organizations__organization_id__creative_assets_post: {
             /** File */
@@ -3406,6 +3528,19 @@ export interface components {
              * @enum {string}
              */
             severity: "block" | "flag";
+        };
+        /** CheckoutIn */
+        CheckoutIn: {
+            /**
+             * Interval
+             * @enum {string}
+             */
+            interval: "month" | "year";
+            /**
+             * Plan
+             * @enum {string}
+             */
+            plan: "starter" | "growth" | "scale";
         };
         /** ConnectionOut */
         ConnectionOut: {
@@ -4015,6 +4150,11 @@ export interface components {
             data: components["schemas"]["AutopilotPolicyOut"];
             meta: components["schemas"]["Meta"];
         };
+        /** Envelope[BillingOut] */
+        Envelope_BillingOut_: {
+            data: components["schemas"]["BillingOut"];
+            meta: components["schemas"]["Meta"];
+        };
         /** Envelope[CampaignFunnelsOut] */
         Envelope_CampaignFunnelsOut_: {
             data: components["schemas"]["CampaignFunnelsOut"];
@@ -4150,6 +4290,11 @@ export interface components {
             data: components["schemas"]["RecommendationOut"];
             meta: components["schemas"]["Meta"];
         };
+        /** Envelope[RedirectOut] */
+        Envelope_RedirectOut_: {
+            data: components["schemas"]["RedirectOut"];
+            meta: components["schemas"]["Meta"];
+        };
         /** Envelope[ResyncOut] */
         Envelope_ResyncOut_: {
             data: components["schemas"]["ResyncOut"];
@@ -4261,6 +4406,12 @@ export interface components {
         Envelope_list_OrganizationOut__: {
             /** Data */
             data: components["schemas"]["OrganizationOut"][];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[list[PlanOut]] */
+        Envelope_list_PlanOut__: {
+            /** Data */
+            data: components["schemas"]["PlanOut"][];
             meta: components["schemas"]["Meta"];
         };
         /** Envelope[list[ProviderOut]] */
@@ -4817,6 +4968,36 @@ export interface components {
                 [key: string]: components["schemas"]["FigureOut"];
             };
         };
+        /** PlanLimitsOut */
+        PlanLimitsOut: {
+            /** Ad Accounts */
+            ad_accounts: number;
+            /** Ai Runs Per Day */
+            ai_runs_per_day: number;
+            /** Autopilot */
+            autopilot: boolean;
+            /** Members */
+            members: number;
+            /** Stores */
+            stores: number;
+        };
+        /** PlanOut */
+        PlanOut: {
+            /**
+             * Code
+             * @enum {string}
+             */
+            code: "starter" | "growth" | "scale";
+            /** Currency */
+            currency: string;
+            limits: components["schemas"]["PlanLimitsOut"];
+            /** Monthly */
+            monthly: number;
+            /** Name */
+            name: string;
+            /** Yearly */
+            yearly: number;
+        };
         /** PlatformAmountOut */
         PlatformAmountOut: {
             /** Amount */
@@ -5086,6 +5267,11 @@ export interface components {
              * @enum {string}
              */
             reason: "not_relevant" | "figures_wrong" | "wrong_time" | "other";
+        };
+        /** RedirectOut */
+        RedirectOut: {
+            /** Url */
+            url: string;
         };
         /** RegisterRequest */
         RegisterRequest: {
@@ -5971,6 +6157,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_plans_api_v1_billing_plans_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_list_PlanOut__"];
                 };
             };
         };
@@ -7642,6 +7848,103 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Envelope_AutopilotPolicyOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_billing_api_v1_organizations__organization_id__billing_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_BillingOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_checkout_api_v1_organizations__organization_id__billing_checkout_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CheckoutIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_RedirectOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    open_portal_api_v1_organizations__organization_id__billing_portal_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_RedirectOut_"];
                 };
             };
             /** @description Validation Error */

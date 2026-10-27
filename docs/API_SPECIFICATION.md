@@ -638,6 +638,22 @@ Base `/organizations/{organization_id}`. Permissions: reading `actions.view` (ev
 
 **A run** follows each daily look and "Look again now": open advice of the allowed kinds, in rank order, within every limit, checked again (as §19L approve), then requested and approved by autopilot through the Action Engine with `actions.policy` = the policy snapshot. Owners are emailed the changes (`autopilot_changes`) and when autopilot stops itself (`autopilot_stopped`).
 
+## 19N. Billing — as built (Phase 13; A32)
+
+Off unless `BILLING_ENABLED` (then every organization keeps full use and nothing is charged). Permissions: reading `billing.view` (every role); checkout and the portal `billing.manage` (**owners only**). Stripe keys never leave the server; card details never reach AdVegaX (Checkout and the portal are Stripe's own pages). Audited: `billing.checkout_started | portal_opened` (user), `billing.subscription_changed | read_only` (system).
+
+| Method & path | Notes |
+|---|---|
+| `GET /billing/plans` | Signed in. `[{code: starter\|growth\|scale, name, currency, monthly, yearly (minor units, GST included), limits {stores, ad_accounts, members, ai_runs_per_day, autopilot}}]` |
+| `GET /organizations/{id}/billing` | `{enabled, status: off\|complimentary\|trialing\|active\|past_due\|read_only, read_only, plan (in force, or null), subscribed_plan, interval, subscription_status (Stripe's word; none), trial_ends_at, current_period_end, cancel_at_period_end, grace_ends_at, usage {stores, ad_accounts, members (with open invitations), ai_runs_today}, can_manage, checkout_available, portal_available}` |
+| `POST /organizations/{id}/billing/checkout` | Body `{plan, interval: month\|year}` → `{url}` (Stripe Checkout). Already subscribed or complimentary: `CONFLICT` (409). Off, no key, price missing (`details[] {reason: price_missing}`) or Stripe unreachable: `BILLING_UNAVAILABLE` (503) |
+| `POST /organizations/{id}/billing/portal` | → `{url}` (Stripe's customer portal). No Stripe customer yet: `CONFLICT` |
+| `POST /billing/stripe/webhook` | Public, not in the schema; CSRF-exempt; Stripe's `Stripe-Signature` over the raw body (HMAC-SHA256, `STRIPE_WEBHOOK_TOLERANCE`). Wrong, missing or old: `INVALID_SIGNATURE` (401), nothing stored. Recorded once by event id (`{status: applied\|ignored\|duplicate}`); AdVegaX then reads the subscription from Stripe and applies it, so duplicates and any order end in Stripe's current state. Stripe unreachable: `BILLING_UNAVAILABLE` (503, Stripe sends it again) |
+
+**Limits** (`PLAN_LIMIT_REACHED`, 403, `details[] {limit: stores\|ad_accounts\|members\|autopilot, allowed, used, plan}`) are checked when linking a store or ad account, inviting a member (members and open invitations together), switching autopilot on, and starting an AI run (the plan's daily runs when lower than `AI_DAILY_RUNS`: `AI_LIMIT_REACHED`). What exists is never removed by a downgrade.
+
+**Read-only** (trial over without a plan; a failed payment past `BILLING_PAYMENT_GRACE`; a cancelled subscription after its period): every `POST/PUT/PATCH/DELETE` under `/organizations/{id}` answers `ORGANIZATION_READ_ONLY` (403) except the organization's own details, members and invitations (adding still needs a free place), billing checkout and portal, autopilot stop, cancelling or rejecting a change, rejecting advice, disconnecting and unlinking. Reading always works; schedulers import and look at nothing for it. Owners are emailed `billing_trial_ending` (3 days before), `billing_payment_failed`, `billing_read_only` and `billing_changed`.
+
 ## 20. Webhooks
 
 Provider webhooks must:

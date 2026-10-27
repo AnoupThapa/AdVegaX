@@ -80,6 +80,10 @@ BODIES = {
         "min_campaign_age_days": 14,
     },
     ("post", "/organizations/{organization_id}/autopilot/enable"): {"confirm": "x"},
+    ("post", "/organizations/{organization_id}/billing/checkout"): {
+        "plan": "starter",
+        "interval": "month",
+    },
     ("patch", "/organizations/{organization_id}/members/{member_id}"): {"role": "viewer"},
     ("post", "/organizations/{organization_id}/invitations"): {
         "email": "evil@example.com",

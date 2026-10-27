@@ -10,6 +10,7 @@ from app.domains.advertising.router import router as advertising_router
 from app.domains.analytics.router import router as analytics_router
 from app.domains.audit.router import router as audit_router
 from app.domains.autopilot.router import router as autopilot_router
+from app.domains.billing.router import router as billing_router
 from app.domains.builder.router import router as builder_router
 from app.domains.commerce.router import router as commerce_router
 from app.domains.creative.router import router as creative_router
@@ -39,4 +40,5 @@ api_router.include_router(actions_router)
 api_router.include_router(builder_router)
 api_router.include_router(optimization_router)
 api_router.include_router(autopilot_router)
+api_router.include_router(billing_router)
 api_router.include_router(webhooks_router)

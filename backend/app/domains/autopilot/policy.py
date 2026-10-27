@@ -17,6 +17,7 @@ import uuid
 from typing import Any
 
 from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.domains.actions.facts import switches_on
@@ -32,21 +33,28 @@ def policy_for(
     row = session.get(AutopilotPolicy, org_id, with_for_update=lock)
     if row is None:
         s = rt.settings
-        row = AutopilotPolicy(
-            organization_id=org_id,
-            enabled=False,
-            kinds=list(AUTOMATIC_KINDS),
-            ad_account_ids=[],
-            excluded_campaign_ids=[],
-            max_changes_per_day=s.AUTOPILOT_MAX_CHANGES_PER_DAY,
-            campaign_cooldown_days=s.AUTOPILOT_MIN_COOLDOWN_DAYS,
-            max_decrease_percent=s.AUTOPILOT_MAX_DECREASE_PERCENT,
-            max_cumulative_decrease_percent=s.AUTOPILOT_MAX_CUMULATIVE_DECREASE_PERCENT,
-            cumulative_window_days=s.AUTOPILOT_CUMULATIVE_WINDOW_DAYS,
-            min_campaign_age_days=s.AUTOPILOT_MIN_CAMPAIGN_AGE_DAYS,
+        # Two first requests may arrive together (Phase 13 e2e found it): the first insert
+        # wins and the other reads it.
+        session.execute(
+            insert(AutopilotPolicy)
+            .values(
+                organization_id=org_id,
+                enabled=False,
+                kinds=list(AUTOMATIC_KINDS),
+                ad_account_ids=[],
+                excluded_campaign_ids=[],
+                max_changes_per_day=s.AUTOPILOT_MAX_CHANGES_PER_DAY,
+                campaign_cooldown_days=s.AUTOPILOT_MIN_COOLDOWN_DAYS,
+                max_decrease_percent=s.AUTOPILOT_MAX_DECREASE_PERCENT,
+                max_cumulative_decrease_percent=s.AUTOPILOT_MAX_CUMULATIVE_DECREASE_PERCENT,
+                cumulative_window_days=s.AUTOPILOT_CUMULATIVE_WINDOW_DAYS,
+                min_campaign_age_days=s.AUTOPILOT_MIN_CAMPAIGN_AGE_DAYS,
+            )
+            .on_conflict_do_nothing(index_elements=["organization_id"])
         )
-        session.add(row)
-        session.flush()
+        found = session.get(AutopilotPolicy, org_id, with_for_update=lock)
+        assert found is not None
+        row = found
     return row
 
 

@@ -51,6 +51,8 @@ TABLES = (
     "ai_models",  # shared reference data (Phase 8): which model and prompt version a run used
     "prompt_versions",
     "fx_rates",  # shared reference data (Phase 6), cleared like the rest between tests
+    "billing_events",  # system-owned (Phase 13): no organization to cascade from
+    "billing_reconciliations",
     "job_runs",
     "organization_resource_links",
     "external_resources",

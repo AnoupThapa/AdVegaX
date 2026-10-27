@@ -314,6 +314,31 @@ class AutopilotConfirmation(AppError):
     message = "Type the organization's name exactly to switch autopilot on."
 
 
+class PlanLimitReached(AppError):
+    """Phase 13: the organization's plan does not allow one more of this; ``details`` say
+    which limit, what is allowed and what is used."""
+
+    status_code = 403
+    code = "PLAN_LIMIT_REACHED"
+    message = "Your plan does not allow this. Change your plan on the Billing page."
+
+
+class OrganizationReadOnly(AppError):
+    """Phase 13: the trial ended or payment failed past its grace period."""
+
+    status_code = 403
+    code = "ORGANIZATION_READ_ONLY"
+    message = "This organization is read-only until a plan is chosen on the Billing page."
+
+
+class BillingUnavailable(AppError):
+    """Phase 13: billing is switched off or the billing provider cannot be reached."""
+
+    status_code = 503
+    code = "BILLING_UNAVAILABLE"
+    message = "Billing is not available right now. Try again later."
+
+
 def error_body(
     code: str, message: str, details: list[dict[str, Any]] | None = None
 ) -> dict[str, Any]:

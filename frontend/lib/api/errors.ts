@@ -129,6 +129,10 @@ const MESSAGES: Readonly<Record<string, string>> = {
   OPTIMIZATION_DISABLED: "Recommendations are switched off for this AdVegaX installation.",
   AUTOPILOT_NOT_READY: "Autopilot cannot be switched on for this organization yet.",
   AUTOPILOT_CONFIRMATION: "Type the organization's name exactly to switch autopilot on.",
+  PLAN_LIMIT_REACHED: "Your plan does not allow this. Change your plan on the Billing page.",
+  ORGANIZATION_READ_ONLY:
+    "This organization is read-only until a plan is chosen on the Billing page.",
+  BILLING_UNAVAILABLE: "Billing is not available right now. Try again later.",
   INTERNAL_ERROR: "Something went wrong on our side. Please try again.",
   SERVICE_UNAVAILABLE: "The service is temporarily unavailable. Please try again shortly.",
   HTTP_ERROR: "This request could not be completed. Please try again.",

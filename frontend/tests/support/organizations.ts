@@ -155,6 +155,7 @@ export function emptyOrganizationData(): Record<string, Response> {
     }),
     [`GET ${ORG_PATH}/autopilot`]: wrap(emptyAutopilot()),
     [`GET ${ORG_PATH}/autopilot/runs`]: wrap([]),
+    [`GET ${ORG_PATH}/billing`]: wrap(emptyBilling()),
     [`GET ${ORG_PATH}/optimization-settings`]: wrap({
       enabled: true,
       currency: "AUD",
@@ -171,5 +172,27 @@ export function emptyOrganizationData(): Record<string, Response> {
       base_prohibited_terms: ["cure", "100% effective", "tga approved"],
       updated_at: null,
     }),
+  };
+}
+
+/** Billing switched off (the default installation): no limits, nothing to show. */
+export function emptyBilling(overrides: Record<string, unknown> = {}) {
+  return {
+    enabled: false,
+    status: "off",
+    read_only: false,
+    plan: null,
+    subscribed_plan: null,
+    interval: null,
+    subscription_status: "none",
+    trial_ends_at: null,
+    current_period_end: null,
+    cancel_at_period_end: false,
+    grace_ends_at: null,
+    usage: { stores: 0, ad_accounts: 0, members: 1, ai_runs_today: 0 },
+    can_manage: true,
+    checkout_available: false,
+    portal_available: false,
+    ...overrides,
   };
 }

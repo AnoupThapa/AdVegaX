@@ -32,6 +32,7 @@ from app.domains.autopilot.schemas import (
     AutopilotRunOut,
     ReadinessOut,
 )
+from app.domains.billing import entitlements
 from app.domains.organizations.models import Organization
 from app.domains.organizations.permissions import Permission, authorize
 from app.domains.organizations.tenancy import TenantContext
@@ -159,6 +160,7 @@ class AutopilotService:
             assert org is not None
             if body.confirm.strip() != org.name.strip():
                 raise AutopilotConfirmation()
+            entitlements.require(self.rt, session, org_id, "autopilot")  # Phase 13, Q-13-1
             lacking = missing(self.rt, session, org_id)
             row = policy_for(self.rt, session, org_id, lock=True)
             if not row.kinds:

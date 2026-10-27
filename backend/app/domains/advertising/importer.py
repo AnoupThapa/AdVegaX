@@ -49,6 +49,7 @@ from app.domains.advertising.models import (
 )
 from app.domains.advertising.quota import SharedQuota
 from app.domains.audit.service import Actor, record_audit
+from app.domains.billing.entitlements import is_read_only
 from app.domains.integrations.jobs import call_provider
 from app.domains.integrations.models import (
     ExternalConnection,
@@ -338,7 +339,7 @@ def enqueue_ad_syncs(rt: Runtime) -> int:
             state = session.get(AdSyncState, account_id, with_for_update=True)
             if account is None or (state is not None and chain_running(rt, state)):
                 continue
-            if not _syncable(session, account):
+            if not _syncable(session, account) or is_read_only(rt, session, org_id):
                 continue
             mode = due_mode(rt, state, defer_rereads=bool(defer[provider_code]))
             if mode is None and account.funnel_reread_at is None:

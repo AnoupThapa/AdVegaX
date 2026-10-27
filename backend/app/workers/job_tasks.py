@@ -163,3 +163,13 @@ def optimization_task() -> int | None:
     rt = worker_runtime()
     ttl = int(rt.settings.SCHEDULE_OPTIMIZATION_TICK.total_seconds() * 0.9)
     return run_singleton(rt.redis, "optimization", ttl, lambda: optimization.enqueue_looks(rt))
+
+
+@celery_app.task(name="advegax.schedule.billing")  # type: ignore[untyped-decorator]
+def billing_task() -> int | None:
+    """Trial reminders, read-only notices and the nightly check with Stripe (13-04, 13-06)."""
+    from app.domains.billing.service import tick
+
+    rt = worker_runtime()
+    ttl = int(rt.settings.SCHEDULE_BILLING_TICK.total_seconds() * 0.9)
+    return run_singleton(rt.redis, "billing", ttl, lambda: tick(rt))

@@ -29,7 +29,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | 10B | Campaign builder | **Implemented — awaiting review** (A29; Step 0 pending) | 2,011 backend + 534 frontend + 17 end-to-end tests; `phases/PHASE_10B_REPORT.md` |
 | 11 | Optimization engine | **Implemented — awaiting review** (A30; Step 0 pending) | 2,053 backend + 556 frontend + 18 end-to-end tests; `phases/PHASE_11_REPORT.md` |
 | 12 | Controlled autopilot | **Implemented — awaiting review** (A31; Step 0 pending) | 2,069 backend + 563 frontend + 19 end-to-end tests; `phases/PHASE_12_REPORT.md` |
-| 13 | Stripe billing & entitlements | **In progress** (A32; Step 0 pending) | `phases/PHASE_13_PLAN.md` |
+| 13 | Stripe billing & entitlements | **Implemented — awaiting review** (A32; Step 0 pending) | 2,106 backend + 577 frontend + 20 end-to-end tests; `phases/PHASE_13_REPORT.md` |
 | 14 | Agency mode | Not started | Needs Q15 |
 
 ## 2. Completed work
@@ -169,7 +169,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | A29 | Phase 10B plan with all §2 recommendations (Q-10B-1 … Q-10B-12), Step 0 (§4.2), the data model (§5) and delivery 10B-01 … 10B-07 with one report for the phase | Approved 2026-10-27 ("Approve all") — implemented, awaiting review |
 | A30 | Phase 11 plan with all §2 recommendations (Q-11-1 … Q-11-12), Step 0 (§4.2), the data model (§5) and delivery 11-01 … 11-08 with one report for the phase | Approved 2026-10-27 ("Approve all") — implemented, awaiting review |
 | A31 | Phase 12 plan with all §2 recommendations (Q-12-1 … Q-12-12, answering Q13), Step 0 (§4.2), the data model (§5) and delivery 12-01 … 12-07 with one report for the phase | Approved 2026-10-27 ("Approve all") — implemented, awaiting review |
-| A32 | Phase 13 plan with all §2 recommendations (Q-13-1 … Q-13-12, the starting prices and limits), Step 0 (§4.2), the data model (§5) and delivery 13-01 … 13-08 with one report for the phase | Approved 2026-10-27 ("Approve all") — in progress |
+| A32 | Phase 13 plan with all §2 recommendations (Q-13-1 … Q-13-12, the starting prices and limits), Step 0 (§4.2), the data model (§5) and delivery 13-01 … 13-08 with one report for the phase | Approved 2026-10-27 ("Approve all") — implemented, awaiting review |
 | A21 | Phase 3 plan with all §2 recommendations (Q-3-1 … Q-3-11); live-testing option C | Approved 2026-10-15 ("Approve all") — implemented 2026-10-18, awaiting review |
 | A20 | Phase 2A and 2B reports reviewed by the product owner; continue to Phase 3 planning | Reviewed 2026-10-15 ("reviewed pls continue") |
 | A18 | Phase 2A plan v2 with all §2 recommendations (Q5–Q9, D-2A-1…3); live-testing option C | Approved 2026-10-13 — implemented, awaiting review (live checks pending) |
@@ -195,7 +195,7 @@ Q5 Shopify public-app approach (2A production) · Q6 same store/account in two o
 
 ## 5. Next actions
 
-0. **Now:** review Phase 9 (`phases/PHASE_09_REPORT.md` §12) and Phase 8 (`phases/PHASE_08_REPORT.md` §12); put an Anthropic API key in the local settings file (`ANTHROPIC_API_KEY`, never in a chat or the repository) so Phase 8's Step 0 can run; review `phases/PHASE_05_REPORT.md`, `phases/PHASE_04_REPORT.md` and `phases/PHASE_03_REPORT.md`; do the Google (Ads and Analytics) and Meta set-ups so the three Step 0 checks can run; apply `advegax-pending.bundle` to the desktop folder and open a pull request so GitHub CI runs. Phase 6 needs the signed-off metric definitions (Q7).
+0. **Now:** review Phase 13 (`phases/PHASE_13_REPORT.md` §12: prices, trial, grace, complimentary organizations) and Phase 12 (`phases/PHASE_12_REPORT.md` §12); for Phase 13's Step 0 put Stripe **test-mode** keys in the local settings file (never in chat or the repository); review Phase 9 (`phases/PHASE_09_REPORT.md` §12) and Phase 8 (`phases/PHASE_08_REPORT.md` §12); put an Anthropic API key in the local settings file (`ANTHROPIC_API_KEY`, never in a chat or the repository) so Phase 8's Step 0 can run; review `phases/PHASE_05_REPORT.md`, `phases/PHASE_04_REPORT.md` and `phases/PHASE_03_REPORT.md`; do the Google (Ads and Analytics) and Meta set-ups so the three Step 0 checks can run; apply `advegax-pending.bundle` to the desktop folder and open a pull request so GitHub CI runs. Phase 6 needs the signed-off metric definitions (Q7).
 1. Product owner reviews Phase 1 (`PHASE_01A_REPORT.md`, `PHASE_01B_REPORT.md`, `PHASE_01C_REPORT.md`) and Phase 2A (`PHASE_02A_REPORT.md`).
 2. Open a pull request `feature/phase-1a → main` so GitHub CI runs every job (CI does not run on pushes to the feature branch alone).
 3. Live Shopify checks (2A-01): Shopify Partner account + development store + app in the Dev Dashboard, and a reachable public HTTPS address (Shopify domains allowed in Claude network settings plus a tunnel, or a staging server).

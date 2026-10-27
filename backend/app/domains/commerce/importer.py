@@ -38,6 +38,7 @@ from sqlalchemy.orm import Session
 
 from app.core.errors import NotFound
 from app.domains.audit.service import Actor, record_audit
+from app.domains.billing.entitlements import is_read_only
 from app.domains.commerce.models import (
     CommerceSyncState,
     Order,
@@ -1248,6 +1249,8 @@ def enqueue_reconciliations(rt: Runtime, mode: SyncMode) -> int:
             store = session.get(Store, store_id)
             state = session.get(CommerceSyncState, store_id, with_for_update=True)
             if store is None or (state is not None and chain_running(rt, state)):
+                continue
+            if is_read_only(rt, session, org_id):
                 continue
             last = state.last_reconciled_at if state is not None else None
             if mode is SyncMode.RECONCILE and last is not None and last > now - interval:

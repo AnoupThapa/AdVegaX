@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from app.core.errors import Conflict, Forbidden, NotFound
 from app.db.session import set_context
 from app.domains.audit.service import Actor, record_audit
+from app.domains.billing import entitlements
 from app.domains.identity.models import User, UserActionToken
 from app.domains.identity.principal import Principal
 from app.domains.identity.service import IdentityService
@@ -164,6 +165,8 @@ class OrganizationService:
                 resource_id=membership.id,
                 after={"user_id": principal.user_id, "role": Role.OWNER},
             )
+            if self.rt.settings.BILLING_ENABLED:  # Phase 13: the trial starts now (Q-13-2)
+                entitlements.account_for(self.rt, session, org_id)
             session.refresh(org)
             return _org_out(org, Role.OWNER)
 
@@ -417,6 +420,8 @@ class OrganizationService:
             if existing is not None:
                 raise AlreadyMember()
             self._close_pending(session, ctx.organization_id, email, "revoked")
+            # Phase 13 (Q-13-8): members and open invitations together must fit the plan.
+            entitlements.require(self.rt, session, ctx.organization_id, "members")
             invitation = Invitation(
                 organization_id=ctx.organization_id,
                 email=email,

@@ -7,6 +7,7 @@ import { createContext, useContext, type ReactNode } from "react";
 import { Alert } from "@/components/ui/Alert";
 import { PageHeading } from "@/components/ui/PageHeading";
 import { RequireAuth } from "@/features/auth/RequireAuth";
+import { BillingBanner } from "@/features/billing/BillingBanner";
 import { ApiError, messageFor } from "@/lib/api/errors";
 
 import { useOrganization, type Organization } from "./api";
@@ -46,7 +47,10 @@ function FetchedOrganization({ id, children }: { id: string; children: ReactNode
       <OrganizationContext.Provider value={query.data}>
         <div className={styles.shell}>
           <OrganizationNav org={query.data} />
-          <div className={styles.content}>{children}</div>
+          <div className={styles.content}>
+            <BillingBanner orgId={query.data.id} />
+            {children}
+          </div>
         </div>
       </OrganizationContext.Provider>
     );
@@ -101,6 +105,7 @@ const SECTIONS = [
   { href: "/connections", label: "Connections" },
   { href: "/members", label: "Members" },
   { href: "/settings", label: "Settings" },
+  { href: "/billing", label: "Billing" },
 ] as const;
 
 function OrganizationNav({ org }: { org: Organization }) {

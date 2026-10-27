@@ -3250,6 +3250,169 @@
         "title": "AutopilotRunOut",
         "type": "object"
       },
+      "BillingOut": {
+        "properties": {
+          "can_manage": {
+            "title": "Can Manage",
+            "type": "boolean"
+          },
+          "cancel_at_period_end": {
+            "title": "Cancel At Period End",
+            "type": "boolean"
+          },
+          "checkout_available": {
+            "title": "Checkout Available",
+            "type": "boolean"
+          },
+          "current_period_end": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Period End"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "grace_ends_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grace Ends At"
+          },
+          "interval": {
+            "anyOf": [
+              {
+                "enum": [
+                  "month",
+                  "year"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interval"
+          },
+          "plan": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlanOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "portal_available": {
+            "title": "Portal Available",
+            "type": "boolean"
+          },
+          "read_only": {
+            "title": "Read Only",
+            "type": "boolean"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "subscribed_plan": {
+            "anyOf": [
+              {
+                "enum": [
+                  "starter",
+                  "growth",
+                  "scale"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subscribed Plan"
+          },
+          "subscription_status": {
+            "title": "Subscription Status",
+            "type": "string"
+          },
+          "trial_ends_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trial Ends At"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/BillingUsageOut"
+          }
+        },
+        "required": [
+          "enabled",
+          "status",
+          "read_only",
+          "plan",
+          "subscribed_plan",
+          "interval",
+          "subscription_status",
+          "trial_ends_at",
+          "current_period_end",
+          "cancel_at_period_end",
+          "grace_ends_at",
+          "usage",
+          "can_manage",
+          "checkout_available",
+          "portal_available"
+        ],
+        "title": "BillingOut",
+        "type": "object"
+      },
+      "BillingUsageOut": {
+        "properties": {
+          "ad_accounts": {
+            "title": "Ad Accounts",
+            "type": "integer"
+          },
+          "ai_runs_today": {
+            "title": "Ai Runs Today",
+            "type": "integer"
+          },
+          "members": {
+            "title": "Members",
+            "type": "integer"
+          },
+          "stores": {
+            "title": "Stores",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "stores",
+          "ad_accounts",
+          "members",
+          "ai_runs_today"
+        ],
+        "title": "BillingUsageOut",
+        "type": "object"
+      },
       "Body_upload_creative_asset_api_v1_organizations__organization_id__creative_assets_post": {
         "properties": {
           "file": {
@@ -4162,6 +4325,33 @@
           "severity"
         ],
         "title": "CheckOut",
+        "type": "object"
+      },
+      "CheckoutIn": {
+        "properties": {
+          "interval": {
+            "enum": [
+              "month",
+              "year"
+            ],
+            "title": "Interval",
+            "type": "string"
+          },
+          "plan": {
+            "enum": [
+              "starter",
+              "growth",
+              "scale"
+            ],
+            "title": "Plan",
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan",
+          "interval"
+        ],
+        "title": "CheckoutIn",
         "type": "object"
       },
       "ConnectionOut": {
@@ -5938,6 +6128,22 @@
         "title": "Envelope[AutopilotPolicyOut]",
         "type": "object"
       },
+      "Envelope_BillingOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/BillingOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[BillingOut]",
+        "type": "object"
+      },
       "Envelope_CampaignFunnelsOut_": {
         "properties": {
           "data": {
@@ -6370,6 +6576,22 @@
         "title": "Envelope[RecommendationOut]",
         "type": "object"
       },
+      "Envelope_RedirectOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/RedirectOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[RedirectOut]",
+        "type": "object"
+      },
       "Envelope_ResyncOut_": {
         "properties": {
           "data": {
@@ -6740,6 +6962,26 @@
           "meta"
         ],
         "title": "Envelope[list[OrganizationOut]]",
+        "type": "object"
+      },
+      "Envelope_list_PlanOut__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/PlanOut"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[list[PlanOut]]",
         "type": "object"
       },
       "Envelope_list_ProviderOut__": {
@@ -8349,6 +8591,81 @@
         "title": "OverviewOut",
         "type": "object"
       },
+      "PlanLimitsOut": {
+        "properties": {
+          "ad_accounts": {
+            "title": "Ad Accounts",
+            "type": "integer"
+          },
+          "ai_runs_per_day": {
+            "title": "Ai Runs Per Day",
+            "type": "integer"
+          },
+          "autopilot": {
+            "title": "Autopilot",
+            "type": "boolean"
+          },
+          "members": {
+            "title": "Members",
+            "type": "integer"
+          },
+          "stores": {
+            "title": "Stores",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "stores",
+          "ad_accounts",
+          "members",
+          "ai_runs_per_day",
+          "autopilot"
+        ],
+        "title": "PlanLimitsOut",
+        "type": "object"
+      },
+      "PlanOut": {
+        "properties": {
+          "code": {
+            "enum": [
+              "starter",
+              "growth",
+              "scale"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "limits": {
+            "$ref": "#/components/schemas/PlanLimitsOut"
+          },
+          "monthly": {
+            "title": "Monthly",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "yearly": {
+            "title": "Yearly",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "currency",
+          "monthly",
+          "yearly",
+          "limits"
+        ],
+        "title": "PlanOut",
+        "type": "object"
+      },
       "PlatformAmountOut": {
         "properties": {
           "amount": {
@@ -9170,6 +9487,19 @@
           "reason"
         ],
         "title": "RecommendationRejectIn",
+        "type": "object"
+      },
+      "RedirectOut": {
+        "properties": {
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "RedirectOut",
         "type": "object"
       },
       "RegisterRequest": {
@@ -11180,6 +11510,28 @@
         "summary": "Verify Email",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/api/v1/billing/plans": {
+      "get": {
+        "description": "The plans, their prices (minor units, GST included) and limits.",
+        "operationId": "list_plans_api_v1_billing_plans_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_PlanOut__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Plans",
+        "tags": [
+          "billing"
         ]
       }
     },
@@ -14399,6 +14751,148 @@
         "summary": "Stop Autopilot",
         "tags": [
           "autopilot"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/billing": {
+      "get": {
+        "description": "Every member: the plan in force, its dates, limits and usage.",
+        "operationId": "get_billing_api_v1_organizations__organization_id__billing_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_BillingOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Billing",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/billing/checkout": {
+      "post": {
+        "description": "Owners only. Errors: CONFLICT (already subscribed: use the portal), BILLING_UNAVAILABLE.",
+        "operationId": "start_checkout_api_v1_organizations__organization_id__billing_checkout_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckoutIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_RedirectOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start Checkout",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/billing/portal": {
+      "post": {
+        "description": "Owners only. Errors: CONFLICT (no Stripe customer yet), BILLING_UNAVAILABLE.",
+        "operationId": "open_portal_api_v1_organizations__organization_id__billing_portal_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_RedirectOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Open Portal",
+        "tags": [
+          "billing"
         ]
       }
     },

@@ -52,6 +52,7 @@ from app.domains.analytics.models import (
     AnalyticsSyncState,
 )
 from app.domains.audit.service import Actor, record_audit
+from app.domains.billing.entitlements import is_read_only
 from app.domains.integrations.jobs import call_provider
 from app.domains.integrations.models import (
     ExternalConnection,
@@ -328,7 +329,7 @@ def enqueue_analytics_syncs(rt: Runtime) -> int:
             state = session.get(AnalyticsSyncState, property_id, with_for_update=True)
             if prop is None or (state is not None and chain_running(rt, state)):
                 continue
-            if not _syncable(session, prop):
+            if not _syncable(session, prop) or is_read_only(rt, session, org_id):
                 continue
             mode = due_mode(rt, state)
             if mode is None and prop.funnel_reread_at is None:

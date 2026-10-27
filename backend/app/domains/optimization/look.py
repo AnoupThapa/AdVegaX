@@ -36,6 +36,7 @@ from app.core.settings import Settings
 from app.domains.actions.models import Action
 from app.domains.ai.runs import run_task
 from app.domains.audit.service import Actor, record_audit
+from app.domains.billing.entitlements import is_read_only
 from app.domains.funnel.engine import load_funnel
 from app.domains.funnel.findings import find_drop_offs, rules_from
 from app.domains.fx.service import FxTable
@@ -532,7 +533,7 @@ def enqueue_looks(rt: Runtime) -> int:
     for org_id in orgs:
         with rt.db.transaction(org_id=org_id) as session:
             org = session.get(Organization, org_id)
-            if org is None:
+            if org is None or is_read_only(rt, session, org_id):
                 continue
             local = now.astimezone(ZoneInfo(org.default_timezone))
             row = settings_for(rt, session, org_id)

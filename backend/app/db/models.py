@@ -15,6 +15,7 @@ from app.domains.ai.models import AiModel, AiRun, CampaignStrategy, PromptVersio
 from app.domains.analytics.models import AnalyticsDaily, AnalyticsProperty, AnalyticsSyncState
 from app.domains.audit.models import AuditLog, SecurityEvent
 from app.domains.autopilot.models import AutopilotPolicy, AutopilotRun
+from app.domains.billing.models import BillingAccount, BillingEvent, BillingReconciliation
 from app.domains.builder.models import CampaignDraft
 from app.domains.commerce.models import (
     CommerceSyncState,
@@ -68,6 +69,9 @@ __all__ = [
     "AutopilotPolicy",
     "AutopilotRun",
     "Base",
+    "BillingAccount",
+    "BillingEvent",
+    "BillingReconciliation",
     "CampaignDraft",
     "CampaignStrategy",
     "CommerceSyncState",

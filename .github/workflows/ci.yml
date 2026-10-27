@@ -126,6 +126,10 @@ jobs:
       # And Google Analytics (5-09): it uses the Google Ads OAuth placeholders above; the
       # browser test connects through the in-process GA4 simulator, and nothing calls Google.
       GOOGLE_ANALYTICS_ENABLED: "true"
+      # Billing on (13-08) without any Stripe key: the Billing page and the limits are real;
+      # choosing a plan is refused, and the browser test subscribes through the in-process
+      # Stripe simulator. Nothing ever calls Stripe.
+      BILLING_ENABLED: "true"
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6

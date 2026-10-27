@@ -79,6 +79,42 @@ TEMPLATES: dict[str, Template] = {
         "{{ reason }}</p><p>Nothing more will change automatically until an owner "
         '<a href="{{ link }}">switches it on again</a>.</p>' + _FOOTER_HTML,
     ),
+    "billing_trial_ending": Template(
+        subject="Your AdVegaX trial for {{ organization_name }} ends on {{ ends }}",
+        text="The free trial for {{ organization_name }} ends on {{ ends }}. Choose a plan to "
+        "keep everything running; without one the organization becomes read-only (nothing is "
+        "deleted): {{ link }}" + _FOOTER_TEXT,
+        html="<p>The free trial for <strong>{{ organization_name }}</strong> ends on "
+        '{{ ends }}.</p><p><a href="{{ link }}">Choose a plan</a> to keep everything running; '
+        "without one the organization becomes read-only (nothing is deleted).</p>" + _FOOTER_HTML,
+    ),
+    "billing_payment_failed": Template(
+        subject="AdVegaX payment failed for {{ organization_name }}",
+        text="Stripe could not take the payment for {{ organization_name }}. Everything keeps "
+        "working until {{ grace_ends }}; after that the organization becomes read-only until "
+        "it is paid. Update the card: {{ link }}" + _FOOTER_TEXT,
+        html="<p>Stripe could not take the payment for <strong>{{ organization_name }}"
+        "</strong>.</p><p>Everything keeps working until {{ grace_ends }}; after that the "
+        "organization becomes read-only until it is paid. "
+        '<a href="{{ link }}">Update the card</a>.</p>' + _FOOTER_HTML,
+    ),
+    "billing_read_only": Template(
+        subject="{{ organization_name }} is now read-only in AdVegaX",
+        text="{{ organization_name }} is now read-only: everything stays visible, but nothing "
+        "new is imported, changed or generated. Nothing has been deleted. Choose a plan or "
+        "update the card to continue: {{ link }}" + _FOOTER_TEXT,
+        html="<p><strong>{{ organization_name }}</strong> is now read-only: everything stays "
+        "visible, but nothing new is imported, changed or generated. Nothing has been "
+        'deleted.</p><p><a href="{{ link }}">Choose a plan or update the card</a> to '
+        "continue.</p>" + _FOOTER_HTML,
+    ),
+    "billing_changed": Template(
+        subject="AdVegaX billing changed for {{ organization_name }}",
+        text="Billing for {{ organization_name }} changed: {{ summary }}.\nSee the details: "
+        "{{ link }}" + _FOOTER_TEXT,
+        html="<p>Billing for <strong>{{ organization_name }}</strong> changed: "
+        '{{ summary }}.</p><p><a href="{{ link }}">See the details</a>.</p>' + _FOOTER_HTML,
+    ),
     "security_notice": Template(
         subject="AdVegaX security notice",
         text="{{ message }}" + _FOOTER_TEXT,

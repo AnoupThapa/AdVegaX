@@ -656,6 +656,14 @@ Supersedes the `actions` outline in §15.
 
 **actions**: `source` also `autopilot`; `policy` (JSONB, the policy snapshot; set exactly when `source = 'autopilot'`, check constraint). **audit_logs.actor_type** also `autopilot`.
 
+## 14G. Billing — as built (Phase 13, migration 0024; A32)
+
+**billing_accounts** (tenant-owned, forced RLS; one row per organization, made when it is created while billing is on, or the first time it is used afterwards — its trial starts then; app role read, insert, update; the system role reads only `organization_id`, the Stripe ids, `subscription_status` and `trial_ends_at`) — `stripe_customer_id`, `stripe_subscription_id` (unique), `plan` (`starter` | `growth` | `scale` | null), `interval` (`month` | `year` | null), `subscription_status` (Stripe's: `none` | `trialing` | `active` | `past_due` | `unpaid` | `canceled` | `incomplete` | `incomplete_expired` | `paused`), `trial_ends_at`, `current_period_end`, `cancel_at_period_end`, `first_failed_at`, `trial_reminder_sent_at`, `read_only_notice_sent_at`, `synced_at`, `created_at`, `updated_at`. "Read-only", "complimentary" and the plan in force are worked out from these and the settings, never stored.
+
+**billing_events** (system role only, forced RLS; read, insert, update) — `stripe_event_id` (primary key: each event once), `event_type`, `organization_id`, `received_at`, `processed_at`, `result` (`applied` | `ignored` | `failed`), `error_code`. Never the payload or card details.
+
+**billing_reconciliations** (system role only, forced RLS; read, insert) — `started_at`, `checked`, `fixed`, `details` (JSONB `{organization_id, changed[] | error}`).
+
 ## 14. AI Tables
 
 ### ai_models

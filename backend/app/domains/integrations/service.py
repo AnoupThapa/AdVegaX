@@ -22,6 +22,7 @@ from app.core.errors import Conflict, Forbidden, NotFound, ValidationFailed
 from app.core.security.throttle import Limit
 from app.core.security.tokens import generate_token
 from app.domains.audit.service import Actor, record_audit
+from app.domains.billing import entitlements
 from app.domains.identity.principal import Principal
 from app.domains.integrations import tokens
 from app.domains.integrations.connect_state import (
@@ -63,6 +64,8 @@ logger = logging.getLogger("advegax.integrations")
 
 JOB_DISCOVER = "connection.discover"
 JOB_SYNC = "resource.sync"
+
+LIMITED_KINDS = {"store": "stores", "ad_account": "ad_accounts"}
 
 
 class ConnectionNotActive(Conflict):
@@ -768,6 +771,10 @@ class IntegrationService:
                 raise ResourceUnavailable(details=[{"reason": resource.unavailable_reason}])
             if self._active_link(session, resource.id) is not None:
                 raise AlreadyLinked()
+            # Phase 13 (Q-13-8): one more store or ad account must fit the plan.
+            limited = LIMITED_KINDS.get(resource.kind)
+            if limited is not None:
+                entitlements.require(self.rt, session, ctx.organization_id, limited)
             link = OrganizationResourceLink(
                 organization_id=ctx.organization_id,
                 external_resource_id=resource.id,

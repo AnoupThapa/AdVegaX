@@ -21,6 +21,7 @@ SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 CSRF_EXEMPT_PATH = re.compile(
     r"/api/v1/webhooks/[a-z0-9_]{1,32}"  # platform webhooks (2A-05)
     r"|/api/v1/connections/[a-z0-9_]{1,32}/credentials"  # platform-posted keys (2B-04)
+    r"|/api/v1/billing/stripe/webhook"  # Stripe's signed events (13-04)
 )
 # Image uploads (Phase 9, 9-05): the only route that takes a multipart body, with its own size
 # limit (the image limit plus room for the form's own lines). CSRF and Origin still apply.

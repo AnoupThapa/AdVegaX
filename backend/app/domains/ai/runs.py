@@ -37,6 +37,7 @@ from app.domains.ai.adapter import AiError, AiTimedOut, ModelAdapter, ModelReque
 from app.domains.ai.anthropic import AnthropicAdapter
 from app.domains.ai.models import AiModel, AiRun, PromptVersion
 from app.domains.ai.prompts import Prompt
+from app.domains.billing import entitlements
 from app.providers.http.client import SafeHttpClient
 from app.runtime import Runtime, outbound_policy
 
@@ -140,7 +141,10 @@ def run_task(
     if not settings.AI_ENABLED:
         raise AiUnavailableError()
     with rt.db.transaction(org_id=organization_id) as session:
-        if runs_today(session, organization_id, rt.clock.now()) >= settings.AI_DAILY_RUNS:
+        # Phase 13 (Q-13-8): the plan's daily runs when lower; none while read-only.
+        entitlements.require_writable(rt, session, organization_id)
+        allowed = entitlements.ai_runs_allowed(rt, session, organization_id)
+        if runs_today(session, organization_id, rt.clock.now()) >= allowed:
             raise AiLimitReached()
     adapter = adapter_for(rt)
 
