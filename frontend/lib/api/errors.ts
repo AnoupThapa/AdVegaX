@@ -122,6 +122,11 @@ const MESSAGES: Readonly<Record<string, string>> = {
   DRAFT_NOT_EDITABLE:
     "This campaign is being launched or was launched, so it can no longer be changed here.",
   CREATIVE_NOT_APPROVED: "Approve a creative for this platform first.",
+  RECOMMENDATION_OUT_OF_DATE:
+    "This advice is out of date: the campaign or its figures changed. Nothing was changed.",
+  RECOMMENDATION_CLOSED: "This advice is no longer open.",
+  REFRESH_LIMIT: "AdVegaX already looked again as often as allowed today. Try again tomorrow.",
+  OPTIMIZATION_DISABLED: "Recommendations are switched off for this AdVegaX installation.",
   INTERNAL_ERROR: "Something went wrong on our side. Please try again.",
   SERVICE_UNAVAILABLE: "The service is temporarily unavailable. Please try again shortly.",
   HTTP_ERROR: "This request could not be completed. Please try again.",

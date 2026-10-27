@@ -112,6 +112,14 @@ class Action(UUIDPrimaryKey, Timestamps, Base):
             postgresql_where=text(_in("status", OPEN_STATUSES)),
         ),
         ForeignKeyConstraint(
+            ["organization_id", "recommendation_id"],
+            ["recommendations.organization_id", "recommendations.id"],
+            name="fk_actions_recommendation",
+        ),
+        CheckConstraint(
+            "(recommendation_id IS NULL) = (source = 'user')", name="recommendation_source"
+        ),
+        ForeignKeyConstraint(
             ["organization_id", "undo_of"],
             ["actions.organization_id", "actions.id"],
             name="fk_actions_undo_of",
@@ -127,6 +135,7 @@ class Action(UUIDPrimaryKey, Timestamps, Base):
         Index("ix_actions_organization_id_status", "organization_id", "status"),
         Index("ix_actions_organization_id_campaign_id", "organization_id", "campaign_id"),
         Index("ix_actions_ad_account_id_submitted_at", "ad_account_id", "submitted_at"),
+        Index("ix_actions_recommendation_id", "recommendation_id"),
         Index(
             "uq_actions_one_open_per_campaign",
             "campaign_id",
@@ -163,6 +172,8 @@ class Action(UUIDPrimaryKey, Timestamps, Base):
     error_code: Mapped[str | None] = mapped_column(String(64))
     source: Mapped[str] = mapped_column(String(16), nullable=False, server_default="user")
     undo_of: Mapped[uuid.UUID | None] = mapped_column()
+    # Phase 11: the recommendation this change was made from (``source = recommendation``).
+    recommendation_id: Mapped[uuid.UUID | None] = mapped_column()
     requested_by: Mapped[uuid.UUID | None] = mapped_column(_user())
     decided_by: Mapped[uuid.UUID | None] = mapped_column(_user())
     decided_at: Mapped[datetime | None] = mapped_column(TZ)

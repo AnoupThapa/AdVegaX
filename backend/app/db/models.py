@@ -39,6 +39,11 @@ from app.domains.integrations.models import (
 )
 from app.domains.jobs.models import JobRun
 from app.domains.notifications.models import EmailOutbox
+from app.domains.optimization.models import (
+    OptimizationSettings,
+    Recommendation,
+    RecommendationOutcome,
+)
 from app.domains.organizations.models import Invitation, Membership, Organization
 from app.domains.webhooks.models import WebhookEvent
 
@@ -76,6 +81,7 @@ __all__ = [
     "Invitation",
     "JobRun",
     "Membership",
+    "OptimizationSettings",
     "Order",
     "OrderItem",
     "Organization",
@@ -84,6 +90,8 @@ __all__ = [
     "ProductCostHistory",
     "ProductVariant",
     "PromptVersion",
+    "Recommendation",
+    "RecommendationOutcome",
     "Refund",
     "RefundItem",
     "SalesEntry",

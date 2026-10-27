@@ -297,6 +297,30 @@ class Settings(BaseSettings):
     ACTIONS_RECONCILE_ATTEMPTS: int = Field(default=5, ge=1, le=50)
     ACTIONS_LOCK_TTL: timedelta = timedelta(minutes=2)
     SCHEDULE_ACTIONS_SWEEP_INTERVAL: timedelta = timedelta(minutes=5)
+    # --- Optimization engine (Phase 11; PHASE_11_PLAN §2, A30) --------------------------
+    # The installation's switch for new recommendations (existing ones and changes stay).
+    OPTIMIZATION_ENABLED: bool = True
+    # The daily look runs once per organization after this hour of its reporting time zone.
+    OPTIMIZATION_RUN_HOUR: int = Field(default=6, ge=0, le=23)
+    SCHEDULE_OPTIMIZATION_TICK: timedelta = timedelta(hours=1)
+    OPTIMIZATION_VALID_FOR: timedelta = timedelta(hours=72)  # Q-11-6
+    OPTIMIZATION_QUIET_PERIOD: timedelta = timedelta(days=14)  # after a rejection (Q-11-8)
+    OPTIMIZATION_ACTED_PERIOD: timedelta = timedelta(days=7)  # after an approval
+    OPTIMIZATION_REFRESHES_PER_DAY: int = Field(default=3, ge=0, le=50)  # "Look again now"
+    # The periods compared (Q-11-1): the last full days, and the days before them.
+    OPTIMIZATION_RECENT_DAYS: int = Field(default=7, ge=3, le=31)
+    OPTIMIZATION_BASELINE_DAYS: int = Field(default=28, ge=7, le=180)
+    # "Held back by budget" (rule 3): budget use at least this share, and the platform's
+    # conversion value at least this many times the break-even level.
+    OPTIMIZATION_BUDGET_USE: Decimal = Field(default=Decimal("0.95"), gt=0, le=Decimal("1.5"))
+    OPTIMIZATION_WINNER_FACTOR: Decimal = Field(default=Decimal("1.2"), ge=1, le=10)
+    # Profit rules need a known product cost for at least this share of net sales (Q-11-3).
+    OPTIMIZATION_MARGIN_COVERAGE: Decimal = Field(default=Decimal("0.8"), gt=0, le=1)
+    # Each organization's thresholds start from these (owners and admins can change them).
+    OPTIMIZATION_MIN_SPEND: Decimal = Field(default=Decimal("50"), gt=0)
+    OPTIMIZATION_MIN_CONVERSIONS: int = Field(default=5, ge=1, le=1000)
+    OPTIMIZATION_BUDGET_STEP_PERCENT: int = Field(default=20, ge=5, le=50)
+    OPTIMIZATION_COST_JUMP_PERCENT: int = Field(default=30, ge=10, le=200)
     # Meta: the Facebook Login for Business configuration that also asks for
     # ``ads_management`` ("Allow changes", Q-10A-2). None: Meta changes cannot be allowed.
     META_WRITE_LOGIN_CONFIG_ID: str | None = Field(default=None, pattern=r"^[0-9]{5,20}$")
@@ -450,6 +474,10 @@ class Settings(BaseSettings):
             "ACTIONS_RECONCILE_DELAY": self.ACTIONS_RECONCILE_DELAY,
             "ACTIONS_LOCK_TTL": self.ACTIONS_LOCK_TTL,
             "SCHEDULE_ACTIONS_SWEEP_INTERVAL": self.SCHEDULE_ACTIONS_SWEEP_INTERVAL,
+            "SCHEDULE_OPTIMIZATION_TICK": self.SCHEDULE_OPTIMIZATION_TICK,
+            "OPTIMIZATION_VALID_FOR": self.OPTIMIZATION_VALID_FOR,
+            "OPTIMIZATION_QUIET_PERIOD": self.OPTIMIZATION_QUIET_PERIOD,
+            "OPTIMIZATION_ACTED_PERIOD": self.OPTIMIZATION_ACTED_PERIOD,
         }
         for name, value in durations.items():
             if value <= timedelta(0):

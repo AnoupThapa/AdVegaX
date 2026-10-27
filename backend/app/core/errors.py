@@ -266,6 +266,38 @@ class CreativeNotApproved(AppError):
     message = "Approve a creative for this platform first."
 
 
+class RecommendationOutOfDate(AppError):
+    """Phase 11: the campaign or its figures changed since the advice; nothing was sent."""
+
+    status_code = 409
+    code = "RECOMMENDATION_OUT_OF_DATE"
+    message = "This advice is out of date. Nothing was changed."
+
+
+class RecommendationClosed(AppError):
+    """Phase 11: the advice was already decided, replaced or has expired."""
+
+    status_code = 409
+    code = "RECOMMENDATION_CLOSED"
+    message = "This advice is no longer open."
+
+
+class RefreshLimit(AppError):
+    """Phase 11: "Look again now" was used as often as allowed today (Q-11-5)."""
+
+    status_code = 429
+    code = "REFRESH_LIMIT"
+    message = "AdVegaX already looked again as often as allowed today. Try again tomorrow."
+
+
+class OptimizationDisabled(AppError):
+    """Phase 11: new recommendations are switched off for this installation."""
+
+    status_code = 409
+    code = "OPTIMIZATION_DISABLED"
+    message = "Recommendations are switched off for this AdVegaX installation."
+
+
 def error_body(
     code: str, message: str, details: list[dict[str, Any]] | None = None
 ) -> dict[str, Any]:

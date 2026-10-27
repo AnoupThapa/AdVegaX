@@ -15,6 +15,7 @@ from app.domains.commerce import importer, incremental, privacy
 from app.domains.integrations import jobs as integration_jobs
 from app.domains.integrations.service import JOB_DISCOVER, JOB_SYNC
 from app.domains.jobs.service import Handler, JobOutcome, recover_stuck_jobs, run_job
+from app.domains.optimization import look as optimization
 from app.domains.webhooks import service as webhooks
 from app.workers.celery_app import celery_app
 from app.workers.email_tasks import deliver_pending, worker_runtime
@@ -35,6 +36,7 @@ HANDLERS: Mapping[str, Handler] = {
     actions.JOB_RECONCILE: actions.reconcile,
     actions.JOB_DRAFT_EXECUTE: draft_launch.execute,
     actions.JOB_DRAFT_RECONCILE: draft_launch.reconcile,
+    optimization.JOB_LOOK: optimization.look_job,
 }
 
 
@@ -153,3 +155,11 @@ def actions_sweep_task() -> int | None:
     rt = worker_runtime()
     ttl = int(rt.settings.SCHEDULE_ACTIONS_SWEEP_INTERVAL.total_seconds() * 0.9)
     return run_singleton(rt.redis, "actions_sweep", ttl, lambda: actions.sweep(rt))
+
+
+@celery_app.task(name="advegax.schedule.optimization")  # type: ignore[untyped-decorator]
+def optimization_task() -> int | None:
+    """Start the daily look of each organization that is due (11-05)."""
+    rt = worker_runtime()
+    ttl = int(rt.settings.SCHEDULE_OPTIMIZATION_TICK.total_seconds() * 0.9)
+    return run_singleton(rt.redis, "optimization", ttl, lambda: optimization.enqueue_looks(rt))

@@ -16,6 +16,7 @@ from app.domains.funnel.router import router as funnel_router
 from app.domains.identity.router import router as identity_router
 from app.domains.integrations.router import router as integrations_router
 from app.domains.metrics.router import router as metrics_router
+from app.domains.optimization.router import router as optimization_router
 from app.domains.organizations.router import router as organizations_router
 from app.domains.strategy.router import router as strategy_router
 from app.domains.webhooks.router import router as webhooks_router
@@ -35,4 +36,5 @@ api_router.include_router(strategy_router)
 api_router.include_router(creative_router)
 api_router.include_router(actions_router)
 api_router.include_router(builder_router)
+api_router.include_router(optimization_router)
 api_router.include_router(webhooks_router)

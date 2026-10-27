@@ -328,7 +328,12 @@ class ActionService:
 
     # ------------------------------------------------------------------ requests
     def request(
-        self, ctx: TenantContext, body: ActionIn, *, undo_of: uuid.UUID | None = None
+        self,
+        ctx: TenantContext,
+        body: ActionIn,
+        *,
+        undo_of: uuid.UUID | None = None,
+        recommendation_id: uuid.UUID | None = None,
     ) -> ActionOut:
         authorize(ctx, Permission.ACTIONS_REQUEST)
         assessment = self._assess(ctx, body, undo=undo_of is not None)
@@ -352,7 +357,8 @@ class ActionService:
                     idempotency_key=catalogue.key(target.campaign.id, assessment.spec, params),
                     checks=[c.as_json() for c in assessment.checks],
                     dry_run=assessment.dry_run,
-                    source="user",
+                    source="recommendation" if recommendation_id else "user",
+                    recommendation_id=recommendation_id,
                     undo_of=undo_of,
                     requested_by=ctx.user_id,
                     created_at=self.rt.clock.now(),
@@ -386,6 +392,7 @@ class ActionService:
                         "campaign_id": str(action.campaign_id),
                         "provider": action.provider,
                         "undo_of": str(undo_of) if undo_of else None,
+                        "recommendation_id": str(recommendation_id) if recommendation_id else None,
                     },
                 )
                 session.flush()
@@ -600,6 +607,7 @@ class ActionService:
             platform_request=a.platform_request,
             platform_answer=a.platform_answer,
             source=a.source,
+            recommendation_id=a.recommendation_id,
             undo_of=a.undo_of,
             requested_by=a.requested_by,
             decided_by=a.decided_by,

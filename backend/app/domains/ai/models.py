@@ -38,7 +38,7 @@ from app.db.base import Base, Timestamps, UUIDPrimaryKey
 
 TZ = DateTime(timezone=True)
 RUN_STATUSES = ("succeeded", "rejected", "failed", "timed_out")
-RUN_TASKS = ("campaign_strategy", "creative_copy")
+RUN_TASKS = ("campaign_strategy", "creative_copy", "optimization")
 STRATEGY_STATUSES = ("draft", "ready", "archived")
 BUDGET_PERIODS = ("daily", "monthly")
 

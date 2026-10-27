@@ -136,6 +136,7 @@ class ActionOut(BaseModel):
     platform_request: dict[str, Any] | None
     platform_answer: dict[str, Any] | None
     source: str
+    recommendation_id: uuid.UUID | None = None  # Phase 11: made from this advice
     undo_of: uuid.UUID | None
     requested_by: uuid.UUID | None
     decided_by: uuid.UUID | None
