@@ -88,3 +88,18 @@ export function canManageCreatives(role: string): boolean {
 export function canApproveCreatives(role: string): boolean {
   return role === "owner" || role === "admin" || role === "manager";
 }
+
+/** Owners, admins and managers request changes to campaigns (`actions.request`, Q-10A-3). */
+export function canRequestChanges(role: string): boolean {
+  return role === "owner" || role === "admin" || role === "manager";
+}
+
+/** Owners and admins approve or reject changes (`actions.approve`, Q-10A-3). */
+export function canApproveChanges(role: string): boolean {
+  return role === "owner" || role === "admin";
+}
+
+/** Owners and admins pause all changes, set the rules and allow changes per connection. */
+export function canManageChangeSettings(role: string): boolean {
+  return canApproveChanges(role);
+}

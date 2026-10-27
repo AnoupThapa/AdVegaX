@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Alert } from "@/components/ui/Alert";
 import { PageHeading } from "@/components/ui/PageHeading";
 import { SelectField } from "@/components/ui/SelectField";
+import { CampaignChanges } from "@/features/changes/CampaignChanges";
 import { useCurrentOrganization } from "@/features/organizations/OrganizationShell";
 import { addDays, formatDay } from "@/features/stores/dates";
 import { ApiError, messageFor } from "@/lib/api/errors";
@@ -211,6 +212,15 @@ function Detail({ campaignId }: { campaignId: string }) {
           </dd>
         </dl>
       </div>
+      <CampaignChanges
+        campaign={{
+          id: c.id,
+          status: c.status,
+          provider: c.provider,
+          currency: c.currency,
+          currency_minor_units: c.currency_minor_units,
+        }}
+      />
       <section aria-labelledby="campaign-figures" className={styles.section}>
         <h2 id="campaign-figures">Performance</h2>
         <div className={styles.toolbar}>

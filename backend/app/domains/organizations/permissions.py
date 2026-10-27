@@ -57,6 +57,10 @@ class Permission(StrEnum):
     CREATIVES_VIEW = "creatives.view"  # creatives, images and rules (Phase 9)
     CREATIVES_MANAGE = "creatives.manage"  # draft, edit, upload images (Q-9-6)
     CREATIVES_APPROVE = "creatives.approve"  # approve, reject, archive (Q-9-6)
+    ACTIONS_VIEW = "actions.view"  # changes to ad accounts and their history (Phase 10A)
+    ACTIONS_REQUEST = "actions.request"  # request, validate, cancel own, undo (Q-10A-3)
+    ACTIONS_APPROVE = "actions.approve"  # approve, reject (Q-10A-3)
+    ACTIONS_SETTINGS = "actions.settings"  # pause all, rules, allow changes per connection
 
 
 _ALL = frozenset(Role)
@@ -86,6 +90,10 @@ PERMISSION_MATRIX: dict[Permission, frozenset[Role]] = {
     Permission.CREATIVES_VIEW: _ALL,
     Permission.CREATIVES_MANAGE: _ALL_BUT_VIEWER,
     Permission.CREATIVES_APPROVE: _OWNER_ADMIN_MANAGER,
+    Permission.ACTIONS_VIEW: _ALL,
+    Permission.ACTIONS_REQUEST: _OWNER_ADMIN_MANAGER,
+    Permission.ACTIONS_APPROVE: _OWNER_ADMIN,
+    Permission.ACTIONS_SETTINGS: _OWNER_ADMIN,
 }
 
 

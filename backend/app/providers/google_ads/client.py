@@ -4,8 +4,10 @@ PHASE_03_PLAN §4.1, §7 (facts verified 2026-10-15; "to confirm live" in INTEGR
 
 * **Fixed Google hosts only** — the sign-in token and revocation endpoints and
   ``googleads.googleapis.com``. No address ever comes from a user; redirects are not followed.
-* **Read-only:** the only Google Ads methods are ``customers:listAccessibleCustomers``,
-  ``googleAds:search`` and ``googleAds:searchStream`` (static guard, tests/security).
+* **Read-only here:** the only Google Ads methods named in this module are
+  ``customers:listAccessibleCustomers``, ``googleAds:search`` and ``googleAds:searchStream``
+  (static guard, tests/security). Changes (Phase 10A) are written only in ``writes.py`` and
+  sent through ``post_change``, which only the Action Engine reaches.
 * Headers: ``Authorization: Bearer``, ``developer-token`` and, when an account is reached
   through a manager, ``login-customer-id``. Customer ids are validated (digits only) before
   they enter a path or header.
@@ -226,6 +228,18 @@ class GoogleAdsClient:
             client.close()
         raise_for_ads(response)
         return response
+
+    def post_change(
+        self,
+        access_token: str,
+        path: str,
+        body: dict[str, Any],
+        *,
+        login_customer_id: str | None = None,
+    ) -> Any:
+        """One change request (Phase 10A): ``path`` comes only from ``writes.py``."""
+        response = self._send("POST", path, self._headers(access_token, login_customer_id), body)
+        return _json(response)
 
     def list_accessible_customers(self, access_token: str) -> list[str]:
         """Customer ids the signed-in person has **direct** access to."""

@@ -278,6 +278,29 @@ class Settings(BaseSettings):
     S3_ACCESS_KEY_ID: SecretStr | None = None
     S3_SECRET_ACCESS_KEY: SecretStr | None = None
 
+    # --- Action Engine (Phase 10A; PHASE_10A_PLAN §2, A28) ------------------------------
+    # The installation's switch (Q-10A-9): off, nothing is ever sent to Google or Meta and no
+    # change can be requested. Each organization also has its own "Pause all changes".
+    ACTIONS_ENABLED: bool = False
+    # Limits (Q-10A-4): one budget change at most this much up or down, at most one budget
+    # change per campaign in this interval, at most this many changes per ad account a day.
+    ACTIONS_MAX_INCREASE_PERCENT: int = Field(default=50, ge=1, le=1000)
+    ACTIONS_MAX_DECREASE_PERCENT: int = Field(default=90, ge=1, le=99)
+    ACTIONS_BUDGET_CHANGE_INTERVAL: timedelta = timedelta(hours=1)
+    ACTIONS_DAILY_LIMIT_PER_ACCOUNT: int = Field(default=50, ge=1, le=10_000)
+    ACTIONS_VOLUME_WINDOW: timedelta = timedelta(hours=24)
+    # A request not decided within this time can no longer be approved (it is stale).
+    ACTIONS_PENDING_TTL: timedelta = timedelta(days=7)
+    # A change whose outcome is unknown is looked up (never sent again) after this delay, up
+    # to this many times; then it waits for a person.
+    ACTIONS_RECONCILE_DELAY: timedelta = timedelta(minutes=1)
+    ACTIONS_RECONCILE_ATTEMPTS: int = Field(default=5, ge=1, le=50)
+    ACTIONS_LOCK_TTL: timedelta = timedelta(minutes=2)
+    SCHEDULE_ACTIONS_SWEEP_INTERVAL: timedelta = timedelta(minutes=5)
+    # Meta: the Facebook Login for Business configuration that also asks for
+    # ``ads_management`` ("Allow changes", Q-10A-2). None: Meta changes cannot be allowed.
+    META_WRITE_LOGIN_CONFIG_ID: str | None = Field(default=None, pattern=r"^[0-9]{5,20}$")
+
     # --- Advertising import (Phase 3; PHASE_03_PLAN §9) ---------------------------------
     ADS_HISTORY_WINDOW: timedelta = timedelta(days=395)  # 13 months on first link (Q-3-6)
     # Ongoing sync (Q-3-5, task 3-07): every 3 hours structure + today and yesterday; nightly
@@ -421,6 +444,12 @@ class Settings(BaseSettings):
             "WEBHOOK_CLOCK_SKEW": self.WEBHOOK_CLOCK_SKEW,
             "WEBHOOK_RETENTION": self.WEBHOOK_RETENTION,
             "SCHEDULE_WEBHOOK_PURGE_INTERVAL": self.SCHEDULE_WEBHOOK_PURGE_INTERVAL,
+            "ACTIONS_BUDGET_CHANGE_INTERVAL": self.ACTIONS_BUDGET_CHANGE_INTERVAL,
+            "ACTIONS_VOLUME_WINDOW": self.ACTIONS_VOLUME_WINDOW,
+            "ACTIONS_PENDING_TTL": self.ACTIONS_PENDING_TTL,
+            "ACTIONS_RECONCILE_DELAY": self.ACTIONS_RECONCILE_DELAY,
+            "ACTIONS_LOCK_TTL": self.ACTIONS_LOCK_TTL,
+            "SCHEDULE_ACTIONS_SWEEP_INTERVAL": self.SCHEDULE_ACTIONS_SWEEP_INTERVAL,
         }
         for name, value in durations.items():
             if value <= timedelta(0):

@@ -25,7 +25,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | 7 | Funnel intelligence | ✅ **Implemented against the simulators — awaiting review**; Step 0 (7-01) waits for live GA4 and Meta access | 1,627 backend + 411 frontend + 15 end-to-end tests; `phases/PHASE_07_REPORT.md` |
 | 8 | AI campaign planner | **Implemented — awaiting review** (A26; Step 0 waits for an Anthropic API key) | `phases/PHASE_08_PLAN.md`, `phases/PHASE_08_PROGRESS.md` |
 | 9 | Creative engine | **Implemented — awaiting review** (A27; Step 0 pending) | `phases/PHASE_09_PLAN.md` |
-| 10A | Action Engine | Plan written — awaiting approval | `PHASE_10A_PLAN.md` |
+| 10A | Action Engine | **In progress** (A28; Step 0 pending) | `phases/PHASE_10A_PLAN.md` · `phases/PHASE_10A_PROGRESS.md` |
 | 10B | Campaign builder | Not started | Uses Action Engine only (A13) |
 | 11 | Optimization engine | Not started | |
 | 12 | Controlled autopilot | Not started | Needs Q13 |
@@ -165,6 +165,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | A25 | Phase 7 plan with all §2 recommendations (Q-7-1 … Q-7-9) | Approved 2026-10-22 ("Approve all") — implemented, awaiting review |
 | A26 | Phase 8 plan with all §2 recommendations (Q-8-1 … Q-8-10; Q12 settled for Phase 8: Anthropic Claude API, structured outputs, behind a model adapter) | Approved 2026-10-25 ("Approve all") — implemented, awaiting review |
 | A27 | Phase 9 plan with all §2 recommendations (Q-9-1 … Q-9-11; Q12 settled for Phase 9: copy plus uploaded images, no AI images) and the libraries Pillow, python-multipart, boto3; one report per phase | Approved 2026-10-26 ("Approve all") — implemented, awaiting review |
+| A28 | Phase 10A plan with all §2 recommendations (Q-10A-1 … Q-10A-11), Step 0 (§4.2), the data model (§6) and delivery 10A-01 … 10A-07 with one report for the phase | Approved 2026-10-26 ("Approve all") — in progress |
 | A21 | Phase 3 plan with all §2 recommendations (Q-3-1 … Q-3-11); live-testing option C | Approved 2026-10-15 ("Approve all") — implemented 2026-10-18, awaiting review |
 | A20 | Phase 2A and 2B reports reviewed by the product owner; continue to Phase 3 planning | Reviewed 2026-10-15 ("reviewed pls continue") |
 | A18 | Phase 2A plan v2 with all §2 recommendations (Q5–Q9, D-2A-1…3); live-testing option C | Approved 2026-10-13 — implemented, awaiting review (live checks pending) |

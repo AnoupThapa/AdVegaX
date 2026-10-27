@@ -39,6 +39,22 @@ BODIES = {
     ("patch", "/organizations/{organization_id}/ai/campaign-strategies/{strategy_id}"): {
         "budget": {"amount": "10", "period": "daily"}
     },
+    ("post", "/organizations/{organization_id}/actions"): {
+        "action_type": "campaign.pause",
+        "campaign_id": "00000000-0000-0000-0000-000000000001",
+    },
+    ("post", "/organizations/{organization_id}/actions/validate"): {
+        "action_type": "campaign.pause",
+        "campaign_id": "00000000-0000-0000-0000-000000000001",
+    },
+    ("post", "/organizations/{organization_id}/actions/{action_id}/reject"): {"reason": "no"},
+    ("put", "/organizations/{organization_id}/action-settings"): {
+        "paused": True,
+        "require_second_person": False,
+    },
+    ("put", "/organizations/{organization_id}/connections/{connection_id}/write-access"): {
+        "allowed": True
+    },
     ("patch", "/organizations/{organization_id}/members/{member_id}"): {"role": "viewer"},
     ("post", "/organizations/{organization_id}/invitations"): {
         "email": "evil@example.com",
@@ -117,6 +133,7 @@ def test_every_org_route_returns_404_for_non_members(app, tenants):
             .replace("{set_id}", str(uuid.uuid4()))
             .replace("{creative_id}", str(uuid.uuid4()))
             .replace("{asset_id}", str(uuid.uuid4()))
+            .replace("{action_id}", str(uuid.uuid4()))
         )
         assert not re.search(r"\{\w+\}", path), f"unhandled path parameter in {template}"
         response = _call(tenants["a"], method, path, BODIES.get((method, template), {}))

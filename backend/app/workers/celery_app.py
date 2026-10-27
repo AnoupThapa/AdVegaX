@@ -46,6 +46,10 @@ celery_app.conf.update(
             "task": "advegax.schedule.commerce_deep",
             "schedule": _settings.SCHEDULE_COMMERCE_DEEP_INTERVAL.total_seconds(),
         },
+        "actions-sweep": {
+            "task": "advegax.schedule.actions_sweep",
+            "schedule": _settings.SCHEDULE_ACTIONS_SWEEP_INTERVAL.total_seconds(),
+        },
         "ads-sync": {
             "task": "advegax.schedule.ads_sync",
             "schedule": _settings.SCHEDULE_ADS_SYNC_TICK.total_seconds(),

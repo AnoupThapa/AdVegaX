@@ -103,7 +103,8 @@ def meta_ads_configured(settings: Settings) -> bool:
 
 
 def build_meta_ads(settings: Settings, clock: Clock, outbound: OutboundPolicy) -> PlatformProvider:
-    """Meta Ads, read-only (Phase 4): fixed Meta hosts through the SSRF-safe client."""
+    """Meta Ads (Phase 4; changes only through the Action Engine, Phase 10A): fixed Meta
+    hosts through the SSRF-safe client."""
     from app.providers.http.client import SafeHttpClient
     from app.providers.meta_ads.provider import MetaAdsProvider
 
@@ -117,6 +118,7 @@ def build_meta_ads(settings: Settings, clock: Clock, outbound: OutboundPolicy) -
         api_version=settings.META_API_VERSION,
         http_factory=lambda: SafeHttpClient(outbound),
         clock=clock,
+        write_login_config_id=settings.META_WRITE_LOGIN_CONFIG_ID,
     )
 
 
@@ -132,7 +134,8 @@ def google_ads_configured(settings: Settings) -> bool:
 def build_google_ads(
     settings: Settings, clock: Clock, outbound: OutboundPolicy
 ) -> PlatformProvider:
-    """Google Ads, read-only (Phase 3): fixed Google hosts through the SSRF-safe client."""
+    """Google Ads (Phase 3; changes only through the Action Engine, Phase 10A): fixed Google
+    hosts through the SSRF-safe client."""
     from app.providers.google_ads.provider import GoogleAdsProvider
     from app.providers.http.client import SafeHttpClient
 

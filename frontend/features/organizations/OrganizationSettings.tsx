@@ -9,6 +9,7 @@ import ui from "@/components/ui/ui.module.css";
 import { formFeedback } from "@/features/auth/form-errors";
 import { hasErrors, type FieldErrors } from "@/features/auth/validation";
 import { StoreAssignments } from "@/features/overview/StoreAssignments";
+import { ChangeSettings } from "@/features/changes/ChangeSettings";
 import { CreativeRulesSettings } from "@/features/creatives/CreativeRulesSettings";
 import { AiUsage } from "@/features/strategies/AiUsage";
 
@@ -37,6 +38,7 @@ export function OrganizationSettings() {
       <StoreAssignments org={org} />
       <AiUsage org={org} />
       <CreativeRulesSettings org={org} />
+      <ChangeSettings org={org} />
     </section>
   );
 }

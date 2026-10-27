@@ -1,6 +1,596 @@
 {
   "components": {
     "schemas": {
+      "ActionCheckOut": {
+        "properties": {
+          "check": {
+            "title": "Check",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "check",
+          "result",
+          "reason"
+        ],
+        "title": "ActionCheckOut",
+        "type": "object"
+      },
+      "ActionEventOut": {
+        "properties": {
+          "actor_type": {
+            "title": "Actor Type",
+            "type": "string"
+          },
+          "actor_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor User Id"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "detail": {
+            "additionalProperties": true,
+            "title": "Detail",
+            "type": "object"
+          },
+          "from_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Status"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "from_status",
+          "status",
+          "actor_type",
+          "actor_user_id",
+          "detail",
+          "created_at"
+        ],
+        "title": "ActionEventOut",
+        "type": "object"
+      },
+      "ActionIn": {
+        "description": "One change to one campaign. ``params`` for a daily budget: ``{\"daily_budget\": \"60.00\"}``\nin the ad account's currency; nothing for pause and resume.",
+        "properties": {
+          "action_type": {
+            "enum": [
+              "campaign.pause",
+              "campaign.resume",
+              "campaign.set_daily_budget"
+            ],
+            "title": "Action Type",
+            "type": "string"
+          },
+          "campaign_id": {
+            "format": "uuid",
+            "title": "Campaign Id",
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "maxProperties": 4,
+            "title": "Params",
+            "type": "object"
+          }
+        },
+        "required": [
+          "action_type",
+          "campaign_id"
+        ],
+        "title": "ActionIn",
+        "type": "object"
+      },
+      "ActionOut": {
+        "properties": {
+          "action_type": {
+            "enum": [
+              "campaign.pause",
+              "campaign.resume",
+              "campaign.set_daily_budget"
+            ],
+            "title": "Action Type",
+            "type": "string"
+          },
+          "campaign": {
+            "$ref": "#/components/schemas/CampaignRefOut"
+          },
+          "can_undo": {
+            "title": "Can Undo",
+            "type": "boolean"
+          },
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/ActionCheckOut"
+            },
+            "title": "Checks",
+            "type": "array"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "currency_minor_units": {
+            "title": "Currency Minor Units",
+            "type": "integer"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "decided_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided By"
+          },
+          "decision_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Reason"
+          },
+          "dry_run": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DryRunOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/ActionEventOut"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "observed": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CampaignStateOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "params": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Params",
+            "type": "object"
+          },
+          "platform_answer": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform Answer"
+          },
+          "platform_request": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform Request"
+          },
+          "previous": {
+            "$ref": "#/components/schemas/CampaignStateOut"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "requested_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested By"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "approved",
+              "rejected",
+              "cancelled",
+              "queued",
+              "submitting",
+              "unknown",
+              "succeeded",
+              "failed",
+              "stale"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          },
+          "undo_of": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Undo Of"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "verification": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verification"
+          }
+        },
+        "required": [
+          "id",
+          "action_type",
+          "provider",
+          "campaign",
+          "currency",
+          "currency_minor_units",
+          "params",
+          "previous",
+          "observed",
+          "status",
+          "checks",
+          "dry_run",
+          "verification",
+          "error_code",
+          "platform_request",
+          "platform_answer",
+          "source",
+          "undo_of",
+          "requested_by",
+          "decided_by",
+          "decided_at",
+          "decision_reason",
+          "submitted_at",
+          "finished_at",
+          "created_at",
+          "updated_at",
+          "can_undo"
+        ],
+        "title": "ActionOut",
+        "type": "object"
+      },
+      "ActionPreviewOut": {
+        "properties": {
+          "action_type": {
+            "enum": [
+              "campaign.pause",
+              "campaign.resume",
+              "campaign.set_daily_budget"
+            ],
+            "title": "Action Type",
+            "type": "string"
+          },
+          "budget_limits": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BudgetLimitsOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "campaign_id": {
+            "format": "uuid",
+            "title": "Campaign Id",
+            "type": "string"
+          },
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/ActionCheckOut"
+            },
+            "title": "Checks",
+            "type": "array"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "currency_minor_units": {
+            "title": "Currency Minor Units",
+            "type": "integer"
+          },
+          "current": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CampaignStateOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "dry_run": {
+            "$ref": "#/components/schemas/DryRunOut"
+          },
+          "passed": {
+            "title": "Passed",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "action_type",
+          "campaign_id",
+          "currency",
+          "currency_minor_units",
+          "passed",
+          "checks",
+          "dry_run",
+          "current",
+          "budget_limits"
+        ],
+        "title": "ActionPreviewOut",
+        "type": "object"
+      },
+      "ActionRejectIn": {
+        "properties": {
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "ActionRejectIn",
+        "type": "object"
+      },
+      "ActionSettingsIn": {
+        "properties": {
+          "max_daily_budget": {
+            "anyOf": [
+              {
+                "exclusiveMaximum": 1000000000000.0,
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Daily Budget"
+          },
+          "paused": {
+            "title": "Paused",
+            "type": "boolean"
+          },
+          "require_second_person": {
+            "title": "Require Second Person",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "paused",
+          "require_second_person"
+        ],
+        "title": "ActionSettingsIn",
+        "type": "object"
+      },
+      "ActionSettingsOut": {
+        "properties": {
+          "budget_change_interval_minutes": {
+            "title": "Budget Change Interval Minutes",
+            "type": "integer"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "currency_minor_units": {
+            "title": "Currency Minor Units",
+            "type": "integer"
+          },
+          "daily_limit_per_account": {
+            "title": "Daily Limit Per Account",
+            "type": "integer"
+          },
+          "decrease_percent": {
+            "title": "Decrease Percent",
+            "type": "integer"
+          },
+          "engine_enabled": {
+            "title": "Engine Enabled",
+            "type": "boolean"
+          },
+          "increase_percent": {
+            "title": "Increase Percent",
+            "type": "integer"
+          },
+          "max_daily_budget": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Daily Budget"
+          },
+          "paused": {
+            "title": "Paused",
+            "type": "boolean"
+          },
+          "require_second_person": {
+            "title": "Require Second Person",
+            "type": "boolean"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "engine_enabled",
+          "paused",
+          "require_second_person",
+          "max_daily_budget",
+          "currency",
+          "currency_minor_units",
+          "increase_percent",
+          "decrease_percent",
+          "budget_change_interval_minutes",
+          "daily_limit_per_account",
+          "updated_at"
+        ],
+        "title": "ActionSettingsOut",
+        "type": "object"
+      },
       "AdAccountOut": {
         "properties": {
           "connection_expires_at": {
@@ -2249,6 +2839,73 @@
         "title": "BudgetIn",
         "type": "object"
       },
+      "BudgetLimitsOut": {
+        "description": "The daily budget this campaign may be given in one change (computed by AdVegaX).",
+        "properties": {
+          "decrease_percent": {
+            "title": "Decrease Percent",
+            "type": "integer"
+          },
+          "highest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Highest"
+          },
+          "increase_percent": {
+            "title": "Increase Percent",
+            "type": "integer"
+          },
+          "lowest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lowest"
+          },
+          "organization_maximum": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Organization Maximum"
+          },
+          "platform_minimum": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform Minimum"
+          }
+        },
+        "required": [
+          "lowest",
+          "highest",
+          "platform_minimum",
+          "organization_maximum",
+          "increase_percent",
+          "decrease_percent"
+        ],
+        "title": "BudgetLimitsOut",
+        "type": "object"
+      },
       "BudgetOut": {
         "properties": {
           "amount": {
@@ -2600,6 +3257,110 @@
           "analytics_missing"
         ],
         "title": "CampaignOut",
+        "type": "object"
+      },
+      "CampaignRefOut": {
+        "properties": {
+          "ad_account_id": {
+            "format": "uuid",
+            "title": "Ad Account Id",
+            "type": "string"
+          },
+          "ad_account_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ad Account Name"
+          },
+          "external_id": {
+            "title": "External Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "external_id",
+          "ad_account_id",
+          "ad_account_name"
+        ],
+        "title": "CampaignRefOut",
+        "type": "object"
+      },
+      "CampaignStateOut": {
+        "description": "A campaign as the platform reported it.",
+        "properties": {
+          "budget_level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budget Level"
+          },
+          "budget_period": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budget Period"
+          },
+          "budget_shared": {
+            "title": "Budget Shared",
+            "type": "boolean"
+          },
+          "daily_budget": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Daily Budget"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "required": [
+          "status",
+          "budget_level",
+          "budget_period",
+          "daily_budget",
+          "budget_shared"
+        ],
+        "title": "CampaignStateOut",
         "type": "object"
       },
       "CampaignsOut": {
@@ -3844,6 +4605,79 @@
         "title": "DayOut",
         "type": "object"
       },
+      "DryRunOut": {
+        "description": "The platform's own check of the change, without making it.",
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "DryRunOut",
+        "type": "object"
+      },
+      "Envelope_ActionOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ActionOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[ActionOut]",
+        "type": "object"
+      },
+      "Envelope_ActionPreviewOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ActionPreviewOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[ActionPreviewOut]",
+        "type": "object"
+      },
+      "Envelope_ActionSettingsOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ActionSettingsOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[ActionSettingsOut]",
+        "type": "object"
+      },
       "Envelope_AdAccountOut_": {
         "properties": {
           "data": {
@@ -4450,6 +5284,22 @@
           "meta"
         ],
         "title": "Envelope[UserOut]",
+        "type": "object"
+      },
+      "Envelope_WriteAccessOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/WriteAccessOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[WriteAccessOut]",
         "type": "object"
       },
       "Envelope_list_AdAccountOut__": {
@@ -5490,6 +6340,26 @@
           "unlink_reason"
         ],
         "title": "LinkOut",
+        "type": "object"
+      },
+      "ListEnvelope_ActionOut_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/ActionOut"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ListMeta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "ListEnvelope[ActionOut]",
         "type": "object"
       },
       "ListEnvelope_AuditLogOut_": {
@@ -7931,6 +8801,87 @@
         ],
         "title": "VersionRefOut",
         "type": "object"
+      },
+      "WriteAccessIn": {
+        "properties": {
+          "allowed": {
+            "title": "Allowed",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "allowed"
+        ],
+        "title": "WriteAccessIn",
+        "type": "object"
+      },
+      "WriteAccessOut": {
+        "properties": {
+          "allowed": {
+            "title": "Allowed",
+            "type": "boolean"
+          },
+          "allowed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allowed At"
+          },
+          "allowed_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allowed By"
+          },
+          "can_request_permission": {
+            "title": "Can Request Permission",
+            "type": "boolean"
+          },
+          "connection_id": {
+            "format": "uuid",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "missing_permissions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing Permissions",
+            "type": "array"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "supported": {
+            "title": "Supported",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "connection_id",
+          "provider",
+          "supported",
+          "allowed",
+          "allowed_at",
+          "allowed_by",
+          "missing_permissions",
+          "can_request_permission"
+        ],
+        "title": "WriteAccessOut",
+        "type": "object"
       }
     }
   },
@@ -8591,6 +9542,602 @@
         "summary": "Update Organization",
         "tags": [
           "organizations"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/action-settings": {
+      "get": {
+        "description": "Pause all changes, the second-person rule, the maximum daily budget and the limits.",
+        "operationId": "get_action_settings_api_v1_organizations__organization_id__action_settings_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ActionSettingsOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Action Settings",
+        "tags": [
+          "actions"
+        ]
+      },
+      "put": {
+        "description": "Change the organization's settings (owners, admins).",
+        "operationId": "put_action_settings_api_v1_organizations__organization_id__action_settings_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActionSettingsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ActionSettingsOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Action Settings",
+        "tags": [
+          "actions"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/actions": {
+      "get": {
+        "description": "Changes, newest first; ``status=open`` for those waiting or on their way.",
+        "operationId": "list_actions_api_v1_organizations__organization_id__actions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "maximum": 10000,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "open",
+                    "pending",
+                    "approved",
+                    "rejected",
+                    "cancelled",
+                    "queued",
+                    "submitting",
+                    "unknown",
+                    "succeeded",
+                    "failed",
+                    "stale"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "campaign_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Campaign Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListEnvelope_ActionOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Actions",
+        "tags": [
+          "actions"
+        ]
+      },
+      "post": {
+        "description": "Request a change (owners, admins, managers). Kept as ``pending`` only when every check\nand the platform's dry run pass; nothing is sent until an owner or admin approves.\nErrors: ACTIONS_DISABLED, ACTION_INVALID, ACTION_DUPLICATE, ACTION_NOT_ALLOWED.",
+        "operationId": "request_action_api_v1_organizations__organization_id__actions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ActionOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Request Action",
+        "tags": [
+          "actions"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/actions/validate": {
+      "post": {
+        "description": "Run every check and the platform's dry run on a change; nothing is kept or changed.\nErrors: ACTIONS_DISABLED, ACTION_NOT_ALLOWED.",
+        "operationId": "validate_action_api_v1_organizations__organization_id__actions_validate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ActionPreviewOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Validate Action",
+        "tags": [
+          "actions"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/actions/{action_id}": {
+      "get": {
+        "description": "One change with its checks, what was sent, the platform's answer, the verification and\nevery step (who, when, why).",
+        "operationId": "get_action_api_v1_organizations__organization_id__actions__action_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "action_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Action Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ActionOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Action",
+        "tags": [
+          "actions"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/actions/{action_id}/approve": {
+      "post": {
+        "description": "Approve (owners, admins): the checks run again and the change is queued for sending.\nErrors: ACTIONS_DISABLED, ACTION_INVALID, ACTION_NOT_ALLOWED, ACTION_STALE,\nSECOND_PERSON_REQUIRED.",
+        "operationId": "approve_action_api_v1_organizations__organization_id__actions__action_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "action_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Action Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ActionOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Approve Action",
+        "tags": [
+          "actions"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/actions/{action_id}/cancel": {
+      "post": {
+        "description": "Cancel before it is sent (the requester, or an owner or admin).",
+        "operationId": "cancel_action_api_v1_organizations__organization_id__actions__action_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "action_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Action Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ActionOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel Action",
+        "tags": [
+          "actions"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/actions/{action_id}/reject": {
+      "post": {
+        "description": "Reject with a reason (owners, admins).",
+        "operationId": "reject_action_api_v1_organizations__organization_id__actions__action_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "action_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Action Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActionRejectIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ActionOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reject Action",
+        "tags": [
+          "actions"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/actions/{action_id}/undo": {
+      "post": {
+        "description": "Request the opposite of a change that was made, approved like any other.",
+        "operationId": "undo_action_api_v1_organizations__organization_id__actions__action_id__undo_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "action_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Action Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ActionOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Undo Action",
+        "tags": [
+          "actions"
         ]
       }
     },
@@ -10973,6 +12520,122 @@
         "summary": "List Resources",
         "tags": [
           "connections"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/connections/{connection_id}/write-access": {
+      "get": {
+        "description": "Whether AdVegaX may change ad accounts through this connection.",
+        "operationId": "get_write_access_api_v1_organizations__organization_id__connections__connection_id__write_access_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connection_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Connection Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_WriteAccessOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Write Access",
+        "tags": [
+          "actions"
+        ]
+      },
+      "put": {
+        "description": "\"Allow changes\" through this connection, or take it back (owners, admins).\nErrors: ACTION_NOT_ALLOWED (the platform permission is missing: sign in again).",
+        "operationId": "put_write_access_api_v1_organizations__organization_id__connections__connection_id__write_access_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connection_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Connection Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WriteAccessIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_WriteAccessOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Write Access",
+        "tags": [
+          "actions"
         ]
       }
     },

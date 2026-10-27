@@ -24,6 +24,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from app.core.clock import Clock
 from app.providers.base.capabilities import Capability, ProviderCapabilities
+from app.providers.base.changes import CampaignChange, CampaignSnapshot, ChangeReceipt
 from app.providers.base.errors import (
     InvalidConnectParamsError,
     InvalidRequestError,
@@ -47,7 +48,7 @@ from app.providers.base.types import (
     WebhookDelivery,
 )
 from app.providers.google.oauth import GoogleOAuth
-from app.providers.google_ads import mapping, queries
+from app.providers.google_ads import mapping, queries, writes
 from app.providers.google_ads.client import (
     AccountNotEnabledError,
     DeveloperTokenNotApprovedError,
@@ -160,6 +161,9 @@ class GoogleAdsProvider:
     # one ``searchStream`` per level of daily figures.
     structure_operations = 5
     level_operations = 1
+    # Changes (Phase 10A): the ``adwords`` scope already covers them; which accounts may be
+    # changed depends on the developer token's access level (test accounts until Basic).
+    write_scopes: frozenset[str] = frozenset()
 
     def __init__(
         self,
@@ -363,6 +367,33 @@ class GoogleAdsProvider:
             yield record
         if skipped:
             logger.warning("google_ads_rows_skipped", extra={"count": skipped})
+
+    # ------------------------------------------------------------------ changes (10A)
+    def read_campaign(
+        self, secrets: Secrets, account: AdAccountRef, campaign_id: str, currency: str
+    ) -> CampaignSnapshot:
+        """The campaign's status and budget now (one operation). ``currency`` is unused:
+        Google states amounts in micros of the account currency."""
+        del currency
+        token = str(secrets.get("access_token", ""))
+        return writes.read_campaign(self.ads, token, account, campaign_id)
+
+    def change_campaign(
+        self,
+        secrets: Secrets,
+        account: AdAccountRef,
+        snapshot: CampaignSnapshot,
+        change: CampaignChange,
+        currency: str,
+        *,
+        validate_only: bool,
+    ) -> ChangeReceipt:
+        """One change through the Action Engine only (``writes.py``)."""
+        del currency
+        token = str(secrets.get("access_token", ""))
+        return writes.change_campaign(
+            self.ads, token, account, snapshot, change, validate_only=validate_only
+        )
 
 
 def _positive_int(value: Any) -> int | None:

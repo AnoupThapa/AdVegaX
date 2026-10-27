@@ -72,6 +72,12 @@ class ExternalConnection(UUIDPrimaryKey, Timestamps, Base):
     last_error_code: Mapped[str | None] = mapped_column(String(64))
     last_error_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # "Allow changes" (Phase 10A, Q-10A-2): who allowed the Action Engine to change ad
+    # accounts through this connection, and when. NULL = read-only (the default).
+    write_access_granted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    write_access_granted_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
 
 
 class ExternalConnectionCredential(Timestamps, Base):

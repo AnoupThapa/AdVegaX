@@ -84,6 +84,24 @@ export function emptyAiUsage() {
 }
 
 /** The routes the Overview and Settings read, with nothing connected. */
+/** The Action Engine's settings as a new organization has them (Phase 10A). */
+export function emptyActionSettings(extra: Record<string, unknown> = {}) {
+  return {
+    engine_enabled: true,
+    paused: false,
+    require_second_person: false,
+    max_daily_budget: null,
+    currency: "AUD",
+    currency_minor_units: 2,
+    increase_percent: 50,
+    decrease_percent: 90,
+    budget_change_interval_minutes: 60,
+    daily_limit_per_account: 50,
+    updated_at: null,
+    ...extra,
+  };
+}
+
 export function emptyOrganizationData(): Record<string, Response> {
   const wrap = (data: unknown) =>
     new Response(JSON.stringify({ data, meta: { request_id: "req-test" } }), {
@@ -96,6 +114,8 @@ export function emptyOrganizationData(): Record<string, Response> {
     [`GET ${ORG_PATH}/analytics-properties`]: wrap([]),
     [`GET ${ORG_PATH}/analytics/overview`]: wrap(emptyOverview()),
     [`GET ${ORG_PATH}/ai/usage`]: wrap(emptyAiUsage()),
+    [`GET ${ORG_PATH}/actions`]: wrap([]),
+    [`GET ${ORG_PATH}/action-settings`]: wrap(emptyActionSettings()),
     [`GET ${ORG_PATH}/creative-rules`]: wrap({
       prohibited_terms: [],
       allowed_caps: [],

@@ -8,6 +8,14 @@ import path from "node:path";
  * must exist and manage the organization. Returns the AU ad account's id.
  */
 export function connectSimulatedGoogleAds(email: string, orgUrl: string): string {
+  return connectSimulatedGoogleAdsWithConnection(email, orgUrl).adAccountId;
+}
+
+/** As ``connectSimulatedGoogleAds``, also returning the connection (Phase 10A). */
+export function connectSimulatedGoogleAdsWithConnection(
+  email: string,
+  orgUrl: string,
+): { adAccountId: string; connectionId: string } {
   const organization = new URL(orgUrl).pathname.split("/")[2] ?? "";
   const backend = process.env.E2E_BACKEND_DIR ?? path.resolve(process.cwd(), "..", "backend");
   const args = ["run", "--frozen", "python", "-m", "tests.e2e_google_ads"];
@@ -21,7 +29,9 @@ export function connectSimulatedGoogleAds(email: string, orgUrl: string): string
   });
   const result = JSON.parse(output.trim().split("\n").pop() ?? "{}") as {
     ad_account_id?: string;
+    connection_id?: string;
   };
-  if (!result.ad_account_id) throw new Error("the simulated Google Ads accounts were not linked");
-  return result.ad_account_id;
+  if (!result.ad_account_id || !result.connection_id)
+    throw new Error("the simulated Google Ads accounts were not linked");
+  return { adAccountId: result.ad_account_id, connectionId: result.connection_id };
 }

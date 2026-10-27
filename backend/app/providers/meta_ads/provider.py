@@ -33,6 +33,7 @@ from urllib.parse import urlencode
 
 from app.core.clock import Clock
 from app.providers.base.capabilities import Capability, ProviderCapabilities
+from app.providers.base.changes import CampaignChange, CampaignSnapshot, ChangeReceipt
 from app.providers.base.errors import (
     InvalidConnectParamsError,
     InvalidRequestError,
@@ -55,7 +56,7 @@ from app.providers.base.types import (
     SyncSummary,
     WebhookDelivery,
 )
-from app.providers.meta_ads import mapping
+from app.providers.meta_ads import mapping, writes
 from app.providers.meta_ads.client import (
     LOGIN_DIALOG,
     HttpFactory,
@@ -110,6 +111,7 @@ class MetaAdsProvider:
     test_only = False
     rate_limit = (5.0, 10)  # per connection; Meta's own usage headers pace the rest (4-06)
     funnel_actions = True  # reports landing page views, content views, carts, checkouts (7-03)
+    write_scopes = writes.WRITE_SCOPES  # changes need the change permission (Phase 10A)
 
     def __init__(
         self,
@@ -121,12 +123,18 @@ class MetaAdsProvider:
         http_factory: HttpFactory,
         clock: Clock,
         sleep: Callable[[float], None] = time.sleep,
+        write_login_config_id: str | None = None,
     ) -> None:
         if not app_id or not app_secret or not login_config_id:
             raise ValueError("Meta needs an app id, an app secret and a login configuration id")
         self._app_id = app_id
         self._app_secret = app_secret
         self._config_id = login_config_id
+        # Phase 10A (Q-10A-2): the configuration that also asks for the change permission, used
+        # only when a person chooses "Allow changes" for a connection.
+        self._write_config_id = write_login_config_id
+        # Whether "Allow changes" can ask Meta for the change permission (sign in again).
+        self.write_consent_available = write_login_config_id is not None
         self._clock = clock
         self._sleep = sleep
         self.graph = MetaGraphClient(
@@ -143,9 +151,13 @@ class MetaAdsProvider:
 
     # ------------------------------------------------------------------ connect
     def prepare_connect(self, params: Mapping[str, str]) -> PreparedConnect:
-        if params:  # nothing to type: the person chooses their account on Meta's page
-            raise InvalidConnectParamsError()
-        return PreparedConnect()
+        """Nothing to type: the person chooses their account on Meta's page. The only
+        parameter is ``access=changes`` (Phase 10A): sign in again granting changes."""
+        if not params:
+            return PreparedConnect()
+        if dict(params) == {"access": "changes"} and self._write_config_id:
+            return PreparedConnect(params={"access": "changes"})
+        raise InvalidConnectParamsError()
 
     def authorization_url(self, request: AuthorizationRequest) -> str:
         if not request.code_challenge:
@@ -154,7 +166,12 @@ class MetaAdsProvider:
             "client_id": self._app_id,
             "redirect_uri": request.redirect_uri,
             "response_type": "code",
-            "config_id": self._config_id,  # Login for Business: replaces the scope list
+            # Login for Business: the configuration replaces the scope list.
+            "config_id": (
+                self._write_config_id
+                if request.provider_params.get("access") == "changes" and self._write_config_id
+                else self._config_id
+            ),
             "state": request.state,
             "code_challenge": request.code_challenge,
             "code_challenge_method": "S256",
@@ -201,7 +218,8 @@ class MetaAdsProvider:
             raise MissingScopesError()
         return ConnectResult(
             secrets={"access_token": token},
-            granted_scopes=tuple(sorted(set(granted) & WANTED_SCOPES)),
+            # The change permission is kept when granted (Phase 10A, "Allow changes").
+            granted_scopes=tuple(sorted(set(granted) & (WANTED_SCOPES | writes.WRITE_SCOPES))),
             account_label="Meta",
             token_expires_in_seconds=_positive_int(long.get("expires_in")),
             external_account_id=info["user_id"],
@@ -383,6 +401,32 @@ class MetaAdsProvider:
             if not isinstance(status, str):
                 raise UnexpectedResponseError()
         raise ReportPendingError()  # started again by the job's next attempt
+
+    # ------------------------------------------------------------------ changes (10A)
+    def read_campaign(
+        self, secrets: Secrets, account: AdAccountRef, campaign_id: str, currency: str
+    ) -> CampaignSnapshot:
+        """The campaign's status and own budget now (one call)."""
+        del account
+        token = str(secrets.get("access_token", ""))
+        return writes.read_campaign(self.graph, token, campaign_id, currency)
+
+    def change_campaign(
+        self,
+        secrets: Secrets,
+        account: AdAccountRef,
+        snapshot: CampaignSnapshot,
+        change: CampaignChange,
+        currency: str,
+        *,
+        validate_only: bool,
+    ) -> ChangeReceipt:
+        """One change through the Action Engine only (``writes.py``)."""
+        del account
+        token = str(secrets.get("access_token", ""))
+        return writes.change_campaign(
+            self.graph, token, snapshot, change, currency, validate_only=validate_only
+        )
 
 
 _ALL_STATUSES = json.dumps(

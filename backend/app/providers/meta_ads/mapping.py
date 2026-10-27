@@ -166,6 +166,11 @@ def status(row: dict[str, Any]) -> tuple[AdEntityStatus, str | None] | None:
     return shown, detail
 
 
+def configured_status(row: dict[str, Any]) -> AdEntityStatus | None:
+    """The object's own setting (``status``), not its delivery: what a change sets (10A)."""
+    return _CONFIGURED.get(enum(row.get("status")) or "")
+
+
 def money(value: Any, currency_code: str) -> Decimal | None:
     """A budget in the currency's smallest unit → an exact amount; "0" or none → None."""
     if isinstance(value, bool):

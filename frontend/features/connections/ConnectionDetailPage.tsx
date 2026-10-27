@@ -9,9 +9,11 @@ import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { PageHeading } from "@/components/ui/PageHeading";
+import { WriteAccessPanel } from "@/features/changes/ChangeSettings";
 import { useCurrentOrganization } from "@/features/organizations/OrganizationShell";
 import { canManageConnections } from "@/features/organizations/permissions";
 import { ApiError, messageFor } from "@/lib/api/errors";
+import { goToExternal } from "@/lib/navigation/external";
 
 import {
   jobFinished,
@@ -21,6 +23,7 @@ import {
   useJob,
   useProviders,
   useRediscover,
+  useStartConnection,
   useResources,
   type Connection,
   type Resource,
@@ -114,6 +117,7 @@ function Detail({ connectionId }: { connectionId: string }) {
   const resources = useResources(org.id, connectionId, active);
   const disconnect = useDisconnect(org.id, connectionId);
   const rediscover = useRediscover(org.id, connectionId);
+  const signInAgain = useStartConnection(org.id);
   const [discoveryJob, setDiscoveryJob] = useState<string | null>(null);
   const discovery = useJob(org.id, discoveryJob);
   const [confirming, setConfirming] = useState(false);
@@ -203,6 +207,30 @@ function Detail({ connectionId }: { connectionId: string }) {
           </>
         ) : null}
       </dl>
+
+      <WriteAccessPanel
+        orgId={org.id}
+        role={org.role}
+        connectionId={c.id}
+        active={active}
+        signingIn={signInAgain.isPending}
+        onSignIn={() =>
+          signInAgain.mutate(
+            { provider: c.provider, params: { access: "changes" } },
+            {
+              onSuccess: (result) => {
+                if (!goToExternal(result.authorize_url))
+                  setNotice({
+                    tone: "error",
+                    text: "The platform's sign-in address could not be opened.",
+                    requestId: null,
+                  });
+              },
+              onError: fail,
+            },
+          )
+        }
+      />
 
       <section aria-labelledby="accounts-title" className={styles.section}>
         <h2 id="accounts-title">Accounts found</h2>

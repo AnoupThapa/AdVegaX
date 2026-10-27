@@ -92,7 +92,8 @@ def test_core_domains_do_not_import_platform_specific_code():
 # Phase 3 (PHASE_03_PLAN §3, §7, acceptance criterion 4): advertising providers may only read.
 # Google Ads REST methods are written as ``…/customers/{id}/googleAds:search``; every ``:verb``
 # a provider names must be one of these reads. Any change to an ad account goes only through
-# the Action Engine (Phase 10A), which does not exist yet.
+# the Action Engine (Phase 10A), whose platform calls live only in ``<platform>/writes.py``.
+WRITE_MODULES = {"providers/google_ads/writes.py", "providers/meta_ads/writes.py"}
 ADVERTISING_PROVIDER_DIRS = ("google", "google_ads", "meta_ads")  # google: shared sign-in
 ALLOWED_AD_METHODS = {"listAccessibleCustomers", "search", "searchStream"}
 _AD_METHOD = re.compile(r"""[\w}]:([a-zA-Z]+)\b""")
@@ -133,6 +134,8 @@ def test_advertising_providers_only_read():
     for name in ADVERTISING_PROVIDER_DIRS:
         folder = APP / "providers" / name
         for path in folder.rglob("*.py") if folder.exists() else ():
+            if path.relative_to(APP).as_posix() in WRITE_MODULES:
+                continue  # the Action Engine's write calls (Phase 10A), checked below
             calls = advertising_write_calls(path.read_text(encoding="utf-8"))
             if calls:
                 offenders[path.relative_to(APP).as_posix()] = calls
@@ -164,11 +167,75 @@ def test_meta_requests_all_pass_the_read_only_guard():
     assert "_allowed(method, path)" in send and send.index("_allowed(") < send.index(".request(")
 
 
-def test_meta_never_asks_for_write_permissions():
+def test_meta_asks_for_write_permissions_only_in_its_write_module():
+    """Phase 10A: ``ads_management`` is named only where changes are made (and asked for only
+    when a person chooses "Allow changes"); page permissions never."""
     for path in (APP / "providers" / "meta_ads").rglob("*.py"):
         src = path.read_text(encoding="utf-8")
-        assert "ads_management" not in src, path.name
+        if path.name != "writes.py":
+            assert "ads_management" not in src, path.name
         assert "pages_manage" not in src, path.name
+
+
+# ------------------------------------------------------------------ the Action Engine (10A)
+# PHASE_10A_PLAN §8, acceptance criterion 2: no code path changes a platform outside the engine.
+def test_platform_writes_exist_only_in_the_write_modules_and_reach_only_the_engine():
+    writers = {"change_campaign", "post_change"}
+    offenders: dict[str, list[str]] = {}
+    for path, src in _sources():
+        rel = path.relative_to(APP).as_posix()
+        # The write modules and the provider methods that hand over to them.
+        allowed = rel in WRITE_MODULES or rel.startswith("domains/actions/")
+        allowed = allowed or rel in {
+            "providers/google_ads/provider.py",
+            "providers/meta_ads/provider.py",
+            "providers/google_ads/client.py",
+            "providers/meta_ads/client.py",
+            "providers/base/changes.py",
+        }
+        found = [w for w in writers if re.search(rf"\b{w}\(", src)]
+        if found and not allowed:
+            offenders[rel] = found
+    assert offenders == {}
+    # The write modules are imported by their own provider only.
+    importers = {
+        p.relative_to(APP).as_posix()
+        for p, src in _sources()
+        if re.search(
+            r"from app\.providers\.(google_ads|meta_ads)(\.writes)? import (.*\b)?writes\b", src
+        )
+        or re.search(r"from app\.providers\.(google_ads|meta_ads)\.writes import", src)
+    }
+    assert importers == {"providers/google_ads/provider.py", "providers/meta_ads/provider.py"}
+    # The clients' change entry points are used only by the write modules.
+    users = {p.relative_to(APP).as_posix() for p, src in _sources() if ".post_change(" in src}
+    assert users == WRITE_MODULES
+    # Meta: the change path is the only ``_send(…, change=True)`` and it stays guarded.
+    meta = (APP / "providers" / "meta_ads" / "client.py").read_text(encoding="utf-8")
+    assert meta.count("change=True") == 1
+    assert "_change_allowed(method, path) if change else _allowed(method, path)" in meta
+    # Only the engine's domain uses the provider-level change methods.
+    callers = {
+        p.relative_to(APP).as_posix()
+        for p, src in _sources()
+        if re.search(r"\.change_campaign\(", src)
+    }
+    assert callers <= {
+        "domains/actions/engine.py",
+        "domains/actions/service.py",
+        "providers/google_ads/provider.py",
+        "providers/meta_ads/provider.py",
+    }
+
+
+def test_the_engine_sees_no_tokens_in_what_it_stores():
+    """What was sent is stored from ``ChangeReceipt.request``, built in the write modules from
+    the change's fields only; neither module puts a token or secret in it."""
+    for rel in WRITE_MODULES:
+        src = (APP / rel).read_text(encoding="utf-8")
+        sent = src[re.search(r"\bsent\b[^=\n]*=", src).start() :]  # type: ignore[union-attr]
+        sent = sent[: sent.index("\n")]
+        assert "token" not in sent and "secret" not in sent.lower(), rel
 
 
 # ------------------------------------------------------------------ analytics is read-only

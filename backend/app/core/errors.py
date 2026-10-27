@@ -194,6 +194,54 @@ class AssetInvalid(AppError):
     message = "This file is not an image AdVegaX can use."
 
 
+class ActionsDisabled(AppError):
+    """Phase 10A: the installation's or the organization's switch stops every change."""
+
+    status_code = 409
+    code = "ACTIONS_DISABLED"
+    message = "Changes to ad accounts are switched off."
+
+
+class ActionInvalid(AppError):
+    """Phase 10A: a requested change failed AdVegaX's checks; ``details`` list each one."""
+
+    status_code = 422
+    code = "ACTION_INVALID"
+    message = "This change does not pass AdVegaX's checks."
+
+
+class ActionDuplicate(AppError):
+    """Phase 10A: the same change is already waiting or running for this campaign."""
+
+    status_code = 409
+    code = "ACTION_DUPLICATE"
+    message = "This change has already been requested."
+
+
+class ActionNotAllowed(AppError):
+    """Phase 10A: changes are not allowed for this connection (or its permission is missing)."""
+
+    status_code = 409
+    code = "ACTION_NOT_ALLOWED"
+    message = "Changes are not allowed for this connection."
+
+
+class ActionStale(AppError):
+    """Phase 10A: the campaign changed (or too much time passed) since the request."""
+
+    status_code = 409
+    code = "ACTION_STALE"
+    message = "The campaign changed since this was requested; request it again."
+
+
+class SecondPersonRequired(AppError):
+    """Phase 10A: the organization requires someone other than the requester to approve."""
+
+    status_code = 409
+    code = "SECOND_PERSON_REQUIRED"
+    message = "Someone other than the requester must approve this change."
+
+
 def error_body(
     code: str, message: str, details: list[dict[str, Any]] | None = None
 ) -> dict[str, Any]:

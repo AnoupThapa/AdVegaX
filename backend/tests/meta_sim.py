@@ -17,6 +17,10 @@ resolver returns a public address; the transport is ``httpx.MockTransport``):
   ``<level>.effective_status``; "too much data" (100 / 1487534) for chosen levels; and the
   asynchronous report (``POST …/insights`` → ``report_run_id``, ``GET /<id>``,
   ``GET /<id>/insights``);
+* changes (Phase 10A): ``GET /<campaign id>`` and ``POST /<campaign id>`` with ``status`` or
+  ``daily_budget`` (smallest currency unit) and ``execution_options=["validate_only"]``; the
+  ``ads_management`` permission is required (granted by signing in with the write
+  configuration); and the outcomes a worker must survive (``change_outcomes``);
 * every other call: the token must be known and unexpired and ``appsecret_proof`` must match;
   errors use Meta's ``{"error": {"code", "error_subcode", "type", "message"}}`` shape; usage
   headers can be set per answer.
@@ -46,6 +50,7 @@ from app.providers.meta_ads.provider import MetaAdsProvider
 APP_ID = "1234567890123"
 APP_SECRET = "test-meta-app-secret-0123456789abcdef"
 CONFIG_ID = "9876543210"
+WRITE_CONFIG_ID = "9876543211"  # Phase 10A: the configuration that also asks for ads_management
 API_VERSION = "v26.0"
 PUBLIC_IP = "157.240.22.35"
 LONG_LIVED_SECONDS = 60 * 24 * 3600
@@ -115,6 +120,10 @@ class MetaSim:
     extra_rows: list[dict[str, Any]] = field(default_factory=list)  # odd rows for skip tests
     _codes: dict[str, dict[str, str]] = field(default_factory=dict)
     issued: int = 0
+    # Changes (10A): what was applied, and how the next change requests end:
+    # "lose_answer" (made, then the answer is lost), "timeout" (not made), "server_error".
+    mutations: list[dict[str, Any]] = field(default_factory=list)
+    change_outcomes: list[str] = field(default_factory=list)
 
     # ------------------------------------------------------------------ setup helpers
     def add_user(self, user_id: str, *granted: str) -> MetaUser:
@@ -151,7 +160,10 @@ class MetaSim:
         assert (parts.hostname, parts.path) == ("www.facebook.com", f"/{API_VERSION}/dialog/oauth")
         query = {k: v[0] for k, v in parse_qs(parts.query).items()}
         assert query["client_id"] == APP_ID
-        assert query["config_id"] == CONFIG_ID
+        assert query["config_id"] in (CONFIG_ID, WRITE_CONFIG_ID)
+        user = self.users.get(user_id)
+        if query["config_id"] == WRITE_CONFIG_ID and user and "ads_management" not in user.granted:
+            user.granted.append("ads_management")
         assert query["response_type"] == "code"
         assert query["code_challenge_method"] == "S256"
         assert "scope" not in query  # Login for Business: the configuration decides
@@ -263,12 +275,71 @@ class MetaSim:
             if owner is None or user_id not in owner.users:
                 return self.error(400, 100, 33)
             return self._edge(getattr(owner, edge.group(2)), query)
+        node = re.fullmatch(r"/([0-9]+)", route)
+        if node and (found := self._campaign(node.group(1), user_id)) is not None:
+            return self._campaign_call(request, query, user_id, *found)
         if request.method == "GET" and re.fullmatch(r"/act_[0-9]+", route):
             account = self.accounts.get(route[1:])
             if account is None or user_id not in account.users:
                 return self.error(400, 100, 33)
             return httpx.Response(200, json=account.row())
         return self.error(400, 100)
+
+    def _campaign(self, campaign_id: str, user_id: str) -> tuple[AdAccount, dict[str, Any]] | None:
+        for account in self.accounts.values():
+            if user_id not in account.users:
+                continue
+            for row in account.campaigns:
+                if row.get("id") == campaign_id:
+                    return account, row
+        return None
+
+    def _campaign_call(
+        self,
+        request: httpx.Request,
+        query: dict[str, str],
+        user_id: str,
+        account: AdAccount,
+        row: dict[str, Any],
+    ) -> httpx.Response:
+        if request.method == "GET":
+            fields = set(query.get("fields", "id").split(","))
+            return httpx.Response(200, json={k: v for k, v in row.items() if k in fields})
+        if request.method != "POST":
+            return self.error(400, 100)
+        user = self.users.get(user_id, MetaUser(user_id))
+        if "ads_management" not in user.granted:
+            return self.error(400, 200)  # "Permissions error"
+        form = {k: v[0] for k, v in parse_qs(request.content.decode()).items()}
+        options = json.loads(form.pop("execution_options", "[]"))
+        changes: dict[str, str] = {}
+        if "status" in form:
+            if form["status"] not in ("ACTIVE", "PAUSED") or row.get("status") == "DELETED":
+                return self.error(400, 100)
+            changes["status"] = form.pop("status")
+        if "daily_budget" in form:
+            value = form.pop("daily_budget")
+            if not value.isdigit() or int(value) <= 0:
+                return self.error(400, 100)
+            if str(row.get("daily_budget", "0")) in ("", "0"):
+                return self.error(400, 100, 1885621)  # the ad sets hold the budget
+            changes["daily_budget"] = value
+        if form or not changes:
+            return self.error(400, 100)
+        if options == ["validate_only"]:
+            return httpx.Response(200, json={"success": True})
+        outcome = self.change_outcomes.pop(0) if self.change_outcomes else "ok"
+        if outcome == "timeout":
+            raise httpx.ReadTimeout("simulated timeout")
+        if outcome == "server_error":
+            return self.error(500, 2)
+        row.update(changes)
+        if "status" in changes:
+            row["effective_status"] = changes["status"]
+        self.mutations.append({"id": row["id"], **changes})
+        if outcome == "lose_answer":
+            raise httpx.ReadTimeout("simulated lost answer")
+        return httpx.Response(200, json={"success": True})
 
     def _ad_accounts(self, query: dict[str, str], user_id: str) -> httpx.Response:
         rows = [a.row() for a in self.accounts.values() if user_id in a.users] + self.extra_rows
@@ -369,7 +440,11 @@ class MetaSim:
 
 
 def build_provider(
-    sim: MetaSim, *, burst: int = 1000, sleeps: list[float] | None = None
+    sim: MetaSim,
+    *,
+    burst: int = 1000,
+    sleeps: list[float] | None = None,
+    write_config: bool = False,
 ) -> MetaAdsProvider:
     """As for the Google Ads simulator: the frozen test clock never refills the per-connection
     limiter, so tests get a large burst unless they test the limit itself."""
@@ -381,6 +456,7 @@ def build_provider(
         http_factory=sim.http_factory,
         clock=sim.clock,
         sleep=(sleeps.append if sleeps is not None else lambda seconds: None),
+        write_login_config_id=WRITE_CONFIG_ID if write_config else None,
     )
     rate, _ = provider.rate_limit
     provider.rate_limit = (rate, burst)

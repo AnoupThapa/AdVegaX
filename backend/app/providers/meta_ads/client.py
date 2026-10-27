@@ -5,10 +5,12 @@ PHASE_04_PLAN §4.1, §6, §7 (facts checked 2026-10-18; "to confirm live" in IN
 * **Fixed Meta host only** — ``graph.facebook.com``; the browser alone opens the login dialog
   on ``www.facebook.com``. No address ever comes from a user; redirects are not followed.
 * **Read-only, enforced at runtime and by a static test:** every request goes through one
-  ``_send`` that refuses anything but ``GET``, except three documented writes that change
-  nothing in an ad account — the token exchange (``POST /oauth/access_token``), starting an
-  insights report (``POST /<object>/insights``, task 4-05) and removing AdVegaX's own
-  permission on disconnect (``DELETE /me/permissions``).
+  ``_send`` that refuses anything but ``GET`` (changes, Phase 10A, are a separate guarded
+  path used only by ``writes.py``: ``POST`` to one object id), except three documented
+  writes that change nothing in an ad account — the token exchange
+  (``POST /oauth/access_token``), starting an insights report (``POST /<object>/insights``,
+  task 4-05) and removing AdVegaX's own permission on disconnect
+  (``DELETE /me/permissions``).
 * **Secrets stay out of URLs:** the access token travels in the ``Authorization`` header; the
   app secret only in the form body of the token exchange. Every call carries
   ``appsecret_proof`` (HMAC-SHA256 of the token with the app secret), so a token alone cannot
@@ -269,6 +271,12 @@ def _allowed(method: str, path: str) -> bool:
     return method == "DELETE" and path == "/me/permissions"
 
 
+def _change_allowed(method: str, path: str) -> bool:
+    """Changes (Phase 10A, ``writes.py`` only): ``POST`` to one object, ``/<numeric id>``."""
+    parts = path.split("/")
+    return method == "POST" and len(parts) == 2 and parts[1].isdigit() and len(parts[1]) <= 25
+
+
 # Pacing (Q-4-12): from SLOW_ABOVE % of a limit each call waits a little longer (up to
 # SLOW_MAX_SECONDS at PAUSE_AT %); from PAUSE_AT %, or while Meta names a wait, the account
 # (or, for the app's own limit, every account) pauses instead of calling.
@@ -350,8 +358,10 @@ class MetaGraphClient:
         token: str | None = None,
         params: Mapping[str, str] | None = None,
         form: dict[str, str] | None = None,
+        change: bool = False,
     ) -> Any:
-        if not _PATH.fullmatch(path) or not _allowed(method, path):
+        allowed = _change_allowed(method, path) if change else _allowed(method, path)
+        if not _PATH.fullmatch(path) or not allowed:
             raise ValueError(f"refused Meta call: {method} {path}")  # programming error
         query = dict(params or {})
         headers = {"Accept": "application/json"}
@@ -435,6 +445,14 @@ class MetaGraphClient:
         if not isinstance(report, str) or not report.isdigit() or len(report) > 25:
             raise UnexpectedResponseError()
         return report
+
+    def post_change(self, token: str, node: str, form: dict[str, str]) -> Any:
+        """One change to one object (Phase 10A): ``form`` comes only from ``writes.py``."""
+        if not node.isdigit():
+            raise InvalidRequestError()
+        return self._send(
+            method="POST", path=f"/{valid_node(node)}", token=token, form=form, change=True
+        )
 
     def remove_permissions(self, token: str) -> None:
         """Disconnect: ``DELETE /me/permissions`` ends AdVegaX's access for this person. A token

@@ -7,6 +7,7 @@ from collections.abc import Callable, Mapping
 
 import redis
 
+from app.domains.actions import engine as actions
 from app.domains.advertising import importer as ad_importer
 from app.domains.analytics import importer as analytics_importer
 from app.domains.commerce import importer, incremental, privacy
@@ -29,6 +30,8 @@ HANDLERS: Mapping[str, Handler] = {
     privacy.JOB_CUSTOMER_DATA_REQUEST: privacy.customer_data_request,
     privacy.JOB_CUSTOMER_REDACT: privacy.customer_redact,
     privacy.JOB_SHOP_REDACT: privacy.shop_redact,
+    actions.JOB_EXECUTE: actions.execute,
+    actions.JOB_RECONCILE: actions.reconcile,
 }
 
 
@@ -139,3 +142,11 @@ def fx_rates_task() -> int | None:
     rt = worker_runtime()
     ttl = int(rt.settings.SCHEDULE_FX_INTERVAL.total_seconds() * 0.9)
     return run_singleton(rt.redis, "fx_rates", ttl, lambda: refresh_rates(rt))
+
+
+@celery_app.task(name="advegax.schedule.actions_sweep")  # type: ignore[untyped-decorator]
+def actions_sweep_task() -> int | None:
+    """Queued changes whose message was lost, and outcomes still unknown (10A-04)."""
+    rt = worker_runtime()
+    ttl = int(rt.settings.SCHEDULE_ACTIONS_SWEEP_INTERVAL.total_seconds() * 0.9)
+    return run_singleton(rt.redis, "actions_sweep", ttl, lambda: actions.sweep(rt))

@@ -7,7 +7,11 @@ fake resolver returns a public address; the transport is ``httpx.MockTransport``
 * Google Ads REST: ``customers:listAccessibleCustomers``, ``googleAds:search`` (paged with
   ``nextPageToken``) and ``googleAds:searchStream``, with the ``developer-token`` and
   ``login-customer-id`` rules, access through manager accounts, test vs production accounts,
-  and errors in Google's ``GoogleAdsFailure`` shape.
+  and errors in Google's ``GoogleAdsFailure`` shape;
+* changes (Phase 10A): ``campaigns:mutate`` (status) and ``campaignBudgets:mutate``
+  (``amountMicros``) with one ``update`` operation, ``updateMask`` and ``validateOnly``; one
+  campaign read with its budget (``WHERE campaign.id = …``); and the outcomes a worker must
+  survive — an answer lost after the change was made, a timeout before it, a server error.
 
 GAQL is not parsed here: tests (and later tasks' fixtures) register a ``query_handler`` that
 answers the queries AdVegaX sends. Records every request. No network — CI never calls Google.
@@ -48,6 +52,8 @@ PERFORMANCE_LEVELS = {
     "ad_group_ad": "ad",
 }
 _BETWEEN = re.compile(r"segments\.date BETWEEN '(\d{4}-\d{2}-\d{2})' AND '(\d{4}-\d{2}-\d{2})'")
+_MUTATE = re.compile(r"/customers/([0-9]+)/(campaigns|campaignBudgets):mutate")
+_ONE_CAMPAIGN = re.compile(r"WHERE campaign\.id = ([0-9]+)")
 FAILURE_TYPE = f"type.googleapis.com/google.ads.googleads.{API_VERSION}.errors.GoogleAdsFailure"
 
 
@@ -94,6 +100,11 @@ class GoogleAdsSim(GoogleOAuthSim):
     stream_batch_size: int = 10_000
     # Forced failures: the next Google Ads call answers this (status, errorCode dict) once.
     fail_next: list[tuple[int, dict[str, str]]] = field(default_factory=list)
+    # Changes (10A): what was applied, and how the next change requests end:
+    # "lose_answer" (made, then the answer is lost), "timeout" (not made), "server_error",
+    # "refuse" (a platform refusal) and "ignore" (answers success, changes nothing).
+    mutations: list[dict[str, Any]] = field(default_factory=list)
+    change_outcomes: list[str] = field(default_factory=list)
 
     # ------------------------------------------------------------------ setup helpers
     def add_customer(self, customer_id: str, **kw: Any) -> Customer:
@@ -185,6 +196,9 @@ class GoogleAdsSim(GoogleOAuthSim):
             )
         if request.method != "POST" or not route.startswith("/customers/"):
             return httpx.Response(404, json={"error": {"code": 404, "status": "NOT_FOUND"}})
+        change = _MUTATE.fullmatch(route)
+        if change:
+            return self._mutate(request, sub, change.group(1), change.group(2))
         customer_id, _, method = route.removeprefix("/customers/").partition("/googleAds:")
         if method not in ("search", "searchStream"):
             return httpx.Response(404, json={"error": {"code": 404, "status": "NOT_FOUND"}})
@@ -204,6 +218,8 @@ class GoogleAdsSim(GoogleOAuthSim):
         resource = found.group(1) if found else ""
         if "segments.date" in query and resource in PERFORMANCE_LEVELS:
             rows = self.performance_rows(customer, PERFORMANCE_LEVELS[resource], query)
+        elif resource == "campaign" and (one := _ONE_CAMPAIGN.search(query)):
+            rows = self.campaign_with_budget(customer, one.group(1))
         elif resource == "customer_client":
             rows = self.hierarchy_rows(customer_id)
         elif resource == "customer":
@@ -225,6 +241,81 @@ class GoogleAdsSim(GoogleOAuthSim):
         if start + self.page_size < len(rows):
             answer["nextPageToken"] = str(start + self.page_size)
         return httpx.Response(200, json=answer)
+
+    def campaign_with_budget(self, customer: Customer, campaign_id: str) -> list[dict[str, Any]]:
+        for row in customer.campaigns:
+            data = row.get("campaign", {})
+            if data.get("id") != campaign_id:
+                continue
+            out: dict[str, Any] = {"campaign": dict(data)}
+            for budget in customer.budgets:
+                if budget["campaignBudget"].get("resourceName") == data.get("campaignBudget"):
+                    out["campaignBudget"] = dict(budget["campaignBudget"])
+            return [out]
+        return []
+
+    def _mutate(
+        self, request: httpx.Request, sub: str, customer_id: str, resources: str
+    ) -> httpx.Response:
+        login = request.headers.get("login-customer-id")
+        customer = self.customers.get(customer_id)
+        if customer is None or customer_id not in self.reachable(sub, login):
+            return self.failure(403, {"authorizationError": "USER_PERMISSION_DENIED"})
+        if not customer.test and self.token_access == "test":
+            return self.failure(403, {"authorizationError": "DEVELOPER_TOKEN_NOT_APPROVED"})
+        if customer.status != "ENABLED":
+            return self.failure(403, {"authorizationError": "CUSTOMER_NOT_ENABLED"})
+        body = json.loads(request.content or b"{}")
+        operations = body.get("operations")
+        if not isinstance(operations, list) or len(operations) != 1:
+            return self.failure(400, {"requestError": "BAD_REQUEST"})
+        update, mask = operations[0].get("update"), operations[0].get("updateMask")
+        rows = customer.campaigns if resources == "campaigns" else customer.budgets
+        key = "campaign" if resources == "campaigns" else "campaignBudget"
+        target = next(
+            (
+                r[key]
+                for r in rows
+                if r.get(key, {}).get("resourceName") == update.get("resourceName")
+            ),
+            None,
+        )
+        if target is None:
+            return self.failure(400, {"mutateError": "RESOURCE_NOT_FOUND"})
+        if resources == "campaigns":
+            if mask != "status" or update.get("status") not in ("ENABLED", "PAUSED"):
+                return self.failure(400, {"fieldMaskError": "FIELD_NOT_FOUND"})
+            if target.get("status") == "REMOVED":
+                return self.failure(
+                    400,
+                    {"operationAccessDeniedError": "OPERATION_NOT_PERMITTED_FOR_REMOVED_RESOURCE"},
+                )
+            changes = {"status": update["status"]}
+        else:
+            micros = str(update.get("amountMicros", ""))
+            if mask != "amountMicros" or not micros.isdigit():
+                return self.failure(400, {"fieldMaskError": "FIELD_NOT_FOUND"})
+            if int(micros) <= 0 or int(micros) % 10_000:
+                return self.failure(
+                    400, {"campaignBudgetError": "NON_MULTIPLE_OF_MINIMUM_CURRENCY_UNIT"}
+                )
+            changes = {"amountMicros": micros}
+        if body.get("validateOnly"):
+            return httpx.Response(200, json={})
+        outcome = self.change_outcomes.pop(0) if self.change_outcomes else "ok"
+        if outcome == "timeout":
+            raise httpx.ReadTimeout("simulated timeout")
+        if outcome == "server_error":
+            return self.failure(500, {"internalError": "INTERNAL_ERROR"})
+        if outcome == "refuse":
+            return self.failure(400, {"campaignError": "CANNOT_MODIFY_CAMPAIGN"})
+        if outcome == "ignore":  # answers success but the campaign stays as it was
+            return httpx.Response(200, json={"results": [{"resourceName": update["resourceName"]}]})
+        target.update(changes)
+        self.mutations.append({"resources": resources, **changes})
+        if outcome == "lose_answer":
+            raise httpx.ReadTimeout("simulated lost answer")
+        return httpx.Response(200, json={"results": [{"resourceName": update["resourceName"]}]})
 
     @staticmethod
     def performance_rows(customer: Customer, level: str, query: str) -> list[dict[str, Any]]:

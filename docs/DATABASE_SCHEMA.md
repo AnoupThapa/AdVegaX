@@ -618,6 +618,18 @@ Supersedes the `creatives` outline in §9.
 
 `campaign_strategies` gains unique (`organization_id`, `id`); `ai_runs.task` also allows `creative_copy`.
 
+## 14C. Action Engine — as built (Phase 10A, migration 0020; A28)
+
+Supersedes the `actions` outline in §15.
+
+**actions** (tenant-owned, forced RLS; read, insert, update — never deleted) — `organization_id`, `action_type` (`campaign.pause` | `campaign.resume` | `campaign.set_daily_budget`), `provider`, `ad_account_id` and `campaign_id` (composite foreign keys within the organization), `params` (JSONB, e.g. `{"daily_budget": "60.00"}` in the account currency), `currency`, `previous` (JSONB: the campaign as the platform reported it at the request — status, budget holder, period, daily budget, shared, the budget's platform id), `status` (`pending` | `approved` | `rejected` | `cancelled` | `queued` | `submitting` | `unknown` | `succeeded` | `failed` | `stale`), `idempotency_key` (SHA-256 of campaign, type and values), `checks` (JSONB), `dry_run` (JSONB), `platform_request` / `platform_answer` (JSONB: the method and fields sent, a summary of the answer — never a token), `observed` (JSONB: the campaign read back), `verification` (`verified` | `mismatch` | `not_checked`), `error_code`, `source` (`user`; `recommendation` reserved for Phase 11), `undo_of` (composite self reference), `requested_by`, `decided_by`, `decided_at`, `decision_reason`, `submitted_at`, `finished_at`, `reconcile_attempts`, timestamps. **At most one open change per campaign** (partial unique index on `campaign_id` where `status` is `pending`, `approved`, `queued`, `submitting` or `unknown`). The system role may read `id, organization_id, status, updated_at` (the sweep).
+
+**action_events** (tenant-owned, forced RLS; read and insert only) — `organization_id`, `action_id` (composite), `seq` (1, 2, … unique per action), `from_status`, `status`, `actor_type` (`user` | `worker`), `actor_user_id`, `detail` (JSONB), `created_at`.
+
+**action_settings** (tenant-owned, forced RLS; one row per organization) — `paused`, `require_second_person`, `max_daily_budget` + `max_daily_budget_currency` (both or neither), `updated_by`, `updated_at`.
+
+`external_connections` gains `write_access_granted_at`, `write_access_granted_by` ("Allow changes").
+
 ## 14. AI Tables
 
 ### ai_models
@@ -667,6 +679,8 @@ Supersedes the `creatives` outline in §9.
 - updated_at
 
 ## 15. Action / Automation Tables
+
+> **`actions` is superseded by §14C (Phase 10A, as built).** `automation_policies` belongs to Phase 12 (autopilot) and is not built yet. Kept for history (A1).
 
 ### actions
 - id

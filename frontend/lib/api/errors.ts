@@ -15,6 +15,8 @@ export type ApiErrorDetail = {
   /** More about a check that failed, e.g. the limit or the word (9-05). */
   readonly detail?: string | null;
   readonly severity?: string;
+  /** Phase 10A: which group of the Action Engine's checks failed (shape, limits, dry_run, …). */
+  readonly check?: string;
 };
 
 export type ApiErrorBody = {
@@ -108,6 +110,14 @@ const MESSAGES: Readonly<Record<string, string>> = {
   CREATIVE_CHECKS_FAILED: "This creative does not pass AdVegaX's checks yet.",
   CREATIVE_NOT_EDITABLE: "This version can no longer be changed. Open the latest version.",
   ASSET_INVALID: "This file is not an image AdVegaX can use.",
+  ACTIONS_DISABLED:
+    "Changes to ad accounts are switched off. An owner or admin can switch them on in Settings.",
+  ACTION_INVALID: "This change does not pass AdVegaX's checks.",
+  ACTION_DUPLICATE: "This change has already been requested for this campaign.",
+  ACTION_NOT_ALLOWED:
+    "Changes are not allowed for this connection yet. An owner or admin can allow them on the connection's page.",
+  ACTION_STALE: "The campaign changed since this was requested. Please request it again.",
+  SECOND_PERSON_REQUIRED: "Someone other than the person who asked must approve this change.",
   INTERNAL_ERROR: "Something went wrong on our side. Please try again.",
   SERVICE_UNAVAILABLE: "The service is temporarily unavailable. Please try again shortly.",
   HTTP_ERROR: "This request could not be completed. Please try again.",

@@ -369,6 +369,8 @@ Approval should create an executable action request, not directly bypass the Act
 
 ## 14. Actions
 
+> **Superseded by §19J (Phase 10A, as built).** Kept for history (A1).
+
 ### POST /organizations/{organization_id}/actions/validate
 
 Validates proposed action.
@@ -563,6 +565,24 @@ Base `/organizations/{organization_id}`. Permissions: `creatives.view` (every ro
 | `POST /creative-assets` (201) | `multipart/form-data` with `file` (the only multipart route; size limit `ASSET_MAX_BYTES` + form overhead, else 413). Decoded (JPEG, PNG, WebP), pixel limit, smallest side, re-encoded without metadata; `ASSET_INVALID` (422, `details[] {reason}`: `not_an_image`, `unsupported_type`, `too_small`, `too_large`, `too_many_pixels`, `empty`) |
 | `GET /creative-assets[?archived]`, `GET /creative-assets/{asset_id}/content`, `POST /creative-assets/{asset_id}/archive` | The image itself only through the API, for members (`Cache-Control: private`) |
 | `GET /creative-rules`, `PUT /creative-rules` | `{prohibited_terms[], allowed_caps[], base_prohibited_terms[], updated_at}` |
+
+## 19J. Changes to ad accounts (Action Engine) — as built (Phase 10A)
+
+Base `/organizations/{organization_id}`. Supersedes §14. Permissions: `actions.view` (every role), `actions.request` (owner, admin, manager: validate, request, cancel their own, undo), `actions.approve` (owner, admin: approve, reject, cancel any), `actions.settings` (owner, admin: settings and "Allow changes"). The installation switch `ACTIONS_ENABLED` (off by default) and the organization's `paused` stop requests, approvals and sending (`ACTIONS_DISABLED`, 409). Every step is in `action_events` and the audit log (`action.requested | approved | queued | submitting | succeeded | failed | unknown | stale | rejected | cancelled | verified`, `action_settings.updated`, `connection.write_access_granted | removed`) — never a token.
+
+| Method & path | Notes |
+|---|---|
+| `POST /actions/validate` | Body `{action_type: campaign.pause \| campaign.resume \| campaign.set_daily_budget, campaign_id, params}` (`params.daily_budget` as a string in the ad account's currency, budgets only). Runs every check and the platform's dry run; keeps nothing. Answer `{passed, checks[] {check: shape \| resource \| budget \| limits \| state, result: passed \| failed \| skipped, reason}, dry_run {result, reason}, current {status, budget_level, budget_period, daily_budget, budget_shared}, budget_limits {lowest, highest, platform_minimum, organization_maximum, increase_percent, decrease_percent} \| null, currency, currency_minor_units}` |
+| `POST /actions` (201) | The same checks and dry run; kept as `pending` only if all pass (`ACTION_INVALID`, 422, `details[] {check, reason}`, the dry run as `check: dry_run`). An identical open request: `ACTION_DUPLICATE` (409); another open change of the campaign: reason `campaign_has_open_change`; changes not allowed for the connection: `ACTION_NOT_ALLOWED` (409, `details[] {reason: changes_not_allowed \| permission_missing \| platform_cannot_change}`) |
+| `GET /actions[?status=open\|<status>&campaign_id&page&page_size]`, `GET /actions/{action_id}` | `{id, action_type, provider, campaign {id, name, external_id, ad_account_id, ad_account_name}, currency, currency_minor_units, params, previous, observed, status, checks, dry_run, verification: verified \| mismatch \| not_checked \| null, error_code, platform_request, platform_answer, source, undo_of, requested_by, decided_by, decided_at, decision_reason, submitted_at, finished_at, created_at, updated_at, can_undo, events[] {from_status, status, actor_type, actor_user_id, detail, created_at}}` (events on the single read) |
+| `POST /actions/{action_id}/approve` | Pending only (409 otherwise). Checks run again with today's limits; queued for the worker. `SECOND_PERSON_REQUIRED` (409) when the organization requires it and the approver asked; `ACTION_STALE` (409) after `ACTIONS_PENDING_TTL` |
+| `POST /actions/{action_id}/reject` | Body `{reason}` (1–500); pending only |
+| `POST /actions/{action_id}/cancel` | Pending, approved or queued; the requester or an owner/admin |
+| `POST /actions/{action_id}/undo` (201) | A succeeded, not mismatched change, once: the opposite change as a new `pending` request (`undo_of`); no step or frequency limit, every other check |
+| `GET /action-settings`, `PUT /action-settings` | `{engine_enabled, paused, require_second_person, max_daily_budget (reporting currency; null = not chosen, budget changes refused), currency, currency_minor_units, increase_percent, decrease_percent, budget_change_interval_minutes, daily_limit_per_account, updated_at}`; lifting `paused` sends what was queued |
+| `GET /connections/{connection_id}/write-access`, `PUT …` | Body `{allowed}`. `{connection_id, provider, supported, allowed, allowed_at, allowed_by, missing_permissions[], can_request_permission}`. Meta needs `ads_management`: sign in again with `POST /connections/meta_ads/start {"params": {"access": "changes"}}` (when `META_WRITE_LOGIN_CONFIG_ID` is set) |
+
+**Statuses:** `pending → approved → queued → submitting → succeeded | failed | unknown`; `unknown → succeeded | failed` (looked up, never sent again); `pending | queued → stale`; `pending → rejected`; `pending | approved | queued → cancelled`. **Reasons** (lower-case codes shown in plain words by the web app): shape `daily_budget_required | daily_budget_invalid | daily_budget_precision | unexpected_values`; resource `platform_cannot_change | account_not_linked | connection_inactive | account_not_active | campaign_not_changeable | campaign_has_open_change | campaign_unavailable | connection_needs_attention`; budget `budget_on_ad_sets | budget_not_daily | budget_shared | no_change`; limits `increase_too_large | decrease_too_large | below_platform_minimum | minimum_not_checkable | above_maximum | maximum_not_checkable | maximum_not_set | budget_changed_recently | daily_limit_reached`; state `already_paused | already_active | campaign_not_changeable`; worker `campaign_changed | outcome_unknown | not_applied | changed_elsewhere | needs_checking | request_expired` and the platform's refusal codes.
 
 ## 20. Webhooks
 

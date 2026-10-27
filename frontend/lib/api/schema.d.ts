@@ -312,6 +312,180 @@ export interface paths {
         patch: operations["update_organization_api_v1_organizations__organization_id__patch"];
         trace?: never;
     };
+    "/api/v1/organizations/{organization_id}/action-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Action Settings
+         * @description Pause all changes, the second-person rule, the maximum daily budget and the limits.
+         */
+        get: operations["get_action_settings_api_v1_organizations__organization_id__action_settings_get"];
+        /**
+         * Put Action Settings
+         * @description Change the organization's settings (owners, admins).
+         */
+        put: operations["put_action_settings_api_v1_organizations__organization_id__action_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Actions
+         * @description Changes, newest first; ``status=open`` for those waiting or on their way.
+         */
+        get: operations["list_actions_api_v1_organizations__organization_id__actions_get"];
+        put?: never;
+        /**
+         * Request Action
+         * @description Request a change (owners, admins, managers). Kept as ``pending`` only when every check
+         *     and the platform's dry run pass; nothing is sent until an owner or admin approves.
+         *     Errors: ACTIONS_DISABLED, ACTION_INVALID, ACTION_DUPLICATE, ACTION_NOT_ALLOWED.
+         */
+        post: operations["request_action_api_v1_organizations__organization_id__actions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/actions/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Validate Action
+         * @description Run every check and the platform's dry run on a change; nothing is kept or changed.
+         *     Errors: ACTIONS_DISABLED, ACTION_NOT_ALLOWED.
+         */
+        post: operations["validate_action_api_v1_organizations__organization_id__actions_validate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/actions/{action_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Action
+         * @description One change with its checks, what was sent, the platform's answer, the verification and
+         *     every step (who, when, why).
+         */
+        get: operations["get_action_api_v1_organizations__organization_id__actions__action_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/actions/{action_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve Action
+         * @description Approve (owners, admins): the checks run again and the change is queued for sending.
+         *     Errors: ACTIONS_DISABLED, ACTION_INVALID, ACTION_NOT_ALLOWED, ACTION_STALE,
+         *     SECOND_PERSON_REQUIRED.
+         */
+        post: operations["approve_action_api_v1_organizations__organization_id__actions__action_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/actions/{action_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Action
+         * @description Cancel before it is sent (the requester, or an owner or admin).
+         */
+        post: operations["cancel_action_api_v1_organizations__organization_id__actions__action_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/actions/{action_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject Action
+         * @description Reject with a reason (owners, admins).
+         */
+        post: operations["reject_action_api_v1_organizations__organization_id__actions__action_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/actions/{action_id}/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Undo Action
+         * @description Request the opposite of a change that was made, approved like any other.
+         */
+        post: operations["undo_action_api_v1_organizations__organization_id__actions__action_id__undo_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizations/{organization_id}/ad-accounts": {
         parameters: {
             query?: never;
@@ -930,6 +1104,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/{organization_id}/connections/{connection_id}/write-access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Write Access
+         * @description Whether AdVegaX may change ad accounts through this connection.
+         */
+        get: operations["get_write_access_api_v1_organizations__organization_id__connections__connection_id__write_access_get"];
+        /**
+         * Put Write Access
+         * @description "Allow changes" through this connection, or take it back (owners, admins).
+         *     Errors: ACTION_NOT_ALLOWED (the platform permission is missing: sign in again).
+         */
+        put: operations["put_write_access_api_v1_organizations__organization_id__connections__connection_id__write_access_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizations/{organization_id}/connections/{provider}/start": {
         parameters: {
             query?: never;
@@ -1448,6 +1647,195 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** ActionCheckOut */
+        ActionCheckOut: {
+            /** Check */
+            check: string;
+            /** Reason */
+            reason: string | null;
+            /** Result */
+            result: string;
+        };
+        /** ActionEventOut */
+        ActionEventOut: {
+            /** Actor Type */
+            actor_type: string;
+            /** Actor User Id */
+            actor_user_id: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Detail */
+            detail: {
+                [key: string]: unknown;
+            };
+            /** From Status */
+            from_status: string | null;
+            /** Status */
+            status: string;
+        };
+        /**
+         * ActionIn
+         * @description One change to one campaign. ``params`` for a daily budget: ``{"daily_budget": "60.00"}``
+         *     in the ad account's currency; nothing for pause and resume.
+         */
+        ActionIn: {
+            /**
+             * Action Type
+             * @enum {string}
+             */
+            action_type: "campaign.pause" | "campaign.resume" | "campaign.set_daily_budget";
+            /**
+             * Campaign Id
+             * Format: uuid
+             */
+            campaign_id: string;
+            /** Params */
+            params?: {
+                [key: string]: string;
+            };
+        };
+        /** ActionOut */
+        ActionOut: {
+            /**
+             * Action Type
+             * @enum {string}
+             */
+            action_type: "campaign.pause" | "campaign.resume" | "campaign.set_daily_budget";
+            campaign: components["schemas"]["CampaignRefOut"];
+            /** Can Undo */
+            can_undo: boolean;
+            /** Checks */
+            checks: components["schemas"]["ActionCheckOut"][];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Currency */
+            currency: string;
+            /** Currency Minor Units */
+            currency_minor_units: number;
+            /** Decided At */
+            decided_at: string | null;
+            /** Decided By */
+            decided_by: string | null;
+            /** Decision Reason */
+            decision_reason: string | null;
+            dry_run: components["schemas"]["DryRunOut"] | null;
+            /** Error Code */
+            error_code: string | null;
+            /** Events */
+            events?: components["schemas"]["ActionEventOut"][];
+            /** Finished At */
+            finished_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            observed: components["schemas"]["CampaignStateOut"] | null;
+            /** Params */
+            params: {
+                [key: string]: string;
+            };
+            /** Platform Answer */
+            platform_answer: {
+                [key: string]: unknown;
+            } | null;
+            /** Platform Request */
+            platform_request: {
+                [key: string]: unknown;
+            } | null;
+            previous: components["schemas"]["CampaignStateOut"];
+            /** Provider */
+            provider: string;
+            /** Requested By */
+            requested_by: string | null;
+            /** Source */
+            source: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "approved" | "rejected" | "cancelled" | "queued" | "submitting" | "unknown" | "succeeded" | "failed" | "stale";
+            /** Submitted At */
+            submitted_at: string | null;
+            /** Undo Of */
+            undo_of: string | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Verification */
+            verification: string | null;
+        };
+        /** ActionPreviewOut */
+        ActionPreviewOut: {
+            /**
+             * Action Type
+             * @enum {string}
+             */
+            action_type: "campaign.pause" | "campaign.resume" | "campaign.set_daily_budget";
+            budget_limits: components["schemas"]["BudgetLimitsOut"] | null;
+            /**
+             * Campaign Id
+             * Format: uuid
+             */
+            campaign_id: string;
+            /** Checks */
+            checks: components["schemas"]["ActionCheckOut"][];
+            /** Currency */
+            currency: string;
+            /** Currency Minor Units */
+            currency_minor_units: number;
+            current: components["schemas"]["CampaignStateOut"] | null;
+            dry_run: components["schemas"]["DryRunOut"];
+            /** Passed */
+            passed: boolean;
+        };
+        /** ActionRejectIn */
+        ActionRejectIn: {
+            /** Reason */
+            reason: string;
+        };
+        /** ActionSettingsIn */
+        ActionSettingsIn: {
+            /** Max Daily Budget */
+            max_daily_budget?: number | string | null;
+            /** Paused */
+            paused: boolean;
+            /** Require Second Person */
+            require_second_person: boolean;
+        };
+        /** ActionSettingsOut */
+        ActionSettingsOut: {
+            /** Budget Change Interval Minutes */
+            budget_change_interval_minutes: number;
+            /** Currency */
+            currency: string;
+            /** Currency Minor Units */
+            currency_minor_units: number;
+            /** Daily Limit Per Account */
+            daily_limit_per_account: number;
+            /** Decrease Percent */
+            decrease_percent: number;
+            /** Engine Enabled */
+            engine_enabled: boolean;
+            /** Increase Percent */
+            increase_percent: number;
+            /** Max Daily Budget */
+            max_daily_budget: string | null;
+            /** Paused */
+            paused: boolean;
+            /** Require Second Person */
+            require_second_person: boolean;
+            /** Updated At */
+            updated_at: string | null;
+        };
         /** AdAccountOut */
         AdAccountOut: {
             /** Connection Expires At */
@@ -2193,6 +2581,24 @@ export interface components {
              */
             period: "daily" | "monthly";
         };
+        /**
+         * BudgetLimitsOut
+         * @description The daily budget this campaign may be given in one change (computed by AdVegaX).
+         */
+        BudgetLimitsOut: {
+            /** Decrease Percent */
+            decrease_percent: number;
+            /** Highest */
+            highest: string | null;
+            /** Increase Percent */
+            increase_percent: number;
+            /** Lowest */
+            lowest: string | null;
+            /** Organization Maximum */
+            organization_maximum: string | null;
+            /** Platform Minimum */
+            platform_minimum: string | null;
+        };
         /** BudgetOut */
         BudgetOut: {
             /** Amount */
@@ -2319,6 +2725,41 @@ export interface components {
             source: string;
             /** Status */
             status: string;
+        };
+        /** CampaignRefOut */
+        CampaignRefOut: {
+            /**
+             * Ad Account Id
+             * Format: uuid
+             */
+            ad_account_id: string;
+            /** Ad Account Name */
+            ad_account_name: string | null;
+            /** External Id */
+            external_id: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+        };
+        /**
+         * CampaignStateOut
+         * @description A campaign as the platform reported it.
+         */
+        CampaignStateOut: {
+            /** Budget Level */
+            budget_level: string | null;
+            /** Budget Period */
+            budget_period: string | null;
+            /** Budget Shared */
+            budget_shared: boolean;
+            /** Daily Budget */
+            daily_budget: string | null;
+            /** Status */
+            status: string | null;
         };
         /** CampaignsOut */
         CampaignsOut: {
@@ -2747,6 +3188,31 @@ export interface components {
             /** Total Sales */
             total_sales: string | null;
         };
+        /**
+         * DryRunOut
+         * @description The platform's own check of the change, without making it.
+         */
+        DryRunOut: {
+            /** Reason */
+            reason?: string | null;
+            /** Result */
+            result: string;
+        };
+        /** Envelope[ActionOut] */
+        Envelope_ActionOut_: {
+            data: components["schemas"]["ActionOut"];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[ActionPreviewOut] */
+        Envelope_ActionPreviewOut_: {
+            data: components["schemas"]["ActionPreviewOut"];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[ActionSettingsOut] */
+        Envelope_ActionSettingsOut_: {
+            data: components["schemas"]["ActionSettingsOut"];
+            meta: components["schemas"]["Meta"];
+        };
         /** Envelope[AdAccountOut] */
         Envelope_AdAccountOut_: {
             data: components["schemas"]["AdAccountOut"];
@@ -2935,6 +3401,11 @@ export interface components {
         /** Envelope[UserOut] */
         Envelope_UserOut_: {
             data: components["schemas"]["UserOut"];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[WriteAccessOut] */
+        Envelope_WriteAccessOut_: {
+            data: components["schemas"]["WriteAccessOut"];
             meta: components["schemas"]["Meta"];
         };
         /** Envelope[list[AdAccountOut]] */
@@ -3281,6 +3752,12 @@ export interface components {
             unlink_reason: string | null;
             /** Unlinked At */
             unlinked_at: string | null;
+        };
+        /** ListEnvelope[ActionOut] */
+        ListEnvelope_ActionOut_: {
+            /** Data */
+            data: components["schemas"]["ActionOut"][];
+            meta: components["schemas"]["ListMeta"];
         };
         /** ListEnvelope[AuditLogOut] */
         ListEnvelope_AuditLogOut_: {
@@ -4107,6 +4584,33 @@ export interface components {
             /** Version */
             version: number;
         };
+        /** WriteAccessIn */
+        WriteAccessIn: {
+            /** Allowed */
+            allowed: boolean;
+        };
+        /** WriteAccessOut */
+        WriteAccessOut: {
+            /** Allowed */
+            allowed: boolean;
+            /** Allowed At */
+            allowed_at: string | null;
+            /** Allowed By */
+            allowed_by: string | null;
+            /** Can Request Permission */
+            can_request_permission: boolean;
+            /**
+             * Connection Id
+             * Format: uuid
+             */
+            connection_id: string;
+            /** Missing Permissions */
+            missing_permissions: string[];
+            /** Provider */
+            provider: string;
+            /** Supported */
+            supported: boolean;
+        };
     };
     responses: never;
     parameters: never;
@@ -4646,6 +5150,342 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Envelope_OrganizationOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_action_settings_api_v1_organizations__organization_id__action_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ActionSettingsOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_action_settings_api_v1_organizations__organization_id__action_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActionSettingsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ActionSettingsOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_actions_api_v1_organizations__organization_id__actions_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+                status?: ("open" | "pending" | "approved" | "rejected" | "cancelled" | "queued" | "submitting" | "unknown" | "succeeded" | "failed" | "stale") | null;
+                campaign_id?: string | null;
+            };
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListEnvelope_ActionOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_action_api_v1_organizations__organization_id__actions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ActionOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    validate_action_api_v1_organizations__organization_id__actions_validate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ActionPreviewOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_action_api_v1_organizations__organization_id__actions__action_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                action_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ActionOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_action_api_v1_organizations__organization_id__actions__action_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                action_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ActionOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_action_api_v1_organizations__organization_id__actions__action_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                action_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ActionOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_action_api_v1_organizations__organization_id__actions__action_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                action_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActionRejectIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ActionOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    undo_action_api_v1_organizations__organization_id__actions__action_id__undo_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                action_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ActionOut_"];
                 };
             };
             /** @description Validation Error */
@@ -5763,6 +6603,74 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Envelope_list_ResourceOut__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_write_access_api_v1_organizations__organization_id__connections__connection_id__write_access_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connection_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_WriteAccessOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_write_access_api_v1_organizations__organization_id__connections__connection_id__write_access_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connection_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WriteAccessIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_WriteAccessOut_"];
                 };
             };
             /** @description Validation Error */
