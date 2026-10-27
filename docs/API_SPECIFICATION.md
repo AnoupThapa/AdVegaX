@@ -604,6 +604,24 @@ Base `/organizations/{organization_id}`. Permissions: reading needs `actions.vie
 
 `PUT /action-settings` (§19J) also takes `landing_domains[]` (up to 10 host names; `landing_domain_invalid`).
 
+## 19L. Recommendations (optimization engine) — as built (Phase 11; A30)
+
+Base `/organizations/{organization_id}`. Permissions: reading `actions.view` (every role); approving, rejecting, "looked into" and "Look again now" `actions.request` (owner, admin, manager); settings `actions.settings` (owner, admin). The installation switch `OPTIMIZATION_ENABLED` (on by default) stops new advice (`OPTIMIZATION_DISABLED`, 409); the Action Engine's own switches still govern every change. Audited: `recommendation.created | approved | rejected | done | out_of_date | refresh_requested`, `optimization_settings.updated` (actor `ai_recommendation` when the AI wrote the explanation, `system` otherwise).
+
+| Method & path | Notes |
+|---|---|
+| `GET /recommendations[?status=open\|decided\|closed\|approved\|rejected\|done&campaign_id]` | `{summary {enabled, open, last_run {periods, campaigns_checked, found, profit_rules: used\|skipped, profit_reason, gross_margin, cost_coverage, explained_by, ai_problem, ran_at}, refreshes_left}, items[]}`. Open advice first, by rank. Without `status`, replaced advice is left out. Expired advice is marked on reading |
+| `GET /recommendations/{id}` | `{id, kind: spend_without_results\|losing_money\|budget_limited\|cost_jump\|funnel_drop, status: open\|approved\|rejected\|done\|expired\|out_of_date\|superseded, campaign {id, name, provider, ad_account_id, ad_account_name}\|null, funnel, figures (written out), raw_figures, periods {from, to, baseline_from, baseline_to}, currency, proposal {action_type: campaign.pause\|campaign.set_daily_budget\|null, params, currency, previous_daily_budget, text}, note, prechecks[] (10A checks), ready, explanation, confidence: low\|medium\|high, assumptions[], risks[], rank, explained_by: ai\|rules, ai_run_id, expires_at, closed_reason, decided_by, decided_at, decision_reason, decision_note, action {id, status, verification}\|null, outcomes[] {after_days: 7\|14, before, after, created_at}, created_at}` |
+| `POST /recommendations/{id}/approve` | Open and valid only (`RECOMMENDATION_CLOSED`, 409). Checked again: the campaign's status and budget unchanged, the rule still true with today's figures (`RECOMMENDATION_OUT_OF_DATE`, 409, `details[] {reason: campaign_changed\|no_longer_true}`). Then `POST /actions` with `source = recommendation` (every 10A check, the platform's test, `ACTION_INVALID` etc.); an owner or admin's change is approved in the same step unless the organization requires a second person. Advice without a change: `CONFLICT` |
+| `POST /recommendations/{id}/reject` | Body `{reason: not_relevant\|figures_wrong\|wrong_time\|other, note?}` (note ≤ 500). The same advice is not shown again for `OPTIMIZATION_QUIET_PERIOD` (14 days) unless the loss at least doubled |
+| `POST /recommendations/{id}/done` | Advice without a change: "looked into" |
+| `POST /recommendations/refresh` | Look again now: at most `OPTIMIZATION_REFRESHES_PER_DAY` (3) a day (`REFRESH_LIMIT`, 429). Answer as the list |
+| `GET /optimization-settings`, `PUT …` | Body `{min_spend (reporting currency, > 0), min_conversions (1–1000), budget_step_percent (5–50, at most the 10A limits), cost_jump_percent (10–200)}`. `{enabled, currency, …, max_step_percent, updated_at}` |
+
+`ActionOut` (§19J) gains `recommendation_id`.
+
+**The daily look:** once per organization after `OPTIMIZATION_RUN_HOUR` (06:00) in its reporting time zone (scheduler tick `SCHEDULE_OPTIMIZATION_TICK`, job `optimization.look`). Advice is valid for `OPTIMIZATION_VALID_FOR` (72 hours) or until the next look supersedes it.
+
 ## 20. Webhooks
 
 Provider webhooks must:

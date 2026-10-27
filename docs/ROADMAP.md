@@ -38,7 +38,7 @@ This roadmap splits AdVegaX into phases. Each phase has its own plan in `docs/ph
 | 9 | Creative engine | AI copy concepts, versions, approval workflow, asset storage | 8 | Implemented against the simulators — awaiting review; live Step 0 pending (`phases/PHASE_09_REPORT.md`) |
 | 10A | Action Engine | The single, audited, idempotent gate for external mutations | 1, 3, 4 | Implemented against the simulators — awaiting review; live Step 0 pending (`phases/PHASE_10A_REPORT.md`) |
 | 10B | Campaign builder | Approved strategy + creatives → validated, explicitly launched campaigns | 8, 9, 10A | Implemented against the simulators — awaiting review; live Step 0 pending (`phases/PHASE_10B_REPORT.md`) |
-| 11 | Optimization engine | AI recommendations → approval → Action Engine | 6, 7, 8, 10A | Not started |
+| 11 | Optimization engine | AI recommendations → approval → Action Engine | 6, 7, 8, 10A | Implemented against the simulators — awaiting review; live Step 0 pending (`phases/PHASE_11_REPORT.md`) |
 | 12 | Controlled autopilot | Whitelisted actions within hard limits, kill switch | 11 + proven 10A | Not started |
 | 13 | Stripe billing & entitlements | Plans, subscriptions, usage limits | 1 (stub); parallel after 6 | Not started |
 | 14 | Agency mode | Agencies managing many client organizations safely | 13 | Not started |

@@ -638,6 +638,16 @@ Supersedes the `actions` outline in §15.
 
 **action_settings** gains `landing_domains` (JSONB list of host names, default `[]`).
 
+## 14E. Optimization engine — as built (Phase 11, migration 0022; A30)
+
+**recommendations** (tenant-owned, forced RLS; read, insert, update — never deleted) — `organization_id`, `kind`, `campaign_id` and `ad_account_id` (composite foreign keys; null for a business-wide funnel drop-off), `signal` (JSONB: the figures as computed and as written, facts such as the loss, the periods, the currency, why no change is proposed), `proposal` (JSONB: change type, values in the account currency, the previous budget — or `{}`), `prechecks` (JSONB: the 10A checks on AdVegaX's copy of the campaign), `campaign_state` (status and budget when made), `explanation`, `confidence`, `assumptions`, `risks`, `rank`, `explained_by` (`ai` | `rules`), `ai_run_id` (composite), `status`, `expires_at`, `fingerprint` (kind + campaign or funnel step; **one open recommendation each**, partial unique index), `closed_reason`, `decided_by`, `decided_at`, `decision_reason`, `decision_note`, timestamps.
+
+**recommendation_outcomes** (tenant-owned, forced RLS; read and insert) — `recommendation_id` (composite), `after_days` (7 | 14, unique per recommendation), `before`, `after` (JSONB: spend, conversions, cost per conversion, conversion value with their availability), `created_at`.
+
+**optimization_settings** (tenant-owned, forced RLS; one row per organization) — `min_spend`, `min_conversions`, `budget_step_percent`, `cost_jump_percent`, `last_run_on`, `refreshes_on`, `refreshes_used`, `last_run_summary` (JSONB), `updated_by`, `updated_at`.
+
+**actions** gains `recommendation_id` (composite foreign key; set exactly when `source = 'recommendation'`, check constraint). **ai_runs.task** also allows `optimization`.
+
 ## 14. AI Tables
 
 ### ai_models

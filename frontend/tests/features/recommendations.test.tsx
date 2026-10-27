@@ -336,6 +336,89 @@ describe("A recommendation", () => {
   });
 });
 
+describe("Plain words for every case", () => {
+  it("names unknown kinds and statuses, Meta, both funnels and closed advice", async () => {
+    base("owner", {
+      [`GET ${LIST}`]: ok(
+        list(
+          [
+            rec({ kind: "new_kind", status: "approved", explained_by: "ai" }),
+            rec({
+              id: "r2",
+              status: "odd",
+              campaign: {
+                id: CAMPAIGN,
+                name: "Meta Sales",
+                provider: "meta_ads",
+                ad_account_id: "a2",
+                ad_account_name: null,
+              },
+            }),
+            rec({ id: "r3", kind: "funnel_drop", campaign: null, funnel: { view: "whole" } }),
+            rec({
+              id: "r4",
+              kind: "funnel_drop",
+              campaign: null,
+              funnel: { view: "platform", platform: "google_ads" },
+            }),
+          ],
+          {
+            refreshes_left: 0,
+            last_run: {
+              ran_at: "2026-10-14T00:00:00Z",
+              campaigns_checked: 1,
+              found: 4,
+              profit_rules: "skipped",
+              profit_reason: "mystery",
+              explained_by: "rules",
+              ai_problem: "mystery",
+            },
+          },
+        ),
+      ),
+    });
+    render(<RecommendationsPage />);
+    const items = await screen.findByRole("list", { name: "Recommendations" });
+    expect(items).toHaveTextContent("new_kind");
+    expect(items).toHaveTextContent("Explained by AI");
+    expect(items).toHaveTextContent("Meta Sales · Meta");
+    expect(items).toHaveTextContent("odd");
+    expect(items).toHaveTextContent("Your business's funnel");
+    expect(items).toHaveTextContent("Google Ads's own funnel");
+    expect(screen.getByText(/your gross margin is not known/)).toBeVisible();
+    expect(screen.getByText(/the AI was not used/)).toBeVisible();
+    expect(screen.getByRole("button", { name: "Look again now" })).toBeDisabled();
+  });
+
+  it("shows advice explained by the AI without a summary note, and a budget proposal", async () => {
+    base("owner", {
+      [`GET ${ONE}`]: ok(
+        rec({
+          kind: "budget_limited",
+          note: "mystery_note",
+          ready: false,
+          figures: {},
+          assumptions: [],
+          risks: [],
+          prechecks: [{ check: "limits", result: "failed", reason: "maximum_not_set" }],
+          proposal: {
+            action_type: "campaign.set_daily_budget",
+            params: { daily_budget: "60.00" },
+            currency: "AUD",
+            previous_daily_budget: "50.00",
+            text: "Raise the daily budget from AUD 50.00 to AUD 60.00",
+          },
+        }),
+      ),
+    });
+    render(<RecommendationDetailPage />, { recommendationId: REC });
+    expect(await screen.findByText("mystery_note")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Approve and send" })).toBeDisabled();
+    expect(screen.getByText("Before it can be approved, see the checks above.")).toBeVisible();
+    expect(screen.queryByLabelText("The figures behind it")).toBeNull();
+  });
+});
+
 describe("Elsewhere", () => {
   it("counts open advice on the Overview and lists a campaign's", async () => {
     const api = base("owner", { [`GET ${LIST}`]: ok(list([rec(), rec({ id: "x2" })])) });
@@ -385,6 +468,16 @@ describe("Elsewhere", () => {
       }),
     );
     expect(await screen.findByText(/switched off for this AdVegaX installation/)).toBeVisible();
+  });
+
+  it("shows a refused save", async () => {
+    base("owner", {
+      [`PUT ${ORG_PATH}/optimization-settings`]: fail(422, "VALIDATION_ERROR"),
+    });
+    render(<OptimizationSettings org={testOrg({ role: "owner" })} />);
+    const form = await screen.findByRole("form", { name: "Recommendation settings" });
+    click(within(form).getByRole("button", { name: "Save" }));
+    expect(await within(form).findByRole("alert")).toBeVisible();
   });
 
   it("shows settings errors and read-only settings", async () => {
