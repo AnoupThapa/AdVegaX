@@ -271,10 +271,22 @@ def _allowed(method: str, path: str) -> bool:
     return method == "DELETE" and path == "/me/permissions"
 
 
+CREATE_EDGES = frozenset({"adimages", "campaigns", "adsets", "adcreatives", "ads"})
+
+
 def _change_allowed(method: str, path: str) -> bool:
-    """Changes (Phase 10A, ``writes.py`` only): ``POST`` to one object, ``/<numeric id>``."""
+    """Changes (``writes.py`` only): ``POST`` to one object, ``/<numeric id>`` (Phase 10A), or
+    creating in an ad account, ``/act_<id>/<edge>`` for the five edges a launch uses (10B)."""
+    if method != "POST":
+        return False
     parts = path.split("/")
-    return method == "POST" and len(parts) == 2 and parts[1].isdigit() and len(parts[1]) <= 25
+    if len(parts) == 2:
+        return parts[1].isdigit() and len(parts[1]) <= 25
+    return (
+        len(parts) == 3
+        and bool(re.fullmatch(r"act_[0-9]{1,25}", parts[1]))
+        and parts[2] in CREATE_EDGES
+    )
 
 
 # Pacing (Q-4-12): from SLOW_ABOVE % of a limit each call waits a little longer (up to
@@ -446,13 +458,21 @@ class MetaGraphClient:
             raise UnexpectedResponseError()
         return report
 
+    def post_create(self, token: str, account: str, edge: str, form: dict[str, str]) -> Any:
+        """Create one object in an ad account (Phase 10B): ``form`` comes only from
+        ``writes.py``; the edge must be one a launch uses."""
+        if edge not in CREATE_EDGES or not account.startswith("act_"):
+            raise InvalidRequestError()
+        return self._change(token, f"/{valid_node(account)}/{edge}", form)
+
     def post_change(self, token: str, node: str, form: dict[str, str]) -> Any:
         """One change to one object (Phase 10A): ``form`` comes only from ``writes.py``."""
         if not node.isdigit():
             raise InvalidRequestError()
-        return self._send(
-            method="POST", path=f"/{valid_node(node)}", token=token, form=form, change=True
-        )
+        return self._change(token, f"/{valid_node(node)}", form)
+
+    def _change(self, token: str, path: str, form: dict[str, str]) -> Any:
+        return self._send(method="POST", path=path, token=token, form=form, change=True)
 
     def remove_permissions(self, token: str) -> None:
         """Disconnect: ``DELETE /me/permissions`` ends AdVegaX's access for this person. A token

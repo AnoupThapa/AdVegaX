@@ -114,7 +114,7 @@ def org_settings(session: Session, org_id: uuid.UUID) -> ActionSettings:
     """The organization's settings (defaults when never saved; not added to the session)."""
     found = session.get(ActionSettings, org_id)
     return found or ActionSettings(
-        organization_id=org_id, paused=False, require_second_person=False
+        organization_id=org_id, paused=False, require_second_person=False, landing_domains=[]
     )
 
 
@@ -125,6 +125,49 @@ def switches_on(rt: Runtime, session: Session, org_id: uuid.UUID) -> bool:
 def require_switches(rt: Runtime, session: Session, org_id: uuid.UUID) -> None:
     if not switches_on(rt, session, org_id):
         raise ActionsDisabled()
+
+
+def budget_bounds(
+    rt: Runtime, session: Session, org_id: uuid.UUID, provider: str, currency: str
+) -> tuple[Decimal | None, Decimal | None, bool]:
+    """The platform minimum and the organization's maximum daily budget in ``currency``
+    (None: no exchange rate), and whether a maximum was chosen at all."""
+    s = rt.settings
+    today = rt.clock.now().date()
+    settings = org_settings(session, org_id)
+    fx = FxTable.load(session, today, today, s.FX_MAX_STALE_DAYS)
+    minimum = budgets.minimums(s, fx, currency, today).get(provider)
+    maximum = None
+    if settings.max_daily_budget is not None and settings.max_daily_budget_currency:
+        maximum = fx.convert(
+            settings.max_daily_budget, settings.max_daily_budget_currency, currency, today
+        )
+    return minimum, maximum, settings.max_daily_budget is not None
+
+
+def volume_used(
+    rt: Runtime,
+    session: Session,
+    org_id: uuid.UUID,
+    ad_account_id: uuid.UUID,
+    exclude: uuid.UUID | None = None,
+) -> int:
+    """Changes of this ad account approved, queued or sent in the volume window."""
+    others = [Action.id != exclude] if exclude is not None else []
+    used = session.execute(
+        select(func.count())
+        .select_from(Action)
+        .where(
+            Action.organization_id == org_id,
+            Action.ad_account_id == ad_account_id,
+            or_(
+                Action.status.in_(("approved", "queued")),
+                Action.submitted_at >= rt.clock.now() - rt.settings.ACTIONS_VOLUME_WINDOW,
+            ),
+            *others,
+        )
+    ).scalar_one()
+    return int(used)
 
 
 def limits_for(
@@ -138,41 +181,24 @@ def limits_for(
 ) -> Limits:
     s = rt.settings
     now = rt.clock.now()
-    today = now.date()
-    currency = target.account.currency
+    org_id = target.account.organization_id
     minimum: Decimal | None = None
     maximum: Decimal | None = None
-    settings = org_settings(session, target.account.organization_id)
+    maximum_set = org_settings(session, org_id).max_daily_budget is not None
     if spec.kind is ChangeKind.SET_DAILY_BUDGET:
-        fx = FxTable.load(session, today, today, s.FX_MAX_STALE_DAYS)
-        minimum = budgets.minimums(s, fx, currency, today).get(target.account.provider)
-        if settings.max_daily_budget is not None and settings.max_daily_budget_currency:
-            maximum = fx.convert(
-                settings.max_daily_budget, settings.max_daily_budget_currency, currency, today
-            )
+        minimum, maximum, maximum_set = budget_bounds(
+            rt, session, org_id, target.account.provider, target.account.currency
+        )
     others = [Action.id != exclude] if exclude is not None else []
     recent = session.execute(
         select(func.count())
         .select_from(Action)
         .where(
-            Action.organization_id == target.account.organization_id,
+            Action.organization_id == org_id,
             Action.campaign_id == target.campaign.id,
             Action.action_type == "campaign.set_daily_budget",
             Action.status.in_(SENT),
             Action.submitted_at >= now - s.ACTIONS_BUDGET_CHANGE_INTERVAL,
-            *others,
-        )
-    ).scalar_one()
-    used = session.execute(
-        select(func.count())
-        .select_from(Action)
-        .where(
-            Action.organization_id == target.account.organization_id,
-            Action.ad_account_id == target.account.id,
-            or_(
-                Action.status.in_(("approved", "queued")),
-                Action.submitted_at >= now - s.ACTIONS_VOLUME_WINDOW,
-            ),
             *others,
         )
     ).scalar_one()
@@ -181,9 +207,9 @@ def limits_for(
         decrease_percent=s.ACTIONS_MAX_DECREASE_PERCENT,
         minimum=minimum,
         maximum=maximum,
-        maximum_set=settings.max_daily_budget is not None,
+        maximum_set=maximum_set,
         budget_changed_recently=recent > 0,
-        volume_used=int(used),
+        volume_used=volume_used(rt, session, org_id, target.account.id, exclude),
         volume_limit=s.ACTIONS_DAILY_LIMIT_PER_ACCOUNT,
         undo=undo,
     )

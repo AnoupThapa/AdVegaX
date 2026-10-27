@@ -97,6 +97,7 @@ export function emptyActionSettings(extra: Record<string, unknown> = {}) {
     decrease_percent: 90,
     budget_change_interval_minutes: 60,
     daily_limit_per_account: 50,
+    landing_domains: [],
     updated_at: null,
     ...extra,
   };

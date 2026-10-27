@@ -32,12 +32,12 @@ This roadmap splits AdVegaX into phases. Each phase has its own plan in `docs/ph
 | 3 | Advertising — Google Ads (read-only) | Accounts, structure, daily performance | 1 | Implemented against the simulator — awaiting review; live Step 0 pending (`phases/PHASE_03_REPORT.md`) |
 | 4 | Advertising — Meta (read-only) | Accounts, structure, insights | 1 | Implemented against the simulator — awaiting review; live Step 0 pending (`phases/PHASE_04_REPORT.md`) |
 | 5 | Analytics — GA4 (read-only) | Property discovery, aggregated behaviour data | 1 | Implemented against the simulator — awaiting review; live Step 0 pending (`phases/PHASE_05_REPORT.md`) |
-| 6 | Unified analytics & financial engine | One trustworthy cross-source view of revenue, spend, cost and profit | 2A, 3, 4, 5 (2B recommended) | Not started |
-| 7 | Funnel intelligence | Source-labelled funnel stages and conversion rates | 6 | Not started |
-| 8 | AI campaign planner | Schema-validated AI strategies grounded in deterministic data | 2A, 6 | Not started |
-| 9 | Creative engine | AI copy concepts, versions, approval workflow, asset storage | 8 | Not started |
-| 10A | Action Engine | The single, audited, idempotent gate for external mutations | 1, 3, 4 | Not started |
-| 10B | Campaign builder | Approved strategy + creatives → validated, explicitly launched campaigns | 8, 9, 10A | Not started |
+| 6 | Unified analytics & financial engine | One trustworthy cross-source view of revenue, spend, cost and profit | 2A, 3, 4, 5 (2B recommended) | Implemented against recorded exchange rates — awaiting review; live Step 0 pending (`phases/PHASE_06_REPORT.md`) |
+| 7 | Funnel intelligence | Source-labelled funnel stages and conversion rates | 6 | Implemented against the simulators — awaiting review; live Step 0 pending (`phases/PHASE_07_REPORT.md`) |
+| 8 | AI campaign planner | Schema-validated AI strategies grounded in deterministic data | 2A, 6 | Implemented against the simulators — awaiting review; live Step 0 pending (`phases/PHASE_08_REPORT.md`) |
+| 9 | Creative engine | AI copy concepts, versions, approval workflow, asset storage | 8 | Implemented against the simulators — awaiting review; live Step 0 pending (`phases/PHASE_09_REPORT.md`) |
+| 10A | Action Engine | The single, audited, idempotent gate for external mutations | 1, 3, 4 | Implemented against the simulators — awaiting review; live Step 0 pending (`phases/PHASE_10A_REPORT.md`) |
+| 10B | Campaign builder | Approved strategy + creatives → validated, explicitly launched campaigns | 8, 9, 10A | Implemented against the simulators — awaiting review; live Step 0 pending (`phases/PHASE_10B_REPORT.md`) |
 | 11 | Optimization engine | AI recommendations → approval → Action Engine | 6, 7, 8, 10A | Not started |
 | 12 | Controlled autopilot | Whitelisted actions within hard limits, kill switch | 11 + proven 10A | Not started |
 | 13 | Stripe billing & entitlements | Plans, subscriptions, usage limits | 1 (stub); parallel after 6 | Not started |

@@ -390,6 +390,7 @@ describe("Change settings", () => {
         paused: false,
         require_second_person: true,
         max_daily_budget: "500.00",
+        landing_domains: [],
       }),
     );
   });

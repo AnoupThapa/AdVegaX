@@ -1,6 +1,6 @@
 # Phase 10B — Campaign Builder: Implementation Plan
 
-**Status:** 📝 **Draft for product-owner approval.** Nothing is implemented until you approve (A1). · **Date:** 2026-10-27
+**Status:** ✅ **Approved 2026-10-27 (A29, "Approve all": Q-10B-1 … Q-10B-12).** In progress — see `PHASE_10B_PROGRESS.md`. · **Date:** 2026-10-27
 
 > **This is the first phase that can create campaigns at Google or Meta.** Everything is built and tested against the platform **simulators** (no calls in CI). It goes **only through the Action Engine** (Phase 10A, A13): every campaign is checked, tested by the platform, **approved by a person**, created **paused**, and goes live only on a second, separate approval.
 

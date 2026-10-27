@@ -20,6 +20,7 @@ Every step is audited (``engine.transition``) without secrets.
 
 from __future__ import annotations
 
+import re
 import uuid
 from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal
 from typing import Any
@@ -86,6 +87,8 @@ from app.providers.base.errors import (
 )
 from app.runtime import Runtime
 
+# A web address's host name (no scheme, path or port), e.g. ``evezone.com.au``.
+HOST = re.compile(r"^(?=.{4,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$")
 # Live undo children: an undo that is open or done blocks another undo of the same change.
 _UNDO_BLOCKING = (*OPEN_STATUSES, "succeeded")
 
@@ -407,6 +410,8 @@ class ActionService:
         return self.request(ctx, body, undo_of=action_id)
 
     def _undoable(self, session: Session, action: Action) -> bool:
+        if action.draft_id is not None or action.action_type not in CATALOGUE:
+            return False  # a draft's launch is undone by pausing or cleaning up (10B)
         if action.status != "succeeded" or action.verification == "mismatch":
             return False
         if catalogue.undo(CATALOGUE[action.action_type], action.previous) is None:
@@ -444,12 +449,17 @@ class ActionService:
                 )
                 expired = True
             else:
-                self._recheck(session, action)
+                if action.draft_id is not None:
+                    from app.domains.builder.launch import recheck  # a draft's change (10B)
+
+                    recheck(self.rt, session, action)
+                else:
+                    self._recheck(session, action)
                 action.decided_by = ctx.user_id
                 action.decided_at = self.rt.clock.now()
                 engine.transition(session, self.rt, action, "approved", user_id=ctx.user_id)
                 engine.transition(session, self.rt, action, "queued", user_id=ctx.user_id)
-                engine.schedule(session, self.rt, action, engine.JOB_EXECUTE)
+                engine.schedule(session, self.rt, action, engine.job_for(action, "execute"))
         if expired:
             raise ActionStale()
         return self.get(ctx, action_id)
@@ -458,6 +468,7 @@ class ActionService:
         """Today's limits and access, on the campaign as it was when requested (the worker
         reads it again right before sending)."""
         spec = CATALOGUE[action.action_type]
+        assert action.campaign_id is not None  # drafts are re-checked by the builder
         target = load_target(session, action.organization_id, action.campaign_id)
         writer = writer_for(self.rt, action.provider)
         reason = resource_reason(target, writer)
@@ -524,17 +535,32 @@ class ActionService:
     def _out(
         self, session: Session, ctx: TenantContext, a: Action, *, events: bool = False
     ) -> ActionOut:
-        campaign, account = session.execute(
-            select(AdCampaign, AdAccount)
-            .join(
-                AdAccount,
-                (AdAccount.id == AdCampaign.ad_account_id)
-                & (AdAccount.organization_id == AdCampaign.organization_id),
+        campaign_ref: CampaignRefOut | None = None
+        if a.campaign_id is not None:
+            campaign, account = session.execute(
+                select(AdCampaign, AdAccount)
+                .join(
+                    AdAccount,
+                    (AdAccount.id == AdCampaign.ad_account_id)
+                    & (AdAccount.organization_id == AdCampaign.organization_id),
+                )
+                .where(
+                    AdCampaign.organization_id == ctx.organization_id,
+                    AdCampaign.id == a.campaign_id,
+                )
+            ).one()
+            campaign_ref = CampaignRefOut(
+                id=campaign.id,
+                name=campaign.name,
+                external_id=campaign.external_campaign_id,
+                ad_account_id=account.id,
+                ad_account_name=account.name,
             )
-            .where(
-                AdCampaign.organization_id == ctx.organization_id, AdCampaign.id == a.campaign_id
-            )
-        ).one()
+        draft_ref = None
+        if a.draft_id is not None:
+            from app.domains.builder.launch import draft_ref_of  # a draft's change (10B)
+
+            draft_ref = draft_ref_of(session, ctx.organization_id, a.draft_id)
         history: list[ActionEventOut] = []
         if events:
             history = [
@@ -559,13 +585,8 @@ class ActionService:
             id=a.id,
             action_type=a.action_type,
             provider=a.provider,
-            campaign=CampaignRefOut(
-                id=campaign.id,
-                name=campaign.name,
-                external_id=campaign.external_campaign_id,
-                ad_account_id=account.id,
-                ad_account_name=account.name,
-            ),
+            campaign=campaign_ref,
+            draft=draft_ref,
             currency=a.currency,
             currency_minor_units=minor_units(a.currency),
             params=dict(a.params),
@@ -639,6 +660,7 @@ class ActionService:
             paused=row.paused,
             require_second_person=row.require_second_person,
             max_daily_budget=_money(row.max_daily_budget, currency),
+            landing_domains=list(row.landing_domains or []),
             currency=currency,
             currency_minor_units=minor_units(currency),
             increase_percent=s.ACTIONS_MAX_INCREASE_PERCENT,
@@ -681,6 +703,15 @@ class ActionService:
             row.require_second_person = body.require_second_person
             row.max_daily_budget = maximum
             row.max_daily_budget_currency = currency if maximum is not None else None
+            if body.landing_domains is not None:
+                hosts = [h.strip().lower().rstrip(".") for h in body.landing_domains if h.strip()]
+                if any(not HOST.fullmatch(h) for h in hosts):
+                    raise ActionInvalid(
+                        details=[{"check": "shape", "reason": "landing_domain_invalid"}]
+                    )
+                row.landing_domains = list(dict.fromkeys(hosts))
+            elif row.landing_domains is None:
+                row.landing_domains = []
             row.updated_by = ctx.user_id
             row.updated_at = self.rt.clock.now()
             session.flush()

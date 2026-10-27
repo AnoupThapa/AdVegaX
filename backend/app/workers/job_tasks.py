@@ -10,6 +10,7 @@ import redis
 from app.domains.actions import engine as actions
 from app.domains.advertising import importer as ad_importer
 from app.domains.analytics import importer as analytics_importer
+from app.domains.builder import launch as draft_launch
 from app.domains.commerce import importer, incremental, privacy
 from app.domains.integrations import jobs as integration_jobs
 from app.domains.integrations.service import JOB_DISCOVER, JOB_SYNC
@@ -32,6 +33,8 @@ HANDLERS: Mapping[str, Handler] = {
     privacy.JOB_SHOP_REDACT: privacy.shop_redact,
     actions.JOB_EXECUTE: actions.execute,
     actions.JOB_RECONCILE: actions.reconcile,
+    actions.JOB_DRAFT_EXECUTE: draft_launch.execute,
+    actions.JOB_DRAFT_RECONCILE: draft_launch.reconcile,
 }
 
 

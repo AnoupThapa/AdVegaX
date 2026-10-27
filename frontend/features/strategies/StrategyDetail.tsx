@@ -22,6 +22,7 @@ import type { Organization } from "@/features/organizations/api";
 import { formatDateTime } from "@/features/organizations/options";
 import { useCreativeSets, useGenerateCreatives } from "@/features/creatives/api";
 import { creativeReasonText } from "@/features/creatives/labels";
+import { StrategyCampaigns } from "@/features/builder/StrategyCampaigns";
 import { canManageCreatives, canManageStrategies } from "@/features/organizations/permissions";
 import { ApiError, messageFor } from "@/lib/api/errors";
 import type { Availability } from "@/lib/format/availability";
@@ -487,6 +488,14 @@ function LoadedStrategy({ org, strategyId }: { org: Organization; strategyId: st
         <Actions org={org} strategy={strategy} onEdit={() => setEditing(true)} />
       ) : null}
       {!editing ? <StrategyCreatives org={org} strategy={strategy} /> : null}
+      {!editing ? (
+        <StrategyCampaigns
+          org={org}
+          strategyId={strategy.id}
+          ready={strategy.status === "ready"}
+          platforms={asPlan(strategy).platforms.map((p) => p.platform)}
+        />
+      ) : null}
       {editing ? (
         <EditForm org={org} strategy={strategy} onDone={() => setEditing(false)} />
       ) : (

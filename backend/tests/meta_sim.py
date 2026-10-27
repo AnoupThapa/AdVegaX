@@ -84,6 +84,7 @@ class AdAccount:
     # level ("account" | "campaign" | "adset" | "ad") → Meta rows; "_status" is the object's
     # effective status (stripped from answers).
     insights: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
+    pixels: list[dict[str, str]] = field(default_factory=list)  # datasets (10B)
 
     def row(self) -> dict[str, Any]:
         row: dict[str, Any] = {
@@ -124,6 +125,12 @@ class MetaSim:
     # "lose_answer" (made, then the answer is lost), "timeout" (not made), "server_error".
     mutations: list[dict[str, Any]] = field(default_factory=list)
     change_outcomes: list[str] = field(default_factory=list)
+    # The builder (10B): Pages the user may advertise as, uploaded images, creatives.
+    pages: list[dict[str, str]] = field(
+        default_factory=lambda: [{"id": "1122334455", "name": "Eve Zone"}]
+    )
+    images: dict[str, str] = field(default_factory=dict)
+    creatives: dict[str, dict[str, Any]] = field(default_factory=dict)
 
     # ------------------------------------------------------------------ setup helpers
     def add_user(self, user_id: str, *granted: str) -> MetaUser:
@@ -162,8 +169,10 @@ class MetaSim:
         assert query["client_id"] == APP_ID
         assert query["config_id"] in (CONFIG_ID, WRITE_CONFIG_ID)
         user = self.users.get(user_id)
-        if query["config_id"] == WRITE_CONFIG_ID and user and "ads_management" not in user.granted:
-            user.granted.append("ads_management")
+        if query["config_id"] == WRITE_CONFIG_ID and user:
+            for permission in ("ads_management", "pages_show_list"):
+                if permission not in user.granted:
+                    user.granted.append(permission)
         assert query["response_type"] == "code"
         assert query["code_challenge_method"] == "S256"
         assert "scope" not in query  # Login for Business: the configuration decides
@@ -275,6 +284,20 @@ class MetaSim:
             if owner is None or user_id not in owner.users:
                 return self.error(400, 100, 33)
             return self._edge(getattr(owner, edge.group(2)), query)
+        create = re.fullmatch(r"/(act_[0-9]+)/(adimages|campaigns|adsets|adcreatives|ads)", route)
+        if create and request.method == "POST":
+            return self._create(request, user_id, create.group(1), create.group(2))
+        if route == "/me/accounts" and request.method == "GET":
+            user = self.users.get(user_id, MetaUser(user_id))
+            if "pages_show_list" not in user.granted:
+                return self.error(400, 200)
+            return self._page(list(self.pages), query)
+        pixels = re.fullmatch(r"/(act_[0-9]+)/adspixels", route)
+        if pixels and request.method == "GET":
+            owner = self.accounts.get(pixels.group(1))
+            if owner is None or user_id not in owner.users:
+                return self.error(400, 100, 33)
+            return self._page(list(owner.pixels), query)
         node = re.fullmatch(r"/([0-9]+)", route)
         if node and (found := self._campaign(node.group(1), user_id)) is not None:
             return self._campaign_call(request, query, user_id, *found)
@@ -286,13 +309,77 @@ class MetaSim:
         return self.error(400, 100)
 
     def _campaign(self, campaign_id: str, user_id: str) -> tuple[AdAccount, dict[str, Any]] | None:
+        """A campaign, ad set or ad the user can reach (changes, 10A and 10B)."""
         for account in self.accounts.values():
             if user_id not in account.users:
                 continue
-            for row in account.campaigns:
+            for row in [*account.campaigns, *account.adsets, *account.ads]:
                 if row.get("id") == campaign_id:
                     return account, row
         return None
+
+    def _create(
+        self, request: httpx.Request, user_id: str, account_id: str, edge: str
+    ) -> httpx.Response:
+        """Creating in an ad account (10B): image, campaign, ad set, creative, ad."""
+        owner = self.accounts.get(account_id)
+        if owner is None or user_id not in owner.users:
+            return self.error(400, 100, 33)
+        user = self.users.get(user_id, MetaUser(user_id))
+        if "ads_management" not in user.granted:
+            return self.error(400, 200)
+        form = {k: v[0] for k, v in parse_qs(request.content.decode()).items()}
+        options = json.loads(form.pop("execution_options", "[]"))
+        if edge == "campaigns":
+            if form.get("objective") != "OUTCOME_SALES" or "special_ad_categories" not in form:
+                return self.error(400, 100)
+            if form.get("status") != "PAUSED":
+                return self.error(400, 100)  # AdVegaX always creates paused
+        if edge == "adsets" and not any(
+            c["id"] == form.get("campaign_id") for c in owner.campaigns
+        ):
+            return self.error(400, 100, 33)
+        if edge == "ads" and not any(a["id"] == form.get("adset_id") for a in owner.adsets):
+            return self.error(400, 100, 33)
+        if edge == "adcreatives":
+            spec = json.loads(form.get("object_story_spec", "{}"))
+            if spec.get("page_id") not in {p["id"] for p in self.pages}:
+                return self.error(400, 100)
+            if spec.get("link_data", {}).get("image_hash") not in self.images:
+                return self.error(400, 100)
+        if options == ["validate_only"]:
+            return httpx.Response(200, json={"success": True})
+        outcome = self.change_outcomes.pop(0) if self.change_outcomes else "ok"
+        if outcome == "timeout":
+            raise httpx.ReadTimeout("simulated timeout")
+        if outcome == "server_error":
+            return self.error(500, 2)
+        if outcome == "refuse":
+            return self.error(400, 100, 1885183)
+        self.issued += 1
+        new_id = str(700000000 + self.issued)
+        if edge == "adimages":
+            digest = hashlib.sha256(base64.b64decode(form["bytes"])).hexdigest()[:32]
+            self.images[digest] = form.get("name", "")
+            body: dict[str, Any] = {"images": {form.get("name", "image"): {"hash": digest}}}
+        else:
+            row = {"id": new_id, **form}
+            if edge in ("campaigns", "adsets", "ads"):
+                row["effective_status"] = row.get("status", "PAUSED")
+            if edge == "campaigns":
+                row.setdefault("lifetime_budget", "0")
+                owner.campaigns.append(row)
+            elif edge == "adsets":
+                owner.adsets.append(row)
+            elif edge == "ads":
+                owner.ads.append(row)
+            else:
+                self.creatives[new_id] = row
+            body = {"id": new_id}
+        self.mutations.append({"create": edge, "id": new_id})
+        if outcome == "lose_answer":
+            raise httpx.ReadTimeout("simulated lost answer")
+        return httpx.Response(200, json=body)
 
     def _campaign_call(
         self,
@@ -314,7 +401,10 @@ class MetaSim:
         options = json.loads(form.pop("execution_options", "[]"))
         changes: dict[str, str] = {}
         if "status" in form:
-            if form["status"] not in ("ACTIVE", "PAUSED") or row.get("status") == "DELETED":
+            if (
+                form["status"] not in ("ACTIVE", "PAUSED", "DELETED")
+                or row.get("status") == "DELETED"
+            ):
                 return self.error(400, 100)
             changes["status"] = form.pop("status")
         if "daily_budget" in form:
@@ -358,15 +448,21 @@ class MetaSim:
             "IN_PROCESS",
             "WITH_ISSUES",
         }  # Meta's default: no ARCHIVED or DELETED
+        contains = None
         if "filtering" in query:
-            (rule,) = json.loads(query["filtering"])
-            assert (rule["field"], rule["operator"]) == ("effective_status", "IN")
-            shown = set(rule["value"])
+            for rule in json.loads(query["filtering"]):
+                if rule["field"] == "name":  # the builder's look-up by reference (10B)
+                    assert rule["operator"] == "CONTAIN"
+                    contains = rule["value"]
+                    continue
+                assert (rule["field"], rule["operator"]) == ("effective_status", "IN")
+                shown = set(rule["value"])
         fields = set(re.sub(r"\{[^}]*\}", "", query.get("fields", "")).split(","))
         kept = [
             {k: v for k, v in r.items() if k.split("{")[0] in fields}
             for r in rows
-            if r.get("effective_status") in shown or "effective_status" not in r
+            if (r.get("effective_status") in shown or "effective_status" not in r)
+            and (contains is None or contains in str(r.get("name", "")))
         ]
         return self._page(kept, query)
 

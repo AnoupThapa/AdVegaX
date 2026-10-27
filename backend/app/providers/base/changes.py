@@ -103,3 +103,125 @@ def campaign_writer(provider: PlatformProvider) -> CampaignWriter | None:
     if not all(hasattr(provider, m) for m in ("read_campaign", "change_campaign", "write_scopes")):
         return None
     return cast(CampaignWriter, provider)
+
+
+# ------------------------------------------------------------------ campaign builder (10B)
+@dataclass(frozen=True)
+class Keyword:
+    text: str
+    match: str  # phrase | exact | broad
+
+
+@dataclass(frozen=True)
+class CampaignBuild:
+    """Everything one new campaign needs, checked by AdVegaX first (Phase 10B).
+
+    ``reference`` (e.g. ``AVX-7F3A2C``) is part of every name, so a lost answer is looked up
+    by it and never sent twice. Amounts are in the ad account's currency."""
+
+    reference: str
+    name: str
+    daily_budget: Decimal
+    locations: tuple[str, ...]  # ISO 3166-1 alpha-2 country codes from ``COUNTRIES``
+    landing_url: str
+    # Google (responsive search ad)
+    keywords: tuple[Keyword, ...] = ()
+    headlines: tuple[str, ...] = ()
+    descriptions: tuple[str, ...] = ()
+    path1: str = ""
+    path2: str = ""
+    maximize_conversions: bool = False  # otherwise maximize clicks
+    # Meta (single image ad)
+    primary_text: str = ""
+    headline: str = ""
+    description: str = ""
+    call_to_action: str = ""
+    image: bytes = field(default=b"", repr=False)
+    page_id: str = ""
+    pixel_id: str | None = None
+    age_min: int = 18
+    age_max: int = 65
+
+
+@dataclass(frozen=True)
+class BuildResult:
+    """The platform IDs created (``campaign``, ``budget``, ``ad_group`` / ``ad_set``,
+    ``creative``, ``ad``, ``image``) and what was sent (never a token)."""
+
+    ids: dict[str, str] = field(default_factory=dict)
+    request: dict[str, Any] = field(default_factory=dict)
+
+
+class BuildIncomplete(Exception):
+    """A launch stopped part-way (Meta builds step by step): ``ids`` were created — all
+    paused — and ``cause`` is why it stopped (an ``UnknownOutcomeError`` when the last step's
+    outcome is not known)."""
+
+    def __init__(self, ids: dict[str, str], cause: Exception) -> None:
+        super().__init__(getattr(cause, "code", "build_incomplete"))
+        self.ids = dict(ids)
+        self.cause = cause
+
+
+@dataclass(frozen=True)
+class MetaAsset:
+    """A Facebook Page or a pixel (dataset) a person may choose."""
+
+    id: str
+    name: str | None
+
+
+# Countries a campaign may target, with Google's geo target constant for each (the Google Ads
+# API's geo targets list; to confirm in Step 0). More are added on request.
+COUNTRIES: dict[str, int] = {
+    "AU": 2036,
+    "NZ": 2554,
+    "NP": 2524,
+    "IN": 2356,
+    "US": 2840,
+    "GB": 2826,
+    "CA": 2124,
+    "IE": 2372,
+    "SG": 2702,
+}
+
+
+class CampaignBuilder(CampaignWriter, Protocol):
+    def create_campaign(
+        self,
+        secrets: Secrets,
+        account: AdAccountRef,
+        build: CampaignBuild,
+        currency: str,
+        *,
+        validate_only: bool,
+    ) -> BuildResult:
+        """Create the whole campaign **paused**. Google: one all-or-nothing request. Meta:
+        step by step; a stop part-way raises ``BuildIncomplete`` with what exists."""
+        ...
+
+    def find_campaign(
+        self, secrets: Secrets, account: AdAccountRef, reference: str
+    ) -> dict[str, str]:
+        """The objects whose name carries ``reference`` (empty: none). Read only."""
+        ...
+
+    def go_live(
+        self, secrets: Secrets, account: AdAccountRef, ids: dict[str, str]
+    ) -> ChangeReceipt:
+        """Switch the created campaign (and Meta's ad set and ad) on."""
+        ...
+
+    def remove_objects(
+        self, secrets: Secrets, account: AdAccountRef, ids: dict[str, str]
+    ) -> ChangeReceipt:
+        """Remove what a launch created (it is paused)."""
+        ...
+
+
+def campaign_builder(provider: PlatformProvider) -> CampaignBuilder | None:
+    if campaign_writer(provider) is None:
+        return None
+    if not all(hasattr(provider, m) for m in ("create_campaign", "find_campaign", "go_live")):
+        return None
+    return cast(CampaignBuilder, provider)

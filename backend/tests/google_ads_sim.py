@@ -54,6 +54,16 @@ PERFORMANCE_LEVELS = {
 _BETWEEN = re.compile(r"segments\.date BETWEEN '(\d{4}-\d{2}-\d{2})' AND '(\d{4}-\d{2}-\d{2})'")
 _MUTATE = re.compile(r"/customers/([0-9]+)/(campaigns|campaignBudgets):mutate")
 _ONE_CAMPAIGN = re.compile(r"WHERE campaign\.id = ([0-9]+)")
+_NAME_LIKE = re.compile(r"WHERE campaign\.name LIKE '%([A-Z0-9-]+)%'")
+_BULK = re.compile(r"/customers/([0-9]+)/googleAds:mutate")
+_RESULT_OF = {
+    "campaignBudgetOperation": ("campaignBudgetResult", "campaignBudgets"),
+    "campaignOperation": ("campaignResult", "campaigns"),
+    "campaignCriterionOperation": ("campaignCriterionResult", "campaignCriteria"),
+    "adGroupOperation": ("adGroupResult", "adGroups"),
+    "adGroupCriterionOperation": ("adGroupCriterionResult", "adGroupCriteria"),
+    "adGroupAdOperation": ("adGroupAdResult", "adGroupAds"),
+}
 FAILURE_TYPE = f"type.googleapis.com/google.ads.googleads.{API_VERSION}.errors.GoogleAdsFailure"
 
 
@@ -74,6 +84,8 @@ class Customer:
     ads: list[dict[str, Any]] = field(default_factory=list)
     # Daily-figure rows per level ("account", "campaign", "ad_group", "ad"), see ``perf_row``.
     performance: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
+    # Keywords and locations created by the builder (10B).
+    criteria: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass
@@ -105,6 +117,7 @@ class GoogleAdsSim(GoogleOAuthSim):
     # "refuse" (a platform refusal) and "ignore" (answers success, changes nothing).
     mutations: list[dict[str, Any]] = field(default_factory=list)
     change_outcomes: list[str] = field(default_factory=list)
+    issued_ids: int = 0
 
     # ------------------------------------------------------------------ setup helpers
     def add_customer(self, customer_id: str, **kw: Any) -> Customer:
@@ -196,6 +209,9 @@ class GoogleAdsSim(GoogleOAuthSim):
             )
         if request.method != "POST" or not route.startswith("/customers/"):
             return httpx.Response(404, json={"error": {"code": 404, "status": "NOT_FOUND"}})
+        bulk = _BULK.fullmatch(route)
+        if bulk:
+            return self._bulk(request, sub, bulk.group(1))
         change = _MUTATE.fullmatch(route)
         if change:
             return self._mutate(request, sub, change.group(1), change.group(2))
@@ -218,6 +234,12 @@ class GoogleAdsSim(GoogleOAuthSim):
         resource = found.group(1) if found else ""
         if "segments.date" in query and resource in PERFORMANCE_LEVELS:
             rows = self.performance_rows(customer, PERFORMANCE_LEVELS[resource], query)
+        elif resource == "campaign" and (like := _NAME_LIKE.search(query)):
+            rows = [
+                {"campaign": dict(r["campaign"])}
+                for r in customer.campaigns
+                if like.group(1) in str(r.get("campaign", {}).get("name", ""))
+            ]
         elif resource == "campaign" and (one := _ONE_CAMPAIGN.search(query)):
             rows = self.campaign_with_budget(customer, one.group(1))
         elif resource == "customer_client":
@@ -269,8 +291,20 @@ class GoogleAdsSim(GoogleOAuthSim):
         operations = body.get("operations")
         if not isinstance(operations, list) or len(operations) != 1:
             return self.failure(400, {"requestError": "BAD_REQUEST"})
-        update, mask = operations[0].get("update"), operations[0].get("updateMask")
         rows = customer.campaigns if resources == "campaigns" else customer.budgets
+        if "remove" in operations[0]:
+            name = operations[0]["remove"]
+            key = "campaign" if resources == "campaigns" else "campaignBudget"
+            found = [r for r in rows if r.get(key, {}).get("resourceName") == name]
+            if not found:
+                return self.failure(400, {"mutateError": "RESOURCE_NOT_FOUND"})
+            if resources == "campaigns":
+                found[0][key]["status"] = "REMOVED"
+            else:
+                rows.remove(found[0])
+            self.mutations.append({"resources": resources, "remove": name})
+            return httpx.Response(200, json={"results": [{"resourceName": name}]})
+        update, mask = operations[0].get("update"), operations[0].get("updateMask")
         key = "campaign" if resources == "campaigns" else "campaignBudget"
         target = next(
             (
@@ -316,6 +350,98 @@ class GoogleAdsSim(GoogleOAuthSim):
         if outcome == "lose_answer":
             raise httpx.ReadTimeout("simulated lost answer")
         return httpx.Response(200, json={"results": [{"resourceName": update["resourceName"]}]})
+
+    def _bulk(self, request: httpx.Request, sub: str, customer_id: str) -> httpx.Response:
+        """``googleAds:mutate`` (10B): every operation or none; temporary resource names."""
+        login = request.headers.get("login-customer-id")
+        customer = self.customers.get(customer_id)
+        if customer is None or customer_id not in self.reachable(sub, login):
+            return self.failure(403, {"authorizationError": "USER_PERMISSION_DENIED"})
+        if not customer.test and self.token_access == "test":
+            return self.failure(403, {"authorizationError": "DEVELOPER_TOKEN_NOT_APPROVED"})
+        body = json.loads(request.content or b"{}")
+        operations = body.get("mutateOperations") or []
+        base = f"customers/{customer_id}"
+        names: dict[str, str] = {}
+        made: list[tuple[str, str, dict[str, Any]]] = []  # (operation, resources, row)
+        for op in operations:
+            ((kind, inner),) = op.items()
+            create = dict(inner.get("create") or {})
+            result, resources = _RESULT_OF[kind]
+            for key in ("campaignBudget", "campaign", "adGroup"):
+                if create.get(key) in names:
+                    create[key] = names[create[key]]
+                elif key in create and str(create[key]).endswith(("/-1", "/-2", "/-3")):
+                    return self.failure(400, {"mutateError": "RESOURCE_NOT_FOUND"})
+            self.issued_ids += 1
+            new_id = str(800000 + self.issued_ids)
+            name = f"{base}/{resources}/{new_id}"
+            if "resourceName" in create:
+                names[create["resourceName"]] = name
+            create["resourceName"] = name
+            create["id"] = new_id
+            if kind == "campaignOperation":
+                if "containsEuPoliticalAdvertising" not in create:
+                    return self.failure(400, {"fieldError": "REQUIRED"})
+                taken = {
+                    r["campaign"].get("name")
+                    for r in customer.campaigns
+                    if r["campaign"].get("status") != "REMOVED"
+                }
+                if create.get("name") in taken:
+                    return self.failure(400, {"campaignError": "DUPLICATE_CAMPAIGN_NAME"})
+            if kind == "adGroupAdOperation":
+                rsa = create.get("ad", {}).get("responsiveSearchAd", {})
+                urls = create.get("ad", {}).get("finalUrls") or []
+                if (
+                    not 3 <= len(rsa.get("headlines", [])) <= 15
+                    or not 2 <= len(rsa.get("descriptions", [])) <= 4
+                ):
+                    return self.failure(400, {"adError": "TOO_FEW_HEADLINES"})
+                if not urls or not str(urls[0]).startswith("https://"):
+                    return self.failure(400, {"adError": "INVALID_URL"})
+            made.append((kind, result, create))
+        if body.get("validateOnly"):
+            return httpx.Response(200, json={})
+        outcome = self.change_outcomes.pop(0) if self.change_outcomes else "ok"
+        if outcome == "timeout":
+            raise httpx.ReadTimeout("simulated timeout")
+        if outcome == "server_error":
+            return self.failure(500, {"internalError": "INTERNAL_ERROR"})
+        if outcome == "refuse":
+            return self.failure(400, {"campaignError": "CANNOT_CREATE_CAMPAIGN"})
+        for kind, _, row in made:
+            if kind == "campaignBudgetOperation":
+                customer.budgets.append({"campaignBudget": {**row, "period": "DAILY"}})
+            elif kind == "campaignOperation":
+                customer.campaigns.append({"campaign": row})
+            elif kind == "adGroupOperation":
+                customer.ad_groups.append({"adGroup": row})
+            elif kind == "adGroupAdOperation":
+                ad = {**row["ad"], "id": row["id"], "type": "RESPONSIVE_SEARCH_AD"}
+                customer.ads.append(
+                    {
+                        "adGroupAd": {
+                            "resourceName": row["resourceName"],
+                            "status": row["status"],
+                            "adGroup": row["adGroup"],
+                            "ad": ad,
+                        }
+                    }
+                )
+            else:
+                customer.criteria.append(row)
+        self.mutations.append({"resources": "googleAds", "operations": len(made)})
+        if outcome == "lose_answer":
+            raise httpx.ReadTimeout("simulated lost answer")
+        return httpx.Response(
+            200,
+            json={
+                "mutateOperationResponses": [
+                    {result: {"resourceName": row["resourceName"]}} for _, result, row in made
+                ]
+            },
+        )
 
     @staticmethod
     def performance_rows(customer: Customer, level: str, query: str) -> list[dict[str, Any]]:

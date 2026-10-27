@@ -630,6 +630,14 @@ Supersedes the `actions` outline in §15.
 
 `external_connections` gains `write_access_granted_at`, `write_access_granted_by` ("Allow changes").
 
+## 14D. Campaign builder — as built (Phase 10B, migration 0021; A29)
+
+**campaign_drafts** (tenant-owned, forced RLS; read, insert, update — never deleted) — `organization_id`, `strategy_id`, `creative_id`, `ad_account_id` (composite foreign keys within the organization), `platform`, `name`, `daily_budget` + `currency`, `locations` (JSONB country codes), `age_min`, `age_max`, `keywords` (JSONB `[{text, match}]`), `landing_url`, `meta_page_id`, `meta_pixel_id`, `declaration_confirmed_by` / `_at`, `reference` (`AVX-XXXXXX`, unique), `version`, `status` (`draft` | `launching` | `created` | `live` | `failed` | `archived`), `created_ids` (JSONB: the platform ids made, e.g. budget, campaign, ad group, ad set, creative, ad), `error_code`, `created_by`, `updated_by`, timestamps.
+
+**actions** gains `draft_id` (composite foreign key to `campaign_drafts`), `campaign_id` becomes nullable; `action_type` adds `campaign.create` | `campaign.go_live` | `campaign.remove_draft_objects`, which carry a `draft_id` (check constraints: a draft action has a draft, any other action has a campaign). **At most one open change per draft** (partial unique index, as for campaigns).
+
+**action_settings** gains `landing_domains` (JSONB list of host names, default `[]`).
+
 ## 14. AI Tables
 
 ### ai_models

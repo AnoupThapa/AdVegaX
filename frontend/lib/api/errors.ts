@@ -118,6 +118,10 @@ const MESSAGES: Readonly<Record<string, string>> = {
     "Changes are not allowed for this connection yet. An owner or admin can allow them on the connection's page.",
   ACTION_STALE: "The campaign changed since this was requested. Please request it again.",
   SECOND_PERSON_REQUIRED: "Someone other than the person who asked must approve this change.",
+  DRAFT_INVALID: "This campaign is not ready to launch yet.",
+  DRAFT_NOT_EDITABLE:
+    "This campaign is being launched or was launched, so it can no longer be changed here.",
+  CREATIVE_NOT_APPROVED: "Approve a creative for this platform first.",
   INTERNAL_ERROR: "Something went wrong on our side. Please try again.",
   SERVICE_UNAVAILABLE: "The service is temporarily unavailable. Please try again shortly.",
   HTTP_ERROR: "This request could not be completed. Please try again.",

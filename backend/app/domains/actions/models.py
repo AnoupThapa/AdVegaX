@@ -39,7 +39,16 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base, Timestamps, UUIDPrimaryKey
 
 TZ = DateTime(timezone=True)
-ACTION_TYPES = ("campaign.pause", "campaign.resume", "campaign.set_daily_budget")
+ACTION_TYPES = (
+    "campaign.pause",
+    "campaign.resume",
+    "campaign.set_daily_budget",
+    # Phase 10B: from a campaign draft (``draft_id``); there is no campaign row yet.
+    "campaign.create",
+    "campaign.go_live",
+    "campaign.remove_draft_objects",
+)
+DRAFT_ACTIONS = ("campaign.create", "campaign.go_live", "campaign.remove_draft_objects")
 ACTION_STATUSES = (
     "pending",
     "approved",
@@ -84,6 +93,25 @@ class Action(UUIDPrimaryKey, Timestamps, Base):
             name="fk_actions_campaign",
         ),
         ForeignKeyConstraint(
+            ["organization_id", "draft_id"],
+            ["campaign_drafts.organization_id", "campaign_drafts.id"],
+            ondelete="CASCADE",
+            name="fk_actions_draft",
+        ),
+        CheckConstraint(
+            "(draft_id IS NULL) <> (" + _in("action_type", DRAFT_ACTIONS) + ")",
+            name="draft_actions",
+        ),
+        CheckConstraint(
+            "campaign_id IS NOT NULL OR " + _in("action_type", DRAFT_ACTIONS), name="campaign"
+        ),
+        Index(
+            "uq_actions_one_open_per_draft",
+            "draft_id",
+            unique=True,
+            postgresql_where=text(_in("status", OPEN_STATUSES)),
+        ),
+        ForeignKeyConstraint(
             ["organization_id", "undo_of"],
             ["actions.organization_id", "actions.id"],
             name="fk_actions_undo_of",
@@ -113,7 +141,9 @@ class Action(UUIDPrimaryKey, Timestamps, Base):
     action_type: Mapped[str] = mapped_column(String(48), nullable=False)
     provider: Mapped[str] = mapped_column(String(32), nullable=False)
     ad_account_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
-    campaign_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
+    # The campaign changed (10A); null for a draft's actions (10B) — see ``draft_id``.
+    campaign_id: Mapped[uuid.UUID | None] = mapped_column()
+    draft_id: Mapped[uuid.UUID | None] = mapped_column()
     # The values of the change, e.g. {"daily_budget": "60.00"} in the account currency.
     params: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False)
@@ -195,5 +225,8 @@ class ActionSettings(Base):
     # The most a campaign may spend a day, in the organization's reporting currency.
     max_daily_budget: Mapped[Decimal | None] = mapped_column(Numeric(20, 6))
     max_daily_budget_currency: Mapped[str | None] = mapped_column(String(3))
+    # Phase 10B: the store's own web addresses landing pages may use, besides the platform
+    # domain (e.g. a Shopify store's custom domain), chosen by owners and admins.
+    landing_domains: Mapped[list[str]] = mapped_column(JSONB, nullable=False, server_default="[]")
     updated_by: Mapped[uuid.UUID | None] = mapped_column(_user())
     updated_at: Mapped[datetime] = mapped_column(TZ, nullable=False, server_default=func.now())

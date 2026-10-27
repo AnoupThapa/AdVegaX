@@ -33,7 +33,14 @@ from urllib.parse import urlencode
 
 from app.core.clock import Clock
 from app.providers.base.capabilities import Capability, ProviderCapabilities
-from app.providers.base.changes import CampaignChange, CampaignSnapshot, ChangeReceipt
+from app.providers.base.changes import (
+    BuildResult,
+    CampaignBuild,
+    CampaignChange,
+    CampaignSnapshot,
+    ChangeReceipt,
+    MetaAsset,
+)
 from app.providers.base.errors import (
     InvalidConnectParamsError,
     InvalidRequestError,
@@ -219,7 +226,9 @@ class MetaAdsProvider:
         return ConnectResult(
             secrets={"access_token": token},
             # The change permission is kept when granted (Phase 10A, "Allow changes").
-            granted_scopes=tuple(sorted(set(granted) & (WANTED_SCOPES | writes.WRITE_SCOPES))),
+            granted_scopes=tuple(
+                sorted(set(granted) & (WANTED_SCOPES | writes.WRITE_SCOPES | {writes.PAGES_SCOPE}))
+            ),
             account_label="Meta",
             token_expires_in_seconds=_positive_int(long.get("expires_in")),
             external_account_id=info["user_id"],
@@ -427,6 +436,46 @@ class MetaAdsProvider:
         return writes.change_campaign(
             self.graph, token, snapshot, change, currency, validate_only=validate_only
         )
+
+    # ------------------------------------------------------------------ builder (10B)
+    def create_campaign(
+        self,
+        secrets: Secrets,
+        account: AdAccountRef,
+        build: CampaignBuild,
+        currency: str,
+        *,
+        validate_only: bool,
+    ) -> BuildResult:
+        """Image, campaign, ad set, creative and ad, each paused."""
+        token = str(secrets.get("access_token", ""))
+        return writes.create_campaign(
+            self.graph, token, account.external_id, build, currency, validate_only=validate_only
+        )
+
+    def find_campaign(
+        self, secrets: Secrets, account: AdAccountRef, reference: str
+    ) -> dict[str, str]:
+        token = str(secrets.get("access_token", ""))
+        return writes.find_campaign(self.graph, token, account.external_id, reference)
+
+    def go_live(
+        self, secrets: Secrets, account: AdAccountRef, ids: dict[str, str]
+    ) -> ChangeReceipt:
+        del account
+        return writes.go_live(self.graph, str(secrets.get("access_token", "")), ids)
+
+    def remove_objects(
+        self, secrets: Secrets, account: AdAccountRef, ids: dict[str, str]
+    ) -> ChangeReceipt:
+        del account
+        return writes.remove_objects(self.graph, str(secrets.get("access_token", "")), ids)
+
+    def list_pages(self, secrets: Secrets) -> list[MetaAsset]:
+        return writes.pages(self.graph, str(secrets.get("access_token", "")))
+
+    def list_pixels(self, secrets: Secrets, account: AdAccountRef) -> list[MetaAsset]:
+        return writes.pixels(self.graph, str(secrets.get("access_token", "")), account.external_id)
 
 
 _ALL_STATUSES = json.dumps(

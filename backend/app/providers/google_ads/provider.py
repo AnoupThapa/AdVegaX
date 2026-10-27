@@ -24,7 +24,14 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from app.core.clock import Clock
 from app.providers.base.capabilities import Capability, ProviderCapabilities
-from app.providers.base.changes import CampaignChange, CampaignSnapshot, ChangeReceipt
+from app.providers.base.changes import (
+    BuildResult,
+    CampaignBuild,
+    CampaignChange,
+    CampaignSnapshot,
+    ChangeKind,
+    ChangeReceipt,
+)
 from app.providers.base.errors import (
     InvalidConnectParamsError,
     InvalidRequestError,
@@ -34,6 +41,7 @@ from app.providers.base.interfaces import Secrets
 from app.providers.base.types import (
     AdAccountRef,
     AdAccountState,
+    AdEntityStatus,
     AdLevel,
     AdPerformanceRecord,
     AdStructureRecord,
@@ -394,6 +402,43 @@ class GoogleAdsProvider:
         return writes.change_campaign(
             self.ads, token, account, snapshot, change, validate_only=validate_only
         )
+
+    # ------------------------------------------------------------------ builder (10B)
+    def create_campaign(
+        self,
+        secrets: Secrets,
+        account: AdAccountRef,
+        build: CampaignBuild,
+        currency: str,
+        *,
+        validate_only: bool,
+    ) -> BuildResult:
+        """The whole Search campaign, paused, in one all-or-nothing request."""
+        del currency
+        token = str(secrets.get("access_token", ""))
+        return writes.create_campaign(self.ads, token, account, build, validate_only=validate_only)
+
+    def find_campaign(
+        self, secrets: Secrets, account: AdAccountRef, reference: str
+    ) -> dict[str, str]:
+        token = str(secrets.get("access_token", ""))
+        return writes.find_campaign(self.ads, token, account, reference)
+
+    def go_live(
+        self, secrets: Secrets, account: AdAccountRef, ids: dict[str, str]
+    ) -> ChangeReceipt:
+        """Only the campaign was created paused: switching it on starts it."""
+        token = str(secrets.get("access_token", ""))
+        paused = CampaignSnapshot(external_id=ids.get("campaign", ""), status=AdEntityStatus.PAUSED)
+        return writes.change_campaign(
+            self.ads, token, account, paused, CampaignChange(ChangeKind.RESUME), validate_only=False
+        )
+
+    def remove_objects(
+        self, secrets: Secrets, account: AdAccountRef, ids: dict[str, str]
+    ) -> ChangeReceipt:
+        token = str(secrets.get("access_token", ""))
+        return writes.remove_objects(self.ads, token, account, ids)
 
 
 def _positive_int(value: Any) -> int | None:

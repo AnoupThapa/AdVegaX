@@ -242,6 +242,30 @@ class SecondPersonRequired(AppError):
     message = "Someone other than the requester must approve this change."
 
 
+class DraftInvalid(AppError):
+    """Phase 10B: a campaign draft does not pass the builder's checks; ``details`` say why."""
+
+    status_code = 422
+    code = "DRAFT_INVALID"
+    message = "This campaign is not ready to launch yet."
+
+
+class DraftNotEditable(AppError):
+    """Phase 10B: the draft is being launched or was launched; it can no longer change."""
+
+    status_code = 409
+    code = "DRAFT_NOT_EDITABLE"
+    message = "This campaign can no longer be changed here."
+
+
+class CreativeNotApproved(AppError):
+    """Phase 10B: only approved creatives become campaigns."""
+
+    status_code = 409
+    code = "CREATIVE_NOT_APPROVED"
+    message = "Approve a creative for this platform first."
+
+
 def error_body(
     code: str, message: str, details: list[dict[str, Any]] | None = None
 ) -> dict[str, Any]:

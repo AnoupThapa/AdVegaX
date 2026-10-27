@@ -10,6 +10,14 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 ActionType = Literal["campaign.pause", "campaign.resume", "campaign.set_daily_budget"]
+AnyActionType = Literal[
+    "campaign.pause",
+    "campaign.resume",
+    "campaign.set_daily_budget",
+    "campaign.create",
+    "campaign.go_live",
+    "campaign.remove_draft_objects",
+]
 ActionStatus = Literal[
     "pending",
     "approved",
@@ -87,6 +95,18 @@ class CampaignRefOut(BaseModel):
     ad_account_name: str | None
 
 
+class DraftRefOut(BaseModel):
+    """A campaign draft's change (Phase 10B): the campaign it creates or switches on."""
+
+    id: uuid.UUID
+    name: str
+    platform: str
+    ad_account_id: uuid.UUID
+    ad_account_name: str | None
+    strategy_id: uuid.UUID
+    status: str
+
+
 class ActionEventOut(BaseModel):
     from_status: str | None
     status: str
@@ -98,9 +118,10 @@ class ActionEventOut(BaseModel):
 
 class ActionOut(BaseModel):
     id: uuid.UUID
-    action_type: ActionType
+    action_type: AnyActionType
     provider: str
-    campaign: CampaignRefOut
+    campaign: CampaignRefOut | None  # null for a draft's change (Phase 10B): see ``draft``
+    draft: DraftRefOut | None = None
     currency: str
     currency_minor_units: int
     params: dict[str, str]
@@ -138,11 +159,15 @@ class ActionSettingsIn(BaseModel):
     # The most a campaign may spend a day, in the organization's reporting currency; null =
     # not chosen (budget changes are refused until it is).
     max_daily_budget: Decimal | None = Field(default=None, gt=0, lt=Decimal(10) ** 12)
+    # Phase 10B: the store's own web addresses landing pages may use (e.g. a Shopify store's
+    # custom domain), besides the platform's store address. Null keeps what is saved.
+    landing_domains: list[str] | None = Field(default=None, max_length=10)
 
 
 class ActionSettingsOut(BaseModel):
     engine_enabled: bool  # the installation's switch (ACTIONS_ENABLED)
     paused: bool
+    landing_domains: list[str] = Field(default_factory=list)
     require_second_person: bool
     max_daily_budget: str | None
     currency: str  # the organization's reporting currency

@@ -221,8 +221,12 @@ def test_meta_budget_units_and_outcomes(graph, token, msim):
 
 def test_the_meta_change_path_is_guarded(graph, token):
     with pytest.raises(ValueError, match="refused Meta call"):
-        graph._send("POST", "/act_1/campaigns", token=token, form={}, change=True)
+        graph._send("POST", "/act_1/users", token=token, form={}, change=True)
     with pytest.raises(ValueError, match="refused Meta call"):
         graph._send("POST", "/120001", token=token, form={})  # not through the change path
     with pytest.raises(InvalidRequestError):
         graph.post_change(token, "act_1", {})
+    with pytest.raises(ValueError, match="refused Meta call"):
+        graph._send("DELETE", "/act_1/campaigns", token=token, form={}, change=True)
+    with pytest.raises(InvalidRequestError):
+        graph.post_create(token, "act_1", "users", {})

@@ -14,6 +14,7 @@ from app.domains.advertising.models import (
 from app.domains.ai.models import AiModel, AiRun, CampaignStrategy, PromptVersion
 from app.domains.analytics.models import AnalyticsDaily, AnalyticsProperty, AnalyticsSyncState
 from app.domains.audit.models import AuditLog, SecurityEvent
+from app.domains.builder.models import CampaignDraft
 from app.domains.commerce.models import (
     CommerceSyncState,
     Order,
@@ -59,6 +60,7 @@ __all__ = [
     "AnalyticsSyncState",
     "AuditLog",
     "Base",
+    "CampaignDraft",
     "CampaignStrategy",
     "CommerceSyncState",
     "Creative",

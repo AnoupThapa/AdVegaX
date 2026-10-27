@@ -543,6 +543,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/{organization_id}/ad-accounts/{ad_account_id}/meta-pages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Meta Pages
+         * @description The Facebook Pages the connection's person can advertise as.
+         */
+        get: operations["list_meta_pages_api_v1_organizations__organization_id__ad_accounts__ad_account_id__meta_pages_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/ad-accounts/{ad_account_id}/meta-pixels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Meta Pixels
+         * @description The ad account's pixels (datasets).
+         */
+        get: operations["list_meta_pixels_api_v1_organizations__organization_id__ad_accounts__ad_account_id__meta_pixels_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizations/{organization_id}/ad-accounts/{ad_account_id}/metrics/daily": {
         parameters: {
             query?: never;
@@ -993,6 +1033,151 @@ export interface paths {
         get: operations["audit_logs_api_v1_organizations__organization_id__audit_logs_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/campaign-drafts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Campaign Drafts
+         * @description Drafts, newest first (archived ones left out).
+         */
+        get: operations["list_campaign_drafts_api_v1_organizations__organization_id__campaign_drafts_get"];
+        put?: never;
+        /**
+         * Create Campaign Draft
+         * @description Prepare one platform's campaign from a ready strategy and an approved creative.
+         *     Errors: DRAFT_INVALID, CREATIVE_NOT_APPROVED.
+         */
+        post: operations["create_campaign_draft_api_v1_organizations__organization_id__campaign_drafts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/campaign-drafts/{draft_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Campaign Draft */
+        get: operations["get_campaign_draft_api_v1_organizations__organization_id__campaign_drafts__draft_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Campaign Draft
+         * @description Edit until launched; every change asks for the declarations again.
+         *     Errors: DRAFT_NOT_EDITABLE, CREATIVE_NOT_APPROVED.
+         */
+        patch: operations["update_campaign_draft_api_v1_organizations__organization_id__campaign_drafts__draft_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/campaign-drafts/{draft_id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Archive Campaign Draft */
+        post: operations["archive_campaign_draft_api_v1_organizations__organization_id__campaign_drafts__draft_id__archive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/campaign-drafts/{draft_id}/clean-up": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Clean Up Campaign Draft
+         * @description Request removing what a failed launch created (it is paused).
+         */
+        post: operations["clean_up_campaign_draft_api_v1_organizations__organization_id__campaign_drafts__draft_id__clean_up_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/campaign-drafts/{draft_id}/go-live": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Go Live Campaign Draft
+         * @description Request switching the created campaign on — approved by an owner or admin.
+         */
+        post: operations["go_live_campaign_draft_api_v1_organizations__organization_id__campaign_drafts__draft_id__go_live_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/campaign-drafts/{draft_id}/launch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Launch Campaign Draft
+         * @description Request creating the campaign — everything paused — approved by an owner or admin.
+         *     Errors: DRAFT_INVALID, ACTION_DUPLICATE, ACTION_NOT_ALLOWED, ACTIONS_DISABLED.
+         */
+        post: operations["launch_campaign_draft_api_v1_organizations__organization_id__campaign_drafts__draft_id__launch_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/campaign-drafts/{draft_id}/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Validate Campaign Draft
+         * @description Every check and the platform's test; nothing is created.
+         */
+        post: operations["validate_campaign_draft_api_v1_organizations__organization_id__campaign_drafts__draft_id__validate_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1703,8 +1888,8 @@ export interface components {
              * Action Type
              * @enum {string}
              */
-            action_type: "campaign.pause" | "campaign.resume" | "campaign.set_daily_budget";
-            campaign: components["schemas"]["CampaignRefOut"];
+            action_type: "campaign.pause" | "campaign.resume" | "campaign.set_daily_budget" | "campaign.create" | "campaign.go_live" | "campaign.remove_draft_objects";
+            campaign: components["schemas"]["CampaignRefOut"] | null;
             /** Can Undo */
             can_undo: boolean;
             /** Checks */
@@ -1724,6 +1909,7 @@ export interface components {
             decided_by: string | null;
             /** Decision Reason */
             decision_reason: string | null;
+            draft?: components["schemas"]["DraftRefOut"] | null;
             dry_run: components["schemas"]["DryRunOut"] | null;
             /** Error Code */
             error_code: string | null;
@@ -1804,6 +1990,8 @@ export interface components {
         };
         /** ActionSettingsIn */
         ActionSettingsIn: {
+            /** Landing Domains */
+            landing_domains?: string[] | null;
             /** Max Daily Budget */
             max_daily_budget?: number | string | null;
             /** Paused */
@@ -1827,6 +2015,8 @@ export interface components {
             engine_enabled: boolean;
             /** Increase Percent */
             increase_percent: number;
+            /** Landing Domains */
+            landing_domains?: string[];
             /** Max Daily Budget */
             max_daily_budget: string | null;
             /** Paused */
@@ -3090,6 +3280,28 @@ export interface components {
              */
             strategy_id: string;
         };
+        /** CreativeSummaryOut */
+        CreativeSummaryOut: {
+            /** Angle */
+            angle: string;
+            /** Asset Id */
+            asset_id: string | null;
+            /** Content */
+            content: {
+                [key: string]: unknown;
+            };
+            /** Format */
+            format: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Status */
+            status: string;
+            /** Version */
+            version: number;
+        };
         /**
          * CreativeUpdateIn
          * @description An edit: the whole content as edited and/or the image (Meta). Creates a new version.
@@ -3187,6 +3399,190 @@ export interface components {
             taxes: string | null;
             /** Total Sales */
             total_sales: string | null;
+        };
+        /**
+         * DraftCreateIn
+         * @description A draft for one platform of a ready strategy; AdVegaX fills in everything it can.
+         */
+        DraftCreateIn: {
+            /** Ad Account Id */
+            ad_account_id?: string | null;
+            /** Creative Id */
+            creative_id?: string | null;
+            /**
+             * Platform
+             * @enum {string}
+             */
+            platform: "google_ads" | "meta_ads";
+            /**
+             * Strategy Id
+             * Format: uuid
+             */
+            strategy_id: string;
+        };
+        /** DraftOut */
+        DraftOut: {
+            /**
+             * Ad Account Id
+             * Format: uuid
+             */
+            ad_account_id: string;
+            /** Ad Account Name */
+            ad_account_name: string | null;
+            /** Age Max */
+            age_max: number;
+            /** Age Min */
+            age_min: number;
+            /** Bidding */
+            bidding: string;
+            /** Campaign Id */
+            campaign_id: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created Ids */
+            created_ids: {
+                [key: string]: string;
+            };
+            creative: components["schemas"]["CreativeSummaryOut"];
+            /** Currency */
+            currency: string;
+            /** Currency Minor Units */
+            currency_minor_units: number;
+            /** Daily Budget */
+            daily_budget: string;
+            /** Declarations Confirmed */
+            declarations_confirmed: boolean;
+            /** Editable */
+            editable: boolean;
+            /** Error Code */
+            error_code: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Keywords */
+            keywords: {
+                [key: string]: string;
+            }[];
+            /** Landing Url */
+            landing_url: string;
+            /** Locations */
+            locations: string[];
+            /** Meta Page Id */
+            meta_page_id: string | null;
+            /** Meta Pixel Id */
+            meta_pixel_id: string | null;
+            /** Monthly Estimate */
+            monthly_estimate: string;
+            /** Name */
+            name: string;
+            /** Open Action Id */
+            open_action_id: string | null;
+            /**
+             * Platform
+             * @enum {string}
+             */
+            platform: "google_ads" | "meta_ads";
+            /** Product Title */
+            product_title: string | null;
+            /** Reference */
+            reference: string;
+            /** Status */
+            status: string;
+            /**
+             * Strategy Id
+             * Format: uuid
+             */
+            strategy_id: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Version */
+            version: number;
+        };
+        /**
+         * DraftPreviewOut
+         * @description Every check and the platform's test of the draft; nothing is created.
+         */
+        DraftPreviewOut: {
+            /** Budget Limits */
+            budget_limits: {
+                [key: string]: string | null;
+            };
+            /** Checks */
+            checks: components["schemas"]["ActionCheckOut"][];
+            draft: components["schemas"]["DraftOut"];
+            dry_run: components["schemas"]["DryRunOut"];
+            /** Passed */
+            passed: boolean;
+        };
+        /**
+         * DraftRefOut
+         * @description A campaign draft's change (Phase 10B): the campaign it creates or switches on.
+         */
+        DraftRefOut: {
+            /**
+             * Ad Account Id
+             * Format: uuid
+             */
+            ad_account_id: string;
+            /** Ad Account Name */
+            ad_account_name: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Platform */
+            platform: string;
+            /** Status */
+            status: string;
+            /**
+             * Strategy Id
+             * Format: uuid
+             */
+            strategy_id: string;
+        };
+        /** DraftUpdateIn */
+        DraftUpdateIn: {
+            /** Age Max */
+            age_max?: number | null;
+            /** Age Min */
+            age_min?: number | null;
+            /**
+             * Confirm Declarations
+             * @default false
+             */
+            confirm_declarations: boolean;
+            /** Creative Id */
+            creative_id?: string | null;
+            /** Daily Budget */
+            daily_budget?: number | string | null;
+            /** Keywords */
+            keywords?: components["schemas"]["KeywordIn"][] | null;
+            /** Landing Url */
+            landing_url?: string | null;
+            /** Locations */
+            locations?: string[] | null;
+            /** Meta Page Id */
+            meta_page_id?: string | null;
+            /** Meta Pixel Id */
+            meta_pixel_id?: string | null;
+            /** Name */
+            name?: string | null;
+            /**
+             * Remove Pixel
+             * @default false
+             */
+            remove_pixel: boolean;
         };
         /**
          * DryRunOut
@@ -3311,6 +3707,16 @@ export interface components {
         /** Envelope[DailyMetricsOut] */
         Envelope_DailyMetricsOut_: {
             data: components["schemas"]["DailyMetricsOut"];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[DraftOut] */
+        Envelope_DraftOut_: {
+            data: components["schemas"]["DraftOut"];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[DraftPreviewOut] */
+        Envelope_DraftPreviewOut_: {
+            data: components["schemas"]["DraftPreviewOut"];
             meta: components["schemas"]["Meta"];
         };
         /** Envelope[FunnelOut] */
@@ -3444,6 +3850,12 @@ export interface components {
             data: components["schemas"]["CreativeSetSummaryOut"][];
             meta: components["schemas"]["Meta"];
         };
+        /** Envelope[list[DraftOut]] */
+        Envelope_list_DraftOut__: {
+            /** Data */
+            data: components["schemas"]["DraftOut"][];
+            meta: components["schemas"]["Meta"];
+        };
         /** Envelope[list[InvitationOut]] */
         Envelope_list_InvitationOut__: {
             /** Data */
@@ -3460,6 +3872,12 @@ export interface components {
         Envelope_list_MemberOut__: {
             /** Data */
             data: components["schemas"]["MemberOut"][];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[list[MetaAssetOut]] */
+        Envelope_list_MetaAssetOut__: {
+            /** Data */
+            data: components["schemas"]["MetaAssetOut"][];
             meta: components["schemas"]["Meta"];
         };
         /** Envelope[list[OrganizationOut]] */
@@ -3682,6 +4100,17 @@ export interface components {
             /** Status */
             status: string;
         };
+        /** KeywordIn */
+        KeywordIn: {
+            /**
+             * Match
+             * @default phrase
+             * @enum {string}
+             */
+            match: "phrase" | "exact" | "broad";
+            /** Text */
+            text: string;
+        };
         /** LandingPageFunnelOut */
         LandingPageFunnelOut: {
             /** Landing Page */
@@ -3846,6 +4275,13 @@ export interface components {
         Meta: {
             /** Request Id */
             request_id: string | null;
+        };
+        /** MetaAssetOut */
+        MetaAssetOut: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string | null;
         };
         /** MetricDefinitionOut */
         MetricDefinitionOut: {
@@ -5597,6 +6033,70 @@ export interface operations {
             };
         };
     };
+    list_meta_pages_api_v1_organizations__organization_id__ad_accounts__ad_account_id__meta_pages_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ad_account_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_list_MetaAssetOut__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_meta_pixels_api_v1_organizations__organization_id__ad_accounts__ad_account_id__meta_pixels_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ad_account_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_list_MetaAssetOut__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     ad_account_daily_metrics_api_v1_organizations__organization_id__ad_accounts__ad_account_id__metrics_daily_get: {
         parameters: {
             query?: {
@@ -6409,6 +6909,302 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ListEnvelope_AuditLogOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_campaign_drafts_api_v1_organizations__organization_id__campaign_drafts_get: {
+        parameters: {
+            query?: {
+                strategy_id?: string | null;
+            };
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_list_DraftOut__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_campaign_draft_api_v1_organizations__organization_id__campaign_drafts_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DraftCreateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_DraftOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_campaign_draft_api_v1_organizations__organization_id__campaign_drafts__draft_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_DraftOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_campaign_draft_api_v1_organizations__organization_id__campaign_drafts__draft_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DraftUpdateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_DraftOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    archive_campaign_draft_api_v1_organizations__organization_id__campaign_drafts__draft_id__archive_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_DraftOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    clean_up_campaign_draft_api_v1_organizations__organization_id__campaign_drafts__draft_id__clean_up_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ActionOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    go_live_campaign_draft_api_v1_organizations__organization_id__campaign_drafts__draft_id__go_live_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ActionOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    launch_campaign_draft_api_v1_organizations__organization_id__campaign_drafts__draft_id__launch_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ActionOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    validate_campaign_draft_api_v1_organizations__organization_id__campaign_drafts__draft_id__validate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_DraftPreviewOut_"];
                 };
             };
             /** @description Validation Error */

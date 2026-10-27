@@ -133,11 +133,13 @@ export function ChangesPage() {
                     {a.undo_of ? <span className={styles.muted}> (undo)</span> : null}
                   </th>
                   <td>
-                    {a.campaign.name}
+                    {a.campaign?.name ?? a.draft?.name}
                     <br />
                     <span className={styles.muted}>
                       {a.provider === "meta_ads" ? "Meta" : "Google Ads"}
-                      {a.campaign.ad_account_name ? ` · ${a.campaign.ad_account_name}` : ""}
+                      {(a.campaign ?? a.draft)?.ad_account_name
+                        ? ` · ${(a.campaign ?? a.draft)?.ad_account_name}`
+                        : ""}
                     </span>
                   </td>
                   <td>
@@ -341,11 +343,20 @@ function Detail({ actionId }: { actionId: string }) {
       <dl className={`${styles.panel} ${styles.facts}`}>
         <dt>Campaign</dt>
         <dd>
-          <Link href={`/orgs/${org.id}/advertising/campaigns/${a.campaign.id}`}>
-            {a.campaign.name}
+          <Link
+            href={
+              a.campaign
+                ? `/orgs/${org.id}/advertising/campaigns/${a.campaign.id}`
+                : `/orgs/${org.id}/builder/${a.draft?.id ?? ""}`
+            }
+          >
+            {a.campaign?.name ?? a.draft?.name}
           </Link>{" "}
           ({a.provider === "meta_ads" ? "Meta" : "Google Ads"}
-          {a.campaign.ad_account_name ? `, ${a.campaign.ad_account_name}` : ""})
+          {(a.campaign ?? a.draft)?.ad_account_name
+            ? `, ${(a.campaign ?? a.draft)?.ad_account_name}`
+            : ""}
+          )
         </dd>
         <State title="Before" state={a.previous} money={money} />
         <State title="Read back after" state={a.observed} money={money} />

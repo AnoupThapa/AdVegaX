@@ -54,6 +54,7 @@ function SettingsForm({
   const [paused, setPaused] = useState(settings.paused);
   const [second, setSecond] = useState(settings.require_second_person);
   const [maximum, setMaximum] = useState(settings.max_daily_budget ?? "");
+  const [domains, setDomains] = useState((settings.landing_domains ?? []).join(", "));
   const submit = (event: FormEvent) => {
     event.preventDefault();
     setSaved(false);
@@ -62,6 +63,10 @@ function SettingsForm({
         paused,
         require_second_person: second,
         max_daily_budget: maximum.trim() ? maximum.trim() : null,
+        landing_domains: domains
+          .split(/[\s,]+/)
+          .map((d) => d.trim())
+          .filter(Boolean),
       },
       { onSuccess: () => setSaved(true) },
     );
@@ -111,6 +116,13 @@ function SettingsForm({
           value={maximum}
           readOnly={!manage}
           onChange={(e) => setMaximum(e.target.value)}
+        />
+        <TextField
+          label="Your store's web addresses for landing pages"
+          hint="For example evezone.com.au — needed when your store uses its own domain. Separate several with commas."
+          value={domains}
+          readOnly={!manage}
+          onChange={(e) => setDomains(e.target.value)}
         />
         {save.error ? (
           <Alert

@@ -180,12 +180,19 @@ def test_meta_asks_for_write_permissions_only_in_its_write_module():
 # ------------------------------------------------------------------ the Action Engine (10A)
 # PHASE_10A_PLAN §8, acceptance criterion 2: no code path changes a platform outside the engine.
 def test_platform_writes_exist_only_in_the_write_modules_and_reach_only_the_engine():
-    writers = {"change_campaign", "post_change"}
+    writers = {
+        "change_campaign",
+        "post_change",
+        "post_create",
+        "create_campaign",
+        "go_live",
+        "remove_objects",
+    }
     offenders: dict[str, list[str]] = {}
     for path, src in _sources():
         rel = path.relative_to(APP).as_posix()
         # The write modules and the provider methods that hand over to them.
-        allowed = rel in WRITE_MODULES or rel.startswith("domains/actions/")
+        allowed = rel in WRITE_MODULES or rel.startswith(("domains/actions/", "domains/builder/"))
         allowed = allowed or rel in {
             "providers/google_ads/provider.py",
             "providers/meta_ads/provider.py",
@@ -208,7 +215,11 @@ def test_platform_writes_exist_only_in_the_write_modules_and_reach_only_the_engi
     }
     assert importers == {"providers/google_ads/provider.py", "providers/meta_ads/provider.py"}
     # The clients' change entry points are used only by the write modules.
-    users = {p.relative_to(APP).as_posix() for p, src in _sources() if ".post_change(" in src}
+    users = {
+        p.relative_to(APP).as_posix()
+        for p, src in _sources()
+        if ".post_change(" in src or ".post_create(" in src
+    }
     assert users == WRITE_MODULES
     # Meta: the change path is the only ``_send(…, change=True)`` and it stays guarded.
     meta = (APP / "providers" / "meta_ads" / "client.py").read_text(encoding="utf-8")
@@ -218,11 +229,14 @@ def test_platform_writes_exist_only_in_the_write_modules_and_reach_only_the_engi
     callers = {
         p.relative_to(APP).as_posix()
         for p, src in _sources()
-        if re.search(r"\.change_campaign\(", src)
+        if re.search(r"\.(change_campaign|create_campaign|go_live|remove_objects)\(", src)
     }
     assert callers <= {
         "domains/actions/engine.py",
         "domains/actions/service.py",
+        "domains/builder/launch.py",
+        "domains/builder/router.py",  # calls the builder service, not a provider
+        "domains/builder/service.py",
         "providers/google_ads/provider.py",
         "providers/meta_ads/provider.py",
     }

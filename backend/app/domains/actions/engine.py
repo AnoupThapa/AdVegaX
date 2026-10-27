@@ -56,6 +56,18 @@ logger = logging.getLogger("advegax.actions")
 
 JOB_EXECUTE = "action_execute"
 JOB_RECONCILE = "action_reconcile"
+# A campaign draft's launch, go-live and cleanup (Phase 10B, ``app/domains/builder/launch.py``).
+JOB_DRAFT_EXECUTE = "draft_action_execute"
+JOB_DRAFT_RECONCILE = "draft_action_reconcile"
+
+
+def job_for(action: Action, kind: str) -> str:
+    """The job that sends (``execute``) or looks up (``reconcile``) this change."""
+    if action.draft_id is not None:
+        return JOB_DRAFT_EXECUTE if kind == "execute" else JOB_DRAFT_RECONCILE
+    return JOB_EXECUTE if kind == "execute" else JOB_RECONCILE
+
+
 WORKER = Actor("worker", None)
 
 TRANSITIONS: dict[str, frozenset[str]] = {
@@ -110,7 +122,8 @@ def transition(
         after={"status": to},
         metadata={
             "action_type": action.action_type,
-            "campaign_id": str(action.campaign_id),
+            "campaign_id": str(action.campaign_id) if action.campaign_id else None,
+            "draft_id": str(action.draft_id) if action.draft_id else None,
             "provider": action.provider,
             **(detail or {}),
         },
@@ -198,6 +211,8 @@ def _context(
             raise JobSubjectGoneError()
         if action.status != wanted:
             return None  # decided, cancelled or already handled (a repeated job)
+        if action.campaign_id is None:
+            raise JobSubjectGoneError()  # a draft's change: ``builder/launch.py`` sends it
         target = load_target(session, org_id, action.campaign_id)
         writer = writer_for(rt, action.provider)
         if writer is None:
@@ -478,20 +493,20 @@ def sweep(rt: Runtime) -> int:
                 if not switches_on(rt, session, org_id):
                     continue
                 action.updated_at = now
-                schedule(session, rt, action, JOB_EXECUTE)
+                schedule(session, rt, action, job_for(action, "execute"))
             elif status == "submitting":
                 if updated_at > now - rt.settings.ACTIONS_LOCK_TTL:
                     continue
                 action.error_code = "outcome_unknown"
                 transition(session, rt, action, "unknown", detail={"reason": "worker_stopped"})
-                schedule(session, rt, action, JOB_RECONCILE)
+                schedule(session, rt, action, job_for(action, "reconcile"))
             else:
                 if action.reconcile_attempts >= rt.settings.ACTIONS_RECONCILE_ATTEMPTS:
                     continue
                 if updated_at > now - rt.settings.SCHEDULE_ACTIONS_SWEEP_INTERVAL:
                     continue
                 action.updated_at = now
-                schedule(session, rt, action, JOB_RECONCILE)
+                schedule(session, rt, action, job_for(action, "reconcile"))
             started += 1
     if started:
         logger.info("actions_swept", extra={"count": started})
@@ -506,5 +521,5 @@ def resume_queued(session: Session, rt: Runtime, org_id: uuid.UUID) -> int:
         ).scalars()
     )
     for action in queued:
-        schedule(session, rt, action, JOB_EXECUTE)
+        schedule(session, rt, action, job_for(action, "execute"))
     return len(queued)
