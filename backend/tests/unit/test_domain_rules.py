@@ -123,8 +123,9 @@ def test_templates_render_and_escape():
             "role",
             "inviter_name",
             "message",
+            "reason",
         )
-        variables = dict.fromkeys(keys, "<b>&</b>")
+        variables = {**dict.fromkeys(keys, "<b>&</b>"), "lines": ["<b>&</b>"]}
         subject, text, html = render(name, variables)
         assert "\n" not in subject
         assert "<b>&</b>" in text or name in ("password_reset",)

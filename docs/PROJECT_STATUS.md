@@ -28,7 +28,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | 10A | Action Engine | **Implemented — awaiting review** (A28; Step 0 pending) | `phases/PHASE_10A_PLAN.md` · `phases/PHASE_10A_PROGRESS.md` |
 | 10B | Campaign builder | **Implemented — awaiting review** (A29; Step 0 pending) | 2,011 backend + 534 frontend + 17 end-to-end tests; `phases/PHASE_10B_REPORT.md` |
 | 11 | Optimization engine | **Implemented — awaiting review** (A30; Step 0 pending) | 2,053 backend + 556 frontend + 18 end-to-end tests; `phases/PHASE_11_REPORT.md` |
-| 12 | Controlled autopilot | **In progress** (A31; Step 0 pending) | `phases/PHASE_12_PLAN.md` |
+| 12 | Controlled autopilot | **Implemented — awaiting review** (A31; Step 0 pending) | 2,069 backend + 563 frontend + 19 end-to-end tests; `phases/PHASE_12_REPORT.md` |
 | 13 | Stripe billing & entitlements | Not started | Needs Q14 |
 | 14 | Agency mode | Not started | Needs Q15 |
 
@@ -168,7 +168,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | A28 | Phase 10A plan with all §2 recommendations (Q-10A-1 … Q-10A-11), Step 0 (§4.2), the data model (§6) and delivery 10A-01 … 10A-07 with one report for the phase | Approved 2026-10-26 ("Approve all") — implemented, awaiting review |
 | A29 | Phase 10B plan with all §2 recommendations (Q-10B-1 … Q-10B-12), Step 0 (§4.2), the data model (§5) and delivery 10B-01 … 10B-07 with one report for the phase | Approved 2026-10-27 ("Approve all") — implemented, awaiting review |
 | A30 | Phase 11 plan with all §2 recommendations (Q-11-1 … Q-11-12), Step 0 (§4.2), the data model (§5) and delivery 11-01 … 11-08 with one report for the phase | Approved 2026-10-27 ("Approve all") — implemented, awaiting review |
-| A31 | Phase 12 plan with all §2 recommendations (Q-12-1 … Q-12-12, answering Q13), Step 0 (§4.2), the data model (§5) and delivery 12-01 … 12-07 with one report for the phase | Approved 2026-10-27 ("Approve all") — in progress |
+| A31 | Phase 12 plan with all §2 recommendations (Q-12-1 … Q-12-12, answering Q13), Step 0 (§4.2), the data model (§5) and delivery 12-01 … 12-07 with one report for the phase | Approved 2026-10-27 ("Approve all") — implemented, awaiting review |
 | A21 | Phase 3 plan with all §2 recommendations (Q-3-1 … Q-3-11); live-testing option C | Approved 2026-10-15 ("Approve all") — implemented 2026-10-18, awaiting review |
 | A20 | Phase 2A and 2B reports reviewed by the product owner; continue to Phase 3 planning | Reviewed 2026-10-15 ("reviewed pls continue") |
 | A18 | Phase 2A plan v2 with all §2 recommendations (Q5–Q9, D-2A-1…3); live-testing option C | Approved 2026-10-13 — implemented, awaiting review (live checks pending) |

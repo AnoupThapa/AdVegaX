@@ -55,9 +55,9 @@ def _fail(message: str) -> int:
     return 1
 
 
-def write_figures(rt, org: uuid.UUID, today: date) -> None:  # type: ignore[no-untyped-def]
+def write_figures(rt, org: uuid.UUID, today: date, figures=None) -> None:  # type: ignore[no-untyped-def]
     with rt.db.transaction(org_id=org) as session:
-        for external, (recent, baseline) in FIGURES.items():
+        for external, (recent, baseline) in (figures or FIGURES).items():
             account = session.execute(
                 select(AdAccount).where(
                     AdAccount.organization_id == org, AdAccount.external_account_id == external

@@ -622,6 +622,22 @@ Base `/organizations/{organization_id}`. Permissions: reading `actions.view` (ev
 
 **The daily look:** once per organization after `OPTIMIZATION_RUN_HOUR` (06:00) in its reporting time zone (scheduler tick `SCHEDULE_OPTIMIZATION_TICK`, job `optimization.look`). Advice is valid for `OPTIMIZATION_VALID_FOR` (72 hours) or until the next look supersedes it.
 
+## 19M. Autopilot — as built (Phase 12; A31)
+
+Base `/organizations/{organization_id}`. Permissions: reading `actions.view` (every role); the policy and switching on `autopilot.manage` (**owners only**); Stop `actions.request` (owner, admin, manager). Off unless the installation switch `AUTOPILOT_ENABLED` is on, the organization is in `AUTOPILOT_ORGANIZATIONS`, it is ready (`AUTOPILOT_READY_CHANGES` verified changes from advice approved by a person, none mismatched), an owner switched it on, and the Action Engine's switches are on. Audited: `autopilot.policy_updated | enabled | stopped | run`; automatic changes `action.requested` etc. with actor `autopilot`, and `recommendation.approved` by `autopilot`.
+
+| Method & path | Notes |
+|---|---|
+| `GET /autopilot` | `{enabled, enabled_by, enabled_at, stopped_by, stopped_at, stopped_reason: stopped\|change_failed\|outcome_unknown\|not_verified\|change_refused\|daily_limit_reached\|null, kinds[], ad_account_ids[], excluded_campaign_ids[], max_changes_per_day, campaign_cooldown_days, max_decrease_percent, max_cumulative_decrease_percent, cumulative_window_days, min_campaign_age_days, ceilings {…the same limits}, readiness {ready, missing[]: installation_off\|not_in_rollout\|too_few_verified_changes\|mismatched_changes\|changes_switched_off, verified_changes, needed_changes}, updated_at}` |
+| `PUT /autopilot` | Body: `kinds[]` (`spend_without_results`, `losing_money` only), `ad_account_ids[]` and `excluded_campaign_ids[]` (the organization's own, else `VALIDATION_ERROR` `not_this_organization`), the six limits. A limit looser than the installation's ceiling: `VALIDATION_ERROR`, `details[] {field, reason: beyond_installation_limit}` |
+| `POST /autopilot/enable` | Body `{confirm}` = the organization's name (`AUTOPILOT_CONFIRMATION`, 422). Not ready, no kind or no ad account: `AUTOPILOT_NOT_READY` (409, `details[] {reason}`, also `no_kinds`, `no_ad_accounts`) |
+| `POST /autopilot/stop` | At once; `stopped_reason = stopped` |
+| `GET /autopilot/runs` | The latest 30: `{id, started_at, considered, made[] (action ids), skipped[] {recommendation_id, reason: kind_not_allowed\|no_change\|account_not_included\|campaign_excluded\|campaign_too_new\|campaign_cooldown\|not_a_decrease\|decrease_too_large\|cumulative_limit\|campaign_changed\|no_longer_true\|closed\|<10A error code>}, limit_reached, stopped_reason}` |
+
+`ActionOut` (§19J): `source` may be `autopilot`.
+
+**A run** follows each daily look and "Look again now": open advice of the allowed kinds, in rank order, within every limit, checked again (as §19L approve), then requested and approved by autopilot through the Action Engine with `actions.policy` = the policy snapshot. Owners are emailed the changes (`autopilot_changes`) and when autopilot stops itself (`autopilot_stopped`).
+
 ## 20. Webhooks
 
 Provider webhooks must:

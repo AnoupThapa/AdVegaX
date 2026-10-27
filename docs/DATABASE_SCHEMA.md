@@ -648,6 +648,14 @@ Supersedes the `actions` outline in §15.
 
 **actions** gains `recommendation_id` (composite foreign key; set exactly when `source = 'recommendation'`, check constraint). **ai_runs.task** also allows `optimization`.
 
+## 14F. Autopilot — as built (Phase 12, migration 0023; A31)
+
+**autopilot_policies** (tenant-owned, forced RLS; one row per organization; read, insert, update) — `enabled`, `enabled_by`, `enabled_at`, `stopped_by`, `stopped_at`, `stopped_reason`, `kinds`, `ad_account_ids`, `excluded_campaign_ids` (JSONB lists), `max_changes_per_day`, `campaign_cooldown_days`, `max_decrease_percent` (1–50), `max_cumulative_decrease_percent` (1–90), `cumulative_window_days` (≥ 7), `min_campaign_age_days`, `updated_by`, `updated_at`.
+
+**autopilot_runs** (tenant-owned, forced RLS; read and insert) — `started_at`, `considered`, `made` (JSONB action ids), `skipped` (JSONB `{recommendation_id, reason}`), `limit_reached`, `stopped_reason`.
+
+**actions**: `source` also `autopilot`; `policy` (JSONB, the policy snapshot; set exactly when `source = 'autopilot'`, check constraint). **audit_logs.actor_type** also `autopilot`.
+
 ## 14. AI Tables
 
 ### ai_models
