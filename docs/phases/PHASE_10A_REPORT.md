@@ -69,9 +69,9 @@ No other part of AdVegaX can change a platform (static rules).
 
 | Suite | Result |
 |---|---|
-| Backend `make check` (ruff, mypy, pytest) | **RESULT_BACKEND** |
+| Backend `make check` (ruff, mypy, pytest) | **1,953 passed**, coverage 96 % |
 | Frontend `npm run check` | **516 passed**, coverage 95.6 % (branches 85.3 %) |
-| Browser tests (Playwright + axe) | **RESULT_E2E** — the new test shows a change made with the simulator (what was sent, verification, history), its undo waiting, the server's engine off saying so, the settings and the connection's access; every page passes the accessibility check |
+| Browser tests (Playwright + axe) | **16 passed** (the WooCommerce test hit a one-off page-loading warning in the full run and passed twice when run again; it is unchanged by this phase) — the new test shows a change made with the simulator (what was sent, verification, history), its undo waiting, the server's engine off saying so, the settings and the connection's access; every page passes the accessibility check |
 
 ## 6. Database
 

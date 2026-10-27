@@ -57,10 +57,12 @@ test("changes to ad accounts are checked, approved, verified and shown", async (
 
   await test.step("approving while the engine is off says so; nothing is sent", async () => {
     await page.goto(`${orgUrl}/changes/${made.undo}`);
-    await expect(page.getByText("Waiting for approval")).toBeVisible();
+    await expect(page.getByText("Waiting for approval").first()).toBeVisible();
+    person.expectFailedRequests(409);
     await page.getByRole("button", { name: "Approve and send" }).click();
-    await expect(page.getByRole("alert")).toContainText("Changes to ad accounts are switched off");
-    await person.expectFailedRequests(409);
+    await expect(page.getByRole("region", { name: "What next" }).getByRole("alert")).toContainText(
+      "Changes to ad accounts are switched off",
+    );
     await expectAccessible(page, "change waiting");
     pages.push(await page.content());
   });

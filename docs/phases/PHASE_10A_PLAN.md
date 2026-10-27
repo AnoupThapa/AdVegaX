@@ -1,6 +1,6 @@
 # Phase 10A — Action Engine: Implementation Plan
 
-**Status:** ✅ **Approved 2026-10-26 (A28, "Approve all": Q-10A-1 … Q-10A-11).** In progress — see `PHASE_10A_PROGRESS.md`. · **Date:** 2026-10-26
+**Status:** ✅ **Approved 2026-10-26 (A28, "Approve all": Q-10A-1 … Q-10A-11).** Implemented — see `PHASE_10A_PROGRESS.md` and `PHASE_10A_REPORT.md`. · **Date:** 2026-10-26
 
 > **This is the first phase that can change something at Google or Meta.** Everything is built and tested against the platform **simulators** (no calls in CI). Changes reach a real account only after Step 0, after you switch the engine on for this installation, **and** after you allow changes for a specific connection.
 
