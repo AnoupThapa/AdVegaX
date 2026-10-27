@@ -127,6 +127,8 @@ const MESSAGES: Readonly<Record<string, string>> = {
   RECOMMENDATION_CLOSED: "This advice is no longer open.",
   REFRESH_LIMIT: "AdVegaX already looked again as often as allowed today. Try again tomorrow.",
   OPTIMIZATION_DISABLED: "Recommendations are switched off for this AdVegaX installation.",
+  AUTOPILOT_NOT_READY: "Autopilot cannot be switched on for this organization yet.",
+  AUTOPILOT_CONFIRMATION: "Type the organization's name exactly to switch autopilot on.",
   INTERNAL_ERROR: "Something went wrong on our side. Please try again.",
   SERVICE_UNAVAILABLE: "The service is temporarily unavailable. Please try again shortly.",
   HTTP_ERROR: "This request could not be completed. Please try again.",

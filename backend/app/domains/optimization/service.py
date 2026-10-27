@@ -94,6 +94,24 @@ def _proposal(rec: Recommendation) -> ProposalOut:
     )
 
 
+def staleness(rt: Runtime, session: Session, org_id: uuid.UUID, rec: Recommendation) -> str | None:
+    """Why advice with a change may no longer be acted on (Q-11-6): the campaign's status or
+    budget changed since it was made, or the rule no longer holds with today's figures."""
+    assert rec.campaign_id is not None
+    campaign = session.get(AdCampaign, rec.campaign_id)
+    if campaign is None:
+        raise NotFound()
+    now_state = state_of(session, campaign.budget_id, campaign.status)
+    if any(
+        now_state.get(k) != rec.campaign_state.get(k)
+        for k in ("status", "budget_id", "daily_budget")
+    ):
+        return "campaign_changed"
+    if rec.kind not in kinds_now(rt, session, org_id, campaign.id):
+        return "no_longer_true"
+    return None
+
+
 class RecommendationService:
     def __init__(self, runtime: Runtime) -> None:
         self.rt = runtime
@@ -300,18 +318,7 @@ class RecommendationService:
                 closed = False
                 if not rec.proposal.get("action_type"):
                     raise Conflict("This advice proposes no change. Mark it as looked into.")
-                assert rec.campaign_id is not None
-                campaign = session.get(AdCampaign, rec.campaign_id)
-                if campaign is None:
-                    raise NotFound()
-                now_state = state_of(session, campaign.budget_id, campaign.status)
-                if any(
-                    now_state.get(k) != rec.campaign_state.get(k)
-                    for k in ("status", "budget_id", "daily_budget")
-                ):
-                    out_of_date = "campaign_changed"
-                elif rec.kind not in kinds_now(self.rt, session, ctx.organization_id, campaign.id):
-                    out_of_date = "no_longer_true"
+                out_of_date = staleness(self.rt, session, ctx.organization_id, rec)
                 if out_of_date:
                     rec.status, rec.closed_reason = "out_of_date", out_of_date
                     rec.updated_at = self.rt.clock.now()

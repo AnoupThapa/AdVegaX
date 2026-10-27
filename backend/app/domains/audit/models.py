@@ -17,7 +17,8 @@ class AuditLog(UUIDPrimaryKey, Base):
     __tablename__ = "audit_logs"
     __table_args__ = (
         CheckConstraint(
-            "actor_type IN ('user', 'system', 'worker', 'ai_recommendation')", name="actor_type"
+            "actor_type IN ('user', 'system', 'worker', 'ai_recommendation', 'autopilot')",
+            name="actor_type",
         ),
         CheckConstraint("result IN ('success', 'denied', 'failed')", name="result"),
         Index("ix_audit_logs_organization_id_created_at", "organization_id", "created_at"),

@@ -411,6 +411,10 @@ def run_look(
         }
         record_outcomes(rt, session, org)
     logger.info("optimization_look", extra={"organization_id": str(org_id), "found": len(made)})
+    if rt.settings.AUTOPILOT_ENABLED and org_id in rt.settings.AUTOPILOT_ORGANIZATIONS:
+        from app.domains.autopilot.runner import run as autopilot  # Phase 12
+
+        autopilot(rt, org_id)
     return made
 
 

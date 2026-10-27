@@ -298,6 +298,22 @@ class OptimizationDisabled(AppError):
     message = "Recommendations are switched off for this AdVegaX installation."
 
 
+class AutopilotNotReady(AppError):
+    """Phase 12: autopilot cannot be switched on yet; ``details`` say what is missing."""
+
+    status_code = 409
+    code = "AUTOPILOT_NOT_READY"
+    message = "Autopilot cannot be switched on for this organization yet."
+
+
+class AutopilotConfirmation(AppError):
+    """Phase 12: switching autopilot on needs the organization's name typed exactly."""
+
+    status_code = 422
+    code = "AUTOPILOT_CONFIRMATION"
+    message = "Type the organization's name exactly to switch autopilot on."
+
+
 def error_body(
     code: str, message: str, details: list[dict[str, Any]] | None = None
 ) -> dict[str, Any]:

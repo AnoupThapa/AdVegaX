@@ -64,7 +64,7 @@ ACTION_STATUSES = (
 # Waiting for a decision or on its way to the platform: at most one per campaign.
 OPEN_STATUSES = ("pending", "approved", "queued", "submitting", "unknown")
 VERIFICATIONS = ("verified", "mismatch", "not_checked")
-SOURCES = ("user", "recommendation")
+SOURCES = ("user", "recommendation", "autopilot")
 EVENT_ACTORS = ("user", "worker")
 
 
@@ -119,6 +119,7 @@ class Action(UUIDPrimaryKey, Timestamps, Base):
         CheckConstraint(
             "(recommendation_id IS NULL) = (source = 'user')", name="recommendation_source"
         ),
+        CheckConstraint("(policy IS NOT NULL) = (source = 'autopilot')", name="autopilot_policy"),
         ForeignKeyConstraint(
             ["organization_id", "undo_of"],
             ["actions.organization_id", "actions.id"],
@@ -174,6 +175,8 @@ class Action(UUIDPrimaryKey, Timestamps, Base):
     undo_of: Mapped[uuid.UUID | None] = mapped_column()
     # Phase 11: the recommendation this change was made from (``source = recommendation``).
     recommendation_id: Mapped[uuid.UUID | None] = mapped_column()
+    # Phase 12: the autopilot policy that allowed an automatic change (``source = autopilot``).
+    policy: Mapped[dict[str, Any] | None] = mapped_column(JSONB(none_as_null=True))
     requested_by: Mapped[uuid.UUID | None] = mapped_column(_user())
     decided_by: Mapped[uuid.UUID | None] = mapped_column(_user())
     decided_at: Mapped[datetime | None] = mapped_column(TZ)

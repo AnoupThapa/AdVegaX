@@ -6,6 +6,7 @@ No other module may hard-code session/token lifetimes or throttling limits.
 
 from __future__ import annotations
 
+import uuid
 from datetime import timedelta
 from decimal import Decimal
 from enum import StrEnum
@@ -321,6 +322,22 @@ class Settings(BaseSettings):
     OPTIMIZATION_MIN_CONVERSIONS: int = Field(default=5, ge=1, le=1000)
     OPTIMIZATION_BUDGET_STEP_PERCENT: int = Field(default=20, ge=5, le=50)
     OPTIMIZATION_COST_JUMP_PERCENT: int = Field(default=30, ge=10, le=200)
+    # --- Controlled autopilot (Phase 12; PHASE_12_PLAN §2, A31) ---------------------------
+    # Off by default (Q-12-11); only the organizations listed may use it at all.
+    AUTOPILOT_ENABLED: bool = False
+    AUTOPILOT_ORGANIZATIONS: Annotated[list[uuid.UUID], NoDecode] = Field(default_factory=list)
+    # Readiness (Q-12-5): changes made from advice approved by a person, all verified.
+    AUTOPILOT_READY_CHANGES: int = Field(default=5, ge=1, le=1000)
+    # The ceilings of each organization's limits (Q-12-4): owners may only make them stricter.
+    AUTOPILOT_MAX_CHANGES_PER_DAY: int = Field(default=5, ge=1, le=100)
+    AUTOPILOT_MIN_COOLDOWN_DAYS: int = Field(default=7, ge=1, le=90)
+    AUTOPILOT_MAX_DECREASE_PERCENT: int = Field(default=20, ge=1, le=50)
+    AUTOPILOT_MAX_CUMULATIVE_DECREASE_PERCENT: int = Field(default=50, ge=1, le=90)
+    AUTOPILOT_CUMULATIVE_WINDOW_DAYS: int = Field(default=30, ge=7, le=365)
+    AUTOPILOT_MIN_CAMPAIGN_AGE_DAYS: int = Field(default=14, ge=1, le=365)
+    # Stops itself when the day's limit was reached this many times within the window.
+    AUTOPILOT_LIMIT_HITS_TO_STOP: int = Field(default=2, ge=1, le=10)
+    AUTOPILOT_LIMIT_HITS_WINDOW: timedelta = timedelta(days=7)
     # Meta: the Facebook Login for Business configuration that also asks for
     # ``ads_management`` ("Allow changes", Q-10A-2). None: Meta changes cannot be allowed.
     META_WRITE_LOGIN_CONFIG_ID: str | None = Field(default=None, pattern=r"^[0-9]{5,20}$")
@@ -392,6 +409,13 @@ class Settings(BaseSettings):
     WEBHOOK_CLOCK_SKEW: timedelta = timedelta(minutes=5)
     WEBHOOK_RETENTION: timedelta = timedelta(days=30)  # intake metadata is deleted after this
     SCHEDULE_WEBHOOK_PURGE_INTERVAL: timedelta = timedelta(hours=6)
+
+    @field_validator("AUTOPILOT_ORGANIZATIONS", mode="before")
+    @classmethod
+    def _split_organizations(cls, value: object) -> object:
+        if isinstance(value, str):  # comma-separated organization ids
+            return [item.strip() for item in value.split(",") if item.strip()]
+        return value
 
     @field_validator("CORS_ALLOWED_ORIGINS", mode="before")
     @classmethod
@@ -478,6 +502,7 @@ class Settings(BaseSettings):
             "OPTIMIZATION_VALID_FOR": self.OPTIMIZATION_VALID_FOR,
             "OPTIMIZATION_QUIET_PERIOD": self.OPTIMIZATION_QUIET_PERIOD,
             "OPTIMIZATION_ACTED_PERIOD": self.OPTIMIZATION_ACTED_PERIOD,
+            "AUTOPILOT_LIMIT_HITS_WINDOW": self.AUTOPILOT_LIMIT_HITS_WINDOW,
         }
         for name, value in durations.items():
             if value <= timedelta(0):

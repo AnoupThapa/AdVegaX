@@ -68,6 +68,18 @@ BODIES = {
         "budget_step_percent": 20,
         "cost_jump_percent": 30,
     },
+    ("put", "/organizations/{organization_id}/autopilot"): {
+        "kinds": [],
+        "ad_account_ids": [],
+        "excluded_campaign_ids": [],
+        "max_changes_per_day": 5,
+        "campaign_cooldown_days": 7,
+        "max_decrease_percent": 20,
+        "max_cumulative_decrease_percent": 50,
+        "cumulative_window_days": 30,
+        "min_campaign_age_days": 14,
+    },
+    ("post", "/organizations/{organization_id}/autopilot/enable"): {"confirm": "x"},
     ("patch", "/organizations/{organization_id}/members/{member_id}"): {"role": "viewer"},
     ("post", "/organizations/{organization_id}/invitations"): {
         "email": "evil@example.com",

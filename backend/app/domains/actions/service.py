@@ -233,16 +233,17 @@ class ActionService:
 
     def _assess(
         self,
-        ctx: TenantContext,
+        org_id: uuid.UUID,
+        user_id: uuid.UUID | None,
         body: ActionIn,
         *,
         undo: bool = False,
         for_request: bool = True,
     ) -> _Assessment:
         spec = CATALOGUE[body.action_type]
-        with self.rt.db.transaction(org_id=ctx.organization_id, user_id=ctx.user_id) as session:
-            require_switches(self.rt, session, ctx.organization_id)
-            target = load_target(session, ctx.organization_id, body.campaign_id)
+        with self.rt.db.transaction(org_id=org_id, user_id=user_id) as session:
+            require_switches(self.rt, session, org_id)
+            target = load_target(session, org_id, body.campaign_id)
             writer = writer_for(self.rt, target.account.provider)
             reason = resource_reason(target, writer)
             if reason is None:
@@ -257,7 +258,7 @@ class ActionService:
             except ParamsInvalid as exc:
                 params, params_reason = None, exc.reason
             if reason is None and params is not None:
-                reason = self._open_change(session, ctx, target, spec, params, for_request)
+                reason = self._open_change(session, org_id, target, spec, params, for_request)
             limits = limits_for(self.rt, session, target, spec, undo=undo)
         snapshot: CampaignSnapshot | None = None
         if reason is None and params is not None and writer is not None:
@@ -288,7 +289,7 @@ class ActionService:
     def _open_change(
         self,
         session: Session,
-        ctx: TenantContext,
+        org_id: uuid.UUID,
         target: Target,
         spec: ActionSpec,
         params: dict[str, str],
@@ -296,7 +297,7 @@ class ActionService:
     ) -> str | None:
         open_key = session.execute(
             select(Action.idempotency_key).where(
-                Action.organization_id == ctx.organization_id,
+                Action.organization_id == org_id,
                 Action.campaign_id == target.campaign.id,
                 Action.status.in_(OPEN_STATUSES),
             )
@@ -324,7 +325,9 @@ class ActionService:
     def validate(self, ctx: TenantContext, body: ActionIn) -> ActionPreviewOut:
         """Every check and the platform's dry run; nothing is kept."""
         authorize(ctx, Permission.ACTIONS_REQUEST)
-        return self._preview(self._assess(ctx, body, for_request=False))
+        return self._preview(
+            self._assess(ctx.organization_id, ctx.user_id, body, for_request=False)
+        )
 
     # ------------------------------------------------------------------ requests
     def request(
@@ -336,16 +339,57 @@ class ActionService:
         recommendation_id: uuid.UUID | None = None,
     ) -> ActionOut:
         authorize(ctx, Permission.ACTIONS_REQUEST)
-        assessment = self._assess(ctx, body, undo=undo_of is not None)
+        action_id = self._create(
+            ctx.organization_id,
+            ctx.user_id,
+            body,
+            undo_of=undo_of,
+            recommendation_id=recommendation_id,
+            source="recommendation" if recommendation_id else "user",
+        )
+        return self.get(ctx, action_id)
+
+    def request_automatic(
+        self,
+        org_id: uuid.UUID,
+        body: ActionIn,
+        *,
+        recommendation_id: uuid.UUID,
+        policy: dict[str, Any],
+    ) -> uuid.UUID:
+        """Phase 12: a change requested by autopilot under the organization's policy (no
+        person; ``policy`` is the snapshot that allowed it). Same checks as any request."""
+        return self._create(
+            org_id,
+            None,
+            body,
+            recommendation_id=recommendation_id,
+            source="autopilot",
+            policy=policy,
+        )
+
+    def _create(
+        self,
+        org_id: uuid.UUID,
+        user_id: uuid.UUID | None,
+        body: ActionIn,
+        *,
+        source: str,
+        undo_of: uuid.UUID | None = None,
+        recommendation_id: uuid.UUID | None = None,
+        policy: dict[str, Any] | None = None,
+    ) -> uuid.UUID:
+        assessment = self._assess(org_id, user_id, body, undo=undo_of is not None)
         if not assessment.passed or assessment.params is None or assessment.snapshot is None:
             raise ActionInvalid(details=assessment.failures())
         target, params = assessment.target, assessment.params
+        actor = Actor.user(user_id) if user_id else Actor("autopilot", None)
         try:
-            with self.rt.db.transaction(org_id=ctx.organization_id, user_id=ctx.user_id) as session:
-                require_switches(self.rt, session, ctx.organization_id)
+            with self.rt.db.transaction(org_id=org_id, user_id=user_id) as session:
+                require_switches(self.rt, session, org_id)
                 action = Action(
                     id=uuid.uuid4(),
-                    organization_id=ctx.organization_id,
+                    organization_id=org_id,
                     action_type=assessment.spec.type,
                     provider=target.account.provider,
                     ad_account_id=target.account.id,
@@ -357,10 +401,11 @@ class ActionService:
                     idempotency_key=catalogue.key(target.campaign.id, assessment.spec, params),
                     checks=[c.as_json() for c in assessment.checks],
                     dry_run=assessment.dry_run,
-                    source="recommendation" if recommendation_id else "user",
+                    source=source,
                     recommendation_id=recommendation_id,
+                    policy=policy,
                     undo_of=undo_of,
-                    requested_by=ctx.user_id,
+                    requested_by=user_id,
                     created_at=self.rt.clock.now(),
                     updated_at=self.rt.clock.now(),
                 )
@@ -368,21 +413,21 @@ class ActionService:
                 session.flush()
                 session.add(
                     ActionEvent(
-                        organization_id=ctx.organization_id,
+                        organization_id=org_id,
                         action_id=action.id,
                         seq=1,
                         from_status=None,
                         status="pending",
-                        actor_type="user",
-                        actor_user_id=ctx.user_id,
+                        actor_type="user" if user_id else "worker",
+                        actor_user_id=user_id,
                         detail={"undo_of": str(undo_of)} if undo_of else {},
                         created_at=self.rt.clock.now(),
                     )
                 )
                 record_audit(
                     session,
-                    organization_id=ctx.organization_id,
-                    actor=Actor.user(ctx.user_id),
+                    organization_id=org_id,
+                    actor=actor,
                     action="action.requested",
                     resource_type="action",
                     resource_id=action.id,
@@ -393,10 +438,11 @@ class ActionService:
                         "provider": action.provider,
                         "undo_of": str(undo_of) if undo_of else None,
                         "recommendation_id": str(recommendation_id) if recommendation_id else None,
+                        "source": source,
                     },
                 )
                 session.flush()
-                return self._out(session, ctx, action, events=True)
+                return action.id
         except IntegrityError:
             raise ActionDuplicate() from None  # a second request for the campaign at once
 
@@ -435,14 +481,27 @@ class ActionService:
     # ------------------------------------------------------------------ decisions
     def approve(self, ctx: TenantContext, action_id: uuid.UUID) -> ActionOut:
         authorize(ctx, Permission.ACTIONS_APPROVE)
+        self._approve(ctx.organization_id, ctx.user_id, action_id)
+        return self.get(ctx, action_id)
+
+    def approve_automatic(self, org_id: uuid.UUID, action_id: uuid.UUID) -> None:
+        """Phase 12: autopilot's own approval of its change (the owner's standing approval,
+        recorded in ``actions.policy``); the same re-check and queue as a person's."""
+        self._approve(org_id, None, action_id)
+
+    def _approve(self, org_id: uuid.UUID, user_id: uuid.UUID | None, action_id: uuid.UUID) -> None:
         expired = False
-        with self.rt.db.transaction(org_id=ctx.organization_id, user_id=ctx.user_id) as session:
-            require_switches(self.rt, session, ctx.organization_id)
-            action = self._action(session, ctx, action_id, lock=True)
+        with self.rt.db.transaction(org_id=org_id, user_id=user_id) as session:
+            require_switches(self.rt, session, org_id)
+            action = self._action_of(session, org_id, action_id, lock=True)
             if action.status != "pending":
                 raise Conflict("This change is no longer waiting for a decision.")
-            settings = org_settings(session, ctx.organization_id)
-            if settings.require_second_person and action.requested_by == ctx.user_id:
+            settings = org_settings(session, org_id)
+            if (
+                user_id is not None
+                and settings.require_second_person
+                and action.requested_by == user_id
+            ):
                 raise SecondPersonRequired()
             if action.created_at + self.rt.settings.ACTIONS_PENDING_TTL < self.rt.clock.now():
                 action.error_code = "request_expired"
@@ -451,7 +510,7 @@ class ActionService:
                     self.rt,
                     action,
                     "stale",
-                    user_id=ctx.user_id,
+                    user_id=user_id,
                     detail={"reason": "request_expired"},
                 )
                 expired = True
@@ -462,14 +521,13 @@ class ActionService:
                     recheck(self.rt, session, action)
                 else:
                     self._recheck(session, action)
-                action.decided_by = ctx.user_id
+                action.decided_by = user_id
                 action.decided_at = self.rt.clock.now()
-                engine.transition(session, self.rt, action, "approved", user_id=ctx.user_id)
-                engine.transition(session, self.rt, action, "queued", user_id=ctx.user_id)
+                engine.transition(session, self.rt, action, "approved", user_id=user_id)
+                engine.transition(session, self.rt, action, "queued", user_id=user_id)
                 engine.schedule(session, self.rt, action, engine.job_for(action, "execute"))
         if expired:
             raise ActionStale()
-        return self.get(ctx, action_id)
 
     def _recheck(self, session: Session, action: Action) -> None:
         """Today's limits and access, on the campaign as it was when requested (the worker
@@ -529,9 +587,12 @@ class ActionService:
     def _action(
         self, session: Session, ctx: TenantContext, action_id: uuid.UUID, *, lock: bool = False
     ) -> Action:
-        query = select(Action).where(
-            Action.organization_id == ctx.organization_id, Action.id == action_id
-        )
+        return self._action_of(session, ctx.organization_id, action_id, lock=lock)
+
+    def _action_of(
+        self, session: Session, org_id: uuid.UUID, action_id: uuid.UUID, *, lock: bool = False
+    ) -> Action:
+        query = select(Action).where(Action.organization_id == org_id, Action.id == action_id)
         if lock:
             query = query.with_for_update()
         found = session.execute(query).scalar_one_or_none()

@@ -61,6 +61,24 @@ TEMPLATES: dict[str, Template] = {
         '{{ role }}.</p><p><a href="{{ link }}">Accept the invitation</a>. This link expires '
         "in {{ expires_in }}.</p>" + _FOOTER_HTML,
     ),
+    "autopilot_changes": Template(
+        subject="AdVegaX autopilot made changes for {{ organization_name }}",
+        text="Autopilot made these changes for {{ organization_name }}, within the limits an "
+        "owner set:\n{% for line in lines %}- {{ line }}\n{% endfor %}\nSee them, and undo any of "
+        "them, under Changes: {{ link }}" + _FOOTER_TEXT,
+        html="<p>Autopilot made these changes for <strong>{{ organization_name }}</strong>, "
+        "within the limits an owner set:</p><ul>{% for line in lines %}<li>{{ line }}</li>"
+        '{% endfor %}</ul><p><a href="{{ link }}">See them, and undo any of them, under '
+        "Changes</a>.</p>" + _FOOTER_HTML,
+    ),
+    "autopilot_stopped": Template(
+        subject="AdVegaX autopilot stopped for {{ organization_name }}",
+        text="Autopilot stopped itself for {{ organization_name }}: {{ reason }}\nNothing more "
+        "will change automatically until an owner switches it on again: {{ link }}" + _FOOTER_TEXT,
+        html="<p>Autopilot stopped itself for <strong>{{ organization_name }}</strong>: "
+        "{{ reason }}</p><p>Nothing more will change automatically until an owner "
+        '<a href="{{ link }}">switches it on again</a>.</p>' + _FOOTER_HTML,
+    ),
     "security_notice": Template(
         subject="AdVegaX security notice",
         text="{{ message }}" + _FOOTER_TEXT,

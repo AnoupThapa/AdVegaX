@@ -111,6 +111,10 @@ def transition(
             created_at=now,
         )
     )
+    if action.source == "autopilot" and to in ("failed", "unknown", "stale"):
+        from app.domains.autopilot.runner import after_change  # Phase 12 watchdog
+
+        after_change(rt, session, action, "outcome_unknown" if to == "unknown" else "change_failed")
     record_audit(
         session,
         organization_id=action.organization_id,
@@ -371,11 +375,19 @@ def verify(
         spec = CATALOGUE[action.action_type]
         if now is None:
             action.verification = "not_checked"
+            if action.source == "autopilot":
+                from app.domains.autopilot.runner import after_change  # Phase 12 watchdog
+
+                after_change(rt, session, action, "not_verified")
             return
         action.observed = stored(now)
         action.verification = (
             "verified" if catalogue.reached(spec, action.params, now) else "mismatch"
         )
+        if action.source == "autopilot" and action.verification != "verified":
+            from app.domains.autopilot.runner import after_change  # Phase 12 watchdog
+
+            after_change(rt, session, action, "not_verified")
         action.updated_at = rt.clock.now()
         record_audit(
             session,

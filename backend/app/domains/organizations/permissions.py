@@ -61,6 +61,7 @@ class Permission(StrEnum):
     ACTIONS_REQUEST = "actions.request"  # request, validate, cancel own, undo (Q-10A-3)
     ACTIONS_APPROVE = "actions.approve"  # approve, reject (Q-10A-3)
     ACTIONS_SETTINGS = "actions.settings"  # pause all, rules, allow changes per connection
+    AUTOPILOT_MANAGE = "autopilot.manage"  # switch autopilot on, its policy (Q-12-2)
 
 
 _ALL = frozenset(Role)
@@ -94,6 +95,7 @@ PERMISSION_MATRIX: dict[Permission, frozenset[Role]] = {
     Permission.ACTIONS_REQUEST: _OWNER_ADMIN_MANAGER,
     Permission.ACTIONS_APPROVE: _OWNER_ADMIN,
     Permission.ACTIONS_SETTINGS: _OWNER_ADMIN,
+    Permission.AUTOPILOT_MANAGE: frozenset({Role.OWNER}),
 }
 
 
