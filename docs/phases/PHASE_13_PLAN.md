@@ -1,6 +1,6 @@
 # Phase 13 — Stripe Billing & Entitlements: Implementation Plan
 
-**Status:** Waiting for your approval · **Date:** 2026-10-27
+**Status:** ✅ **Approved 2026-10-27 (A32, "Approve all": Q-13-1 … Q-13-12, with the starting prices and limits).** In progress — see `PHASE_13_PROGRESS.md`. · **Date:** 2026-10-27
 
 > AdVegaX starts charging for itself. Customers choose a plan, pay through **Stripe Checkout**, manage their card and invoices in **Stripe's customer portal**, and AdVegaX enforces each plan's limits **in its own server code**. Built and tested against a **Stripe simulator** (no calls to Stripe in CI); Step 0 uses your Stripe account in **test mode**. This is AdVegaX's own billing — separate from any payment data a merchant connects.
 
