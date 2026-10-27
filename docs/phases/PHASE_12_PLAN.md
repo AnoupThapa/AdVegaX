@@ -1,6 +1,6 @@
 # Phase 12 — Controlled Autopilot: Implementation Plan
 
-**Status:** Waiting for your approval · **Date:** 2026-10-27
+**Status:** ✅ **Approved 2026-10-27 (A31, "Approve all": Q-12-1 … Q-12-12).** In progress — see `PHASE_12_PROGRESS.md`. · **Date:** 2026-10-27
 
 > For the first time, AdVegaX could make a change **without a person approving that change**. So autopilot is **off by default at every level**, limited to changes that **only lower spend**, bounded by hard limits in AdVegaX's own code, stopped by one click, and switched off by itself when anything looks wrong. Built and tested against the simulators (no platform or AI calls in CI).
 
