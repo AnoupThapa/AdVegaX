@@ -131,6 +131,9 @@ export function ChangesPage() {
                   <th scope="row">
                     <Link href={`/orgs/${org.id}/changes/${a.id}`}>{describe(a, moneyOf(a))}</Link>
                     {a.undo_of ? <span className={styles.muted}> (undo)</span> : null}
+                    {a.source === "autopilot" ? (
+                      <span className={styles.muted}> (made by autopilot)</span>
+                    ) : null}
                   </th>
                   <td>
                     {a.campaign?.name ?? a.draft?.name}
@@ -361,7 +364,19 @@ function Detail({ actionId }: { actionId: string }) {
         <State title="Before" state={a.previous} money={money} />
         <State title="Read back after" state={a.observed} money={money} />
         <dt>Requested</dt>
-        <dd>{when(a.created_at)}</dd>
+        <dd>
+          {when(a.created_at)}
+          {a.source === "autopilot" ? " — by autopilot, within the limits an owner set" : ""}
+          {a.source === "recommendation" ? " — from a recommendation" : ""}
+          {a.recommendation_id ? (
+            <>
+              {" "}
+              <Link href={`/orgs/${org.id}/recommendations/${a.recommendation_id}`}>
+                See the advice
+              </Link>
+            </>
+          ) : null}
+        </dd>
         {a.decided_at ? (
           <>
             <dt>{a.status === "rejected" ? "Rejected" : "Approved"}</dt>

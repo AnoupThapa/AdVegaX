@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import { PageHeading } from "@/components/ui/PageHeading";
+import { OverviewAutopilot } from "@/features/autopilot/AutopilotSettings";
 import { OverviewFigures } from "@/features/overview/OverviewFigures";
 import { OverviewRecommendations } from "@/features/recommendations/RecommendationsPages";
 
@@ -18,6 +19,7 @@ export function OrganizationOverview() {
       <p className={styles.muted}>
         Your role: <span className={styles.badge}>{roleLabel(org.role)}</span>
       </p>
+      <OverviewAutopilot org={org} />
       <OverviewFigures org={org} />
       <OverviewRecommendations org={org} />
       <div className={styles.panel}>

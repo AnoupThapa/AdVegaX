@@ -2877,6 +2877,379 @@
         "title": "AuthorizationStartOut",
         "type": "object"
       },
+      "AutopilotEnableIn": {
+        "properties": {
+          "confirm": {
+            "maxLength": 200,
+            "title": "Confirm",
+            "type": "string"
+          }
+        },
+        "required": [
+          "confirm"
+        ],
+        "title": "AutopilotEnableIn",
+        "type": "object"
+      },
+      "AutopilotLimits": {
+        "properties": {
+          "campaign_cooldown_days": {
+            "maximum": 365.0,
+            "minimum": 1.0,
+            "title": "Campaign Cooldown Days",
+            "type": "integer"
+          },
+          "cumulative_window_days": {
+            "maximum": 365.0,
+            "minimum": 7.0,
+            "title": "Cumulative Window Days",
+            "type": "integer"
+          },
+          "max_changes_per_day": {
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Max Changes Per Day",
+            "type": "integer"
+          },
+          "max_cumulative_decrease_percent": {
+            "maximum": 90.0,
+            "minimum": 1.0,
+            "title": "Max Cumulative Decrease Percent",
+            "type": "integer"
+          },
+          "max_decrease_percent": {
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Max Decrease Percent",
+            "type": "integer"
+          },
+          "min_campaign_age_days": {
+            "maximum": 365.0,
+            "minimum": 1.0,
+            "title": "Min Campaign Age Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "max_changes_per_day",
+          "campaign_cooldown_days",
+          "max_decrease_percent",
+          "max_cumulative_decrease_percent",
+          "cumulative_window_days",
+          "min_campaign_age_days"
+        ],
+        "title": "AutopilotLimits",
+        "type": "object"
+      },
+      "AutopilotPolicyIn": {
+        "properties": {
+          "ad_account_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 200,
+            "title": "Ad Account Ids",
+            "type": "array"
+          },
+          "campaign_cooldown_days": {
+            "maximum": 365.0,
+            "minimum": 1.0,
+            "title": "Campaign Cooldown Days",
+            "type": "integer"
+          },
+          "cumulative_window_days": {
+            "maximum": 365.0,
+            "minimum": 7.0,
+            "title": "Cumulative Window Days",
+            "type": "integer"
+          },
+          "excluded_campaign_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 2000,
+            "title": "Excluded Campaign Ids",
+            "type": "array"
+          },
+          "kinds": {
+            "items": {
+              "enum": [
+                "spend_without_results",
+                "losing_money"
+              ],
+              "type": "string"
+            },
+            "maxItems": 2,
+            "title": "Kinds",
+            "type": "array"
+          },
+          "max_changes_per_day": {
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Max Changes Per Day",
+            "type": "integer"
+          },
+          "max_cumulative_decrease_percent": {
+            "maximum": 90.0,
+            "minimum": 1.0,
+            "title": "Max Cumulative Decrease Percent",
+            "type": "integer"
+          },
+          "max_decrease_percent": {
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Max Decrease Percent",
+            "type": "integer"
+          },
+          "min_campaign_age_days": {
+            "maximum": 365.0,
+            "minimum": 1.0,
+            "title": "Min Campaign Age Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "max_changes_per_day",
+          "campaign_cooldown_days",
+          "max_decrease_percent",
+          "max_cumulative_decrease_percent",
+          "cumulative_window_days",
+          "min_campaign_age_days",
+          "kinds",
+          "ad_account_ids",
+          "excluded_campaign_ids"
+        ],
+        "title": "AutopilotPolicyIn",
+        "type": "object"
+      },
+      "AutopilotPolicyOut": {
+        "properties": {
+          "ad_account_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Ad Account Ids",
+            "type": "array"
+          },
+          "campaign_cooldown_days": {
+            "maximum": 365.0,
+            "minimum": 1.0,
+            "title": "Campaign Cooldown Days",
+            "type": "integer"
+          },
+          "ceilings": {
+            "$ref": "#/components/schemas/AutopilotLimits"
+          },
+          "cumulative_window_days": {
+            "maximum": 365.0,
+            "minimum": 7.0,
+            "title": "Cumulative Window Days",
+            "type": "integer"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "enabled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled At"
+          },
+          "enabled_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled By"
+          },
+          "excluded_campaign_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Excluded Campaign Ids",
+            "type": "array"
+          },
+          "kinds": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Kinds",
+            "type": "array"
+          },
+          "max_changes_per_day": {
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Max Changes Per Day",
+            "type": "integer"
+          },
+          "max_cumulative_decrease_percent": {
+            "maximum": 90.0,
+            "minimum": 1.0,
+            "title": "Max Cumulative Decrease Percent",
+            "type": "integer"
+          },
+          "max_decrease_percent": {
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Max Decrease Percent",
+            "type": "integer"
+          },
+          "min_campaign_age_days": {
+            "maximum": 365.0,
+            "minimum": 1.0,
+            "title": "Min Campaign Age Days",
+            "type": "integer"
+          },
+          "readiness": {
+            "$ref": "#/components/schemas/ReadinessOut"
+          },
+          "stopped_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stopped At"
+          },
+          "stopped_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stopped By"
+          },
+          "stopped_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stopped Reason"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "max_changes_per_day",
+          "campaign_cooldown_days",
+          "max_decrease_percent",
+          "max_cumulative_decrease_percent",
+          "cumulative_window_days",
+          "min_campaign_age_days",
+          "enabled",
+          "enabled_by",
+          "enabled_at",
+          "stopped_by",
+          "stopped_at",
+          "stopped_reason",
+          "kinds",
+          "ad_account_ids",
+          "excluded_campaign_ids",
+          "ceilings",
+          "readiness",
+          "updated_at"
+        ],
+        "title": "AutopilotPolicyOut",
+        "type": "object"
+      },
+      "AutopilotRunOut": {
+        "properties": {
+          "considered": {
+            "title": "Considered",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "limit_reached": {
+            "title": "Limit Reached",
+            "type": "boolean"
+          },
+          "made": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Made",
+            "type": "array"
+          },
+          "skipped": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Skipped",
+            "type": "array"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "stopped_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stopped Reason"
+          }
+        },
+        "required": [
+          "id",
+          "started_at",
+          "considered",
+          "made",
+          "skipped",
+          "limit_reached",
+          "stopped_reason"
+        ],
+        "title": "AutopilotRunOut",
+        "type": "object"
+      },
       "Body_upload_creative_asset_api_v1_organizations__organization_id__creative_assets_post": {
         "properties": {
           "file": {
@@ -5549,6 +5922,22 @@
         "title": "Envelope[AuthorizationStartOut]",
         "type": "object"
       },
+      "Envelope_AutopilotPolicyOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AutopilotPolicyOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[AutopilotPolicyOut]",
+        "type": "object"
+      },
       "Envelope_CampaignFunnelsOut_": {
         "properties": {
           "data": {
@@ -6151,6 +6540,26 @@
           "meta"
         ],
         "title": "Envelope[list[AssetOut]]",
+        "type": "object"
+      },
+      "Envelope_list_AutopilotRunOut__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/AutopilotRunOut"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[list[AutopilotRunOut]]",
         "type": "object"
       },
       "Envelope_list_ConnectionOut__": {
@@ -8402,6 +8811,37 @@
           "test_only"
         ],
         "title": "ProviderOut",
+        "type": "object"
+      },
+      "ReadinessOut": {
+        "properties": {
+          "missing": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing",
+            "type": "array"
+          },
+          "needed_changes": {
+            "title": "Needed Changes",
+            "type": "integer"
+          },
+          "ready": {
+            "title": "Ready",
+            "type": "boolean"
+          },
+          "verified_changes": {
+            "title": "Verified Changes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ready",
+          "missing",
+          "verified_changes",
+          "needed_changes"
+        ],
+        "title": "ReadinessOut",
         "type": "object"
       },
       "RecommendationListOut": {
@@ -13722,6 +14162,243 @@
         "summary": "Audit Logs",
         "tags": [
           "audit"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/autopilot": {
+      "get": {
+        "description": "The policy, readiness and the installation's ceilings.",
+        "operationId": "get_autopilot_api_v1_organizations__organization_id__autopilot_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AutopilotPolicyOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Autopilot",
+        "tags": [
+          "autopilot"
+        ]
+      },
+      "put": {
+        "description": "Owners only. Limits may only be stricter than the installation's ceilings.",
+        "operationId": "put_autopilot_api_v1_organizations__organization_id__autopilot_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutopilotPolicyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AutopilotPolicyOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Autopilot",
+        "tags": [
+          "autopilot"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/autopilot/enable": {
+      "post": {
+        "description": "Owners only, with the organization's name typed. Errors: AUTOPILOT_CONFIRMATION,\nAUTOPILOT_NOT_READY.",
+        "operationId": "enable_autopilot_api_v1_organizations__organization_id__autopilot_enable_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutopilotEnableIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AutopilotPolicyOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Enable Autopilot",
+        "tags": [
+          "autopilot"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/autopilot/runs": {
+      "get": {
+        "operationId": "list_autopilot_runs_api_v1_organizations__organization_id__autopilot_runs_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_AutopilotRunOut__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Autopilot Runs",
+        "tags": [
+          "autopilot"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/autopilot/stop": {
+      "post": {
+        "description": "Owner, admin or manager; takes effect at once.",
+        "operationId": "stop_autopilot_api_v1_organizations__organization_id__autopilot_stop_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AutopilotPolicyOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stop Autopilot",
+        "tags": [
+          "autopilot"
         ]
       }
     },

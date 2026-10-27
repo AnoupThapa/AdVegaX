@@ -1039,6 +1039,88 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/{organization_id}/autopilot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Autopilot
+         * @description The policy, readiness and the installation's ceilings.
+         */
+        get: operations["get_autopilot_api_v1_organizations__organization_id__autopilot_get"];
+        /**
+         * Put Autopilot
+         * @description Owners only. Limits may only be stricter than the installation's ceilings.
+         */
+        put: operations["put_autopilot_api_v1_organizations__organization_id__autopilot_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/autopilot/enable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Enable Autopilot
+         * @description Owners only, with the organization's name typed. Errors: AUTOPILOT_CONFIRMATION,
+         *     AUTOPILOT_NOT_READY.
+         */
+        post: operations["enable_autopilot_api_v1_organizations__organization_id__autopilot_enable_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/autopilot/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Autopilot Runs */
+        get: operations["list_autopilot_runs_api_v1_organizations__organization_id__autopilot_runs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/autopilot/stop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stop Autopilot
+         * @description Owner, admin or manager; takes effect at once.
+         */
+        post: operations["stop_autopilot_api_v1_organizations__organization_id__autopilot_stop_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizations/{organization_id}/campaign-drafts": {
         parameters: {
             query?: never;
@@ -2900,6 +2982,109 @@ export interface components {
             /** Expires In Seconds */
             expires_in_seconds: number;
         };
+        /** AutopilotEnableIn */
+        AutopilotEnableIn: {
+            /** Confirm */
+            confirm: string;
+        };
+        /** AutopilotLimits */
+        AutopilotLimits: {
+            /** Campaign Cooldown Days */
+            campaign_cooldown_days: number;
+            /** Cumulative Window Days */
+            cumulative_window_days: number;
+            /** Max Changes Per Day */
+            max_changes_per_day: number;
+            /** Max Cumulative Decrease Percent */
+            max_cumulative_decrease_percent: number;
+            /** Max Decrease Percent */
+            max_decrease_percent: number;
+            /** Min Campaign Age Days */
+            min_campaign_age_days: number;
+        };
+        /** AutopilotPolicyIn */
+        AutopilotPolicyIn: {
+            /** Ad Account Ids */
+            ad_account_ids: string[];
+            /** Campaign Cooldown Days */
+            campaign_cooldown_days: number;
+            /** Cumulative Window Days */
+            cumulative_window_days: number;
+            /** Excluded Campaign Ids */
+            excluded_campaign_ids: string[];
+            /** Kinds */
+            kinds: ("spend_without_results" | "losing_money")[];
+            /** Max Changes Per Day */
+            max_changes_per_day: number;
+            /** Max Cumulative Decrease Percent */
+            max_cumulative_decrease_percent: number;
+            /** Max Decrease Percent */
+            max_decrease_percent: number;
+            /** Min Campaign Age Days */
+            min_campaign_age_days: number;
+        };
+        /** AutopilotPolicyOut */
+        AutopilotPolicyOut: {
+            /** Ad Account Ids */
+            ad_account_ids: string[];
+            /** Campaign Cooldown Days */
+            campaign_cooldown_days: number;
+            ceilings: components["schemas"]["AutopilotLimits"];
+            /** Cumulative Window Days */
+            cumulative_window_days: number;
+            /** Enabled */
+            enabled: boolean;
+            /** Enabled At */
+            enabled_at: string | null;
+            /** Enabled By */
+            enabled_by: string | null;
+            /** Excluded Campaign Ids */
+            excluded_campaign_ids: string[];
+            /** Kinds */
+            kinds: string[];
+            /** Max Changes Per Day */
+            max_changes_per_day: number;
+            /** Max Cumulative Decrease Percent */
+            max_cumulative_decrease_percent: number;
+            /** Max Decrease Percent */
+            max_decrease_percent: number;
+            /** Min Campaign Age Days */
+            min_campaign_age_days: number;
+            readiness: components["schemas"]["ReadinessOut"];
+            /** Stopped At */
+            stopped_at: string | null;
+            /** Stopped By */
+            stopped_by: string | null;
+            /** Stopped Reason */
+            stopped_reason: string | null;
+            /** Updated At */
+            updated_at: string | null;
+        };
+        /** AutopilotRunOut */
+        AutopilotRunOut: {
+            /** Considered */
+            considered: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Limit Reached */
+            limit_reached: boolean;
+            /** Made */
+            made: string[];
+            /** Skipped */
+            skipped: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /** Stopped Reason */
+            stopped_reason: string | null;
+        };
         /** Body_upload_creative_asset_api_v1_organizations__organization_id__creative_assets_post */
         Body_upload_creative_asset_api_v1_organizations__organization_id__creative_assets_post: {
             /** File */
@@ -3825,6 +4010,11 @@ export interface components {
             data: components["schemas"]["AuthorizationStartOut"];
             meta: components["schemas"]["Meta"];
         };
+        /** Envelope[AutopilotPolicyOut] */
+        Envelope_AutopilotPolicyOut_: {
+            data: components["schemas"]["AutopilotPolicyOut"];
+            meta: components["schemas"]["Meta"];
+        };
         /** Envelope[CampaignFunnelsOut] */
         Envelope_CampaignFunnelsOut_: {
             data: components["schemas"]["CampaignFunnelsOut"];
@@ -4011,6 +4201,12 @@ export interface components {
         Envelope_list_AssetOut__: {
             /** Data */
             data: components["schemas"]["AssetOut"][];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[list[AutopilotRunOut]] */
+        Envelope_list_AutopilotRunOut__: {
+            /** Data */
+            data: components["schemas"]["AutopilotRunOut"][];
             meta: components["schemas"]["Meta"];
         };
         /** Envelope[list[ConnectionOut]] */
@@ -4776,6 +4972,17 @@ export interface components {
             display_name: string;
             /** Test Only */
             test_only: boolean;
+        };
+        /** ReadinessOut */
+        ReadinessOut: {
+            /** Missing */
+            missing: string[];
+            /** Needed Changes */
+            needed_changes: number;
+            /** Ready */
+            ready: boolean;
+            /** Verified Changes */
+            verified_changes: number;
         };
         /** RecommendationListOut */
         RecommendationListOut: {
@@ -7272,6 +7479,169 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ListEnvelope_AuditLogOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_autopilot_api_v1_organizations__organization_id__autopilot_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AutopilotPolicyOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_autopilot_api_v1_organizations__organization_id__autopilot_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AutopilotPolicyIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AutopilotPolicyOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    enable_autopilot_api_v1_organizations__organization_id__autopilot_enable_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AutopilotEnableIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AutopilotPolicyOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_autopilot_runs_api_v1_organizations__organization_id__autopilot_runs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_list_AutopilotRunOut__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stop_autopilot_api_v1_organizations__organization_id__autopilot_stop_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AutopilotPolicyOut_"];
                 };
             };
             /** @description Validation Error */

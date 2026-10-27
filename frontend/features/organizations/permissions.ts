@@ -103,3 +103,9 @@ export function canApproveChanges(role: string): boolean {
 export function canManageChangeSettings(role: string): boolean {
   return canApproveChanges(role);
 }
+
+/** Phase 12: only owners switch autopilot on and set its policy; anyone who may request
+ * changes can stop it. */
+export function canManageAutopilot(role: string): boolean {
+  return role === "owner";
+}

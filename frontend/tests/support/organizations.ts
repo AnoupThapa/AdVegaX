@@ -103,6 +103,38 @@ export function emptyActionSettings(extra: Record<string, unknown> = {}) {
   };
 }
 
+export function emptyAutopilot(extra: Record<string, unknown> = {}) {
+  const limits = {
+    max_changes_per_day: 5,
+    campaign_cooldown_days: 7,
+    max_decrease_percent: 20,
+    max_cumulative_decrease_percent: 50,
+    cumulative_window_days: 30,
+    min_campaign_age_days: 14,
+  };
+  return {
+    enabled: false,
+    enabled_by: null,
+    enabled_at: null,
+    stopped_by: null,
+    stopped_at: null,
+    stopped_reason: null,
+    kinds: ["spend_without_results", "losing_money"],
+    ad_account_ids: [],
+    excluded_campaign_ids: [],
+    ...limits,
+    ceilings: limits,
+    readiness: {
+      ready: false,
+      missing: ["installation_off", "not_in_rollout", "too_few_verified_changes"],
+      verified_changes: 0,
+      needed_changes: 5,
+    },
+    updated_at: null,
+    ...extra,
+  };
+}
+
 export function emptyOrganizationData(): Record<string, Response> {
   const wrap = (data: unknown) =>
     new Response(JSON.stringify({ data, meta: { request_id: "req-test" } }), {
@@ -121,6 +153,8 @@ export function emptyOrganizationData(): Record<string, Response> {
       summary: { enabled: true, open: 0, last_run: null, refreshes_left: 3 },
       items: [],
     }),
+    [`GET ${ORG_PATH}/autopilot`]: wrap(emptyAutopilot()),
+    [`GET ${ORG_PATH}/autopilot/runs`]: wrap([]),
     [`GET ${ORG_PATH}/optimization-settings`]: wrap({
       enabled: true,
       currency: "AUD",

@@ -10,6 +10,7 @@ import { formFeedback } from "@/features/auth/form-errors";
 import { hasErrors, type FieldErrors } from "@/features/auth/validation";
 import { StoreAssignments } from "@/features/overview/StoreAssignments";
 import { ChangeSettings } from "@/features/changes/ChangeSettings";
+import { AutopilotSettings } from "@/features/autopilot/AutopilotSettings";
 import { OptimizationSettings } from "@/features/recommendations/OptimizationSettings";
 import { CreativeRulesSettings } from "@/features/creatives/CreativeRulesSettings";
 import { AiUsage } from "@/features/strategies/AiUsage";
@@ -41,6 +42,7 @@ export function OrganizationSettings() {
       <CreativeRulesSettings org={org} />
       <ChangeSettings org={org} />
       <OptimizationSettings org={org} />
+      <AutopilotSettings org={org} />
     </section>
   );
 }
