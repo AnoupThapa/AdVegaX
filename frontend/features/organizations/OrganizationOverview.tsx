@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { PageHeading } from "@/components/ui/PageHeading";
 import { OverviewFigures } from "@/features/overview/OverviewFigures";
+import { OverviewRecommendations } from "@/features/recommendations/RecommendationsPages";
 
 import { useCurrentOrganization } from "./OrganizationShell";
 import styles from "./organizations.module.css";
@@ -18,6 +19,7 @@ export function OrganizationOverview() {
         Your role: <span className={styles.badge}>{roleLabel(org.role)}</span>
       </p>
       <OverviewFigures org={org} />
+      <OverviewRecommendations org={org} />
       <div className={styles.panel}>
         <h2>Your team</h2>
         <p>

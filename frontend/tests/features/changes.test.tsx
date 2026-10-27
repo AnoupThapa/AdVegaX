@@ -403,7 +403,11 @@ describe("Change settings", () => {
     expect(
       await screen.findByText(/Changes are switched off for this AdVegaX installation/),
     ).toBeVisible();
-    expect(screen.getByText("Only owners and admins can change these settings.")).toBeVisible();
+    expect(
+      within(screen.getByRole("form", { name: "Change settings" })).getByText(
+        "Only owners and admins can change these settings.",
+      ),
+    ).toBeVisible();
   });
 });
 

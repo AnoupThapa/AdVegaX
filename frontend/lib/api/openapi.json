@@ -305,6 +305,18 @@
             "title": "Provider",
             "type": "string"
           },
+          "recommendation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommendation Id"
+          },
           "requested_by": {
             "anyOf": [
               {
@@ -481,6 +493,37 @@
           "budget_limits"
         ],
         "title": "ActionPreviewOut",
+        "type": "object"
+      },
+      "ActionRefOut": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "verification": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verification"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "verification"
+        ],
+        "title": "ActionRefOut",
         "type": "object"
       },
       "ActionRejectIn": {
@@ -3301,6 +3344,48 @@
         "title": "CampaignOut",
         "type": "object"
       },
+      "CampaignRef": {
+        "properties": {
+          "ad_account_id": {
+            "format": "uuid",
+            "title": "Ad Account Id",
+            "type": "string"
+          },
+          "ad_account_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ad Account Name"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "provider",
+          "ad_account_id",
+          "ad_account_name"
+        ],
+        "title": "CampaignRef",
+        "type": "object"
+      },
       "CampaignRefOut": {
         "properties": {
           "ad_account_id": {
@@ -5768,6 +5853,22 @@
         "title": "Envelope[MemberOut]",
         "type": "object"
       },
+      "Envelope_OptimizationSettingsOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/OptimizationSettingsOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[OptimizationSettingsOut]",
+        "type": "object"
+      },
       "Envelope_OrganizationOut_": {
         "properties": {
           "data": {
@@ -5846,6 +5947,38 @@
           "meta"
         ],
         "title": "Envelope[ProductsOut]",
+        "type": "object"
+      },
+      "Envelope_RecommendationListOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/RecommendationListOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[RecommendationListOut]",
+        "type": "object"
+      },
+      "Envelope_RecommendationOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/RecommendationOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[RecommendationOut]",
         "type": "object"
       },
       "Envelope_ResyncOut_": {
@@ -7415,6 +7548,105 @@
         "title": "MetricDefinitionOut",
         "type": "object"
       },
+      "OptimizationSettingsIn": {
+        "properties": {
+          "budget_step_percent": {
+            "maximum": 50.0,
+            "minimum": 5.0,
+            "title": "Budget Step Percent",
+            "type": "integer"
+          },
+          "cost_jump_percent": {
+            "maximum": 200.0,
+            "minimum": 10.0,
+            "title": "Cost Jump Percent",
+            "type": "integer"
+          },
+          "min_conversions": {
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Min Conversions",
+            "type": "integer"
+          },
+          "min_spend": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
+                "type": "string"
+              }
+            ],
+            "title": "Min Spend"
+          }
+        },
+        "required": [
+          "min_spend",
+          "min_conversions",
+          "budget_step_percent",
+          "cost_jump_percent"
+        ],
+        "title": "OptimizationSettingsIn",
+        "type": "object"
+      },
+      "OptimizationSettingsOut": {
+        "properties": {
+          "budget_step_percent": {
+            "title": "Budget Step Percent",
+            "type": "integer"
+          },
+          "cost_jump_percent": {
+            "title": "Cost Jump Percent",
+            "type": "integer"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "max_step_percent": {
+            "title": "Max Step Percent",
+            "type": "integer"
+          },
+          "min_conversions": {
+            "title": "Min Conversions",
+            "type": "integer"
+          },
+          "min_spend": {
+            "title": "Min Spend",
+            "type": "string"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "enabled",
+          "currency",
+          "min_spend",
+          "min_conversions",
+          "budget_step_percent",
+          "cost_jump_percent",
+          "max_step_percent",
+          "updated_at"
+        ],
+        "title": "OptimizationSettingsOut",
+        "type": "object"
+      },
       "OrganizationCreate": {
         "additionalProperties": false,
         "properties": {
@@ -7552,6 +7784,37 @@
           }
         },
         "title": "OrganizationUpdate",
+        "type": "object"
+      },
+      "OutcomeOut": {
+        "properties": {
+          "after": {
+            "additionalProperties": true,
+            "title": "After",
+            "type": "object"
+          },
+          "after_days": {
+            "title": "After Days",
+            "type": "integer"
+          },
+          "before": {
+            "additionalProperties": true,
+            "title": "Before",
+            "type": "object"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "after_days",
+          "before",
+          "after",
+          "created_at"
+        ],
+        "title": "OutcomeOut",
         "type": "object"
       },
       "OverviewDayOut": {
@@ -8037,6 +8300,68 @@
         "title": "ProductsOut",
         "type": "object"
       },
+      "ProposalOut": {
+        "description": "The change AdVegaX proposes, or none (\"look into it\").",
+        "properties": {
+          "action_type": {
+            "anyOf": [
+              {
+                "enum": [
+                  "campaign.pause",
+                  "campaign.set_daily_budget"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Type"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "params": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Params",
+            "type": "object"
+          },
+          "previous_daily_budget": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Daily Budget"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action_type",
+          "params",
+          "currency",
+          "previous_daily_budget",
+          "text"
+        ],
+        "title": "ProposalOut",
+        "type": "object"
+      },
       "ProviderOut": {
         "description": "A platform the web app may offer for connection. Public metadata only — never secrets.",
         "properties": {
@@ -8077,6 +8402,334 @@
           "test_only"
         ],
         "title": "ProviderOut",
+        "type": "object"
+      },
+      "RecommendationListOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RecommendationOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/SummaryOut"
+          }
+        },
+        "required": [
+          "summary",
+          "items"
+        ],
+        "title": "RecommendationListOut",
+        "type": "object"
+      },
+      "RecommendationOut": {
+        "properties": {
+          "action": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ActionRefOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ai_run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ai Run Id"
+          },
+          "assumptions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Assumptions",
+            "type": "array"
+          },
+          "campaign": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CampaignRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "closed_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed Reason"
+          },
+          "confidence": {
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Confidence",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "decided_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided By"
+          },
+          "decision_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Note"
+          },
+          "decision_reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "not_relevant",
+                  "figures_wrong",
+                  "wrong_time",
+                  "other"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Reason"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "explained_by": {
+            "enum": [
+              "ai",
+              "rules"
+            ],
+            "title": "Explained By",
+            "type": "string"
+          },
+          "explanation": {
+            "title": "Explanation",
+            "type": "string"
+          },
+          "figures": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Figures",
+            "type": "object"
+          },
+          "funnel": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Funnel"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "spend_without_results",
+              "losing_money",
+              "budget_limited",
+              "cost_jump",
+              "funnel_drop"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "outcomes": {
+            "items": {
+              "$ref": "#/components/schemas/OutcomeOut"
+            },
+            "title": "Outcomes",
+            "type": "array"
+          },
+          "periods": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Periods",
+            "type": "object"
+          },
+          "prechecks": {
+            "items": {
+              "$ref": "#/components/schemas/ActionCheckOut"
+            },
+            "title": "Prechecks",
+            "type": "array"
+          },
+          "proposal": {
+            "$ref": "#/components/schemas/ProposalOut"
+          },
+          "rank": {
+            "title": "Rank",
+            "type": "integer"
+          },
+          "raw_figures": {
+            "additionalProperties": true,
+            "title": "Raw Figures",
+            "type": "object"
+          },
+          "ready": {
+            "title": "Ready",
+            "type": "boolean"
+          },
+          "risks": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Risks",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "open",
+              "approved",
+              "rejected",
+              "done",
+              "expired",
+              "out_of_date",
+              "superseded"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "status",
+          "campaign",
+          "funnel",
+          "figures",
+          "raw_figures",
+          "periods",
+          "currency",
+          "proposal",
+          "note",
+          "prechecks",
+          "ready",
+          "explanation",
+          "confidence",
+          "assumptions",
+          "risks",
+          "rank",
+          "explained_by",
+          "ai_run_id",
+          "expires_at",
+          "closed_reason",
+          "decided_by",
+          "decided_at",
+          "decision_reason",
+          "decision_note",
+          "action",
+          "outcomes",
+          "created_at"
+        ],
+        "title": "RecommendationOut",
+        "type": "object"
+      },
+      "RecommendationRejectIn": {
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "reason": {
+            "enum": [
+              "not_relevant",
+              "figures_wrong",
+              "wrong_time",
+              "other"
+            ],
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "RecommendationRejectIn",
         "type": "object"
       },
       "RegisterRequest": {
@@ -8981,6 +9634,42 @@
           }
         },
         "title": "StrategyUpdateIn",
+        "type": "object"
+      },
+      "SummaryOut": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "last_run": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Run"
+          },
+          "open": {
+            "title": "Open",
+            "type": "integer"
+          },
+          "refreshes_left": {
+            "title": "Refreshes Left",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "enabled",
+          "open",
+          "last_run",
+          "refreshes_left"
+        ],
+        "title": "SummaryOut",
         "type": "object"
       },
       "SyncOut": {
@@ -15230,6 +15919,453 @@
         "summary": "Update Member",
         "tags": [
           "organizations"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/optimization-settings": {
+      "get": {
+        "operationId": "get_optimization_settings_api_v1_organizations__organization_id__optimization_settings_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_OptimizationSettingsOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Optimization Settings",
+        "tags": [
+          "recommendations"
+        ]
+      },
+      "put": {
+        "operationId": "put_optimization_settings_api_v1_organizations__organization_id__optimization_settings_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OptimizationSettingsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_OptimizationSettingsOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Optimization Settings",
+        "tags": [
+          "recommendations"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/recommendations": {
+      "get": {
+        "description": "Open advice first, by rank; then decided and closed advice, newest first.",
+        "operationId": "list_recommendations_api_v1_organizations__organization_id__recommendations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "open",
+                    "decided",
+                    "closed",
+                    "approved",
+                    "rejected",
+                    "done"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "campaign_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Campaign Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_RecommendationListOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Recommendations",
+        "tags": [
+          "recommendations"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/recommendations/refresh": {
+      "post": {
+        "description": "Look again now. Errors: REFRESH_LIMIT, OPTIMIZATION_DISABLED.",
+        "operationId": "refresh_recommendations_api_v1_organizations__organization_id__recommendations_refresh_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_RecommendationListOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Refresh Recommendations",
+        "tags": [
+          "recommendations"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/recommendations/{recommendation_id}": {
+      "get": {
+        "operationId": "get_recommendation_api_v1_organizations__organization_id__recommendations__recommendation_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recommendation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Recommendation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_RecommendationOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Recommendation",
+        "tags": [
+          "recommendations"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/recommendations/{recommendation_id}/approve": {
+      "post": {
+        "description": "Checked again, then an Action Engine change (sent at once by an owner or admin).\nErrors: RECOMMENDATION_OUT_OF_DATE, RECOMMENDATION_CLOSED and the 10A errors.",
+        "operationId": "approve_recommendation_api_v1_organizations__organization_id__recommendations__recommendation_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recommendation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Recommendation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_RecommendationOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Approve Recommendation",
+        "tags": [
+          "recommendations"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/recommendations/{recommendation_id}/done": {
+      "post": {
+        "description": "Advice without a change: marked as looked into.",
+        "operationId": "recommendation_done_api_v1_organizations__organization_id__recommendations__recommendation_id__done_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recommendation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Recommendation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_RecommendationOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Recommendation Done",
+        "tags": [
+          "recommendations"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/recommendations/{recommendation_id}/reject": {
+      "post": {
+        "operationId": "reject_recommendation_api_v1_organizations__organization_id__recommendations__recommendation_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recommendation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Recommendation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecommendationRejectIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_RecommendationOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reject Recommendation",
+        "tags": [
+          "recommendations"
         ]
       }
     },

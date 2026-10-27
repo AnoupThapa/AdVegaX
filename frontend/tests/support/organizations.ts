@@ -117,6 +117,20 @@ export function emptyOrganizationData(): Record<string, Response> {
     [`GET ${ORG_PATH}/ai/usage`]: wrap(emptyAiUsage()),
     [`GET ${ORG_PATH}/actions`]: wrap([]),
     [`GET ${ORG_PATH}/action-settings`]: wrap(emptyActionSettings()),
+    [`GET ${ORG_PATH}/recommendations`]: wrap({
+      summary: { enabled: true, open: 0, last_run: null, refreshes_left: 3 },
+      items: [],
+    }),
+    [`GET ${ORG_PATH}/optimization-settings`]: wrap({
+      enabled: true,
+      currency: "AUD",
+      min_spend: "50.00",
+      min_conversions: 5,
+      budget_step_percent: 20,
+      cost_jump_percent: 30,
+      max_step_percent: 50,
+      updated_at: null,
+    }),
     [`GET ${ORG_PATH}/creative-rules`]: wrap({
       prohibited_terms: [],
       allowed_caps: [],

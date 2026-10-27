@@ -58,7 +58,7 @@ from app.domains.optimization.schemas import (
     ProposalOut,
     RecommendationListOut,
     RecommendationOut,
-    RejectIn,
+    RecommendationRejectIn,
     SummaryOut,
 )
 from app.domains.organizations.models import Organization
@@ -345,7 +345,9 @@ class RecommendationService:
             self._audit(session, ctx, rec, "approved", action_id=str(action.id), sent=sent)
             return self._out(session, rec)
 
-    def reject(self, ctx: TenantContext, rec_id: uuid.UUID, body: RejectIn) -> RecommendationOut:
+    def reject(
+        self, ctx: TenantContext, rec_id: uuid.UUID, body: RecommendationRejectIn
+    ) -> RecommendationOut:
         authorize(ctx, Permission.ACTIONS_REQUEST)
         with self.rt.db.transaction(org_id=ctx.organization_id, user_id=ctx.user_id) as session:
             rec = self._one(session, ctx, rec_id, lock=True)

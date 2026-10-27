@@ -14,7 +14,7 @@ from app.domains.optimization.schemas import (
     OptimizationSettingsOut,
     RecommendationListOut,
     RecommendationOut,
-    RejectIn,
+    RecommendationRejectIn,
 )
 from app.domains.optimization.service import RecommendationService
 
@@ -66,7 +66,7 @@ def approve_recommendation(
 
 @router.post(f"{ONE}/reject", response_model=Envelope[RecommendationOut])
 def reject_recommendation(
-    recommendation_id: uuid.UUID, body: RejectIn, ctx: TenantDep, svc: ServiceDep
+    recommendation_id: uuid.UUID, body: RecommendationRejectIn, ctx: TenantDep, svc: ServiceDep
 ) -> Envelope[RecommendationOut]:
     return ok(svc.reject(ctx, recommendation_id, body))
 

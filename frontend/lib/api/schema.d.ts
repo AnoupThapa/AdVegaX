@@ -1629,6 +1629,139 @@ export interface paths {
         patch: operations["update_member_api_v1_organizations__organization_id__members__member_id__patch"];
         trace?: never;
     };
+    "/api/v1/organizations/{organization_id}/optimization-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Optimization Settings */
+        get: operations["get_optimization_settings_api_v1_organizations__organization_id__optimization_settings_get"];
+        /** Put Optimization Settings */
+        put: operations["put_optimization_settings_api_v1_organizations__organization_id__optimization_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/recommendations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Recommendations
+         * @description Open advice first, by rank; then decided and closed advice, newest first.
+         */
+        get: operations["list_recommendations_api_v1_organizations__organization_id__recommendations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/recommendations/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refresh Recommendations
+         * @description Look again now. Errors: REFRESH_LIMIT, OPTIMIZATION_DISABLED.
+         */
+        post: operations["refresh_recommendations_api_v1_organizations__organization_id__recommendations_refresh_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/recommendations/{recommendation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Recommendation */
+        get: operations["get_recommendation_api_v1_organizations__organization_id__recommendations__recommendation_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/recommendations/{recommendation_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve Recommendation
+         * @description Checked again, then an Action Engine change (sent at once by an owner or admin).
+         *     Errors: RECOMMENDATION_OUT_OF_DATE, RECOMMENDATION_CLOSED and the 10A errors.
+         */
+        post: operations["approve_recommendation_api_v1_organizations__organization_id__recommendations__recommendation_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/recommendations/{recommendation_id}/done": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Recommendation Done
+         * @description Advice without a change: marked as looked into.
+         */
+        post: operations["recommendation_done_api_v1_organizations__organization_id__recommendations__recommendation_id__done_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/recommendations/{recommendation_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject Recommendation */
+        post: operations["reject_recommendation_api_v1_organizations__organization_id__recommendations__recommendation_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizations/{organization_id}/resources/{resource_id}/link": {
         parameters: {
             query?: never;
@@ -1938,6 +2071,8 @@ export interface components {
             previous: components["schemas"]["CampaignStateOut"];
             /** Provider */
             provider: string;
+            /** Recommendation Id */
+            recommendation_id?: string | null;
             /** Requested By */
             requested_by: string | null;
             /** Source */
@@ -1982,6 +2117,18 @@ export interface components {
             dry_run: components["schemas"]["DryRunOut"];
             /** Passed */
             passed: boolean;
+        };
+        /** ActionRefOut */
+        ActionRefOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Status */
+            status: string;
+            /** Verification */
+            verification: string | null;
         };
         /** ActionRejectIn */
         ActionRejectIn: {
@@ -2916,6 +3063,25 @@ export interface components {
             /** Status */
             status: string;
         };
+        /** CampaignRef */
+        CampaignRef: {
+            /**
+             * Ad Account Id
+             * Format: uuid
+             */
+            ad_account_id: string;
+            /** Ad Account Name */
+            ad_account_name: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Provider */
+            provider: string;
+        };
         /** CampaignRefOut */
         CampaignRefOut: {
             /**
@@ -3754,6 +3920,11 @@ export interface components {
             data: components["schemas"]["MemberOut"];
             meta: components["schemas"]["Meta"];
         };
+        /** Envelope[OptimizationSettingsOut] */
+        Envelope_OptimizationSettingsOut_: {
+            data: components["schemas"]["OptimizationSettingsOut"];
+            meta: components["schemas"]["Meta"];
+        };
         /** Envelope[OrganizationOut] */
         Envelope_OrganizationOut_: {
             data: components["schemas"]["OrganizationOut"];
@@ -3777,6 +3948,16 @@ export interface components {
         /** Envelope[ProductsOut] */
         Envelope_ProductsOut_: {
             data: components["schemas"]["ProductsOut"];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[RecommendationListOut] */
+        Envelope_RecommendationListOut_: {
+            data: components["schemas"]["RecommendationListOut"];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[RecommendationOut] */
+        Envelope_RecommendationOut_: {
+            data: components["schemas"]["RecommendationOut"];
             meta: components["schemas"]["Meta"];
         };
         /** Envelope[ResyncOut] */
@@ -4298,6 +4479,36 @@ export interface components {
             /** Unit */
             unit: string;
         };
+        /** OptimizationSettingsIn */
+        OptimizationSettingsIn: {
+            /** Budget Step Percent */
+            budget_step_percent: number;
+            /** Cost Jump Percent */
+            cost_jump_percent: number;
+            /** Min Conversions */
+            min_conversions: number;
+            /** Min Spend */
+            min_spend: number | string;
+        };
+        /** OptimizationSettingsOut */
+        OptimizationSettingsOut: {
+            /** Budget Step Percent */
+            budget_step_percent: number;
+            /** Cost Jump Percent */
+            cost_jump_percent: number;
+            /** Currency */
+            currency: string;
+            /** Enabled */
+            enabled: boolean;
+            /** Max Step Percent */
+            max_step_percent: number;
+            /** Min Conversions */
+            min_conversions: number;
+            /** Min Spend */
+            min_spend: string;
+            /** Updated At */
+            updated_at: string | null;
+        };
         /** OrganizationCreate */
         OrganizationCreate: {
             /** Default Currency */
@@ -4342,6 +4553,24 @@ export interface components {
             default_timezone?: string | null;
             /** Name */
             name?: string | null;
+        };
+        /** OutcomeOut */
+        OutcomeOut: {
+            /** After */
+            after: {
+                [key: string]: unknown;
+            };
+            /** After Days */
+            after_days: number;
+            /** Before */
+            before: {
+                [key: string]: unknown;
+            };
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /** OverviewDayOut */
         OverviewDayOut: {
@@ -4511,6 +4740,24 @@ export interface components {
             to_day: string;
         };
         /**
+         * ProposalOut
+         * @description The change AdVegaX proposes, or none ("look into it").
+         */
+        ProposalOut: {
+            /** Action Type */
+            action_type: ("campaign.pause" | "campaign.set_daily_budget") | null;
+            /** Currency */
+            currency: string | null;
+            /** Params */
+            params: {
+                [key: string]: string;
+            };
+            /** Previous Daily Budget */
+            previous_daily_budget: string | null;
+            /** Text */
+            text: string;
+        };
+        /**
          * ProviderOut
          * @description A platform the web app may offer for connection. Public metadata only — never secrets.
          */
@@ -4529,6 +4776,109 @@ export interface components {
             display_name: string;
             /** Test Only */
             test_only: boolean;
+        };
+        /** RecommendationListOut */
+        RecommendationListOut: {
+            /** Items */
+            items: components["schemas"]["RecommendationOut"][];
+            summary: components["schemas"]["SummaryOut"];
+        };
+        /** RecommendationOut */
+        RecommendationOut: {
+            action: components["schemas"]["ActionRefOut"] | null;
+            /** Ai Run Id */
+            ai_run_id: string | null;
+            /** Assumptions */
+            assumptions: string[];
+            campaign: components["schemas"]["CampaignRef"] | null;
+            /** Closed Reason */
+            closed_reason: string | null;
+            /**
+             * Confidence
+             * @enum {string}
+             */
+            confidence: "low" | "medium" | "high";
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Currency */
+            currency: string;
+            /** Decided At */
+            decided_at: string | null;
+            /** Decided By */
+            decided_by: string | null;
+            /** Decision Note */
+            decision_note: string | null;
+            /** Decision Reason */
+            decision_reason: ("not_relevant" | "figures_wrong" | "wrong_time" | "other") | null;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /**
+             * Explained By
+             * @enum {string}
+             */
+            explained_by: "ai" | "rules";
+            /** Explanation */
+            explanation: string;
+            /** Figures */
+            figures: {
+                [key: string]: string;
+            };
+            /** Funnel */
+            funnel: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "spend_without_results" | "losing_money" | "budget_limited" | "cost_jump" | "funnel_drop";
+            /** Note */
+            note: string | null;
+            /** Outcomes */
+            outcomes: components["schemas"]["OutcomeOut"][];
+            /** Periods */
+            periods: {
+                [key: string]: string;
+            };
+            /** Prechecks */
+            prechecks: components["schemas"]["ActionCheckOut"][];
+            proposal: components["schemas"]["ProposalOut"];
+            /** Rank */
+            rank: number;
+            /** Raw Figures */
+            raw_figures: {
+                [key: string]: unknown;
+            };
+            /** Ready */
+            ready: boolean;
+            /** Risks */
+            risks: string[];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "approved" | "rejected" | "done" | "expired" | "out_of_date" | "superseded";
+        };
+        /** RecommendationRejectIn */
+        RecommendationRejectIn: {
+            /** Note */
+            note?: string | null;
+            /**
+             * Reason
+             * @enum {string}
+             */
+            reason: "not_relevant" | "figures_wrong" | "wrong_time" | "other";
         };
         /** RegisterRequest */
         RegisterRequest: {
@@ -4858,6 +5208,19 @@ export interface components {
             strategy?: {
                 [key: string]: unknown;
             } | null;
+        };
+        /** SummaryOut */
+        SummaryOut: {
+            /** Enabled */
+            enabled: boolean;
+            /** Last Run */
+            last_run: {
+                [key: string]: unknown;
+            } | null;
+            /** Open */
+            open: number;
+            /** Refreshes Left */
+            refreshes_left: number;
         };
         /** SyncOut */
         SyncOut: {
@@ -8202,6 +8565,269 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Envelope_MemberOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_optimization_settings_api_v1_organizations__organization_id__optimization_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_OptimizationSettingsOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_optimization_settings_api_v1_organizations__organization_id__optimization_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OptimizationSettingsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_OptimizationSettingsOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_recommendations_api_v1_organizations__organization_id__recommendations_get: {
+        parameters: {
+            query?: {
+                status?: ("open" | "decided" | "closed" | "approved" | "rejected" | "done") | null;
+                campaign_id?: string | null;
+            };
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_RecommendationListOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    refresh_recommendations_api_v1_organizations__organization_id__recommendations_refresh_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_RecommendationListOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_recommendation_api_v1_organizations__organization_id__recommendations__recommendation_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recommendation_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_RecommendationOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_recommendation_api_v1_organizations__organization_id__recommendations__recommendation_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recommendation_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_RecommendationOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    recommendation_done_api_v1_organizations__organization_id__recommendations__recommendation_id__done_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recommendation_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_RecommendationOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_recommendation_api_v1_organizations__organization_id__recommendations__recommendation_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recommendation_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecommendationRejectIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_RecommendationOut_"];
                 };
             };
             /** @description Validation Error */

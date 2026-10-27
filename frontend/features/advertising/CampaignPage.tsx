@@ -8,6 +8,7 @@ import { Alert } from "@/components/ui/Alert";
 import { PageHeading } from "@/components/ui/PageHeading";
 import { SelectField } from "@/components/ui/SelectField";
 import { CampaignChanges } from "@/features/changes/CampaignChanges";
+import { CampaignRecommendations } from "@/features/recommendations/RecommendationsPages";
 import { useCurrentOrganization } from "@/features/organizations/OrganizationShell";
 import { addDays, formatDay } from "@/features/stores/dates";
 import { ApiError, messageFor } from "@/lib/api/errors";
@@ -212,6 +213,7 @@ function Detail({ campaignId }: { campaignId: string }) {
           </dd>
         </dl>
       </div>
+      <CampaignRecommendations campaignId={c.id} />
       <CampaignChanges
         campaign={{
           id: c.id,

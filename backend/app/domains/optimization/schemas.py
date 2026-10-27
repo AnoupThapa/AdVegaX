@@ -93,7 +93,7 @@ class RecommendationListOut(BaseModel):
     items: list[RecommendationOut]
 
 
-class RejectIn(BaseModel):
+class RecommendationRejectIn(BaseModel):
     reason: RejectReason
     note: str | None = Field(default=None, max_length=500)
 
