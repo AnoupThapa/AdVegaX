@@ -28,7 +28,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | 10A | Action Engine | **Implemented — awaiting review** (A28; Step 0 pending) | `phases/PHASE_10A_PLAN.md` · `phases/PHASE_10A_PROGRESS.md` |
 | 10B | Campaign builder | **Implemented — awaiting review** (A29; Step 0 pending) | 2,011 backend + 534 frontend + 17 end-to-end tests; `phases/PHASE_10B_REPORT.md` |
 | 11 | Optimization engine | **Implemented — awaiting review** (A30; Step 0 pending) | 2,053 backend + 556 frontend + 18 end-to-end tests; `phases/PHASE_11_REPORT.md` |
-| 12 | Controlled autopilot | Not started | Needs Q13 |
+| 12 | Controlled autopilot | **Plan awaiting approval** (answers Q13) | `phases/PHASE_12_PLAN.md` |
 | 13 | Stripe billing & entitlements | Not started | Needs Q14 |
 | 14 | Agency mode | Not started | Needs Q15 |
 
