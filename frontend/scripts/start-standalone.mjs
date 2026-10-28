@@ -3,6 +3,7 @@
 // Usage: npm run build && npm run start:standalone   (PORT and HOSTNAME may be set)
 import { cpSync, existsSync, rmSync } from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 const root = path.resolve(import.meta.dirname, "..");
 const standalone = path.join(root, ".next", "standalone");
@@ -18,4 +19,5 @@ cpSync(path.join(root, ".next", "static"), target, { recursive: true });
 process.env.PORT ??= "3000";
 process.env.HOSTNAME ??= "localhost";
 process.env.NODE_ENV = "production";
-await import(server);
+// A bare Windows path (C:\...) is not a valid ESM specifier; import it as a file:// URL.
+await import(pathToFileURL(server).href);
