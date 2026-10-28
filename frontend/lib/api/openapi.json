@@ -1779,6 +1779,57 @@
         "title": "AdSyncOut",
         "type": "object"
       },
+      "AgencyOut": {
+        "properties": {
+          "agencies": {
+            "items": {
+              "$ref": "#/components/schemas/GrantOut"
+            },
+            "title": "Agencies",
+            "type": "array"
+          },
+          "can_grant": {
+            "title": "Can Grant",
+            "type": "boolean"
+          },
+          "can_manage": {
+            "title": "Can Manage",
+            "type": "boolean"
+          },
+          "clients": {
+            "items": {
+              "$ref": "#/components/schemas/GrantOut"
+            },
+            "title": "Clients",
+            "type": "array"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled",
+          "code",
+          "can_grant",
+          "can_manage",
+          "agencies",
+          "clients"
+        ],
+        "title": "AgencyOut",
+        "type": "object"
+      },
       "AiRunRefOut": {
         "properties": {
           "created_at": {
@@ -4354,6 +4405,85 @@
         "title": "CheckoutIn",
         "type": "object"
       },
+      "ClientOut": {
+        "properties": {
+          "ad_spend": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FigureOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "billing_status": {
+            "title": "Billing Status",
+            "type": "string"
+          },
+          "connections_needing_attention": {
+            "title": "Connections Needing Attention",
+            "type": "integer"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "net_sales": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FigureOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "open_recommendations": {
+            "title": "Open Recommendations",
+            "type": "integer"
+          },
+          "organization_id": {
+            "format": "uuid",
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "organization_id",
+          "name",
+          "role",
+          "billing_status",
+          "currency",
+          "ad_spend",
+          "net_sales",
+          "open_recommendations",
+          "connections_needing_attention"
+        ],
+        "title": "ClientOut",
+        "type": "object"
+      },
+      "CodeOut": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "CodeOut",
+        "type": "object"
+      },
       "ConnectionOut": {
         "properties": {
           "account_label": {
@@ -6032,6 +6162,22 @@
         "title": "Envelope[AdResyncOut]",
         "type": "object"
       },
+      "Envelope_AgencyOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AgencyOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[AgencyOut]",
+        "type": "object"
+      },
       "Envelope_AnalyticsDailyMetricsOut_": {
         "properties": {
           "data": {
@@ -6192,6 +6338,22 @@
         "title": "Envelope[ChannelsOut]",
         "type": "object"
       },
+      "Envelope_CodeOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/CodeOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[CodeOut]",
+        "type": "object"
+      },
       "Envelope_ConnectionOut_": {
         "properties": {
           "data": {
@@ -6350,6 +6512,22 @@
           "meta"
         ],
         "title": "Envelope[FunnelOut]",
+        "type": "object"
+      },
+      "Envelope_GrantOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/GrantOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[GrantOut]",
         "type": "object"
       },
       "Envelope_InvitationOut_": {
@@ -6782,6 +6960,26 @@
           "meta"
         ],
         "title": "Envelope[list[AutopilotRunOut]]",
+        "type": "object"
+      },
+      "Envelope_list_ClientOut__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/ClientOut"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[list[ClientOut]]",
         "type": "object"
       },
       "Envelope_list_ConnectionOut__": {
@@ -7394,6 +7592,133 @@
           "rules"
         ],
         "title": "FunnelOut",
+        "type": "object"
+      },
+      "GrantIn": {
+        "properties": {
+          "code": {
+            "maxLength": 32,
+            "minLength": 6,
+            "title": "Code",
+            "type": "string"
+          },
+          "role": {
+            "default": "manager",
+            "enum": [
+              "manager",
+              "analyst",
+              "viewer"
+            ],
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "GrantIn",
+        "type": "object"
+      },
+      "GrantOut": {
+        "properties": {
+          "accepted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accepted At"
+          },
+          "agency_id": {
+            "format": "uuid",
+            "title": "Agency Id",
+            "type": "string"
+          },
+          "agency_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agency Name"
+          },
+          "client_id": {
+            "format": "uuid",
+            "title": "Client Id",
+            "type": "string"
+          },
+          "client_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Name"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          },
+          "role": {
+            "enum": [
+              "manager",
+              "analyst",
+              "viewer"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "active",
+              "revoked"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "client_id",
+          "client_name",
+          "agency_id",
+          "agency_name",
+          "role",
+          "status",
+          "created_at",
+          "accepted_at",
+          "revoked_at"
+        ],
+        "title": "GrantOut",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -8376,6 +8701,17 @@
           "status": {
             "title": "Status",
             "type": "string"
+          },
+          "via_agency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Via Agency"
           }
         },
         "required": [
@@ -12869,6 +13205,256 @@
         ]
       }
     },
+    "/api/v1/organizations/{organization_id}/agency": {
+      "get": {
+        "description": "Agencies with access to this organization, and organizations that gave it access.",
+        "operationId": "get_agency_api_v1_organizations__organization_id__agency_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AgencyOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Agency",
+        "tags": [
+          "agency"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/agency/code": {
+      "post": {
+        "description": "Owners and admins: a new agency code for clients to enter.",
+        "operationId": "new_agency_code_api_v1_organizations__organization_id__agency_code_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_CodeOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "New Agency Code",
+        "tags": [
+          "agency"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/agency/grants": {
+      "post": {
+        "description": "Owners only: give the agency with this code access (pending its acceptance).",
+        "operationId": "grant_agency_api_v1_organizations__organization_id__agency_grants_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GrantIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_GrantOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Grant Agency",
+        "tags": [
+          "agency"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/agency/grants/{grant_id}/accept": {
+      "post": {
+        "description": "The agency's owners and admins.",
+        "operationId": "accept_grant_api_v1_organizations__organization_id__agency_grants__grant_id__accept_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "grant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Grant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_GrantOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Accept Grant",
+        "tags": [
+          "agency"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/agency/grants/{grant_id}/revoke": {
+      "post": {
+        "description": "Either side's owners and admins; at once.",
+        "operationId": "revoke_grant_api_v1_organizations__organization_id__agency_grants__grant_id__revoke_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "grant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Grant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_GrantOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revoke Grant",
+        "tags": [
+          "agency"
+        ]
+      }
+    },
     "/api/v1/organizations/{organization_id}/ai/campaign-strategies": {
       "get": {
         "description": "Strategies, most recently changed first; archived ones only when asked for.",
@@ -15478,6 +16064,50 @@
         "summary": "Get Ad Campaign",
         "tags": [
           "advertising"
+        ]
+      }
+    },
+    "/api/v1/organizations/{organization_id}/clients": {
+      "get": {
+        "description": "The agency's clients, each computed on its own (no totals across clients).",
+        "operationId": "list_clients_api_v1_organizations__organization_id__clients_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_ClientOut__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Clients",
+        "tags": [
+          "agency"
         ]
       }
     },

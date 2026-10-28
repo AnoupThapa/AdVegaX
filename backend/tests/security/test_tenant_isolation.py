@@ -80,6 +80,10 @@ BODIES = {
         "min_campaign_age_days": 14,
     },
     ("post", "/organizations/{organization_id}/autopilot/enable"): {"confirm": "x"},
+    ("post", "/organizations/{organization_id}/agency/grants"): {
+        "code": "ABCDEFGHJK",
+        "role": "viewer",
+    },
     ("post", "/organizations/{organization_id}/billing/checkout"): {
         "plan": "starter",
         "interval": "month",
@@ -165,6 +169,7 @@ def test_every_org_route_returns_404_for_non_members(app, tenants):
             .replace("{action_id}", str(uuid.uuid4()))
             .replace("{draft_id}", str(uuid.uuid4()))
             .replace("{recommendation_id}", str(uuid.uuid4()))
+            .replace("{grant_id}", str(uuid.uuid4()))
         )
         assert not re.search(r"\{\w+\}", path), f"unhandled path parameter in {template}"
         response = _call(tenants["a"], method, path, BODIES.get((method, template), {}))

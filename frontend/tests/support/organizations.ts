@@ -156,6 +156,14 @@ export function emptyOrganizationData(): Record<string, Response> {
     [`GET ${ORG_PATH}/autopilot`]: wrap(emptyAutopilot()),
     [`GET ${ORG_PATH}/autopilot/runs`]: wrap([]),
     [`GET ${ORG_PATH}/billing`]: wrap(emptyBilling()),
+    [`GET ${ORG_PATH}/agency`]: wrap({
+      enabled: false,
+      code: null,
+      can_grant: false,
+      can_manage: false,
+      agencies: [],
+      clients: [],
+    }),
     [`GET ${ORG_PATH}/optimization-settings`]: wrap({
       enabled: true,
       currency: "AUD",

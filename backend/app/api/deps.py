@@ -6,7 +6,9 @@ import uuid
 from typing import Annotated
 
 from fastapi import Depends, Path, Request
+from starlette.concurrency import run_in_threadpool
 
+from app.core.delegation import set_via_agency
 from app.core.errors import EmailNotVerified, OrganizationReadOnly, Unauthenticated
 from app.core.request_meta import RequestMeta, request_meta
 from app.domains.billing.entitlements import is_read_only
@@ -103,6 +105,7 @@ READ_ONLY_ALLOWED = frozenset(
         "/recommendations/{recommendation_id}/reject",
         "/connections/{connection_id}/disconnect",
         "/resources/{resource_id}/unlink",
+        "/agency/grants/{grant_id}/revoke",
     }
 )
 ORG_PATH = "{organization_id}"
@@ -116,22 +119,40 @@ def _route_tail(request: Request) -> str | None:
     return template.split(ORG_PATH, 1)[1]
 
 
-def tenant_context(
+def _resolve(
+    organizations: OrganizationService,
+    rt: Runtime,
+    principal: Principal,
+    organization_id: uuid.UUID,
+    writing: bool,
+    tail: str | None,
+) -> TenantContext:
+    ctx = organizations.resolve_tenant(principal, organization_id)
+    if rt.settings.BILLING_ENABLED and writing and tail not in READ_ONLY_ALLOWED:
+        with rt.db.transaction(org_id=ctx.organization_id) as session:
+            if is_read_only(rt, session, ctx.organization_id):
+                raise OrganizationReadOnly()
+    return ctx
+
+
+async def tenant_context(
     organization_id: Annotated[uuid.UUID, Path()],
     principal: PrincipalDep,
     organizations: OrganizationsDep,
     request: Request,
     rt: RuntimeDep,
 ) -> TenantContext:
-    """The URL organization ID is only a claim; membership is resolved server-side. While
-    billing is on, a read-only organization (trial over, or payment failed past its grace)
-    may only read, plus the few changes in ``READ_ONLY_ALLOWED``."""
-    ctx = organizations.resolve_tenant(principal, organization_id)
+    """The URL organization ID is only a claim; membership (or, Phase 14, an agency's active
+    grant) is resolved server-side. While billing is on, a read-only organization (trial
+    over, or payment failed past its grace) may only read, plus ``READ_ONLY_ALLOWED``.
+
+    Async so that "working through an agency" is recorded in this request's context, where
+    the endpoint and ``record_audit`` see it (Q-14-6); the database work runs in a thread."""
     writing = request.method not in SAFE_METHODS
-    if rt.settings.BILLING_ENABLED and writing and _route_tail(request) not in READ_ONLY_ALLOWED:
-        with rt.db.transaction(org_id=ctx.organization_id) as session:
-            if is_read_only(rt, session, ctx.organization_id):
-                raise OrganizationReadOnly()
+    ctx = await run_in_threadpool(
+        _resolve, organizations, rt, principal, organization_id, writing, _route_tail(request)
+    )
+    set_via_agency(ctx.organization_id, ctx.via_agency_id)
     return ctx
 
 

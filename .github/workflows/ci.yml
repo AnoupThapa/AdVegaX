@@ -130,6 +130,8 @@ jobs:
       # choosing a plan is refused, and the browser test subscribes through the in-process
       # Stripe simulator. Nothing ever calls Stripe.
       BILLING_ENABLED: "true"
+      # Agency mode on (14-06): grants between the test's own organizations only.
+      AGENCY_ENABLED: "true"
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6

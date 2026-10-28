@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.core.errors import Conflict, Forbidden, NotFound
 from app.db.session import set_context
+from app.domains.agency.access import client_organizations, delegated_role, names
 from app.domains.audit.service import Actor, record_audit
 from app.domains.billing import entitlements
 from app.domains.identity.models import User, UserActionToken
@@ -64,8 +65,9 @@ def slugify(name: str) -> str:
     return slug if len(slug) >= 2 else "org"
 
 
-def _org_out(org: Organization, role: str) -> OrganizationOut:
+def _org_out(org: Organization, role: str, via: str | None = None) -> OrganizationOut:
     return OrganizationOut(
+        via_agency=via,
         id=org.id,
         name=org.name,
         slug=org.slug,
@@ -109,9 +111,21 @@ class OrganizationService:
                     Organization.status == "active",
                 )
             ).scalar_one_or_none()
-        if membership is None:
-            raise NotFound()
-        return TenantContext(organization_id=organization_id, user_id=user_id, role=membership.role)
+        if membership is not None:
+            return TenantContext(
+                organization_id=organization_id, user_id=user_id, role=membership.role
+            )
+        if self.rt.settings.AGENCY_ENABLED:  # Phase 14: through an agency's grant
+            found = delegated_role(self.rt, user_id, organization_id)
+            if found is not None:
+                role, agency_id = found
+                return TenantContext(
+                    organization_id=organization_id,
+                    user_id=user_id,
+                    role=role,
+                    via_agency_id=agency_id,
+                )
+        raise NotFound()
 
     # -------------------------------------------------------------- organizations
     def create(self, principal: Principal, body: OrganizationCreate) -> OrganizationOut:
@@ -182,7 +196,10 @@ class OrganizationService:
                 )
                 .order_by(Organization.name)
             ).all()
-            return [_org_out(org, role) for org, role in rows]
+            own = [_org_out(org, role) for org, role in rows]
+        if not self.rt.settings.AGENCY_ENABLED:
+            return own
+        return own + client_organizations(self.rt, principal.user_id)
 
     def get(self, ctx: TenantContext) -> OrganizationOut:
         authorize(ctx, Permission.ORG_VIEW)
@@ -190,7 +207,12 @@ class OrganizationService:
             org = session.get(Organization, ctx.organization_id)
             if org is None:
                 raise NotFound()
-            return _org_out(org, ctx.role)
+        via = (
+            names(self.rt, {ctx.via_agency_id}).get(ctx.via_agency_id)
+            if ctx.via_agency_id
+            else None
+        )
+        return _org_out(org, ctx.role, via)
 
     def update(self, ctx: TenantContext, body: OrganizationUpdate) -> OrganizationOut:
         authorize(ctx, Permission.ORG_UPDATE)

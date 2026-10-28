@@ -361,6 +361,9 @@ class Settings(BaseSettings):
     )
     BILLING_RECONCILE_INTERVAL: timedelta = timedelta(days=1)  # the nightly check (Q-13-9)
     SCHEDULE_BILLING_TICK: timedelta = timedelta(hours=1)
+    # --- Agency mode (Phase 14; PHASE_14_PLAN, A33) ----------------------------------------
+    # Off until switched on: grants are ignored and the agency pages hidden.
+    AGENCY_ENABLED: bool = False
     # Meta: the Facebook Login for Business configuration that also asks for
     # ``ads_management`` ("Allow changes", Q-10A-2). None: Meta changes cannot be allowed.
     META_WRITE_LOGIN_CONFIG_ID: str | None = Field(default=None, pattern=r"^[0-9]{5,20}$")

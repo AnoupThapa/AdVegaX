@@ -7,11 +7,13 @@ import { createContext, useContext, type ReactNode } from "react";
 import { Alert } from "@/components/ui/Alert";
 import { PageHeading } from "@/components/ui/PageHeading";
 import { RequireAuth } from "@/features/auth/RequireAuth";
+import { useAgency } from "@/features/agency/api";
 import { BillingBanner } from "@/features/billing/BillingBanner";
 import { ApiError, messageFor } from "@/lib/api/errors";
 
 import { useOrganization, type Organization } from "./api";
 import { isOrganizationId } from "./options";
+import { roleLabel } from "./permissions";
 import styles from "./organizations.module.css";
 
 const OrganizationContext = createContext<Organization | null>(null);
@@ -48,6 +50,13 @@ function FetchedOrganization({ id, children }: { id: string; children: ReactNode
         <div className={styles.shell}>
           <OrganizationNav org={query.data} />
           <div className={styles.content}>
+            {query.data.via_agency ? (
+              <Alert tone="info">
+                You are working in {query.data.name} through {query.data.via_agency}, as{" "}
+                {roleLabel(query.data.role)}. Everything you do here is shown to {query.data.name}{" "}
+                in its audit log.
+              </Alert>
+            ) : null}
             <BillingBanner orgId={query.data.id} />
             {children}
           </div>
@@ -111,11 +120,15 @@ const SECTIONS = [
 function OrganizationNav({ org }: { org: Organization }) {
   const pathname = usePathname();
   const base = `/orgs/${org.id}`;
+  const agency = useAgency(org.id);
+  const sections = agency.data?.clients.some((g) => g.status === "active")
+    ? [...SECTIONS, { href: "/clients", label: "Clients" }]
+    : SECTIONS;
   return (
     <nav aria-label="Organization" className={styles.nav}>
       <p className={styles.navTitle}>{org.name}</p>
       <ul className={styles.navList}>
-        {SECTIONS.map((section) => {
+        {sections.map((section) => {
           const href = `${base}${section.href}`;
           // Sub-pages (e.g. one connection) keep their section highlighted.
           const current =

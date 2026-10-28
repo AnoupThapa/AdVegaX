@@ -69,6 +69,8 @@ class OrganizationOut(BaseModel):
     status: str
     role: str
     created_at: datetime
+    # Phase 14: the agency's name when the person works here through its grant.
+    via_agency: str | None = None
 
 
 class MemberOut(BaseModel):

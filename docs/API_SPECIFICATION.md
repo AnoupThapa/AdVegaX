@@ -654,7 +654,19 @@ Off unless `BILLING_ENABLED` (then every organization keeps full use and nothing
 
 **Read-only** (trial over without a plan; a failed payment past `BILLING_PAYMENT_GRACE`; a cancelled subscription after its period): every `POST/PUT/PATCH/DELETE` under `/organizations/{id}` answers `ORGANIZATION_READ_ONLY` (403) except the organization's own details, members and invitations (adding still needs a free place), billing checkout and portal, autopilot stop, cancelling or rejecting a change, rejecting advice, disconnecting and unlinking. Reading always works; schedulers import and look at nothing for it. Owners are emailed `billing_trial_ending` (3 days before), `billing_payment_failed`, `billing_read_only` and `billing_changed`.
 
-## 20. Webhooks
+## 19O. Agency mode — as built (Phase 14; A33)
+
+Off unless `AGENCY_ENABLED` (then `/agency` answers `enabled: false` and every change `CONFLICT`). Base `/organizations/{id}`. A member of an agency organization reaches a client organization while the client's grant is **active**, with the **lower** of their agency role and the granted role (`manager | analyst | viewer`); `OrganizationOut.via_agency` names the agency, and `GET /organizations` lists those clients too. Never through an agency: members and invitations, billing, organization settings, autopilot on, agency grants (403). Every audit record such a person causes in the client carries `metadata.via_agency_id`. Audited in both organizations: `agency.code_changed | granted | offered | accepted | ended`. Emails: `agency_offered` (agency owners), `agency_accepted` (client owners), `agency_ended` (the other side's owners).
+
+| Method & path | Notes |
+|---|---|
+| `GET /agency` | `{enabled, code (owners and admins), can_grant, can_manage, agencies[] (with access here), clients[] (that gave this one access)}`; each `GrantOut {id, client_id, client_name, agency_id, agency_name, role, status: pending\|active\|revoked, created_at, accepted_at, revoked_at}`. Empty when reached through an agency |
+| `POST /agency/code` | `agency.manage` (owner, admin). A new 10-character code; the old one stops working, grants stay |
+| `POST /agency/grants` | `agency.grant` (**client owner**). Body `{code, role}` → 201 pending. Unknown code or own code: `VALIDATION_ERROR` `details[] {field: code, reason: unknown_agency_code\|own_code}`; already offered or active: `CONFLICT` |
+| `POST /agency/grants/{grant_id}/accept` | The agency's owner or admin; pending only (`CONFLICT`); the client side: 404 |
+| `POST /agency/grants/{grant_id}/revoke` | Either side's owner or admin, at once; allowed while read-only (§19N); already ended: `CONFLICT` |
+| `GET /clients` | The agency's active clients, each computed on its own: `[{organization_id, name, role (yours there), billing_status, currency (the client's own), ad_spend, net_sales (FigureOut, the default period), open_recommendations, connections_needing_attention}]` — never a total across clients |
+
 
 Provider webhooks must:
 - verify authenticity,

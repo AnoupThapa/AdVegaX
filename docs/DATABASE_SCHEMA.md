@@ -664,7 +664,12 @@ Supersedes the `actions` outline in §15.
 
 **billing_reconciliations** (system role only, forced RLS; read, insert) — `started_at`, `checked`, `fixed`, `details` (JSONB `{organization_id, changed[] | error}`).
 
-## 14. AI Tables
+## 14H. Agency mode — as built (Phase 14, migration 0025; A33)
+
+**agency_grants** (forced RLS; app role read, insert, update) — `organization_id` (the client), `agency_organization_id`, `role` (`manager` | `analyst` | `viewer`), `status` (`pending` | `active` | `revoked`), `granted_by_user_id`, `accepted_by_user_id`, `revoked_by_user_id`, `created_at`, `accepted_at`, `revoked_at`; at most one open (not revoked) grant per pair (partial unique index). Readable by either organization and by active members of the agency; only the client inserts; either side updates. Revoked grants are kept.
+
+**organizations.agency_code** (unique, nullable). The system role may read `organizations (id, name, status, agency_code)` only: finding an agency by its code and naming the other side of a grant.
+
 
 ### ai_models
 - id

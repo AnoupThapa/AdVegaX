@@ -27,6 +27,8 @@ class Organization(UUIDPrimaryKey, Timestamps, Base):
     default_currency: Mapped[str] = mapped_column(String(3), nullable=False)
     default_timezone: Mapped[str] = mapped_column(String(64), nullable=False)
     status: Mapped[str] = mapped_column(String(16), nullable=False, server_default="active")
+    # Phase 14: the code an agency shares with its clients (None until it asks for one).
+    agency_code: Mapped[str | None] = mapped_column(String(16), unique=True)
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), index=True
     )

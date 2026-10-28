@@ -11,6 +11,7 @@ from app.domains.advertising.models import (
     AdPerformanceDaily,
     AdSyncState,
 )
+from app.domains.agency.models import AgencyGrant
 from app.domains.ai.models import AiModel, AiRun, CampaignStrategy, PromptVersion
 from app.domains.analytics.models import AnalyticsDaily, AnalyticsProperty, AnalyticsSyncState
 from app.domains.audit.models import AuditLog, SecurityEvent
@@ -60,6 +61,7 @@ __all__ = [
     "AdGroup",
     "AdPerformanceDaily",
     "AdSyncState",
+    "AgencyGrant",
     "AiModel",
     "AiRun",
     "AnalyticsDaily",

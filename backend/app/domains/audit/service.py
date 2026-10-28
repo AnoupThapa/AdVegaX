@@ -10,6 +10,7 @@ from sqlalchemy import insert
 from sqlalchemy.orm import Session
 
 from app.core.correlation import get_correlation_id
+from app.core.delegation import via_agency
 from app.core.logging import scrub
 from app.core.request_meta import RequestMeta
 from app.core.security.tokens import keyed_hash
@@ -33,6 +34,15 @@ def _clean(value: dict[str, Any] | None) -> dict[str, Any] | None:
     if not isinstance(cleaned, dict):  # pragma: no cover - scrub preserves dicts
         raise TypeError("audit payload must be a mapping")
     return {k: (str(v) if isinstance(v, uuid.UUID) else v) for k, v in cleaned.items()}
+
+
+def _with_agency(
+    organization_id: uuid.UUID | None, actor: Actor, metadata: dict[str, Any] | None
+) -> dict[str, Any] | None:
+    agency = via_agency(organization_id) if actor.type == "user" else None
+    if agency is None:
+        return metadata
+    return {**(metadata or {}), "via_agency_id": str(agency)}
 
 
 def record_audit(
@@ -61,7 +71,7 @@ def record_audit(
             correlation_id=get_correlation_id(),
             before_json=_clean(before),
             after_json=_clean(after),
-            metadata_json=_clean(metadata) or {},
+            metadata_json=_clean(_with_agency(organization_id, actor, metadata)) or {},
         )
     )
 

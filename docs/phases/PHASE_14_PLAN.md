@@ -1,6 +1,6 @@
 # Phase 14 — Agency Mode: Implementation Plan
 
-**Status:** Draft — awaiting your approval · **Date:** 2026-10-28
+**Status:** ✅ **Approved 2026-10-28 (A33, "Approve all": Q-14-1 … Q-14-10).** In progress. · **Date:** 2026-10-28
 
 > An agency (its own AdVegaX organization) manages several client organizations. A client **grants** the agency access; the agency's staff then work inside the client organization with a **limited role**, every action audited as "via <agency>", and either side can end it at once. Client data is never mixed: each client is read in its own tenant context, as today.
 

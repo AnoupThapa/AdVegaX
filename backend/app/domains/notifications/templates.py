@@ -115,6 +115,32 @@ TEMPLATES: dict[str, Template] = {
         html="<p>Billing for <strong>{{ organization_name }}</strong> changed: "
         '{{ summary }}.</p><p><a href="{{ link }}">See the details</a>.</p>' + _FOOTER_HTML,
     ),
+    "agency_offered": Template(
+        subject="{{ client_name }} gave {{ organization_name }} access in AdVegaX",
+        text="{{ client_name }} gave your agency {{ organization_name }} access as "
+        "{{ role }}. An owner or admin of {{ organization_name }} accepts it in Settings: "
+        "{{ link }}" + _FOOTER_TEXT,
+        html="<p><strong>{{ client_name }}</strong> gave your agency "
+        "<strong>{{ organization_name }}</strong> access as {{ role }}.</p><p>An owner or "
+        'admin <a href="{{ link }}">accepts it in Settings</a>.</p>' + _FOOTER_HTML,
+    ),
+    "agency_accepted": Template(
+        subject="{{ agency_name }} now has access to {{ organization_name }}",
+        text="{{ agency_name }} accepted access to {{ organization_name }} as {{ role }}. "
+        "Everything its people do is shown in your audit log; you can end it at any time in "
+        "Settings: {{ link }}" + _FOOTER_TEXT,
+        html="<p><strong>{{ agency_name }}</strong> accepted access to "
+        "<strong>{{ organization_name }}</strong> as {{ role }}.</p><p>Everything its people "
+        'do is in your audit log; <a href="{{ link }}">end it at any time</a>.</p>' + _FOOTER_HTML,
+    ),
+    "agency_ended": Template(
+        subject="Agency access ended: {{ agency_name }} and {{ client_name }}",
+        text="The access of {{ agency_name }} to {{ client_name }} in AdVegaX has ended. "
+        "Nothing was deleted. Details: {{ link }}" + _FOOTER_TEXT,
+        html="<p>The access of <strong>{{ agency_name }}</strong> to <strong>"
+        "{{ client_name }}</strong> in AdVegaX has ended. Nothing was deleted.</p>"
+        '<p><a href="{{ link }}">Details</a></p>' + _FOOTER_HTML,
+    ),
     "security_notice": Template(
         subject="AdVegaX security notice",
         text="{{ message }}" + _FOOTER_TEXT,

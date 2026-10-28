@@ -663,6 +663,106 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/{organization_id}/agency": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Agency
+         * @description Agencies with access to this organization, and organizations that gave it access.
+         */
+        get: operations["get_agency_api_v1_organizations__organization_id__agency_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/agency/code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * New Agency Code
+         * @description Owners and admins: a new agency code for clients to enter.
+         */
+        post: operations["new_agency_code_api_v1_organizations__organization_id__agency_code_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/agency/grants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Grant Agency
+         * @description Owners only: give the agency with this code access (pending its acceptance).
+         */
+        post: operations["grant_agency_api_v1_organizations__organization_id__agency_grants_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/agency/grants/{grant_id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept Grant
+         * @description The agency's owners and admins.
+         */
+        post: operations["accept_grant_api_v1_organizations__organization_id__agency_grants__grant_id__accept_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/agency/grants/{grant_id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revoke Grant
+         * @description Either side's owners and admins; at once.
+         */
+        post: operations["revoke_grant_api_v1_organizations__organization_id__agency_grants__grant_id__revoke_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizations/{organization_id}/ai/campaign-strategies": {
         parameters: {
             query?: never;
@@ -1358,6 +1458,26 @@ export interface paths {
          * @description One campaign with its budget, ad groups and ads, each with its period figures.
          */
         get: operations["get_ad_campaign_api_v1_organizations__organization_id__campaigns__campaign_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/clients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Clients
+         * @description The agency's clients, each computed on its own (no totals across clients).
+         */
+        get: operations["list_clients_api_v1_organizations__organization_id__clients_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2684,6 +2804,21 @@ export interface components {
             /** Waiting For Allowance */
             waiting_for_allowance: boolean;
         };
+        /** AgencyOut */
+        AgencyOut: {
+            /** Agencies */
+            agencies: components["schemas"]["GrantOut"][];
+            /** Can Grant */
+            can_grant: boolean;
+            /** Can Manage */
+            can_manage: boolean;
+            /** Clients */
+            clients: components["schemas"]["GrantOut"][];
+            /** Code */
+            code: string | null;
+            /** Enabled */
+            enabled: boolean;
+        };
         /** AiRunRefOut */
         AiRunRefOut: {
             /**
@@ -3542,6 +3677,33 @@ export interface components {
              */
             plan: "starter" | "growth" | "scale";
         };
+        /** ClientOut */
+        ClientOut: {
+            ad_spend: components["schemas"]["FigureOut"] | null;
+            /** Billing Status */
+            billing_status: string;
+            /** Connections Needing Attention */
+            connections_needing_attention: number;
+            /** Currency */
+            currency: string;
+            /** Name */
+            name: string;
+            net_sales: components["schemas"]["FigureOut"] | null;
+            /** Open Recommendations */
+            open_recommendations: number;
+            /**
+             * Organization Id
+             * Format: uuid
+             */
+            organization_id: string;
+            /** Role */
+            role: string;
+        };
+        /** CodeOut */
+        CodeOut: {
+            /** Code */
+            code: string;
+        };
         /** ConnectionOut */
         ConnectionOut: {
             /** Account Label */
@@ -4120,6 +4282,11 @@ export interface components {
             data: components["schemas"]["AdResyncOut"];
             meta: components["schemas"]["Meta"];
         };
+        /** Envelope[AgencyOut] */
+        Envelope_AgencyOut_: {
+            data: components["schemas"]["AgencyOut"];
+            meta: components["schemas"]["Meta"];
+        };
         /** Envelope[AnalyticsDailyMetricsOut] */
         Envelope_AnalyticsDailyMetricsOut_: {
             data: components["schemas"]["AnalyticsDailyMetricsOut"];
@@ -4170,6 +4337,11 @@ export interface components {
             data: components["schemas"]["ChannelsOut"];
             meta: components["schemas"]["Meta"];
         };
+        /** Envelope[CodeOut] */
+        Envelope_CodeOut_: {
+            data: components["schemas"]["CodeOut"];
+            meta: components["schemas"]["Meta"];
+        };
         /** Envelope[ConnectionOut] */
         Envelope_ConnectionOut_: {
             data: components["schemas"]["ConnectionOut"];
@@ -4218,6 +4390,11 @@ export interface components {
         /** Envelope[FunnelOut] */
         Envelope_FunnelOut_: {
             data: components["schemas"]["FunnelOut"];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[GrantOut] */
+        Envelope_GrantOut_: {
+            data: components["schemas"]["GrantOut"];
             meta: components["schemas"]["Meta"];
         };
         /** Envelope[InvitationOut] */
@@ -4352,6 +4529,12 @@ export interface components {
         Envelope_list_AutopilotRunOut__: {
             /** Data */
             data: components["schemas"]["AutopilotRunOut"][];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[list[ClientOut]] */
+        Envelope_list_ClientOut__: {
+            /** Data */
+            data: components["schemas"]["ClientOut"][];
             meta: components["schemas"]["Meta"];
         };
         /** Envelope[list[ConnectionOut]] */
@@ -4540,6 +4723,58 @@ export interface components {
              * Format: date
              */
             to_day: string;
+        };
+        /** GrantIn */
+        GrantIn: {
+            /** Code */
+            code: string;
+            /**
+             * Role
+             * @default manager
+             * @enum {string}
+             */
+            role: "manager" | "analyst" | "viewer";
+        };
+        /** GrantOut */
+        GrantOut: {
+            /** Accepted At */
+            accepted_at: string | null;
+            /**
+             * Agency Id
+             * Format: uuid
+             */
+            agency_id: string;
+            /** Agency Name */
+            agency_name: string | null;
+            /**
+             * Client Id
+             * Format: uuid
+             */
+            client_id: string;
+            /** Client Name */
+            client_name: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Revoked At */
+            revoked_at: string | null;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "manager" | "analyst" | "viewer";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "active" | "revoked";
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -4891,6 +5126,8 @@ export interface components {
             slug: string;
             /** Status */
             status: string;
+            /** Via Agency */
+            via_agency?: string | null;
         };
         /** OrganizationUpdate */
         OrganizationUpdate: {
@@ -6976,6 +7213,167 @@ export interface operations {
             };
         };
     };
+    get_agency_api_v1_organizations__organization_id__agency_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AgencyOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    new_agency_code_api_v1_organizations__organization_id__agency_code_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_CodeOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    grant_agency_api_v1_organizations__organization_id__agency_grants_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GrantIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_GrantOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    accept_grant_api_v1_organizations__organization_id__agency_grants__grant_id__accept_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                grant_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_GrantOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_grant_api_v1_organizations__organization_id__agency_grants__grant_id__revoke_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                grant_id: string;
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_GrantOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_campaign_strategies_api_v1_organizations__organization_id__ai_campaign_strategies_get: {
         parameters: {
             query?: {
@@ -8276,6 +8674,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Envelope_AdCampaignDetailOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_clients_api_v1_organizations__organization_id__clients_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_list_ClientOut__"];
                 };
             };
             /** @description Validation Error */

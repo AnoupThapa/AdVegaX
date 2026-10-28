@@ -64,6 +64,8 @@ class Permission(StrEnum):
     AUTOPILOT_MANAGE = "autopilot.manage"  # switch autopilot on, its policy (Q-12-2)
     BILLING_VIEW = "billing.view"  # the plan, its limits and usage (Q-13-5)
     BILLING_MANAGE = "billing.manage"  # subscribe, change, cancel, the portal (Q-13-5)
+    AGENCY_GRANT = "agency.grant"  # give an agency access to this organization (Q-14-1)
+    AGENCY_MANAGE = "agency.manage"  # the agency code, accept, end access, the clients list
 
 
 _ALL = frozenset(Role)
@@ -100,7 +102,25 @@ PERMISSION_MATRIX: dict[Permission, frozenset[Role]] = {
     Permission.AUTOPILOT_MANAGE: frozenset({Role.OWNER}),
     Permission.BILLING_VIEW: _ALL,
     Permission.BILLING_MANAGE: frozenset({Role.OWNER}),
+    Permission.AGENCY_GRANT: frozenset({Role.OWNER}),
+    Permission.AGENCY_MANAGE: _OWNER_ADMIN,
 }
+
+
+# Phase 14: never through an agency's grant, whatever the role (PHASE_14_PLAN §4).
+NOT_THROUGH_AN_AGENCY = frozenset(
+    {
+        Permission.MEMBERS_VIEW,
+        Permission.MEMBERS_MANAGE,
+        Permission.MEMBERS_ASSIGN_ROLE,
+        Permission.BILLING_VIEW,
+        Permission.BILLING_MANAGE,
+        Permission.AGENCY_GRANT,
+        Permission.AGENCY_MANAGE,
+        Permission.AUTOPILOT_MANAGE,
+        Permission.ORG_UPDATE,
+    }
+)
 
 
 class AuthorizationDenied(Forbidden):
@@ -138,6 +158,8 @@ def authorize(
         raise NotFound()
     if not has_permission(ctx.role, permission):
         deny(ctx, permission)
+    if ctx.via_agency_id is not None and permission in NOT_THROUGH_AN_AGENCY:
+        deny(ctx, permission)  # Phase 14 (Q-14-2): the client's people and billing stay its own
 
 
 def deny(
