@@ -30,7 +30,7 @@ Update this file at the end of every phase and every approved sub-phase (ROADMAP
 | 11 | Optimization engine | **Implemented — awaiting review** (A30; Step 0 pending) | 2,053 backend + 556 frontend + 18 end-to-end tests; `phases/PHASE_11_REPORT.md` |
 | 12 | Controlled autopilot | **Implemented — awaiting review** (A31; Step 0 pending) | 2,069 backend + 563 frontend + 19 end-to-end tests; `phases/PHASE_12_REPORT.md` |
 | 13 | Stripe billing & entitlements | **Implemented — awaiting review** (A32; Step 0 pending) | 2,106 backend + 577 frontend + 20 end-to-end tests; `phases/PHASE_13_REPORT.md` |
-| 14 | Agency mode | Not started | Needs Q15 |
+| 14 | Agency mode | **Plan awaiting approval** | `phases/PHASE_14_PLAN.md` |
 
 ## 2. Completed work
 
