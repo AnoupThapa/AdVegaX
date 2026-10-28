@@ -66,4 +66,5 @@ $env:NEXT_PUBLIC_API_BASE_URL = "http://localhost:8000"
 npm run build
 Pop-Location
 
-Say "Ready. Run start.ps1 to open AdVegaX."
+& "$PSScriptRoot\create-shortcuts.ps1"
+Say "Ready. Double-click 'AdVegaX' on your desktop (or press Ctrl+Alt+A)."

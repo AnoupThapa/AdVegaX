@@ -62,7 +62,13 @@
 
    The password for both is **AdVegaX-demo-2026**.
 4. **Admin portal:** click **Admin** at the top, then **Start**. In your authenticator app, add an account using the key shown, then enter the 6-digit code.
-5. **Stop:** `.\scripts\windows\stop.ps1`. **Start again from fresh demo data:** `.\scripts\windows\reset-demo.ps1`.
+5. **Shortcuts** (made by `setup.ps1`; run `.\scripts\windows\create-shortcuts.ps1` to make them again):
+   - **AdVegaX** (Ctrl+Alt+A) — starts AdVegaX if needed and opens the app;
+   - **AdVegaX Admin** (Ctrl+Alt+D) — the same, opening the Admin portal;
+   - **AdVegaX Stop** (Ctrl+Alt+S).
+
+   To start AdVegaX by itself whenever you sign in to Windows, run `.\scripts\windows\create-shortcuts.ps1 -AutoStart`.
+6. **Stop:** `.\scripts\windows\stop.ps1`. **Start again from fresh demo data:** `.\scripts\windows\reset-demo.ps1`.
 
 If a step fails, send me the message on the screen, or the files in `var\logs`.
 

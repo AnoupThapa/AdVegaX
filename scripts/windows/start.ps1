@@ -1,6 +1,19 @@
 # AdVegaX desktop - step 3: start everything and open the browser (Phase 16).
 #   & ".\scripts\windows\start.ps1"        (stop with stop.ps1)
+#   -Page admin   opens the Admin portal instead of the app's home page
+param([string]$Page = "")
 . "$PSScriptRoot\common.ps1"
+$url = "http://localhost:3000/$Page"
+$openBrowser = $Page -ne "none"
+if (-not $openBrowser) { $url = "http://localhost:3000/" }
+
+# Already running (e.g. started by the desktop shortcut or at sign-in): just open the page.
+try {
+  Invoke-WebRequest "http://localhost:8000/api/v1/health/ready" -UseBasicParsing -TimeoutSec 3 | Out-Null
+  if ($openBrowser) { Start-Process $url }
+  exit 0
+} catch { }
+
 Refresh-Path
 Need uv "uv"; Need node "Node.js"
 Import-DesktopEnv
@@ -29,7 +42,7 @@ for ($i = 0; $i -lt 60; $i++) {
   catch { Start-Sleep -Seconds 2 }
 }
 Start-Sleep -Seconds 3
-Start-Process "http://localhost:3000"
+if ($openBrowser) { Start-Process $url }
 Write-Host @"
 
 AdVegaX is running at http://localhost:3000
