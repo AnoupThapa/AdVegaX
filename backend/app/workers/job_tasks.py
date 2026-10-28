@@ -173,3 +173,13 @@ def billing_task() -> int | None:
     rt = worker_runtime()
     ttl = int(rt.settings.SCHEDULE_BILLING_TICK.total_seconds() * 0.9)
     return run_singleton(rt.redis, "billing", ttl, lambda: tick(rt))
+
+
+@celery_app.task(name="advegax.schedule.retention")  # type: ignore[untyped-decorator]
+def retention_task() -> int | None:
+    """Delete unlinked resources' data past its retention (15-01)."""
+    from app.domains.retention.service import purge
+
+    rt = worker_runtime()
+    ttl = int(rt.settings.SCHEDULE_RETENTION_INTERVAL.total_seconds() * 0.9)
+    return run_singleton(rt.redis, "retention", ttl, lambda: purge(rt))

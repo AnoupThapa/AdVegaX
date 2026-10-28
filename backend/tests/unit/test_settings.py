@@ -103,3 +103,17 @@ def test_insecure_production_configuration_rejected(key, value):
 def test_staging_is_validated_like_production():
     with pytest.raises(ValidationError):
         make(**{**SECURE, "ENVIRONMENT": "staging", "COOKIE_SECURE": False})
+
+
+def test_billing_needs_its_stripe_settings_when_deployed():
+    with pytest.raises(ValidationError, match="BILLING_ENABLED needs"):
+        make(**{**SECURE, "BILLING_ENABLED": True})
+    stripe = {
+        "BILLING_ENABLED": True,
+        "STRIPE_SECRET_KEY": "sk_live_x",
+        "STRIPE_WEBHOOK_SECRET": "whsec_x",
+        "STRIPE_API_VERSION": "2026-09-30.basil",
+    }
+    assert make(**{**SECURE, **stripe}).BILLING_ENABLED
+    with pytest.raises(ValidationError, match="test-mode key"):
+        make(**{**SECURE, **stripe, "ENVIRONMENT": "staging"})

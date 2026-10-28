@@ -364,6 +364,12 @@ class Settings(BaseSettings):
     # --- Agency mode (Phase 14; PHASE_14_PLAN, A33) ----------------------------------------
     # Off until switched on: grants are ignored and the agency pages hidden.
     AGENCY_ENABLED: bool = False
+    # --- Data retention (Phase 15; PHASE_15_PLAN Q-15-3, A34) --------------------------------
+    # Unlinked stores, ad accounts and properties are deleted with their imported data after
+    # this long (audit logs are kept 7 years and never deleted by this job). Off until on.
+    RETENTION_ENABLED: bool = False
+    DATA_RETENTION_AFTER_REMOVAL: timedelta = timedelta(days=90)
+    SCHEDULE_RETENTION_INTERVAL: timedelta = timedelta(days=1)
     # Meta: the Facebook Login for Business configuration that also asks for
     # ``ads_management`` ("Allow changes", Q-10A-2). None: Meta changes cannot be allowed.
     META_WRITE_LOGIN_CONFIG_ID: str | None = Field(default=None, pattern=r"^[0-9]{5,20}$")
@@ -534,6 +540,8 @@ class Settings(BaseSettings):
             "BILLING_TRIAL_REMINDER": self.BILLING_TRIAL_REMINDER,
             "BILLING_RECONCILE_INTERVAL": self.BILLING_RECONCILE_INTERVAL,
             "SCHEDULE_BILLING_TICK": self.SCHEDULE_BILLING_TICK,
+            "DATA_RETENTION_AFTER_REMOVAL": self.DATA_RETENTION_AFTER_REMOVAL,
+            "SCHEDULE_RETENTION_INTERVAL": self.SCHEDULE_RETENTION_INTERVAL,
         }
         for name, value in durations.items():
             if value <= timedelta(0):
@@ -593,6 +601,16 @@ class Settings(BaseSettings):
             problems.append("EMAIL_BACKEND must be smtp")
         if self.CELERY_TASK_ALWAYS_EAGER:
             problems.append("CELERY_TASK_ALWAYS_EAGER must be false")
+        if self.BILLING_ENABLED and not (
+            self.STRIPE_SECRET_KEY and self.STRIPE_WEBHOOK_SECRET and self.STRIPE_API_VERSION
+        ):
+            problems.append(
+                "BILLING_ENABLED needs STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET and "
+                "STRIPE_API_VERSION"
+            )
+        key = self.STRIPE_SECRET_KEY.get_secret_value() if self.STRIPE_SECRET_KEY else ""
+        if self.ENVIRONMENT is Environment.STAGING and key.startswith("sk_live_"):
+            problems.append("staging must use a Stripe test-mode key (sk_test_)")
         if problems:
             raise ValueError(
                 "Insecure configuration for deployed environment: " + "; ".join(problems)

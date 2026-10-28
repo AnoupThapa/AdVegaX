@@ -206,3 +206,18 @@ make e2e                   # Playwright + axe against a running stack (see READM
 ```
 
 CI (`.github/workflows/ci.yml`) additionally runs gitleaks secret scanning, `pip-audit`, the frontend checks, the end-to-end and accessibility suite against a real stack (PostgreSQL, Redis, Mailpit, API, worker, web), and Docker image builds for the API and the web app.
+
+
+## Phases 13 – 15 additions (threat model update, Phase 15)
+
+| Threat | Control |
+|---|---|
+| Forged or replayed Stripe webhooks | HMAC signature and 5-minute age check; once per event id; state read back from Stripe (§19N) |
+| Card data exposure | Never handled: Stripe Checkout and portal are Stripe's pages |
+| Billing bypass | Limits and read-only mode enforced on the server; web app only explains |
+| Agency over-reach | Grant needs both sides; role capped at Manager; members, billing, settings, autopilot and granting refused through an agency; every request re-checks the grant; client data read only in the client's tenant context |
+| Agency actions hidden from the client | `via_agency_id` on every audit record a delegated person causes |
+| Data kept too long | Retention job (off until switched on) deletes unlinked resources' data after 90 days; audit logs 7 years |
+| Unsafe production settings | Deployed environments refuse insecure settings, billing without Stripe keys and live Stripe keys on staging |
+| Vulnerable dependencies or images | CI: pip-audit, npm audit (high), Trivy image scans (high/critical, fixable), gitleaks; ZAP baseline and an outside penetration test before taking payments |
+| Data loss | Managed daily backups with point-in-time recovery (35 days); quarterly restore drill (`docs/runbooks/restore.md`); encryption keys kept outside the database |
