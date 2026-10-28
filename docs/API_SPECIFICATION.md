@@ -668,6 +668,24 @@ Off unless `AGENCY_ENABLED` (then `/agency` answers `enabled: false` and every c
 | `GET /clients` | The agency's active clients, each computed on its own: `[{organization_id, name, role (yours there), billing_status, currency (the client's own), ad_spend, net_sales (FigureOut, the default period), open_recommendations, connections_needing_attention}]` — never a total across clients |
 
 
+## 19P. Admin portal — as built (Phase 16; A35)
+
+For the people who operate the installation (`platform_admins`, made with `python -m app.domains.platform.make_admin <email>`), never customers: anyone else gets `ADMIN_REQUIRED` (403). Every call except `/admin/me` and the two-step set-up needs the authenticator code entered in this session (`ADMIN_CODE_REQUIRED`, 403; lasts `ADMIN_STEP_UP_TTL`). Audited without an organization: `platform.two_step_on | signed_in | setting_saved | setting_cleared | organization_status` (setting names only, never values).
+
+| Method & path | Notes |
+|---|---|
+| `GET /admin/me` | `{is_admin, totp_enabled, verified}` |
+| `POST /admin/two-step/setup` | `{secret, uri}` (otpauth) — before two-step is on; then `CONFLICT` |
+| `POST /admin/two-step/enable` · `/verify` | Body `{code}`; wrong code: `VALIDATION_ERROR` `{field: code, reason: wrong_code}` |
+| `GET /admin/settings` | The registry (`platform/registry.py`): `[{name, label, group, kind: secret\|text\|switch, source: portal\|settings_file\|default, set, hint ("••••1234" for secrets), updated_at}]` — never a secret's value |
+| `PUT /admin/settings/{name}` | Body `{value}`; encrypted; switches `true`/`false` (`on_or_off`); a value the setting refuses: `not_accepted`; not in the registry: 404. **Applies the next time AdVegaX starts** |
+| `DELETE /admin/settings/{name}` | Back to the settings file |
+| `GET /admin/organizations` · `PUT /admin/organizations/{id}/status` | `{id, name, status}`; body `{status: active\|suspended}` (a suspended organization answers 404 to its members) |
+| `GET /admin/users` | The latest 500: `{id, email, display_name, status, created_at, is_admin}` |
+| `GET /admin/health` | `{database, redis, environment, switches{}, restart_needed}` |
+
+## 20. Webhooks
+
 Provider webhooks must:
 - verify authenticity,
 - resolve tenant safely,

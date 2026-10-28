@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI, Request
 from fastapi.concurrency import run_in_threadpool
@@ -19,13 +19,20 @@ from app.core.security.middleware import RequestGuardMiddleware, SecurityHeaders
 from app.core.settings import Settings, get_settings
 from app.domains.audit.denials import audit_denial
 from app.domains.organizations.permissions import AuthorizationDenied
+from app.domains.platform.store import apply as apply_platform_settings
 from app.runtime import Runtime, build_runtime
 
 
 def create_app(settings: Settings | None = None, runtime: Runtime | None = None) -> FastAPI:
+    started_here = settings is None
     settings = settings or get_settings()
     configure_logging(settings.LOG_LEVEL)
+    if started_here:  # Phase 16: keys and switches saved in the Admin portal
+        settings = apply_platform_settings(settings)
     runtime = runtime or build_runtime(settings)
+    if started_here:
+        with suppress(Exception):
+            runtime.redis.delete("platform-settings:changed")
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:

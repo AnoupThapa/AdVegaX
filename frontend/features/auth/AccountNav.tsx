@@ -4,11 +4,18 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/Button";
+import { useAdminMe } from "@/features/admin/api";
 import { OrganizationSwitcher } from "@/features/organizations/OrganizationSwitcher";
 
 import { useSignOut } from "./actions";
 import styles from "./AccountNav.module.css";
 import { useSession } from "./session";
+
+/** Only for the people who run this installation (Phase 16). */
+function AdminLink() {
+  const me = useAdminMe();
+  return me.data?.is_admin ? <Link href="/admin">Admin</Link> : null;
+}
 
 export function AccountNav() {
   const { user } = useSession();
@@ -31,6 +38,7 @@ export function AccountNav() {
   return (
     <nav aria-label="Account" className={styles.nav}>
       <OrganizationSwitcher user={user} />
+      <AdminLink />
       <Link
         href="/account/security"
         className={styles.who}

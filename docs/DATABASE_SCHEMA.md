@@ -671,6 +671,18 @@ Supersedes the `actions` outline in §15.
 **organizations.agency_code** (unique, nullable). The system role may read `organizations (id, name, status, agency_code)` only: finding an agency by its code and naming the other side of a grant.
 
 
+**Data retention (Phase 15, migration 0026; A34):** the system role may read `organization_resource_links (organization_id, external_resource_id, status, unlinked_at)` and delete `external_resources` (the retention job only; cascades remove the imported data). The app role still cannot delete integration rows.
+
+## 14I. Admin portal — as built (Phase 16, migration 0027; A35)
+
+**platform_admins** (system role only, forced RLS) — `user_id` (primary key), the two-step secret sealed with the installation's key set (`totp_ciphertext`, `totp_wrapped_key`, `totp_key_version`), `totp_enabled_at`, `created_at`.
+
+**platform_settings** (system role only, forced RLS) — `name` (primary key, a registry setting), `ciphertext`, `wrapped_key`, `key_version` (sealed with the installation's key set, bound to the name), `hint` (last four of a secret; a text value's start), `updated_by`, `updated_at`. Read when AdVegaX starts and laid over the settings file.
+
+The system role also gains `SELECT (id, email, display_name, status, created_at)` on `users` and `UPDATE (status)` on `organizations`.
+
+## 14. AI Tables
+
 ### ai_models
 - id
 - provider

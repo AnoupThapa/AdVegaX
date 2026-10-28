@@ -31,6 +31,7 @@ class Environment(StrEnum):
 class EmailBackend(StrEnum):
     SMTP = "smtp"
     MEMORY = "memory"
+    FOLDER = "folder"  # Phase 16: the desktop installation writes emails to EMAIL_FOLDER
 
 
 # Settings that take comma-separated organization ids.
@@ -106,6 +107,7 @@ class Settings(BaseSettings):
     # --- Transactional email (A9) -----------------------------------------------------
     EMAIL_BACKEND: EmailBackend = EmailBackend.SMTP
     EMAIL_FROM: str = "AdVegaX <no-reply@localhost>"
+    EMAIL_FOLDER: str = "var/mail"
     SMTP_HOST: str = "localhost"
     SMTP_PORT: int = 1025
     SMTP_USERNAME: str | None = None
@@ -368,6 +370,9 @@ class Settings(BaseSettings):
     # Unlinked stores, ad accounts and properties are deleted with their imported data after
     # this long (audit logs are kept 7 years and never deleted by this job). Off until on.
     RETENTION_ENABLED: bool = False
+    # --- Admin portal (Phase 16; A35) --------------------------------------------------------
+    # How long an administrator's two-step code is good for, in one browser session.
+    ADMIN_STEP_UP_TTL: timedelta = timedelta(hours=12)
     DATA_RETENTION_AFTER_REMOVAL: timedelta = timedelta(days=90)
     SCHEDULE_RETENTION_INTERVAL: timedelta = timedelta(days=1)
     # Meta: the Facebook Login for Business configuration that also asks for
@@ -542,6 +547,7 @@ class Settings(BaseSettings):
             "SCHEDULE_BILLING_TICK": self.SCHEDULE_BILLING_TICK,
             "DATA_RETENTION_AFTER_REMOVAL": self.DATA_RETENTION_AFTER_REMOVAL,
             "SCHEDULE_RETENTION_INTERVAL": self.SCHEDULE_RETENTION_INTERVAL,
+            "ADMIN_STEP_UP_TTL": self.ADMIN_STEP_UP_TTL,
         }
         for name, value in durations.items():
             if value <= timedelta(0):

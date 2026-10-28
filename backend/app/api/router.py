@@ -21,6 +21,7 @@ from app.domains.integrations.router import router as integrations_router
 from app.domains.metrics.router import router as metrics_router
 from app.domains.optimization.router import router as optimization_router
 from app.domains.organizations.router import router as organizations_router
+from app.domains.platform.router import router as admin_router
 from app.domains.strategy.router import router as strategy_router
 from app.domains.webhooks.router import router as webhooks_router
 
@@ -43,4 +44,5 @@ api_router.include_router(optimization_router)
 api_router.include_router(autopilot_router)
 api_router.include_router(billing_router)
 api_router.include_router(agency_router)
+api_router.include_router(admin_router)
 api_router.include_router(webhooks_router)

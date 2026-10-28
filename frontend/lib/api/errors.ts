@@ -133,6 +133,8 @@ const MESSAGES: Readonly<Record<string, string>> = {
   ORGANIZATION_READ_ONLY:
     "This organization is read-only until a plan is chosen on the Billing page.",
   BILLING_UNAVAILABLE: "Billing is not available right now. Try again later.",
+  ADMIN_REQUIRED: "Only AdVegaX administrators can do this.",
+  ADMIN_CODE_REQUIRED: "Enter the code from your authenticator app first.",
   INTERNAL_ERROR: "Something went wrong on our side. Please try again.",
   SERVICE_UNAVAILABLE: "The service is temporarily unavailable. Please try again shortly.",
   HTTP_ERROR: "This request could not be completed. Please try again.",

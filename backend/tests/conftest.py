@@ -53,6 +53,8 @@ TABLES = (
     "fx_rates",  # shared reference data (Phase 6), cleared like the rest between tests
     "billing_events",  # system-owned (Phase 13): no organization to cascade from
     "billing_reconciliations",
+    "platform_settings",  # system-owned (Phase 16)
+    "platform_admins",
     "job_runs",
     "organization_resource_links",
     "external_resources",

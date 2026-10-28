@@ -4,6 +4,186 @@
  */
 
 export interface paths {
+    "/api/v1/admin/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin Health */
+        get: operations["admin_health_api_v1_admin_health_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Admin Me
+         * @description Anyone signed in: whether they are an administrator and have entered their code.
+         */
+        get: operations["admin_me_api_v1_admin_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/organizations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Organizations */
+        get: operations["list_organizations_api_v1_admin_organizations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/organizations/{organization_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set Organization Status */
+        put: operations["set_organization_status_api_v1_admin_organizations__organization_id__status_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Settings
+         * @description Keys and switches: never a secret's value, only whether it is set and its last four.
+         */
+        get: operations["list_settings_api_v1_admin_settings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/settings/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Save Setting */
+        put: operations["save_setting_api_v1_admin_settings__name__put"];
+        post?: never;
+        /**
+         * Clear Setting
+         * @description Back to the settings file's value.
+         */
+        delete: operations["clear_setting_api_v1_admin_settings__name__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/two-step/enable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Two Step Enable */
+        post: operations["two_step_enable_api_v1_admin_two_step_enable_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/two-step/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Two Step Setup */
+        post: operations["two_step_setup_api_v1_admin_two_step_setup_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/two-step/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Two Step Verify */
+        post: operations["two_step_verify_api_v1_admin_two_step_verify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Users */
+        get: operations["list_users_api_v1_admin_users_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/change-password": {
         parameters: {
             query?: never;
@@ -2804,6 +2984,48 @@ export interface components {
             /** Waiting For Allowance */
             waiting_for_allowance: boolean;
         };
+        /** AdminMeOut */
+        AdminMeOut: {
+            /** Is Admin */
+            is_admin: boolean;
+            /** Totp Enabled */
+            totp_enabled: boolean;
+            /** Verified */
+            verified: boolean;
+        };
+        /** AdminOrganizationOut */
+        AdminOrganizationOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Status */
+            status: string;
+        };
+        /** AdminUserOut */
+        AdminUserOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Display Name */
+            display_name: string | null;
+            /** Email */
+            email: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Is Admin */
+            is_admin: boolean;
+            /** Status */
+            status: string;
+        };
         /** AgencyOut */
         AgencyOut: {
             /** Agencies */
@@ -3699,6 +3921,11 @@ export interface components {
             /** Role */
             role: string;
         };
+        /** CodeIn */
+        CodeIn: {
+            /** Code */
+            code: string;
+        };
         /** CodeOut */
         CodeOut: {
             /** Code */
@@ -4282,6 +4509,16 @@ export interface components {
             data: components["schemas"]["AdResyncOut"];
             meta: components["schemas"]["Meta"];
         };
+        /** Envelope[AdminMeOut] */
+        Envelope_AdminMeOut_: {
+            data: components["schemas"]["AdminMeOut"];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[AdminOrganizationOut] */
+        Envelope_AdminOrganizationOut_: {
+            data: components["schemas"]["AdminOrganizationOut"];
+            meta: components["schemas"]["Meta"];
+        };
         /** Envelope[AgencyOut] */
         Envelope_AgencyOut_: {
             data: components["schemas"]["AgencyOut"];
@@ -4397,6 +4634,11 @@ export interface components {
             data: components["schemas"]["GrantOut"];
             meta: components["schemas"]["Meta"];
         };
+        /** Envelope[HealthOut] */
+        Envelope_HealthOut_: {
+            data: components["schemas"]["app__domains__platform__schemas__HealthOut"];
+            meta: components["schemas"]["Meta"];
+        };
         /** Envelope[InvitationOut] */
         Envelope_InvitationOut_: {
             data: components["schemas"]["InvitationOut"];
@@ -4492,6 +4734,11 @@ export interface components {
             data: components["schemas"]["StrategyOut"];
             meta: components["schemas"]["Meta"];
         };
+        /** Envelope[TotpSetupOut] */
+        Envelope_TotpSetupOut_: {
+            data: components["schemas"]["TotpSetupOut"];
+            meta: components["schemas"]["Meta"];
+        };
         /** Envelope[UsageOut] */
         Envelope_UsageOut_: {
             data: components["schemas"]["UsageOut"];
@@ -4511,6 +4758,18 @@ export interface components {
         Envelope_list_AdAccountOut__: {
             /** Data */
             data: components["schemas"]["AdAccountOut"][];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[list[AdminOrganizationOut]] */
+        Envelope_list_AdminOrganizationOut__: {
+            /** Data */
+            data: components["schemas"]["AdminOrganizationOut"][];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[list[AdminUserOut]] */
+        Envelope_list_AdminUserOut__: {
+            /** Data */
+            data: components["schemas"]["AdminUserOut"][];
             meta: components["schemas"]["Meta"];
         };
         /** Envelope[list[AnalyticsPropertyOut]] */
@@ -4613,6 +4872,12 @@ export interface components {
         Envelope_list_SessionOut__: {
             /** Data */
             data: components["schemas"]["SessionOut"][];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[list[SettingOut]] */
+        Envelope_list_SettingOut__: {
+            /** Data */
+            data: components["schemas"]["SettingOut"][];
             meta: components["schemas"]["Meta"];
         };
         /** Envelope[list[StoreOut]] */
@@ -4780,17 +5045,6 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
-        };
-        /**
-         * HealthOut
-         * @description Store configuration found by the daily check (2B-06): a plain message key for the web
-         *     app (e.g. ``cost_of_goods_off``, ``woocommerce_too_old``, ``timezone_unknown``), or None.
-         */
-        HealthOut: {
-            /** Checked At */
-            checked_at: string | null;
-            /** Code */
-            code: string | null;
         };
         /** InventoryOut */
         InventoryOut: {
@@ -5635,6 +5889,36 @@ export interface components {
             /** User Agent Summary */
             user_agent_summary: string | null;
         };
+        /** SettingIn */
+        SettingIn: {
+            /** Value */
+            value: string;
+        };
+        /** SettingOut */
+        SettingOut: {
+            /** Group */
+            group: string;
+            /** Hint */
+            hint: string | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "secret" | "text" | "switch";
+            /** Label */
+            label: string;
+            /** Name */
+            name: string;
+            /** Set */
+            set: boolean;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "portal" | "settings_file" | "default";
+            /** Updated At */
+            updated_at: string | null;
+        };
         /** SourceOut */
         SourceOut: {
             /** Currency */
@@ -5656,6 +5940,14 @@ export interface components {
             timezone: string;
             /** Updated At */
             updated_at: string | null;
+        };
+        /** StatusIn */
+        StatusIn: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "active" | "suspended";
         };
         /** StatusOut */
         StatusOut: {
@@ -5699,7 +5991,7 @@ export interface components {
             domain: string;
             /** First Import Completed At */
             first_import_completed_at: string | null;
-            health?: components["schemas"]["HealthOut"] | null;
+            health?: components["schemas"]["app__domains__commerce__schemas__HealthOut"] | null;
             /** History From */
             history_from: string | null;
             /**
@@ -5911,6 +6203,13 @@ export interface components {
             /** Total Sales */
             total_sales: string | null;
         };
+        /** TotpSetupOut */
+        TotpSetupOut: {
+            /** Secret */
+            secret: string;
+            /** Uri */
+            uri: string;
+        };
         /** UsageOut */
         UsageOut: {
             /** Ai Enabled */
@@ -6040,6 +6339,32 @@ export interface components {
             /** Supported */
             supported: boolean;
         };
+        /**
+         * HealthOut
+         * @description Store configuration found by the daily check (2B-06): a plain message key for the web
+         *     app (e.g. ``cost_of_goods_off``, ``woocommerce_too_old``, ``timezone_unknown``), or None.
+         */
+        app__domains__commerce__schemas__HealthOut: {
+            /** Checked At */
+            checked_at: string | null;
+            /** Code */
+            code: string | null;
+        };
+        /** HealthOut */
+        app__domains__platform__schemas__HealthOut: {
+            /** Database */
+            database: boolean;
+            /** Environment */
+            environment: string;
+            /** Redis */
+            redis: boolean;
+            /** Restart Needed */
+            restart_needed: boolean;
+            /** Switches */
+            switches: {
+                [key: string]: boolean;
+            };
+        };
     };
     responses: never;
     parameters: never;
@@ -6049,6 +6374,293 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    admin_health_api_v1_admin_health_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_HealthOut_"];
+                };
+            };
+        };
+    };
+    admin_me_api_v1_admin_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AdminMeOut_"];
+                };
+            };
+        };
+    };
+    list_organizations_api_v1_admin_organizations_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_list_AdminOrganizationOut__"];
+                };
+            };
+        };
+    };
+    set_organization_status_api_v1_admin_organizations__organization_id__status_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StatusIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AdminOrganizationOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_settings_api_v1_admin_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_list_SettingOut__"];
+                };
+            };
+        };
+    };
+    save_setting_api_v1_admin_settings__name__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SettingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_list_SettingOut__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    clear_setting_api_v1_admin_settings__name__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_list_SettingOut__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    two_step_enable_api_v1_admin_two_step_enable_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CodeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AdminMeOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    two_step_setup_api_v1_admin_two_step_setup_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_TotpSetupOut_"];
+                };
+            };
+        };
+    };
+    two_step_verify_api_v1_admin_two_step_verify_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CodeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AdminMeOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_users_api_v1_admin_users_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_list_AdminUserOut__"];
+                };
+            };
+        };
+    };
     change_password_api_v1_auth_change_password_post: {
         parameters: {
             query?: never;

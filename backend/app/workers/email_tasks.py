@@ -14,7 +14,11 @@ from app.workers.celery_app import celery_app
 @lru_cache
 def worker_runtime() -> Runtime:
     """Process-wide runtime for workers (tests may replace it via ``set_worker_runtime``)."""
-    return _override or build_runtime(get_settings())
+    if _override is not None:
+        return _override
+    from app.domains.platform.store import apply
+
+    return build_runtime(apply(get_settings()))  # Phase 16: the Admin portal's values
 
 
 _override: Runtime | None = None

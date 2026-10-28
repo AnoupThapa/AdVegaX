@@ -12,6 +12,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from app.core.settings import get_settings
 from app.main import create_app
 
 DEFAULT_TARGET = Path(__file__).resolve().parents[3] / "frontend" / "lib" / "api" / "openapi.json"
@@ -20,7 +21,7 @@ DEFAULT_TARGET = Path(__file__).resolve().parents[3] / "frontend" / "lib" / "api
 def render(schema: dict[str, Any] | None = None) -> str:
     """Stable, diff-friendly JSON for the schema."""
     if schema is None:
-        app = create_app()
+        app = create_app(get_settings())  # the schema only: no stored Admin values
         try:
             schema = app.openapi()
         finally:

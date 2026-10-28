@@ -128,7 +128,9 @@ def tenants(make_client):
 
 def _org_routes(app):
     for path, methods in app.openapi()["paths"].items():
-        if "{organization_id}" in path:
+        # /admin/… names an organization but is for platform admins only (Phase 16):
+        # everyone else gets ADMIN_REQUIRED, covered in tests/api/test_admin_api.py.
+        if "{organization_id}" in path and not path.startswith("/api/v1/admin/"):
             for method in methods:
                 yield method, path.removeprefix("/api/v1")
 

@@ -63,6 +63,7 @@ def test_credential_boundary():
         "runtime.py",
         "domains/integrations/credentials.py",
         "domains/integrations/rotation.py",
+        "domains/platform/store.py",  # Phase 16: Admin portal keys, sealed the same way
     }
     decrypters = {
         p.relative_to(APP).as_posix()
@@ -383,7 +384,8 @@ def test_the_ai_calls_one_fixed_address_and_offers_the_model_no_tools():
         for path, text_ in _sources()
         if "ANTHROPIC_API_KEY" in text_
     )
-    assert readers == ["core/settings.py", "domains/ai/runs.py"]
+    # The Admin portal's registry names the setting (Phase 16); it never reads the key.
+    assert readers == ["core/settings.py", "domains/ai/runs.py", "domains/platform/registry.py"]
     for name, text_ in sources.items():
         assert "get_secret_value()" not in text_ or name == "anthropic.py", name
 

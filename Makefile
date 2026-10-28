@@ -21,12 +21,12 @@ test:
 		--include="app/core/security/*,app/domains/identity/*,app/domains/organizations/permissions.py,app/domains/organizations/tenancy.py,app/providers/http/*,app/domains/integrations/credentials.py,app/domains/integrations/connect_state.py"
 
 lint:
-	$(BACKEND) uv run ruff check app alembic tests
-	$(BACKEND) uv run ruff format --check app alembic tests
+	$(BACKEND) uv run ruff check app alembic tests demo
+	$(BACKEND) uv run ruff format --check app alembic tests demo
 
 format:
-	$(BACKEND) uv run ruff format app alembic tests
-	$(BACKEND) uv run ruff check --fix app alembic tests
+	$(BACKEND) uv run ruff format app alembic tests demo
+	$(BACKEND) uv run ruff check --fix app alembic tests demo
 
 typecheck:
 	$(BACKEND) uv run mypy

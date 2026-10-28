@@ -48,6 +48,7 @@ from app.domains.optimization.models import (
     RecommendationOutcome,
 )
 from app.domains.organizations.models import Invitation, Membership, Organization
+from app.domains.platform.models import PlatformAdmin, PlatformSetting
 from app.domains.webhooks.models import WebhookEvent
 
 __all__ = [
@@ -95,6 +96,8 @@ __all__ = [
     "OrderItem",
     "Organization",
     "OrganizationResourceLink",
+    "PlatformAdmin",
+    "PlatformSetting",
     "Product",
     "ProductCostHistory",
     "ProductVariant",

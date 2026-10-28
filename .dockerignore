@@ -16,3 +16,4 @@
 **/.coverage
 # Test code (Shopify simulator with a fixed test secret, e2e store helper) never ships (2A-11).
 backend/tests
+backend/demo

@@ -25,6 +25,10 @@ from app.providers.http.ratelimit import ProviderRateLimiter
 def build_sender(settings: Settings) -> EmailSender:
     if settings.EMAIL_BACKEND is EmailBackend.MEMORY:
         return MemorySender()
+    if settings.EMAIL_BACKEND is EmailBackend.FOLDER:
+        from app.domains.notifications.email.folder import FolderSender
+
+        return FolderSender(settings.EMAIL_FOLDER)
     return SmtpSender(settings)
 
 

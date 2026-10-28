@@ -1779,6 +1779,100 @@
         "title": "AdSyncOut",
         "type": "object"
       },
+      "AdminMeOut": {
+        "properties": {
+          "is_admin": {
+            "title": "Is Admin",
+            "type": "boolean"
+          },
+          "totp_enabled": {
+            "title": "Totp Enabled",
+            "type": "boolean"
+          },
+          "verified": {
+            "title": "Verified",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "is_admin",
+          "totp_enabled",
+          "verified"
+        ],
+        "title": "AdminMeOut",
+        "type": "object"
+      },
+      "AdminOrganizationOut": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "status"
+        ],
+        "title": "AdminOrganizationOut",
+        "type": "object"
+      },
+      "AdminUserOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_admin": {
+            "title": "Is Admin",
+            "type": "boolean"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "display_name",
+          "status",
+          "created_at",
+          "is_admin"
+        ],
+        "title": "AdminUserOut",
+        "type": "object"
+      },
       "AgencyOut": {
         "properties": {
           "agencies": {
@@ -4471,6 +4565,21 @@
         "title": "ClientOut",
         "type": "object"
       },
+      "CodeIn": {
+        "properties": {
+          "code": {
+            "maxLength": 8,
+            "minLength": 6,
+            "title": "Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "CodeIn",
+        "type": "object"
+      },
       "CodeOut": {
         "properties": {
           "code": {
@@ -6162,6 +6271,38 @@
         "title": "Envelope[AdResyncOut]",
         "type": "object"
       },
+      "Envelope_AdminMeOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AdminMeOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[AdminMeOut]",
+        "type": "object"
+      },
+      "Envelope_AdminOrganizationOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AdminOrganizationOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[AdminOrganizationOut]",
+        "type": "object"
+      },
       "Envelope_AgencyOut_": {
         "properties": {
           "data": {
@@ -6530,6 +6671,22 @@
         "title": "Envelope[GrantOut]",
         "type": "object"
       },
+      "Envelope_HealthOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/app__domains__platform__schemas__HealthOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[HealthOut]",
+        "type": "object"
+      },
       "Envelope_InvitationOut_": {
         "properties": {
           "data": {
@@ -6834,6 +6991,22 @@
         "title": "Envelope[StrategyOut]",
         "type": "object"
       },
+      "Envelope_TotpSetupOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/TotpSetupOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[TotpSetupOut]",
+        "type": "object"
+      },
       "Envelope_UsageOut_": {
         "properties": {
           "data": {
@@ -6900,6 +7073,46 @@
           "meta"
         ],
         "title": "Envelope[list[AdAccountOut]]",
+        "type": "object"
+      },
+      "Envelope_list_AdminOrganizationOut__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/AdminOrganizationOut"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[list[AdminOrganizationOut]]",
+        "type": "object"
+      },
+      "Envelope_list_AdminUserOut__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/AdminUserOut"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[list[AdminUserOut]]",
         "type": "object"
       },
       "Envelope_list_AnalyticsPropertyOut__": {
@@ -7240,6 +7453,26 @@
           "meta"
         ],
         "title": "Envelope[list[SessionOut]]",
+        "type": "object"
+      },
+      "Envelope_list_SettingOut__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/SettingOut"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[list[SettingOut]]",
         "type": "object"
       },
       "Envelope_list_StoreOut__": {
@@ -7732,40 +7965,6 @@
           }
         },
         "title": "HTTPValidationError",
-        "type": "object"
-      },
-      "HealthOut": {
-        "description": "Store configuration found by the daily check (2B-06): a plain message key for the web\napp (e.g. ``cost_of_goods_off``, ``woocommerce_too_old``, ``timezone_unknown``), or None.",
-        "properties": {
-          "checked_at": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Checked At"
-          },
-          "code": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Code"
-          }
-        },
-        "required": [
-          "code",
-          "checked_at"
-        ],
-        "title": "HealthOut",
         "type": "object"
       },
       "InventoryOut": {
@@ -10164,6 +10363,94 @@
         "title": "SessionOut",
         "type": "object"
       },
+      "SettingIn": {
+        "properties": {
+          "value": {
+            "maxLength": 8000,
+            "minLength": 1,
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value"
+        ],
+        "title": "SettingIn",
+        "type": "object"
+      },
+      "SettingOut": {
+        "properties": {
+          "group": {
+            "title": "Group",
+            "type": "string"
+          },
+          "hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hint"
+          },
+          "kind": {
+            "enum": [
+              "secret",
+              "text",
+              "switch"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "set": {
+            "title": "Set",
+            "type": "boolean"
+          },
+          "source": {
+            "enum": [
+              "portal",
+              "settings_file",
+              "default"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "name",
+          "label",
+          "group",
+          "kind",
+          "source",
+          "set",
+          "hint",
+          "updated_at"
+        ],
+        "title": "SettingOut",
+        "type": "object"
+      },
       "SourceOut": {
         "properties": {
           "currency": {
@@ -10234,6 +10521,23 @@
           "updated_at"
         ],
         "title": "SourceOut",
+        "type": "object"
+      },
+      "StatusIn": {
+        "properties": {
+          "status": {
+            "enum": [
+              "active",
+              "suspended"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "StatusIn",
         "type": "object"
       },
       "StatusOut": {
@@ -10357,7 +10661,7 @@
           "health": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/HealthOut"
+                "$ref": "#/components/schemas/app__domains__commerce__schemas__HealthOut"
               },
               {
                 "type": "null"
@@ -11069,6 +11373,24 @@
         "title": "TotalsOut",
         "type": "object"
       },
+      "TotpSetupOut": {
+        "properties": {
+          "secret": {
+            "title": "Secret",
+            "type": "string"
+          },
+          "uri": {
+            "title": "Uri",
+            "type": "string"
+          }
+        },
+        "required": [
+          "secret",
+          "uri"
+        ],
+        "title": "TotpSetupOut",
+        "type": "object"
+      },
       "UsageOut": {
         "properties": {
           "ai_enabled": {
@@ -11425,6 +11747,76 @@
         ],
         "title": "WriteAccessOut",
         "type": "object"
+      },
+      "app__domains__commerce__schemas__HealthOut": {
+        "description": "Store configuration found by the daily check (2B-06): a plain message key for the web\napp (e.g. ``cost_of_goods_off``, ``woocommerce_too_old``, ``timezone_unknown``), or None.",
+        "properties": {
+          "checked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checked At"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          }
+        },
+        "required": [
+          "code",
+          "checked_at"
+        ],
+        "title": "HealthOut",
+        "type": "object"
+      },
+      "app__domains__platform__schemas__HealthOut": {
+        "properties": {
+          "database": {
+            "title": "Database",
+            "type": "boolean"
+          },
+          "environment": {
+            "title": "Environment",
+            "type": "string"
+          },
+          "redis": {
+            "title": "Redis",
+            "type": "boolean"
+          },
+          "restart_needed": {
+            "title": "Restart Needed",
+            "type": "boolean"
+          },
+          "switches": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "title": "Switches",
+            "type": "object"
+          }
+        },
+        "required": [
+          "database",
+          "redis",
+          "environment",
+          "switches",
+          "restart_needed"
+        ],
+        "title": "HealthOut",
+        "type": "object"
       }
     }
   },
@@ -11434,6 +11826,362 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/admin/health": {
+      "get": {
+        "operationId": "admin_health_api_v1_admin_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_HealthOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Admin Health",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/me": {
+      "get": {
+        "description": "Anyone signed in: whether they are an administrator and have entered their code.",
+        "operationId": "admin_me_api_v1_admin_me_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AdminMeOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Admin Me",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/organizations": {
+      "get": {
+        "operationId": "list_organizations_api_v1_admin_organizations_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_AdminOrganizationOut__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Organizations",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/organizations/{organization_id}/status": {
+      "put": {
+        "operationId": "set_organization_status_api_v1_admin_organizations__organization_id__status_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatusIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AdminOrganizationOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Organization Status",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/settings": {
+      "get": {
+        "description": "Keys and switches: never a secret's value, only whether it is set and its last four.",
+        "operationId": "list_settings_api_v1_admin_settings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_SettingOut__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Settings",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/settings/{name}": {
+      "delete": {
+        "description": "Back to the settings file's value.",
+        "operationId": "clear_setting_api_v1_admin_settings__name__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_SettingOut__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Clear Setting",
+        "tags": [
+          "admin"
+        ]
+      },
+      "put": {
+        "operationId": "save_setting_api_v1_admin_settings__name__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_SettingOut__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Save Setting",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/two-step/enable": {
+      "post": {
+        "operationId": "two_step_enable_api_v1_admin_two_step_enable_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AdminMeOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Two Step Enable",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/two-step/setup": {
+      "post": {
+        "operationId": "two_step_setup_api_v1_admin_two_step_setup_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_TotpSetupOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Two Step Setup",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/two-step/verify": {
+      "post": {
+        "operationId": "two_step_verify_api_v1_admin_two_step_verify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AdminMeOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Two Step Verify",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/users": {
+      "get": {
+        "operationId": "list_users_api_v1_admin_users_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_AdminUserOut__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Users",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/auth/change-password": {
       "post": {
         "operationId": "change_password_api_v1_auth_change_password_post",
