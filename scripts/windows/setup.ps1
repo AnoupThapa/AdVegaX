@@ -1,4 +1,4 @@
-# AdVegaX desktop — step 2 of 3: database, settings, packages and demo data (Phase 16).
+# AdVegaX desktop - step 2 of 3: database, settings, packages and demo data (Phase 16).
 # Run once (and again any time with -Reset to start from fresh demo data):
 #   Set-ExecutionPolicy -Scope Process Bypass; & ".\scripts\windows\setup.ps1"
 param([switch]$Reset)

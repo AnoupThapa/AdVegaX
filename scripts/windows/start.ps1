@@ -1,4 +1,4 @@
-# AdVegaX desktop — step 3: start everything and open the browser (Phase 16).
+# AdVegaX desktop - step 3: start everything and open the browser (Phase 16).
 #   & ".\scripts\windows\start.ps1"        (stop with stop.ps1)
 . "$PSScriptRoot\common.ps1"
 Refresh-Path

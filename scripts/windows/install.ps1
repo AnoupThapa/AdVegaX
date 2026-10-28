@@ -1,4 +1,4 @@
-# AdVegaX desktop — step 1 of 3: install the tools (Phase 16). Run once, in PowerShell:
+# AdVegaX desktop - step 1 of 3: install the tools (Phase 16). Run once, in PowerShell:
 #   Right-click the Start button > Terminal (Admin), then:
 #   Set-ExecutionPolicy -Scope Process Bypass; & "$HOME\Downloads\Tools\Advegax\scripts\windows\install.ps1"
 . "$PSScriptRoot\common.ps1"
@@ -18,7 +18,7 @@ foreach ($p in $packages) {
   winget install --id $p.Id --exact --silent --accept-package-agreements --accept-source-agreements
 }
 
-Say "Installing PostgreSQL 16 (database superuser password: postgres — this computer only)"
+Say "Installing PostgreSQL 16 (database superuser password: postgres - this computer only)"
 winget install --id PostgreSQL.PostgreSQL.16 --exact --silent --accept-package-agreements `
   --accept-source-agreements --override "--mode unattended --superpassword postgres --serverport 5432"
 

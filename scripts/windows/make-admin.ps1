@@ -1,4 +1,4 @@
-# AdVegaX desktop — make a person an administrator (for the Admin portal at /admin).
+# AdVegaX desktop - make a person an administrator (for the Admin portal at /admin).
 #   & ".\scripts\windows\make-admin.ps1" demo@advegax.local
 param([Parameter(Mandatory = $true)][string]$Email)
 . "$PSScriptRoot\common.ps1"

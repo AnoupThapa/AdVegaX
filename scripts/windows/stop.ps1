@@ -1,4 +1,4 @@
-# AdVegaX desktop — stop everything start.ps1 started (Phase 16).
+# AdVegaX desktop - stop everything start.ps1 started (Phase 16).
 . "$PSScriptRoot\common.ps1"
 $pids = Join-Path $Var "pids.txt"
 if (Test-Path $pids) {
