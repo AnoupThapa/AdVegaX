@@ -9,6 +9,23 @@ export const CONNECTION_STATUS: Readonly<
   revoked: { label: "Disconnected", tone: "off" },
 };
 
+/** Names for platforms, used when the list of connectable platforms is not available. */
+const PLATFORM_NAMES: Readonly<Record<string, string>> = {
+  shopify: "Shopify",
+  woocommerce: "WooCommerce",
+  google_ads: "Google Ads",
+  meta_ads: "Meta Ads",
+  google_analytics: "Google Analytics",
+};
+
+/** A readable platform name for an internal code; never shows "google_analytics" to a person. */
+export function platformName(code: string): string {
+  const known = PLATFORM_NAMES[code];
+  if (known) return known;
+  const words = code.replaceAll("_", " ").trim();
+  return words ? words.charAt(0).toUpperCase() + words.slice(1) : code;
+}
+
 export function connectionStatus(status: string) {
   return CONNECTION_STATUS[status] ?? { label: status, tone: "warn" as const };
 }

@@ -162,12 +162,33 @@ a {
   color: var(--color-accent);
 }
 
+/* Groups of radio buttons or checkboxes: a quiet legend instead of the browser's boxed fieldset. */
+fieldset {
+  min-width: 0;
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  border: 0;
+}
+
+legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+  font-weight: var(--font-weight-semibold);
+}
+
+caption {
+  text-align: left;
+  font-weight: var(--font-weight-semibold);
+}
+
 /* Checkboxes and radio buttons are touch targets: at least 24px (WCAG 2.2 target size). */
 input[type="checkbox"],
 input[type="radio"] {
   width: 1.5rem;
   height: 1.5rem;
   flex: none;
+  margin: 0 var(--space-1) 0 0;
+  vertical-align: middle;
   accent-color: var(--color-accent);
 }
 

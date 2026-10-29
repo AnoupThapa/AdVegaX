@@ -104,3 +104,12 @@ describe("organization navigation", () => {
     expect(toggle).toHaveAttribute("aria-expanded", "false");
   });
 });
+
+describe("platform names", () => {
+  it("never shows an internal code to a person", async () => {
+    const { platformName } = await import("@/features/connections/labels");
+    expect(platformName("google_analytics")).toBe("Google Analytics");
+    expect(platformName("meta_ads")).toBe("Meta Ads");
+    expect(platformName("some_new_platform")).toBe("Some new platform");
+  });
+});

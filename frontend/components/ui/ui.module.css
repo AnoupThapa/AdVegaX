@@ -45,6 +45,8 @@
   margin-bottom: var(--space-4);
   /* A grid item will not shrink below its content: stop long <select> options widening the page. */
   min-width: 0;
+  /* Single-line fields stay a readable width on wide screens. */
+  max-width: 40rem;
 }
 
 .label {

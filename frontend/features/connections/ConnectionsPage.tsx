@@ -16,7 +16,13 @@ import { goToExternal } from "@/lib/navigation/external";
 import { useConnections, useProviders, useStartConnection, type Provider } from "./api";
 import { CONNECT_FIELDS, CONNECT_NOTES } from "./connect-fields";
 import styles from "./connections.module.css";
-import { connectError, connectionStatus, signInNotice, storeUnreachable } from "./labels";
+import {
+  connectError,
+  connectionStatus,
+  platformName,
+  signInNotice,
+  storeUnreachable,
+} from "./labels";
 
 type Notice = { tone: "success" | "error" | "info"; text: string; requestId: string | null };
 
@@ -205,6 +211,14 @@ export function SignInWarning({
   );
 }
 
+/** "Shopify — shop.example.com"; just the name when the account label only repeats it. */
+function connectionTitle(platform: string, accountLabel: string | null | undefined): string {
+  if (!accountLabel) return platform;
+  // "Meta" after "Meta Ads" says nothing new; a shop address or account name does.
+  const repeats = platform.trim().toLowerCase().startsWith(accountLabel.trim().toLowerCase());
+  return repeats ? platform : `${platform} — ${accountLabel}`;
+}
+
 export function ConnectionsPage() {
   const org = useCurrentOrganization();
   const connections = useConnections(org.id);
@@ -214,7 +228,7 @@ export function ConnectionsPage() {
   const shown = notice ?? callbackNotice;
   const manage = canManageConnections(org.role);
   const providerName = (code: string) =>
-    providers.data?.find((p) => p.code === code)?.display_name ?? code;
+    providers.data?.find((p) => p.code === code)?.display_name ?? platformName(code);
 
   return (
     <section aria-labelledby="connections-title">
@@ -239,8 +253,7 @@ export function ConnectionsPage() {
                   <div>
                     <p className={styles.cardTitle}>
                       <Link href={`/orgs/${org.id}/connections/${c.id}`}>
-                        {providerName(c.provider)}
-                        {c.account_label ? ` — ${c.account_label}` : ""}
+                        {connectionTitle(providerName(c.provider), c.account_label)}
                       </Link>
                     </p>
                     <p className={styles.muted}>
