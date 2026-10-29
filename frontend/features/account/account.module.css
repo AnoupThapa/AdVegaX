@@ -17,6 +17,7 @@
 
 .tableWrap {
   overflow-x: auto;
+  position: relative; /* contains visually-hidden cells */
 }
 
 .table {

@@ -23,3 +23,10 @@
     display: none;
   }
 }
+
+/* Links in the header are touch targets too (44px). */
+.nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch-target);
+}

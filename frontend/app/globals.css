@@ -35,7 +35,46 @@
 
   --radius-sm: 4px;
   --radius-md: 8px;
+  --radius-lg: 12px;
   --content-max-width: 72rem;
+
+  /* Phase 17 additions. Existing tokens above keep their names and values. */
+  --color-surface-2: #f1f3f6;
+  --color-border-strong: #aab1bd;
+  --color-accent-bg: #e8f0fd;
+  --color-accent-text: #1a4fb0;
+  --color-info: #1a4fb0;
+
+  /* Status pairs: text on its own background, each at least 4.5:1 (checked, not eyeballed). */
+  --status-success-fg: #14632f;
+  --status-success-bg: #e6f4ea;
+  --status-warning-fg: #7a4f00;
+  --status-warning-bg: #fdf1d8;
+  --status-danger-fg: #a3190f;
+  --status-danger-bg: #fdeceb;
+  --status-info-fg: #1a4fb0;
+  --status-info-bg: #e8f0fd;
+  --status-neutral-fg: #3d4452;
+  --status-neutral-bg: #eceef2;
+
+  --font-size-xs: 0.75rem;
+  --font-size-3xl: clamp(2rem, 1.4rem + 2.6vw, 3.25rem);
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --space-5: 1.25rem;
+  --space-10: 2.5rem;
+  --space-16: 4rem;
+  --space-24: 6rem;
+
+  --shadow-sm: 0 1px 2px rgb(16 24 40 / 0.06);
+  --shadow-md: 0 4px 16px rgb(16 24 40 / 0.1);
+
+  --header-height: 3.5rem;
+  --touch-target: 2.75rem;
+  --z-header: 20;
+  --z-drawer: 30;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -52,6 +91,24 @@
     --color-success: #6fd18f;
     --color-warning: #f2c14e;
     --color-focus: #7aa7ff;
+
+    --color-surface-2: #1d212a;
+    --color-border-strong: #4a5263;
+    --color-accent-bg: #14284f;
+    --color-accent-text: #9bbcff;
+    --color-info: #9bbcff;
+    --status-success-fg: #7fdc9d;
+    --status-success-bg: #12301d;
+    --status-warning-fg: #f5cb6a;
+    --status-warning-bg: #38290a;
+    --status-danger-fg: #ff9d94;
+    --status-danger-bg: #3b1512;
+    --status-info-fg: #9bbcff;
+    --status-info-bg: #14284f;
+    --status-neutral-fg: #c8cdd8;
+    --status-neutral-bg: #262b36;
+    --shadow-sm: none;
+    --shadow-md: 0 4px 16px rgb(0 0 0 / 0.5);
   }
 }
 
@@ -81,6 +138,16 @@ h2,
 h3 {
   line-height: 1.2;
   margin: 0 0 var(--space-4);
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+h3 {
+  font-size: var(--font-size-lg);
+}
+
+p {
+  text-wrap: pretty;
 }
 
 h1 {

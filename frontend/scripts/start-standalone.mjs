@@ -15,6 +15,11 @@ if (!existsSync(server)) {
 const target = path.join(standalone, ".next", "static");
 rmSync(target, { recursive: true, force: true });
 cpSync(path.join(root, ".next", "static"), target, { recursive: true });
+// Like the Docker image: public files (screenshots, icons) are served next to the server too.
+const publicDir = path.join(root, "public");
+if (existsSync(publicDir)) {
+  cpSync(publicDir, path.join(standalone, "public"), { recursive: true });
+}
 
 process.env.PORT ??= "3000";
 process.env.HOSTNAME ??= "localhost";

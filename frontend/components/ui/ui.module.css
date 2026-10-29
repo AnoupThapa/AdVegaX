@@ -43,6 +43,8 @@
   display: grid;
   gap: var(--space-1);
   margin-bottom: var(--space-4);
+  /* A grid item will not shrink below its content: stop long <select> options widening the page. */
+  min-width: 0;
 }
 
 .label {
@@ -61,6 +63,8 @@
 }
 
 .input {
+  width: 100%;
+  max-width: 100%;
   min-height: 2.75rem;
   padding: var(--space-2) var(--space-3);
   font: inherit;
@@ -177,4 +181,96 @@
 
 .dialogTitle {
   font-size: var(--font-size-lg);
+}
+
+/* Status badge: colour is never the only signal; the label is always text. */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0 var(--space-2);
+  min-height: 1.5rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
+
+.badgeSuccess {
+  color: var(--status-success-fg);
+  background: var(--status-success-bg);
+}
+
+.badgeWarning {
+  color: var(--status-warning-fg);
+  background: var(--status-warning-bg);
+}
+
+.badgeDanger {
+  color: var(--status-danger-fg);
+  background: var(--status-danger-bg);
+}
+
+.badgeInfo {
+  color: var(--status-info-fg);
+  background: var(--status-info-bg);
+}
+
+.badgeNeutral {
+  color: var(--status-neutral-fg);
+  background: var(--status-neutral-bg);
+}
+
+/* Empty and loading states. */
+.empty {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-2);
+  padding: var(--space-8) var(--space-6);
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.emptyTitle {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+}
+
+.emptyBody {
+  margin: 0;
+  max-width: 40rem;
+  color: var(--color-text-muted);
+}
+
+.skeleton {
+  display: block;
+  height: 1em;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-2),
+    var(--color-border),
+    var(--color-surface-2)
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.skeletonShort {
+  width: 30%;
+}
+
+.skeletonMedium {
+  width: 60%;
 }

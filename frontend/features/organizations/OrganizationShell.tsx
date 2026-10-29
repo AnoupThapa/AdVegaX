@@ -1,18 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, usePathname } from "next/navigation";
+import { useParams } from "next/navigation";
 import { createContext, useContext, type ReactNode } from "react";
 
 import { Alert } from "@/components/ui/Alert";
 import { PageHeading } from "@/components/ui/PageHeading";
 import { RequireAuth } from "@/features/auth/RequireAuth";
-import { useAgency } from "@/features/agency/api";
 import { BillingBanner } from "@/features/billing/BillingBanner";
 import { ApiError, messageFor } from "@/lib/api/errors";
 
 import { useOrganization, type Organization } from "./api";
 import { isOrganizationId } from "./options";
+import { OrganizationNav } from "./OrganizationNav";
 import { roleLabel } from "./permissions";
 import styles from "./organizations.module.css";
 
@@ -97,55 +97,5 @@ export function OrganizationNotFound() {
         <Link href="/">Go to the home page</Link>
       </p>
     </section>
-  );
-}
-
-const SECTIONS = [
-  { href: "", label: "Overview" },
-  { href: "/reports", label: "Reports" },
-  { href: "/funnel", label: "Funnel" },
-  { href: "/strategies", label: "Strategies" },
-  { href: "/creatives", label: "Creatives" },
-  { href: "/recommendations", label: "Recommendations" },
-  { href: "/changes", label: "Changes" },
-  { href: "/stores", label: "Stores" },
-  { href: "/advertising", label: "Advertising" },
-  { href: "/analytics", label: "Analytics" },
-  { href: "/connections", label: "Connections" },
-  { href: "/members", label: "Members" },
-  { href: "/settings", label: "Settings" },
-  { href: "/billing", label: "Billing" },
-] as const;
-
-function OrganizationNav({ org }: { org: Organization }) {
-  const pathname = usePathname();
-  const base = `/orgs/${org.id}`;
-  const agency = useAgency(org.id);
-  const sections = agency.data?.clients.some((g) => g.status === "active")
-    ? [...SECTIONS, { href: "/clients", label: "Clients" }]
-    : SECTIONS;
-  return (
-    <nav aria-label="Organization" className={styles.nav}>
-      <p className={styles.navTitle}>{org.name}</p>
-      <ul className={styles.navList}>
-        {sections.map((section) => {
-          const href = `${base}${section.href}`;
-          // Sub-pages (e.g. one connection) keep their section highlighted.
-          const current =
-            pathname === href || (section.href !== "" && pathname.startsWith(`${href}/`));
-          return (
-            <li key={section.label}>
-              <Link
-                href={href}
-                aria-current={current ? "page" : undefined}
-                className={current ? styles.navCurrent : styles.navLink}
-              >
-                {section.label}
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-    </nav>
   );
 }

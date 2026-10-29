@@ -3,7 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useSignIn } from "@/features/auth/actions";
 import { AccountNav } from "@/features/auth/AccountNav";
-import { HomeSession } from "@/features/auth/HomeSession";
+import { HomeGate } from "@/features/home/HomeGate";
+import { Landing } from "@/features/home/Landing";
 import { RequireAuth } from "@/features/auth/RequireAuth";
 import { SESSION_KEY } from "@/features/auth/session";
 import { clearCsrfToken } from "@/lib/api/csrf";
@@ -185,16 +186,22 @@ describe("Account navigation", () => {
 describe("Home page session area", () => {
   it("invites signed-out visitors to start", () => {
     mockApi({ "GET /api/v1/auth/me": fail(401, "UNAUTHENTICATED") });
-    renderWithProviders(<HomeSession />, { session: null });
-    expect(screen.getByRole("link", { name: "Create an account" })).toBeInTheDocument();
+    renderWithProviders(<HomeGate landing={<Landing />} />, { session: null });
+    expect(screen.getAllByRole("link", { name: "Create an account" }).length).toBeGreaterThan(0);
+    expect(
+      screen.getByRole("heading", { level: 1, name: /Know what your advertising/ }),
+    ).toBeVisible();
   });
 
   it("asks unverified users to verify before creating organizations", () => {
     const user = testUser({ email_verified: false, display_name: null });
     mockApi({ "GET /api/v1/auth/me": ok(user) });
-    renderWithProviders(<HomeSession />, { session: user });
+    renderWithProviders(<HomeGate landing={<Landing />} />, { session: user });
     // Shown as the signed-in name (no display name) and in the verification notice.
-    expect(screen.getAllByText("ada@example.com")).toHaveLength(2);
+    expect(
+      screen.getByRole("heading", { name: "Welcome back, ada@example.com" }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText(/ada@example\.com/).length).toBeGreaterThanOrEqual(2);
     expect(screen.getByRole("heading", { name: "Verify your email address" })).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Send a new verification link" }),
@@ -203,8 +210,8 @@ describe("Home page session area", () => {
 
   it("shows nothing extra to verified users", () => {
     mockApi({ "GET /api/v1/auth/me": ok(testUser()) });
-    renderWithProviders(<HomeSession />, { session: testUser() });
-    expect(screen.getByText("Ada")).toBeInTheDocument();
+    renderWithProviders(<HomeGate landing={<Landing />} />, { session: testUser() });
+    expect(screen.getByRole("heading", { name: "Welcome back, Ada" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Verify your email address" })).toBeNull();
   });
 });

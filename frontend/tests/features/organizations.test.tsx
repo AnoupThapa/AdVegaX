@@ -1,7 +1,8 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { HomeSession } from "@/features/auth/HomeSession";
+import { HomeGate } from "@/features/home/HomeGate";
+import { Landing } from "@/features/home/Landing";
 import { CreateOrganizationForm } from "@/features/organizations/CreateOrganizationForm";
 import { OrganizationOverview } from "@/features/organizations/OrganizationOverview";
 import { OrganizationSettings } from "@/features/organizations/OrganizationSettings";
@@ -325,7 +326,7 @@ describe("Organization switcher and home list", () => {
 
   it("lists organizations on the home page", () => {
     mockApi({});
-    renderWithProviders(<HomeSession />, { session: user });
+    renderWithProviders(<HomeGate landing={<Landing />} />, { session: user });
     expect(screen.getByRole("heading", { name: "Your organizations" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Mediflex/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Create an organization" })).toHaveAttribute(
@@ -336,7 +337,9 @@ describe("Organization switcher and home list", () => {
 
   it("explains how to start when there are none, without a create link if unverified", () => {
     mockApi({});
-    renderWithProviders(<HomeSession />, { session: testUser({ email_verified: false }) });
+    renderWithProviders(<HomeGate landing={<Landing />} />, {
+      session: testUser({ email_verified: false }),
+    });
     expect(screen.getByText(/ask a colleague to invite you/)).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Create an organization" })).not.toBeInTheDocument();
   });

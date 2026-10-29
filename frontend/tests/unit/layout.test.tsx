@@ -28,7 +28,9 @@ describe("layout components", () => {
   it("home page has a single level-one heading", () => {
     renderWithProviders(<HomePage />, { session: null });
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
-    expect(screen.getByRole("region", { name: "AdVegaX" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "Know what your advertising really earns",
+    );
   });
 
   it("not-found page does not reveal whether a resource exists", () => {

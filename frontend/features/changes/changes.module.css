@@ -25,6 +25,7 @@
 
 .code {
   overflow-x: auto;
+  position: relative; /* contains visually-hidden cells */
   padding: 0.75rem;
   border-radius: var(--radius-sm);
   border: 1px solid var(--color-border);
