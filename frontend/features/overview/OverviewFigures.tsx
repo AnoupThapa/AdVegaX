@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import { Alert } from "@/components/ui/Alert";
+import { Sparkline } from "@/components/ui/Sparkline";
 import styles from "@/features/advertising/advertising.module.css";
 import type { Organization } from "@/features/organizations/api";
 import { formatDay } from "@/features/stores/dates";
@@ -27,6 +28,18 @@ import {
   useReportControls,
 } from "./Shared";
 
+/** Figures that read well as a trend over the period; the same numbers are in the table below. */
+const TREND_KEYS = new Set(["net_sales", "orders", "ad_spend"]);
+
+function trend(data: Overview, key: string): (number | null)[] {
+  return data.days.map((day) => {
+    const figure = day.figures[key] as Figure | undefined;
+    return figure && figure.availability === "available" && figure.value !== null
+      ? Number(figure.value)
+      : null;
+  });
+}
+
 function Tiles({ data, currency }: { data: Overview; currency: ReportingCurrency }) {
   const define = definitionsByKey(data.definitions);
   return (
@@ -37,13 +50,21 @@ function Tiles({ data, currency }: { data: Overview; currency: ReportingCurrency
           <ul className={styles.tiles} aria-label={group.title}>
             {group.keys.map((key) => {
               const d = define(key);
+              const figure = data.totals[key] as Figure | undefined;
+              const missing =
+                !figure || figure.availability !== "available" || figure.value === null;
               return (
                 <li key={key} className={styles.tile}>
                   <p className={styles.tileLabel}>{d.label}</p>
-                  <p className={styles.tileValue}>
-                    {formatFigure(data.totals[key] as Figure | undefined, d.unit, currency)}
+                  <p className={`${styles.tileValue} ${missing ? styles.tileMissing : ""}`}>
+                    {formatFigure(figure, d.unit, currency)}
                   </p>
                   {d.note ? <p className={styles.tileNote}>{d.note}</p> : null}
+                  {TREND_KEYS.has(key) && !missing ? (
+                    <div className={styles.tileTrend}>
+                      <Sparkline values={trend(data, key)} />
+                    </div>
+                  ) : null}
                   <HowCalculated definition={d} withNote={false} />
                 </li>
               );

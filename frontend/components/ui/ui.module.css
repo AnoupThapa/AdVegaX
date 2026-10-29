@@ -274,3 +274,10 @@
 .skeletonMedium {
   width: 60%;
 }
+
+.sparkline {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  color: var(--color-accent);
+}

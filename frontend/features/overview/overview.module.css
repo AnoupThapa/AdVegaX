@@ -12,13 +12,19 @@
 }
 
 .how {
-  margin-top: 0.5rem;
+  margin-top: 0.25rem;
   font-size: 0.875rem;
 }
 
 .how summary {
   cursor: pointer;
-  color: var(--color-accent);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.how summary:hover {
+  color: var(--color-accent-text);
+  text-decoration: underline;
 }
 
 .definitions {
