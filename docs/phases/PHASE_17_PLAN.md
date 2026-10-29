@@ -1,6 +1,6 @@
 # Phase 17 — UI/UX redesign and completion: audit and plan
 
-**Status:** Audit done (2026-10-29) · plan **awaiting product-owner approval** · no redesign code written yet.
+**Status:** Audit done (2026-10-29) · plan taken as approved on its defaults ("continue", 2026-10-29) · **in progress** — see §9.
 **Scope source:** the "Master prompt: complete web application design, development and optimisation".
 **Rules that apply:** `PROJECT_RULES.md` (no changes to approved behaviour, security or business rules without approval; every change tested; stop on conflicts).
 
@@ -102,3 +102,15 @@ In priority order: Overview, Reports, Recommendations, Changes, Advertising and 
 | 4 | Brand | Keep the name and blue accent; the logo mark and any new brand colours are your decision (default: wordmark only) |
 | 5 | Navigation | Grouped sidebar plus mobile drawer |
 | 6 | Desktop script fixes (§6) | Include in Phase 17A |
+
+## 9. Progress (updated 2026-10-29)
+
+| Stage | Status | Evidence |
+|---|---|---|
+| 17A Design system | **Partly done** — tokens (type, spacing, radii, elevation, AA-checked status colours, light and dark), `Icon`, `Badge`, `EmptyState`, `Skeleton`, `Sparkline`. Not yet: `Table`, `Tabs`, `Breadcrumbs`, `Toast`; `docs/DESIGN_SYSTEM.md` not written | commits 343e1ac, bff6691 |
+| 17B Shell | **Done for navigation** — grouped sidebar with icons, collapsible menu on phones, header touch targets; Settings (360 px) and Members (820 px) overflow fixed. Not yet: header account menu | same |
+| 17C Public pages | **Home page done** (real demo screenshots, no invented claims, indexable, `robots.txt`, other pages stay `noindex`). Not yet: sitemap (needs a public site URL setting), legal pages (need your text) | same |
+| 17D Pages | **Started** — Overview tiles. Remaining pages not yet redesigned | bff6691 |
+| 17E Verification | **Partly** — frontend lint, format, types and unit tests run after each stage: 598 tests, 596 pass; the 2 failures (`tests/features/creatives.test.tsx`, image tests) also fail on the unchanged code. Not yet run: browser (Playwright + axe) suite, Lighthouse, full 8-width crawl | — |
+
+Also changed: `frontend/scripts/start-standalone.mjs` now serves `public/` (needed for the screenshots; also fixes the Windows desktop copy).
