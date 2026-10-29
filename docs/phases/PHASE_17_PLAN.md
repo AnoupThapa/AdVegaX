@@ -114,3 +114,18 @@ In priority order: Overview, Reports, Recommendations, Changes, Advertising and 
 | 17E Verification | **Partly** — frontend lint, format, types and unit tests run after each stage: 598 tests, 596 pass; the 2 failures (`tests/features/creatives.test.tsx`, image tests) also fail on the unchanged code; this sandbox has Node 22 while the project requires Node 24, so they are probably a Node-version difference (not confirmed). Crawl of 21 routes at 320, 375, 768, 1024, 1440 and 1600 px (126 loads): no horizontal overflow, an h1 on every page. axe (WCAG 2.2 A/AA tags) on 23 routes in light and dark: 0 violations (automated only). Not yet run: the repository's Playwright suite, Lighthouse, keyboard and screen-reader walk-through, real touch devices | — |
 
 Also changed: `frontend/scripts/start-standalone.mjs` now serves `public/` (needed for the screenshots; also fixes the Windows desktop copy).
+
+### 9.1 Measured performance (Lighthouse 12.6, mobile profile with simulated slow network and CPU, local production build, 2026-10-29)
+
+Public home page only; the signed-in pages were not measured (Lighthouse needs a sign-in script; not done yet).
+
+| | Before | After (3 runs) | Target |
+|---|---|---|---|
+| Performance score | 80 | 97, 97, 97 | — |
+| Largest Contentful Paint | 3.3 s | 2.3 s, 2.6 s, 2.4 s | ≤ 2.5 s |
+| Total Blocking Time | 490 ms | 110, 80, 90 ms | (INP is a field metric; not measured here) |
+| Cumulative Layout Shift | 0 | 0.02 | ≤ 0.1 |
+| Transfer | 290 KB | 241 KB | — |
+| Accessibility / SEO / Best practices (first run) | 100 / 100 / 96 | not re-run | — |
+
+What changed: the hero screenshot is served in 480, 800 and 1200 px widths (`srcset`), so a phone downloads 12 to 25 KB instead of 49 KB. LCP is on the edge of its target (one of three runs was 2.6 s). These are lab numbers from a local server, not field data; real results depend on hosting, CDN and network.

@@ -79,7 +79,9 @@ export function Landing() {
         <figure className={styles.shot}>
           {/* eslint-disable-next-line @next/next/no-img-element -- a fixed local screenshot */}
           <img
-            src="/product/overview.webp"
+            src="/product/overview-800.webp"
+            srcSet="/product/overview-480.webp 480w, /product/overview-800.webp 800w, /product/overview.webp 1200w"
+            sizes="(min-width: 64rem) 46vw, calc(100vw - 2rem)"
             width={1200}
             height={820}
             alt="The Overview page of a demo organization: sales, ad spend and profit figures, each with a link to how it is calculated."
@@ -117,7 +119,9 @@ export function Landing() {
         <figure className={styles.shot}>
           {/* eslint-disable-next-line @next/next/no-img-element -- a fixed local screenshot */}
           <img
-            src="/product/recommendations.webp"
+            src="/product/recommendations-800.webp"
+            srcSet="/product/recommendations-480.webp 480w, /product/recommendations-800.webp 800w, /product/recommendations.webp 1200w"
+            sizes="(min-width: 64rem) 46vw, calc(100vw - 2rem)"
             width={1200}
             height={820}
             alt="The Recommendations page of a demo organization, listing proposed changes with their reasons."
