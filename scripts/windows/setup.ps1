@@ -31,6 +31,17 @@ if (-not (Test-Path $EnvFile)) {
 Import-DesktopEnv
 
 $env:PGPASSWORD = "postgres"
+$previousPreference = $ErrorActionPreference; $ErrorActionPreference = "Continue"
+psql -h localhost -U postgres -d postgres -tAc "SELECT 1" 2>&1 | Out-Null
+$loginExit = $LASTEXITCODE
+$ErrorActionPreference = $previousPreference
+if ($loginExit -ne 0) {
+  throw @"
+Cannot sign in to PostgreSQL as 'postgres' with the password 'postgres'.
+PostgreSQL was probably installed earlier with a different password. Either set the password to
+'postgres' (see docs/phases/PHASE_16_REPORT.md), or tell the person helping you what it is.
+"@
+}
 if ($Reset) {
   Say "Removing the old database"
   psql -h localhost -U postgres -d postgres -c "DROP DATABASE IF EXISTS advegax WITH (FORCE)"
@@ -38,6 +49,7 @@ if ($Reset) {
 }
 Say "Creating the database roles and database"
 psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 -f (Join-Path $Root "infrastructure\docker\postgres\init\001_roles.sql")
+Assert-Ok "Creating the database roles"
 $exists = psql -h localhost -U postgres -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname = 'advegax'"
 if ($exists -ne "1") {
   psql -h localhost -U postgres -d postgres -c "CREATE DATABASE advegax OWNER advegax_migrator"
@@ -50,20 +62,27 @@ GRANT USAGE ON SCHEMA public TO advegax_app, advegax_system;
 "@
 }
 
+Say "Checking Redis"
+Ensure-Redis
 Say "Installing the backend's packages"
 Push-Location $Backend
 uv sync --frozen
+Assert-Ok "Installing the backend packages"
 Say "Updating the database"
 uv run alembic upgrade head
+Assert-Ok "Updating the database"
 Say "Filling it with demo data (simulated platforms; nothing leaves this computer)"
 uv run python -m demo.seed
+Assert-Ok "Loading the demo data"
 Pop-Location
 
 Say "Installing and building the web app (a few minutes)"
 Push-Location $Frontend
 npm ci
+Assert-Ok "Installing the web app packages"
 $env:NEXT_PUBLIC_API_BASE_URL = "http://localhost:8000"
 npm run build
+Assert-Ok "Building the web app"
 Pop-Location
 
 & "$PSScriptRoot\create-shortcuts.ps1"

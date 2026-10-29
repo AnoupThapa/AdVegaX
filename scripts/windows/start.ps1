@@ -37,10 +37,23 @@ Start-Part "scheduler" $Backend "uv" "run celery -A app.workers.celery_app:celer
 $env:PORT = "3000"
 Start-Part "web" $Frontend "node" "scripts/start-standalone.mjs"
 
-Say "Waiting for the API"
-for ($i = 0; $i -lt 60; $i++) {
-  try { Invoke-WebRequest "http://localhost:8000/api/v1/health/ready" -UseBasicParsing | Out-Null; break }
-  catch { Start-Sleep -Seconds 2 }
+Say "Waiting for the API and the web app"
+function Test-Url($u) { try { Invoke-WebRequest $u -UseBasicParsing -TimeoutSec 3 | Out-Null; return $true } catch { return $false } }
+$apiReady = $false; $webReady = $false
+for ($i = 0; $i -lt 60 -and -not ($apiReady -and $webReady); $i++) {
+  if (-not $apiReady) { $apiReady = Test-Url "http://localhost:8000/api/v1/health/ready" }
+  if (-not $webReady) { $webReady = Test-Url "http://localhost:3000/" }
+  if (-not ($apiReady -and $webReady)) { Start-Sleep -Seconds 2 }
+}
+if (-not ($apiReady -and $webReady)) {
+  $failed = @(); if (-not $apiReady) { $failed += "the API" }; if (-not $webReady) { $failed += "the web app" }
+  Write-Host ("`nAdVegaX did NOT start: " + ($failed -join " and ") + " is not answering.") -ForegroundColor Red
+  foreach ($f in "api.err.log", "web.err.log") {
+    $path = Join-Path $logs $f
+    if (Test-Path $path) { Write-Host "--- last lines of $path" -ForegroundColor Yellow; Get-Content $path -Tail 15 }
+  }
+  Write-Host "Common causes: Redis or PostgreSQL not running, or setup.ps1 did not finish. Logs: $logs" -ForegroundColor Yellow
+  exit 1
 }
 Start-Sleep -Seconds 3
 if ($openBrowser) { Start-Process $url }

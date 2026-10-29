@@ -49,3 +49,8 @@ function Ensure-Redis {
   }
   throw "Redis is not running on port 6379. Install Memurai, or Redis in WSL (sudo apt install redis-server), then try again."
 }
+
+# Native programs (psql, uv, npm, winget) do not stop a script when they fail. Call this right after one.
+function Assert-Ok($what) {
+  if ($LASTEXITCODE -ne 0) { throw "$what failed (exit code $LASTEXITCODE). Read the messages above." }
+}
