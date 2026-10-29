@@ -17,6 +17,7 @@ try {
 Refresh-Path
 Need uv "uv"; Need node "Node.js"
 Import-DesktopEnv
+Ensure-Redis
 $logs = Join-Path $Var "logs"
 New-Item -ItemType Directory -Force -Path $logs | Out-Null
 
