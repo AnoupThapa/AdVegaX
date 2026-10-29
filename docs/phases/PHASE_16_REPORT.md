@@ -120,3 +120,21 @@ Migration **0027** (reversible) adds `platform_admins` and `platform_settings`, 
 - this report;
 - API_SPECIFICATION §19P;
 - DATABASE_SCHEMA §14I.
+
+## 7. Troubleshooting the desktop install (added after the first Windows run)
+
+**"Cannot sign in to PostgreSQL as 'postgres'"** — PostgreSQL was installed earlier with another password. In Terminal (Admin), set it to `postgres` (this briefly lets local connections skip the password, then restores the file):
+
+```
+$data = "C:\Program Files\PostgreSQL\16\data"
+Copy-Item "$data\pg_hba.conf" "$data\pg_hba.conf.bak"
+(Get-Content "$data\pg_hba.conf") -replace 'scram-sha-256','trust' -replace 'md5','trust' | Set-Content "$data\pg_hba.conf"
+Restart-Service postgresql-x64-16
+& "C:\Program Files\PostgreSQL\16\bin\psql.exe" -h localhost -U postgres -c "ALTER USER postgres PASSWORD 'postgres'"
+Copy-Item "$data\pg_hba.conf.bak" "$data\pg_hba.conf" -Force
+Restart-Service postgresql-x64-16
+```
+
+**"The service is temporarily unavailable" after signing in** — Redis is not reachable. `start.ps1` starts Redis inside WSL when nothing listens on port 6379 (Memurai is not required). If WSL is not installed, install Memurai (`winget install Memurai.MemuraiDeveloper`) or Redis in WSL (`sudo apt install redis-server`). Closing WSL stops that Redis; `start.ps1` starts it again.
+
+**The web app does not open** — `start.ps1` now prints the last lines of `var\logs\api.err.log` and `var\logs\web.err.log` when the API or the web app is not answering.

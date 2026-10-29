@@ -39,7 +39,7 @@ if ($loginExit -ne 0) {
   throw @"
 Cannot sign in to PostgreSQL as 'postgres' with the password 'postgres'.
 PostgreSQL was probably installed earlier with a different password. Either set the password to
-'postgres' (see docs/phases/PHASE_16_REPORT.md), or tell the person helping you what it is.
+'postgres' (steps: docs/phases/PHASE_16_REPORT.md, section 7), or tell the person helping you what it is.
 "@
 }
 if ($Reset) {
