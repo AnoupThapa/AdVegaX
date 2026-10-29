@@ -40,28 +40,31 @@
   color: var(--color-text-muted);
 }
 
+/* Status labels share the Badge look: tinted background, text label, AA-checked colours. */
 .status {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.5rem;
   padding: 0 var(--space-2);
-  border: 1px solid;
   border-radius: var(--radius-sm);
   font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
   white-space: nowrap;
 }
 
 .ok {
-  border-color: var(--color-success);
-  color: var(--color-success);
+  background: var(--status-success-bg);
+  color: var(--status-success-fg);
 }
 
 .warn {
-  border-color: var(--color-warning);
-  color: var(--color-warning);
+  background: var(--status-warning-bg);
+  color: var(--status-warning-fg);
 }
 
 .off {
-  border-color: var(--color-border);
-  color: var(--color-text-muted);
+  background: var(--status-neutral-bg);
+  color: var(--status-neutral-fg);
 }
 
 .facts {

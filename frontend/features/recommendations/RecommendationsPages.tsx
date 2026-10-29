@@ -161,7 +161,7 @@ function Summary({ data, org }: { data: RecommendationList; org: Organization })
 function Card({ r, orgId }: { r: Recommendation; orgId: string }) {
   return (
     <li className={styles.panel}>
-      <h2>
+      <h2 className={styles.cardTitle}>
         <Link href={`/orgs/${orgId}/recommendations/${r.id}`}>{kindLabel(r.kind)}</Link>{" "}
         <Status status={r.status} />
       </h2>
@@ -210,7 +210,7 @@ export function RecommendationsPage() {
         </p>
       ) : null}
       {list.data?.items.length ? (
-        <ul className={own.history} aria-label="Recommendations">
+        <ul className={styles.cards} aria-label="Recommendations">
           {list.data.items.map((r) => (
             <Card key={r.id} r={r} orgId={org.id} />
           ))}
@@ -464,7 +464,7 @@ export function CampaignRecommendations({ campaignId }: { campaignId: string }) 
   return (
     <section aria-labelledby="campaign-recs" className={styles.section}>
       <h2 id="campaign-recs">Recommendations</h2>
-      <ul className={own.history} aria-label="Open recommendations for this campaign">
+      <ul className={styles.cards} aria-label="Open recommendations for this campaign">
         {items.map((r) => (
           <li key={r.id}>
             <Link href={`/orgs/${org.id}/recommendations/${r.id}`}>{kindLabel(r.kind)}</Link> —{" "}

@@ -162,6 +162,21 @@ a {
   color: var(--color-accent);
 }
 
+/* Checkboxes and radio buttons are touch targets: at least 24px (WCAG 2.2 target size). */
+input[type="checkbox"],
+input[type="radio"] {
+  width: 1.5rem;
+  height: 1.5rem;
+  flex: none;
+  accent-color: var(--color-accent);
+}
+
+/* A link that stands on its own line (not inside a sentence) gets a taller target. */
+p > a:only-child {
+  display: inline-block;
+  padding-block: var(--space-1);
+}
+
 main:focus {
   outline: none;
 }
