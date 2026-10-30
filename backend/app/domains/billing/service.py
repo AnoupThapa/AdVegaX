@@ -156,7 +156,8 @@ def notify(rt: Runtime, session: Session, org_id: uuid.UUID, template: str, **va
 
 
 def _day(value: datetime | None) -> str:
-    return value.strftime("%-d %B %Y") if value else ""
+    # "%-d" (day without a leading zero) is not valid on Windows, so the day is formatted by hand.
+    return f"{value.day} {value:%B %Y}" if value else ""
 
 
 # ------------------------------------------------------------------ applying Stripe's state
