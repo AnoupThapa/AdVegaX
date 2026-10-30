@@ -6,6 +6,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { SelectField } from "@/components/ui/SelectField";
 import { TextField } from "@/components/ui/TextField";
+import { useToast } from "@/components/ui/Toast";
 import ui from "@/components/ui/ui.module.css";
 import { formFeedback } from "@/features/auth/form-errors";
 import { emailErrors, hasErrors, type FieldErrors } from "@/features/auth/validation";
@@ -51,6 +52,7 @@ export function InvitationsSection({ org, onNotice }: Props) {
 
 function InviteForm({ org, onNotice }: Props) {
   const invite = useCreateInvitation(org.id);
+  const toast = useToast();
   const roles = assignableRoles(org.role);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Role>("viewer");
@@ -73,10 +75,9 @@ function InviteForm({ org, onNotice }: Props) {
         onSuccess: () => {
           setEmail("");
           setRole("viewer");
-          onNotice({
+          toast.show({
             tone: "success",
             message: `Invitation sent to ${address}. The link in the email is valid for a limited time.`,
-            requestId: null,
           });
         },
         onError: (error) => {

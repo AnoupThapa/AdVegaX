@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render } from "@testing-library/react";
 import { StrictMode, type ReactElement } from "react";
 
+import { ToastProvider } from "@/components/ui/Toast";
 import { SESSION_KEY, type SessionUser } from "@/features/auth/session";
 
 export function testUser(overrides: Partial<SessionUser> = {}): SessionUser {
@@ -24,6 +25,10 @@ export function renderWithProviders(
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   if (session !== undefined) queryClient.setQueryData(SESSION_KEY, session);
-  const tree = <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>;
+  const tree = (
+    <QueryClientProvider client={queryClient}>
+      <ToastProvider>{ui}</ToastProvider>
+    </QueryClientProvider>
+  );
   return { queryClient, ...render(strict ? <StrictMode>{tree}</StrictMode> : tree) };
 }

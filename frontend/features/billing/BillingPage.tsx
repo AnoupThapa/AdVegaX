@@ -1,10 +1,11 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
+import { DataTable, type Column } from "@/components/ui/DataTable";
 import { PageHeading } from "@/components/ui/PageHeading";
 import styles from "@/features/advertising/advertising.module.css";
 import { useCurrentOrganization } from "@/features/organizations/OrganizationShell";
@@ -103,48 +104,37 @@ const ROWS = [
   { key: "members", label: "Members and open invitations" },
 ] as const;
 
+type UsageRow = { readonly label: string; readonly used: ReactNode; readonly allows: ReactNode };
+
+const USAGE_COLUMNS: readonly Column<UsageRow>[] = [
+  { key: "what", header: "What", rowHeader: true, cell: (r) => r.label },
+  { key: "used", header: "Used", numeric: true, cell: (r) => r.used },
+  { key: "allows", header: "Plan allows", numeric: true, cell: (r) => r.allows },
+];
+
 function Usage({ billing }: { billing: Billing }) {
   const limits = billing.plan?.limits;
+  const rows: UsageRow[] = [
+    ...ROWS.map((row) => ({
+      label: row.label,
+      used: billing.usage[row.key],
+      allows: limits ? limits[row.key] : "—",
+    })),
+    {
+      label: "AI runs today",
+      used: billing.usage.ai_runs_today,
+      allows: limits ? limits.ai_runs_per_day : "—",
+    },
+    { label: "Autopilot", used: "—", allows: limits ? (limits.autopilot ? "Yes" : "No") : "—" },
+  ];
   return (
-    <div className={styles.tableWrap}>
-      <table className={styles.table}>
-        <caption>Usage</caption>
-        <thead>
-          <tr>
-            <th scope="col">What</th>
-            <th scope="col" className={styles.num}>
-              Used
-            </th>
-            <th scope="col" className={styles.num}>
-              Plan allows
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {ROWS.map((row) => (
-            <tr key={row.key}>
-              <th scope="row">{row.label}</th>
-              <td className={styles.num}>{billing.usage[row.key]}</td>
-              <td className={styles.num}>{limits ? limits[row.key] : "—"}</td>
-            </tr>
-          ))}
-          <tr>
-            <th scope="row">AI runs today</th>
-            <td className={styles.num}>{billing.usage.ai_runs_today}</td>
-            <td className={styles.num}>{limits ? limits.ai_runs_per_day : "—"}</td>
-          </tr>
-          <tr>
-            <th scope="row">Autopilot</th>
-            <td className={styles.num}>—</td>
-            <td className={styles.num}>{limits ? (limits.autopilot ? "Yes" : "No") : "—"}</td>
-          </tr>
-        </tbody>
-      </table>
+    <>
+      <DataTable caption="Usage" columns={USAGE_COLUMNS} rows={rows} getRowKey={(r) => r.label} />
       <p className={styles.muted}>
         Limits are checked when something is added. Nothing you have is removed if you move to a
         smaller plan.
       </p>
-    </div>
+    </>
   );
 }
 

@@ -3,7 +3,7 @@
 .shell {
   max-width: var(--content-max-width);
   margin: 0 auto;
-  padding: var(--space-8) var(--space-4);
+  padding: var(--space-8) var(--gutter);
   display: grid;
   /* minmax(0, …): wide tables scroll inside their box instead of widening the page. */
   grid-template-columns: minmax(0, 1fr);
@@ -24,7 +24,7 @@
 .page {
   max-width: var(--content-max-width);
   margin: 0 auto;
-  padding: var(--space-8) var(--space-4);
+  padding: var(--space-8) var(--gutter);
 }
 
 .section {
@@ -51,7 +51,7 @@
   display: inline-block;
   padding: 0 var(--space-2);
   border: 1px solid var(--color-border);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   font-size: var(--font-size-sm);
   color: var(--color-text);
   white-space: nowrap;
@@ -73,7 +73,7 @@
 .table caption {
   text-align: left;
   padding: var(--space-3) var(--space-4);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .table th,
@@ -87,7 +87,7 @@
 .table th[scope="col"] {
   font-size: var(--font-size-sm);
   color: var(--color-text-muted);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .who {
@@ -136,7 +136,7 @@
 }
 
 .details dt {
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .details dd {
@@ -171,7 +171,7 @@
 }
 
 .orgName {
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   overflow-wrap: anywhere;
 }
 
@@ -204,7 +204,7 @@
     content: attr(data-label);
     min-width: 5rem;
     font-size: var(--font-size-sm);
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
     color: var(--color-text-muted);
   }
 

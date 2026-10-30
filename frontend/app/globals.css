@@ -41,6 +41,8 @@
   /* Phase 17 additions. Existing tokens above keep their names and values. */
   --color-surface-2: #f1f3f6;
   --color-border-strong: #aab1bd;
+  /* Borders that mark a control (input, select, secondary button): at least 3:1 (WCAG 1.4.11). */
+  --color-control-border: #7a8394;
   --color-accent-bg: #e8f0fd;
   --color-accent-text: #1a4fb0;
   --color-info: #1a4fb0;
@@ -70,11 +72,39 @@
 
   --shadow-sm: 0 1px 2px rgb(16 24 40 / 0.06);
   --shadow-md: 0 4px 16px rgb(16 24 40 / 0.1);
+  --shadow-lg: 0 8px 24px rgb(16 24 40 / 0.15);
 
   --header-height: 3.5rem;
   --touch-target: 2.75rem;
+  /* Layers, lowest to highest. Nothing else may pick a z-index. */
+  --z-dropdown: 10;
   --z-header: 20;
   --z-drawer: 30;
+  --z-toast: 40;
+  --z-skip: 100;
+
+  /* Layout: one responsive side padding for every page container, and a readable line length. */
+  --gutter: var(--space-4);
+  --measure: 65ch;
+  --container-narrow: 40rem;
+
+  --font-weight-regular: 400;
+  --line-height-tight: 1.2;
+  --color-overlay: rgb(0 0 0 / 0.5);
+  --radius-pill: 999px;
+}
+
+/* Side padding grows with the screen: 16px on phones, 24px on tablets, 32px on desktops. */
+@media (min-width: 40rem) {
+  :root {
+    --gutter: var(--space-6);
+  }
+}
+
+@media (min-width: 64rem) {
+  :root {
+    --gutter: var(--space-8);
+  }
 }
 
 @media (prefers-color-scheme: dark) {
@@ -94,6 +124,7 @@
 
     --color-surface-2: #1d212a;
     --color-border-strong: #4a5263;
+    --color-control-border: #6b7385;
     --color-accent-bg: #14284f;
     --color-accent-text: #9bbcff;
     --color-info: #9bbcff;
@@ -109,6 +140,7 @@
     --status-neutral-bg: #262b36;
     --shadow-sm: none;
     --shadow-md: 0 4px 16px rgb(0 0 0 / 0.5);
+    --shadow-lg: 0 8px 24px rgb(0 0 0 / 0.6);
   }
 }
 
@@ -136,7 +168,7 @@ body {
 h1,
 h2,
 h3 {
-  line-height: 1.2;
+  line-height: var(--line-height-tight);
   margin: 0 0 var(--space-4);
   letter-spacing: -0.01em;
   text-wrap: balance;

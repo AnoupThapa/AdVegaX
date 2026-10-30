@@ -146,3 +146,17 @@ Crawl of 21 routes at 320, 375, 768, 1024, 1440 and 1600 px (132 loads): no hori
 Two causes were found on the Overview and fixed: (1) panels below the figures sat in the first screen while the figures loaded and were then pushed about 5,000 px down (layout shift) — the loading state now holds a screen of space; (2) a new `Intl.NumberFormat` was created for every number (hundreds per page) — formatters are now cached (`lib/format/number-format.ts`), output unchanged.
 
 **Not met:** Largest Contentful Paint is still above 2.5 s on Overview, Reports and Recommendations under this slow profile. The remaining time is a chain of requests (session, then organization, then figures; the figures need the organization's time zone) plus JavaScript work. Options for later: fetch the figures on the server, split the Overview's two tables, or load the day-by-day table on demand. INP (a field metric) and real-device results were not measured.
+
+### 9.4 Design system, Table and Toast (2026-10-30)
+
+Written: `docs/DESIGN_SYSTEM.md` (principles, restricted palette with measured contrast, type rules, spacing, layout containers and responsive padding, component specifications, governance, known gaps).
+
+Built: `DataTable` (sortable, caption, row headers, numeric columns, scroll or stacked layout with a "Sort by" menu on phones), `Toast` (provider, polite and urgent announcements, pause on hover or focus, Escape, limit of three), layout primitives (`Container`, `Stack`, `Cluster`, `Grid`), one responsive page gutter (`--gutter`), layering tokens, a control-border token.
+
+Enforced: `tests/static/design-tokens.test.ts` fails on colour literals, off-scale font sizes, weights, radii, spacing and z-index values, and `!important`. All stylesheets were migrated to pass it (14 files; 26 spacing values, 4 font sizes, 2 colours, 1 radius, 2 z-index values, and font weights).
+
+Found and fixed while doing this: (1) form-control borders were 1.4:1 to 2.2:1 against their background (WCAG 1.4.11 expects 3:1); axe does not catch this; now 3.7:1 to 3.8:1; (2) a stacked table would have hidden its sort buttons while leaving them focusable on phones; (3) a layout helper that used an inline style would have been blocked by the Content-Security-Policy.
+
+Adopted so far: `DataTable` in Billing (usage) and Changes; `Toast` for "Settings saved", "No changes to save" and "Invitation sent"; `Container` in the site header. The 18 other hand-built tables and other success messages are listed in DESIGN_SYSTEM §9 for later migration.
+
+Checks: lint, format and types clean; axe 0 violations on 23 routes in light and dark; 132 page loads with no overflow and an h1 on each; small targets 17; the same 2 creatives image tests fail on Node 22.

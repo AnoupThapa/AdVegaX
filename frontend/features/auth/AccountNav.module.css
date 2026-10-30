@@ -6,7 +6,7 @@
 }
 
 .primaryLink {
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 /* Links in the header are touch targets too (44px). */

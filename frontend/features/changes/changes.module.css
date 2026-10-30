@@ -1,9 +1,9 @@
 .checks {
   list-style: none;
-  margin: 0.5rem 0;
+  margin: var(--space-2) 0;
   padding: 0;
   display: grid;
-  gap: 0.35rem;
+  gap: var(--space-1);
 }
 
 .passed::before {
@@ -19,34 +19,34 @@
 .actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin: 0.75rem 0;
+  gap: var(--space-2);
+  margin: var(--space-3) 0;
 }
 
 .code {
   overflow-x: auto;
   position: relative; /* contains visually-hidden cells */
-  padding: 0.75rem;
+  padding: var(--space-3);
   border-radius: var(--radius-sm);
   border: 1px solid var(--color-border);
   background: var(--color-surface);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .history {
   display: grid;
-  gap: 0.35rem;
-  padding-left: 1.25rem;
+  gap: var(--space-1);
+  padding-left: var(--space-5);
 }
 
 .form {
   display: grid;
-  gap: 0.75rem;
+  gap: var(--space-3);
   max-width: 32rem;
 }
 
 .choice {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }

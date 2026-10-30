@@ -5,6 +5,7 @@ import { useRef, useState, type FormEvent } from "react";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { PageHeading } from "@/components/ui/PageHeading";
+import { useToast } from "@/components/ui/Toast";
 import ui from "@/components/ui/ui.module.css";
 import { formFeedback } from "@/features/auth/form-errors";
 import { hasErrors, type FieldErrors } from "@/features/auth/validation";
@@ -69,6 +70,7 @@ function ReadOnlySettings({ org }: { org: Organization }) {
 
 function SettingsForm({ org }: { org: Organization }) {
   const update = useUpdateOrganization(org.id);
+  const toast = useToast();
   const saved: OrganizationValues = {
     name: org.name,
     currency: org.default_currency,
@@ -102,11 +104,11 @@ function SettingsForm({ org }: { org: Organization }) {
     if (values.currency !== org.default_currency) body.default_currency = values.currency;
     if (values.timeZone !== org.default_timezone) body.default_timezone = values.timeZone;
     if (Object.keys(body).length === 0) {
-      setNotice({ tone: "success", message: "No changes to save.", requestId: null });
+      toast.show({ tone: "info", message: "No changes to save." });
       return;
     }
     update.mutate(body, {
-      onSuccess: () => setNotice({ tone: "success", message: "Settings saved.", requestId: null }),
+      onSuccess: () => toast.show({ tone: "success", message: "Settings saved." }),
       onError: (error) => {
         const feedback = formFeedback(error, ORGANIZATION_FIELD_ALIASES);
         setFields(feedback.fields);

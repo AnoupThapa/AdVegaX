@@ -12,7 +12,7 @@
   font: inherit;
   color: var(--color-text);
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-control-border);
   border-radius: var(--radius-md);
   cursor: pointer;
 }
@@ -21,7 +21,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .chevron {
@@ -30,7 +30,7 @@
 
 .menu {
   position: absolute;
-  z-index: 10;
+  z-index: var(--z-dropdown);
   top: calc(100% + var(--space-1));
   left: 0;
   width: min(20rem, calc(100vw - 2 * var(--space-4)));
@@ -38,7 +38,7 @@
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 0.15);
+  box-shadow: var(--shadow-lg);
 }
 
 .list {
@@ -68,7 +68,7 @@
 
 .current {
   background: var(--color-bg);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .name {

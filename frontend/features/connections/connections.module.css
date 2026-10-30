@@ -33,7 +33,7 @@
 .cardTitle {
   margin: 0;
   font-size: var(--font-size-md);
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
 }
 
 .muted {
@@ -64,7 +64,7 @@
 
 .warning {
   color: var(--color-warning);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .off {

@@ -33,7 +33,7 @@
 .cardTitle {
   margin: 0;
   font-size: var(--font-size-md);
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
 }
 
 .muted {
@@ -107,7 +107,7 @@
 .tileValue {
   margin: 0;
   font-size: var(--font-size-lg);
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   font-variant-numeric: tabular-nums;
 }
 
@@ -175,7 +175,7 @@
 }
 
 .health h2 {
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   margin: 0 0 var(--space-2);
 }
 

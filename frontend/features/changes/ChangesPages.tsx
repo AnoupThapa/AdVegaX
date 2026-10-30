@@ -6,6 +6,7 @@ import { useState, type FormEvent } from "react";
 
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
+import { DataTable, type Column } from "@/components/ui/DataTable";
 import { PageHeading } from "@/components/ui/PageHeading";
 import { SelectField } from "@/components/ui/SelectField";
 import { TextField } from "@/components/ui/TextField";
@@ -114,49 +115,64 @@ export function ChangesPage() {
         </p>
       ) : null}
       {actions.data?.length ? (
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <caption>Changes, newest first</caption>
-            <thead>
-              <tr>
-                <th scope="col">Change</th>
-                <th scope="col">Campaign</th>
-                <th scope="col">Status</th>
-                <th scope="col">Requested</th>
-              </tr>
-            </thead>
-            <tbody>
-              {actions.data.map((a) => (
-                <tr key={a.id}>
-                  <th scope="row">
-                    <Link href={`/orgs/${org.id}/changes/${a.id}`}>{describe(a, moneyOf(a))}</Link>
-                    {a.undo_of ? <span className={styles.muted}> (undo)</span> : null}
-                    {a.source === "autopilot" ? (
-                      <span className={styles.muted}> (made by autopilot)</span>
-                    ) : null}
-                  </th>
-                  <td>
-                    {a.campaign?.name ?? a.draft?.name}
-                    <br />
-                    <span className={styles.muted}>
-                      {a.provider === "meta_ads" ? "Meta" : "Google Ads"}
-                      {(a.campaign ?? a.draft)?.ad_account_name
-                        ? ` · ${(a.campaign ?? a.draft)?.ad_account_name}`
-                        : ""}
-                    </span>
-                  </td>
-                  <td>
-                    <Status status={a.status} />
-                  </td>
-                  <td>{when(a.created_at)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          caption="Changes, newest first"
+          layout="stack"
+          columns={changeColumns(org.id)}
+          rows={actions.data}
+          getRowKey={(a) => a.id}
+        />
       ) : null}
     </section>
   );
+}
+
+/** The Changes list's columns; "Requested" and "Status" can be sorted. */
+function changeColumns(orgId: string): Column<Action>[] {
+  return [
+    {
+      key: "change",
+      header: "Change",
+      rowHeader: true,
+      cell: (a) => (
+        <>
+          <Link href={`/orgs/${orgId}/changes/${a.id}`}>{describe(a, moneyOf(a))}</Link>
+          {a.undo_of ? <span className={styles.muted}> (undo)</span> : null}
+          {a.source === "autopilot" ? (
+            <span className={styles.muted}> (made by autopilot)</span>
+          ) : null}
+        </>
+      ),
+    },
+    {
+      key: "campaign",
+      header: "Campaign",
+      cell: (a) => (
+        <>
+          {a.campaign?.name ?? a.draft?.name}
+          <br />
+          <span className={styles.muted}>
+            {a.provider === "meta_ads" ? "Meta" : "Google Ads"}
+            {(a.campaign ?? a.draft)?.ad_account_name
+              ? ` · ${(a.campaign ?? a.draft)?.ad_account_name}`
+              : ""}
+          </span>
+        </>
+      ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      cell: (a) => <Status status={a.status} />,
+      sortValue: (a) => a.status,
+    },
+    {
+      key: "requested",
+      header: "Requested",
+      cell: (a) => when(a.created_at),
+      sortValue: (a) => Date.parse(a.created_at),
+    },
+  ];
 }
 
 // ------------------------------------------------------------------ one change
