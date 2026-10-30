@@ -158,9 +158,21 @@ describe("Admin portal", () => {
     expect(screen.getAllByText("OK", { selector: "dd" })).toHaveLength(2);
   });
 
-  it("shows the Admin link only to administrators", async () => {
+  it("shows the Admin portal link in the account menu only to administrators", async () => {
     mockApi({ "GET /api/v1/auth/me": ok(me), [ME]: ok(admin()) });
     renderWithProviders(<AccountNav />, { session: me });
-    expect(await screen.findByRole("link", { name: "Admin" })).toHaveAttribute("href", "/admin");
+    click(screen.getByRole("button", { name: /account menu/ }));
+    expect(await screen.findByRole("link", { name: "Admin portal" })).toHaveAttribute(
+      "href",
+      "/admin",
+    );
+  });
+
+  it("does not show the Admin portal link to everyone else", async () => {
+    mockApi({ "GET /api/v1/auth/me": ok(me), [ME]: ok({ is_admin: false }) });
+    renderWithProviders(<AccountNav />, { session: me });
+    click(screen.getByRole("button", { name: /account menu/ }));
+    expect(screen.getByRole("link", { name: "Account security" })).toBeVisible();
+    await waitFor(() => expect(screen.queryByRole("link", { name: "Admin portal" })).toBeNull());
   });
 });

@@ -1,4 +1,5 @@
 .header {
+  position: relative; /* anchors the account menu on narrow screens */
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
 }

@@ -5,23 +5,8 @@
   flex-wrap: wrap;
 }
 
-.who {
-  color: var(--color-text-muted);
-  max-width: 16rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .primaryLink {
   font-weight: 600;
-}
-
-/* On phones the switcher and sign-out matter more than the address (still in the account menu). */
-@media (max-width: 40rem) {
-  .who {
-    display: none;
-  }
 }
 
 /* Links in the header are touch targets too (44px). */

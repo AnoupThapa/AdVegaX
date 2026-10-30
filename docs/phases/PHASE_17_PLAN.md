@@ -108,7 +108,7 @@ In priority order: Overview, Reports, Recommendations, Changes, Advertising and 
 | Stage | Status | Evidence |
 |---|---|---|
 | 17A Design system | **Partly done** — tokens (type, spacing, radii, elevation, AA-checked status colours, light and dark), `Icon`, `Badge`, `EmptyState`, `Skeleton`, `Sparkline`. Not yet: `Table`, `Tabs`, `Breadcrumbs`, `Toast`; `docs/DESIGN_SYSTEM.md` not written | commits 343e1ac, bff6691 |
-| 17B Shell | **Done for navigation** — grouped sidebar with icons, collapsible menu on phones, header touch targets; Settings (360 px) and Members (820 px) overflow fixed. Not yet: header account menu | same |
+| 17B Shell | **Done** (account menu in the header: name and email, Account security, Admin portal for administrators; fits phones) — navigation — grouped sidebar with icons, collapsible menu on phones, header touch targets; Settings (360 px) and Members (820 px) overflow fixed. | same |
 | 17C Public pages | **Home page done** (real demo screenshots, no invented claims, indexable, `robots.txt`, other pages stay `noindex`). Not yet: sitemap (needs a public site URL setting), legal pages (need your text) | same |
 | 17D Pages | **Started** — Overview tiles; Recommendations, Changes, Reports, Advertising, Stores and Connections get the shared status-badge look; Recommendations list bullets removed; Reports first column readable; checkboxes and stand-alone links are 24 px+ targets. Connections shows platform names, not internal codes (`google_analytics — Google Analytics` became `Google Analytics`); radio and checkbox groups lose the browser's boxed fieldset; single-line form fields capped at 40 rem. Remaining pages not yet redesigned | bff6691, 6eab83b and the commit after it |
 | 17E Verification | **Partly** — frontend lint, format, types and unit tests run after each stage: 598 tests, 596 pass; the 2 failures (`tests/features/creatives.test.tsx`, image tests) also fail on the unchanged code; this sandbox has Node 22 while the project requires Node 24, so they are probably a Node-version difference (not confirmed). Crawl of 21 routes at 320, 375, 768, 1024, 1440 and 1600 px (126 loads): no horizontal overflow, an h1 on every page. axe (WCAG 2.2 A/AA tags) on 23 routes in light and dark: 0 violations (automated only). Not yet run: the repository's Playwright suite, Lighthouse, keyboard and screen-reader walk-through, real touch devices | — |
@@ -129,3 +129,7 @@ Public home page only; the signed-in pages were not measured (Lighthouse needs a
 | Accessibility / SEO / Best practices (first run) | 100 / 100 / 96 | not re-run | — |
 
 What changed: the hero screenshot is served in 480, 800 and 1200 px widths (`srcset`), so a phone downloads 12 to 25 KB instead of 49 KB. LCP is on the edge of its target (one of three runs was 2.6 s). These are lab numbers from a local server, not field data; real results depend on hosting, CDN and network.
+
+### 9.2 Re-check after the account menu (2026-10-30)
+
+Crawl of 21 routes at 320, 375, 768, 1024, 1440 and 1600 px (132 loads): no horizontal overflow, an h1 on every page. Targets under 24 px across all of them: 233 before this phase's fixes, 17 now (mostly inline links in tables). axe on 23 routes in light and dark: 0 violations. Frontend unit tests: 599 total, 597 pass; the 2 failing are the creatives image tests mentioned above.

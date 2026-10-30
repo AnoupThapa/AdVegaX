@@ -1,4 +1,4 @@
-import { act, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useSignIn } from "@/features/auth/actions";
@@ -93,6 +93,23 @@ describe("Account navigation", () => {
     );
   });
 
+  it("opens the account menu with the person's name and email, and closes it with Escape", () => {
+    mockApi({ "GET /api/v1/auth/me": ok(testUser()) });
+    renderWithProviders(<AccountNav />, { session: testUser() });
+    const toggle = screen.getByRole("button", { name: /account menu/ });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("link", { name: "Account security" })).toBeNull();
+    click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("link", { name: "Account security" })).toHaveAttribute(
+      "href",
+      "/account/security",
+    );
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(toggle).toHaveFocus();
+  });
+
   it("renders nothing while the session is loading", () => {
     mockApi({ "GET /api/v1/auth/me": () => new Promise<Response>(() => {}) });
     const { container } = renderWithProviders(<AccountNav />);
@@ -106,7 +123,7 @@ describe("Account navigation", () => {
     });
     const { queryClient } = renderWithProviders(<AccountNav />, { session: testUser() });
     queryClient.setQueryData(["organizations"], [{ id: "o1" }]);
-    expect(screen.getByText("Ada")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Ada/ })).toBeInTheDocument();
     click(screen.getByRole("button", { name: "Sign out" }));
     await waitFor(() => expect(router.push).toHaveBeenCalledWith("/sign-in"));
     expect(api.calls.some((c) => c.path === "/api/v1/auth/logout" && c.csrf)).toBe(true);
