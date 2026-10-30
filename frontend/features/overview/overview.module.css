@@ -38,3 +38,10 @@
 .definitions dd {
   margin: 0 0 0.5rem;
 }
+
+/* While the figures load, hold a screen's worth of space so the panels below do not jump down
+   (and count as layout shift) when the figures appear. */
+.loading {
+  min-height: 100vh;
+  min-height: 100svh;
+}

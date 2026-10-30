@@ -5,6 +5,7 @@
  */
 
 import { AVAILABILITY_LABELS, type Availability } from "./availability";
+import { numberFormat } from "./number-format";
 
 const DECIMAL = /^([+-])?(\d+)(?:\.(\d+))?$/;
 
@@ -38,7 +39,7 @@ export function formatMoney(
   if (value === null || value === undefined) return AVAILABILITY_LABELS.unavailable;
   const rounded = roundHalfEven(value, minorUnits);
   if (rounded === null) return AVAILABILITY_LABELS.unavailable;
-  return new Intl.NumberFormat(locale, {
+  return numberFormat(locale, {
     style: "currency",
     currency,
     minimumFractionDigits: minorUnits,
@@ -51,7 +52,7 @@ export function formatRatio(value: string | null | undefined, locale?: string): 
   if (value === null || value === undefined) return AVAILABILITY_LABELS.unavailable;
   const rounded = roundHalfEven(value, 4);
   if (rounded === null) return AVAILABILITY_LABELS.unavailable;
-  return new Intl.NumberFormat(locale, {
+  return numberFormat(locale, {
     style: "percent",
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,

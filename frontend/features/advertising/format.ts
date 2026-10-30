@@ -8,6 +8,7 @@ import { AVAILABILITY_LABELS, type Availability } from "@/lib/format/availabilit
 import { figureReason, roundHalfEven, type Figure } from "@/lib/format/money";
 
 import type { AdFigures } from "./api";
+import { numberFormat } from "@/lib/format/number-format";
 
 export function missingText(figures: Pick<AdFigures, "availability" | "reason">): string {
   return figureReason({
@@ -19,7 +20,7 @@ export function missingText(figures: Pick<AdFigures, "availability" | "reason">)
 
 export function formatCount(value: number | null | undefined, locale?: string): string {
   if (value === null || value === undefined) return AVAILABILITY_LABELS.unavailable;
-  return new Intl.NumberFormat(locale).format(value);
+  return numberFormat(locale).format(value);
 }
 
 /** A decimal string with at most two decimals, e.g. "1.5" → "1.5", "3.333333" → "3.33". */
@@ -27,7 +28,7 @@ export function formatDecimal(value: string | null | undefined, locale?: string)
   if (value === null || value === undefined) return AVAILABILITY_LABELS.unavailable;
   const rounded = roundHalfEven(value, 2);
   if (rounded === null) return AVAILABILITY_LABELS.unavailable;
-  return new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(Number(rounded));
+  return numberFormat(locale, { maximumFractionDigits: 2 }).format(Number(rounded));
 }
 
 /** A derived figure that is a plain number (conversion value per amount spent). */

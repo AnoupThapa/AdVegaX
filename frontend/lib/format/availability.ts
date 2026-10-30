@@ -1,3 +1,4 @@
+import { numberFormat } from "./number-format";
 /**
  * Data availability (A10, PHASE_01C_PLAN §4.8). A value that is not `available` is shown as its
  * state — never as 0 — so missing data can never be mistaken for a real zero.
@@ -27,8 +28,8 @@ export function formatMetric(metric: MetricValue, locale?: string): string {
   const number = typeof metric.value === "number" ? metric.value : Number(metric.value);
   if (!Number.isFinite(number)) return AVAILABILITY_LABELS.unavailable;
   return metric.currency
-    ? new Intl.NumberFormat(locale, { style: "currency", currency: metric.currency }).format(number)
-    : new Intl.NumberFormat(locale).format(number);
+    ? numberFormat(locale, { style: "currency", currency: metric.currency }).format(number)
+    : numberFormat(locale).format(number);
 }
 
 /** A timestamp, or the right availability label when it has never happened. */

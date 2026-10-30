@@ -11,6 +11,7 @@ import { messageFor } from "@/lib/api/errors";
 import type { Figure } from "@/lib/format/money";
 
 import { useOverview, type Overview } from "./api";
+import own from "./overview.module.css";
 import {
   DAY_COLUMNS,
   OVERVIEW_GROUPS,
@@ -138,7 +139,13 @@ export function OverviewFigures({ org }: { org: Organization }) {
   const overview = useOverview(org.id, controls.from, controls.to, controls.storeId);
 
   if (overview.error) return <Alert tone="error">{messageFor(overview.error)}</Alert>;
-  if (!overview.data) return <p role="status">Loading figures…</p>;
+  if (!overview.data) {
+    return (
+      <div className={own.loading}>
+        <p role="status">Loading figures…</p>
+      </div>
+    );
+  }
   const data = overview.data;
   if (data.sources.length === 0 && controls.allStores) return <Empty orgId={org.id} />;
   const currency = reportingCurrency(data);

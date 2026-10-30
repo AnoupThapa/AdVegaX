@@ -133,3 +133,16 @@ What changed: the hero screenshot is served in 480, 800 and 1200 px widths (`src
 ### 9.2 Re-check after the account menu (2026-10-30)
 
 Crawl of 21 routes at 320, 375, 768, 1024, 1440 and 1600 px (132 loads): no horizontal overflow, an h1 on every page. Targets under 24 px across all of them: 233 before this phase's fixes, 17 now (mostly inline links in tables). axe on 23 routes in light and dark: 0 violations. Frontend unit tests: 599 total, 597 pass; the 2 failing are the creatives image tests mentioned above.
+
+### 9.3 Signed-in performance (Lighthouse 12.6, mobile profile, simulated slow network and CPU, local build, demo organization, 2026-10-30)
+
+| Page | Performance | LCP | TBT | CLS |
+|---|---|---|---|---|
+| Overview, before | 54, 50 | 4.3 s, 3.9 s | 930 ms, 680 ms | 0.22, 0.5 |
+| Overview, after | 84, 80, 84 | 3.8 s, 3.9 s, 3.8 s | 230, 360, 270 ms | 0.006 (all three) |
+| Reports | 91, 89 | 3.1 s, 3.2 s | 200, 240 ms | 0.006 |
+| Recommendations | 94, 93 | 2.8 s, 2.8 s | 140, 160 ms | 0.07 |
+
+Two causes were found on the Overview and fixed: (1) panels below the figures sat in the first screen while the figures loaded and were then pushed about 5,000 px down (layout shift) — the loading state now holds a screen of space; (2) a new `Intl.NumberFormat` was created for every number (hundreds per page) — formatters are now cached (`lib/format/number-format.ts`), output unchanged.
+
+**Not met:** Largest Contentful Paint is still above 2.5 s on Overview, Reports and Recommendations under this slow profile. The remaining time is a chain of requests (session, then organization, then figures; the figures need the organization's time zone) plus JavaScript work. Options for later: fetch the figures on the server, split the Overview's two tables, or load the day-by-day table on demand. INP (a field metric) and real-device results were not measured.
