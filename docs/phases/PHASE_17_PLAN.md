@@ -1,0 +1,162 @@
+# Phase 17 — UI/UX redesign and completion: audit and plan
+
+**Status:** Audit done (2026-10-29) · plan taken as approved on its defaults ("continue", 2026-10-29) · **in progress** — see §9.
+**Scope source:** the "Master prompt: complete web application design, development and optimisation".
+**Rules that apply:** `PROJECT_RULES.md` (no changes to approved behaviour, security or business rules without approval; every change tested; stop on conflicts).
+
+## 1. How the audit was done
+
+- Ran the real stack locally (PostgreSQL 16, Redis, API, web build) with the Phase 16 demo data.
+- Signed in as `demo@advegax.local`, opened **21 routes** at **360 × 780**, **820 × 1180** and **1440 × 900**, took screenshots and measured horizontal overflow, small touch targets, headings, page titles and console errors.
+- Read the frontend structure, design tokens and shared components.
+- **Not yet measured:** Core Web Vitals (Lighthouse), automated accessibility scan of every route (the repository's Playwright + axe suite exists; not re-run), keyboard walk-through, the remaining detail pages (campaign, store/products, strategy detail, creative set, builder, connect flow), and the signed-out and error screens beyond sign-in/sign-up/404.
+
+## 2. What exists
+
+| Area | Finding |
+|---|---|
+| Stack | Next.js 16 (App Router), React 19, TanStack Query, openapi-fetch, **CSS Modules**, no UI library, no icon library, no chart library, system font stack |
+| Size | 285 frontend files; 41 `page.tsx` routes; 18 feature folders; 7 shared UI components (`Alert`, `Button`, `ConfirmDialog`, `PageCard`, `PageHeading`, `SelectField`, `TextField`); about 1,460 lines of CSS in total |
+| Tokens | `app/globals.css`: 12 colours with light and dark schemes, 5 font sizes, 7 spacing steps, 2 radii, one container width. **No** elevation, status background colours, table, tab, badge, breadcrumb, skeleton, toast or icon definitions |
+| Existing quality | Skip link, visible focus ring, reduced-motion handling, dark scheme, AA colour contrast, titles per page ("Reports · AdVegaX"), tests: 591 frontend unit tests, 21 browser tests (as reported in `PHASE_16_REPORT.md`) |
+| SEO | Root metadata only. No `robots`, sitemap, Open Graph or canonical set-up found |
+
+## 3. Problems found (with evidence)
+
+**P1 — high**
+1. **The public home page tells a visitor nothing.** Signed out, `/` is the product name, one sentence and a sign-in box. No explanation of what AdVegaX does, no screenshots, no pricing, help or legal links. Signed in, `/` is an organization list.
+2. **Mobile navigation is a wall of links.** At 360 px the 13-item organization menu stacks above every page and pushes the content below the fold (about 340 px of menu before the page title).
+3. **Horizontal overflow on Settings at 360 px** (172 px wider than the screen) for every organization, and 2 px on Members at 820 px.
+4. **The Overview dashboard repeats one card pattern for every figure**, each with its own "How is this calculated?" disclosure. Where data is incomplete, the headline slot shows a sentence ("Some products have no cost") instead of a value, which makes cards uneven. There are no charts or trends anywhere in the interface, although the product is about performance over time.
+5. **Per-org pages share one visual structure** (heading plus cards or lists), so a table-heavy page (members, changes, reports) looks the same as a form page (settings).
+
+**P2 — medium**
+6. Small touch targets (< 24 px) on most pages (1–9 per page), typically text links in the header and inline actions.
+7. No design-system pieces for status (only an ad-hoc "Up to date" badge), tables, tabs, breadcrumbs, empty states, skeletons or toasts. Pages build their own CSS (about 1,270 lines spread over 10+ module files).
+8. Header shows "Admin" as an ordinary text link to every administrator; the user's name is a link without clear affordance.
+9. The 404 page's title is just "AdVegaX" (other pages use "<Page> · AdVegaX").
+10. Page titles for the organization root are "Organization · AdVegaX" rather than the organization name.
+
+**P3 — low**
+11. System font only; fine for performance, but typography has little hierarchy beyond size.
+12. Dark scheme exists but has not been reviewed visually for every page.
+
+**Not found as problems:** console errors on normal pages (the only error in the crawl is the expected 404 response); broken routes (all 21 routes loaded); missing page titles on the routes checked.
+
+## 4. Proposed approach (kept inside the approved architecture)
+
+The backend, API contracts, permissions and business rules stay as they are. This phase is a **frontend** phase, plus two small backend items listed in §6.
+
+**17A — Design system (no visual change to pages yet)**
+- Extend tokens: type scale with weights, 4 px spacing scale, radii, elevation, status colours (success, warning, danger, info, neutral) with AA-checked light and dark values, z-index and motion tokens.
+- Choose one icon set (inline SVG, no emoji) and add: `Badge`, `Table` (sortable, responsive), `Tabs`, `Breadcrumbs`, `EmptyState`, `Skeleton`, `Toast`, `Dialog` (existing `ConfirmDialog` kept), `Card` variants, `StatTile`, `PageHeader` with actions.
+- Add a small chart component (inline SVG sparkline and bar chart, no library) for trends the API already returns.
+- Document it in `docs/DESIGN_SYSTEM.md`.
+
+**17B — Application shell**
+- Mobile: collapsible navigation drawer with the organization switcher; desktop: grouped sidebar (Performance, Marketing, Operations, Settings) instead of a flat list of 13 links.
+- Fix overflow on Settings and Members; raise touch targets to at least 44 px on touch screens.
+- Account menu in the header (profile, security, admin for administrators, sign out).
+
+**17C — Public pages**
+- Real home page for signed-out visitors using only true statements about the product from `MASTER_SPECIFICATION.md`, with a real screenshot taken from the demo organization, a "how it works" sequence from the actual workflow (connect, review, approve, audited change), and links to sign in, sign up and legal pages. **No** invented customers, logos, testimonials, statistics or prices. Pricing appears only if Phase 13's plans are approved for public display.
+- SEO for public pages only: titles, descriptions, canonical, Open Graph, `robots.txt`, sitemap; private areas set to `noindex`.
+
+**17D — Page-by-page**
+In priority order: Overview, Reports, Recommendations, Changes, Advertising and detail pages, Analytics, Funnel, Strategies and builder, Creatives, Stores and products, Billing, Members and Settings, Connections, Clients (agency), Admin, account security, sign-in/up and reset flows, error pages. Each gets the layout that suits its task (dashboard, list with filters, detail, form, settings, report) plus loading, empty, error and permission-denied states.
+
+**17E — Verification**
+- Re-run the 21-route crawl at 320, 360, 390, 768, 1024, 1280, 1440 and 1600 px; zero horizontal overflow; screenshots compared before and after.
+- Playwright + axe on every route; manual keyboard and screen-reader spot checks (reported as spot checks, not full audits).
+- Lighthouse on staging-like production build: LCP ≤ 2.5 s, INP ≤ 200 ms, CLS ≤ 0.1 reported as measured numbers.
+- Existing 591 + 21 tests must keep passing; new component tests added.
+
+## 5. Out of scope for this phase unless you add it
+
+- Real-device touch testing (needs a physical phone; I can only emulate touch).
+- Changing financial definitions, permissions, billing rules or AI behaviour.
+- New product features (for example new report types) that need backend work.
+- Replacing Next.js, React or the CSS Modules approach.
+
+## 6. Backend items found while auditing (small, separate)
+
+1. `scripts/windows/start.ps1` reports success even when the API never became ready, which misled the first desktop run. Proposed: fail with the log path if the API is not ready after 120 seconds. (Redis-via-WSL fallback and the `start-standalone.mjs` Windows fix were already added on this branch.)
+2. The desktop installer assumes the PostgreSQL superuser password is `postgres` and that Memurai installs from winget; on your PC neither held. Proposed: detect and report both clearly in `setup.ps1`.
+
+## 7. Risks
+
+| Risk | Mitigation |
+|---|---|
+| A broad restyle breaks working flows | Change by route in small commits; the existing test suites run after each stage |
+| "Distinctive" design drifts from the approved architecture and rules | No new dependencies without approval; tokens and components only; plan-first for each stage |
+| Measured performance gains are small because the app is already light | Report real numbers before and after; don't claim improvement that wasn't measured |
+| Screenshots with demo data show modest figures | Say so on the page and in the report; no fabricated data |
+
+## 8. Decisions requested with approval
+
+| # | Item | Proposed default |
+|---|---|---|
+| 1 | Scope | 17A → 17E as above, one stage at a time, each stage reported before the next |
+| 2 | Public home page content | Only product facts from the specification; real demo screenshot; no pricing until Phase 13 plans are public |
+| 3 | Icons and charts | Inline SVG, no new dependencies |
+| 4 | Brand | Keep the name and blue accent; the logo mark and any new brand colours are your decision (default: wordmark only) |
+| 5 | Navigation | Grouped sidebar plus mobile drawer |
+| 6 | Desktop script fixes (§6) | Include in Phase 17A |
+
+## 9. Progress (updated 2026-10-29)
+
+| Stage | Status | Evidence |
+|---|---|---|
+| 17A Design system | **Partly done** — tokens (type, spacing, radii, elevation, AA-checked status colours, light and dark), `Icon`, `Badge`, `EmptyState`, `Skeleton`, `Sparkline`. Not yet: `Table`, `Tabs`, `Breadcrumbs`, `Toast`; `docs/DESIGN_SYSTEM.md` not written | commits 343e1ac, bff6691 |
+| 17B Shell | **Done** (account menu in the header: name and email, Account security, Admin portal for administrators; fits phones) — navigation — grouped sidebar with icons, collapsible menu on phones, header touch targets; Settings (360 px) and Members (820 px) overflow fixed. | same |
+| 17C Public pages | **Home page done** (real demo screenshots, no invented claims, indexable, `robots.txt`, other pages stay `noindex`). Not yet: sitemap (needs a public site URL setting), legal pages (need your text) | same |
+| 17D Pages | **Started** — Overview tiles; Recommendations, Changes, Reports, Advertising, Stores and Connections get the shared status-badge look; Recommendations list bullets removed; Reports first column readable; checkboxes and stand-alone links are 24 px+ targets. Connections shows platform names, not internal codes (`google_analytics — Google Analytics` became `Google Analytics`); radio and checkbox groups lose the browser's boxed fieldset; single-line form fields capped at 40 rem. Remaining pages not yet redesigned | bff6691, 6eab83b and the commit after it |
+| 17E Verification | **Partly** — frontend lint, format, types and unit tests run after each stage: 598 tests, 596 pass; the 2 failures (`tests/features/creatives.test.tsx`, image tests) also fail on the unchanged code; this sandbox has Node 22 while the project requires Node 24, so they are probably a Node-version difference (not confirmed). Crawl of 21 routes at 320, 375, 768, 1024, 1440 and 1600 px (126 loads): no horizontal overflow, an h1 on every page. axe (WCAG 2.2 A/AA tags) on 23 routes in light and dark: 0 violations (automated only). Not yet run: the repository's Playwright suite, Lighthouse, keyboard and screen-reader walk-through, real touch devices | — |
+
+Also changed: `frontend/scripts/start-standalone.mjs` now serves `public/` (needed for the screenshots; also fixes the Windows desktop copy).
+
+### 9.1 Measured performance (Lighthouse 12.6, mobile profile with simulated slow network and CPU, local production build, 2026-10-29)
+
+Public home page only; the signed-in pages were not measured (Lighthouse needs a sign-in script; not done yet).
+
+| | Before | After (3 runs) | Target |
+|---|---|---|---|
+| Performance score | 80 | 97, 97, 97 | — |
+| Largest Contentful Paint | 3.3 s | 2.3 s, 2.6 s, 2.4 s | ≤ 2.5 s |
+| Total Blocking Time | 490 ms | 110, 80, 90 ms | (INP is a field metric; not measured here) |
+| Cumulative Layout Shift | 0 | 0.02 | ≤ 0.1 |
+| Transfer | 290 KB | 241 KB | — |
+| Accessibility / SEO / Best practices (first run) | 100 / 100 / 96 | not re-run | — |
+
+What changed: the hero screenshot is served in 480, 800 and 1200 px widths (`srcset`), so a phone downloads 12 to 25 KB instead of 49 KB. LCP is on the edge of its target (one of three runs was 2.6 s). These are lab numbers from a local server, not field data; real results depend on hosting, CDN and network.
+
+### 9.2 Re-check after the account menu (2026-10-30)
+
+Crawl of 21 routes at 320, 375, 768, 1024, 1440 and 1600 px (132 loads): no horizontal overflow, an h1 on every page. Targets under 24 px across all of them: 233 before this phase's fixes, 17 now (mostly inline links in tables). axe on 23 routes in light and dark: 0 violations. Frontend unit tests: 599 total, 597 pass; the 2 failing are the creatives image tests mentioned above.
+
+### 9.3 Signed-in performance (Lighthouse 12.6, mobile profile, simulated slow network and CPU, local build, demo organization, 2026-10-30)
+
+| Page | Performance | LCP | TBT | CLS |
+|---|---|---|---|---|
+| Overview, before | 54, 50 | 4.3 s, 3.9 s | 930 ms, 680 ms | 0.22, 0.5 |
+| Overview, after | 84, 80, 84 | 3.8 s, 3.9 s, 3.8 s | 230, 360, 270 ms | 0.006 (all three) |
+| Reports | 91, 89 | 3.1 s, 3.2 s | 200, 240 ms | 0.006 |
+| Recommendations | 94, 93 | 2.8 s, 2.8 s | 140, 160 ms | 0.07 |
+
+Two causes were found on the Overview and fixed: (1) panels below the figures sat in the first screen while the figures loaded and were then pushed about 5,000 px down (layout shift) — the loading state now holds a screen of space; (2) a new `Intl.NumberFormat` was created for every number (hundreds per page) — formatters are now cached (`lib/format/number-format.ts`), output unchanged.
+
+**Not met:** Largest Contentful Paint is still above 2.5 s on Overview, Reports and Recommendations under this slow profile. The remaining time is a chain of requests (session, then organization, then figures; the figures need the organization's time zone) plus JavaScript work. Options for later: fetch the figures on the server, split the Overview's two tables, or load the day-by-day table on demand. INP (a field metric) and real-device results were not measured.
+
+### 9.4 Design system, Table and Toast (2026-10-30)
+
+Written: `docs/DESIGN_SYSTEM.md` (principles, restricted palette with measured contrast, type rules, spacing, layout containers and responsive padding, component specifications, governance, known gaps).
+
+Built: `DataTable` (sortable, caption, row headers, numeric columns, scroll or stacked layout with a "Sort by" menu on phones), `Toast` (provider, polite and urgent announcements, pause on hover or focus, Escape, limit of three), layout primitives (`Container`, `Stack`, `Cluster`, `Grid`), one responsive page gutter (`--gutter`), layering tokens, a control-border token.
+
+Enforced: `tests/static/design-tokens.test.ts` fails on colour literals, off-scale font sizes, weights, radii, spacing and z-index values, and `!important`. All stylesheets were migrated to pass it (14 files; 26 spacing values, 4 font sizes, 2 colours, 1 radius, 2 z-index values, and font weights).
+
+Found and fixed while doing this: (1) form-control borders were 1.4:1 to 2.2:1 against their background (WCAG 1.4.11 expects 3:1); axe does not catch this; now 3.7:1 to 3.8:1; (2) a stacked table would have hidden its sort buttons while leaving them focusable on phones; (3) a layout helper that used an inline style would have been blocked by the Content-Security-Policy.
+
+Adopted so far: `DataTable` in Billing (usage) and Changes; `Toast` for "Settings saved", "No changes to save" and "Invitation sent"; `Container` in the site header. The 18 other hand-built tables and other success messages are listed in DESIGN_SYSTEM §9 for later migration.
+
+Checks: lint, format and types clean; axe 0 violations on 23 routes in light and dark; 132 page loads with no overflow and an h1 on each; small targets 17; the same 2 creatives image tests fail on Node 22.

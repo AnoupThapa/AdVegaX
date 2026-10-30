@@ -1,6 +1,8 @@
 # Phase 6 — Unified Analytics & Financial Engine
 
-**Status:** Not started · **Depends on:** 2A, 3, 4, 5 (2B recommended) · **Milestone:** M2
+> **Detailed plan:** `PHASE_06_PLAN.md` (draft, 2026-10-20) supersedes this outline; kept for reference.
+
+**Status:** Plan drafted · **Depends on:** 2A, 3, 4, 5 (2B recommended) · **Milestone:** M2
 
 ## Goal
 One trustworthy, source-labelled view of revenue, spend, cost and profit per organization, store, channel, campaign and product.

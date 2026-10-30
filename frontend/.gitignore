@@ -1,0 +1,6 @@
+# Next.js / tooling output
+.next/
+coverage/
+next-env.d.ts
+test-results/
+playwright-report/

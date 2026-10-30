@@ -10,11 +10,11 @@ This document is the **target data model**. Tables are created only in the phase
 |---|---|
 | 1A | users, user_password_credentials, sessions, user_action_tokens, organizations, memberships, invitations, audit_logs, security_events, email_outbox |
 | 1B | external_connections, external_connection_credentials, external_resources, organization_resource_links, job_runs |
-| 2A | stores (resource extension), products, product_variants, inventory_levels, product_cost_history, orders, order_items, refunds, refund_lines, customer_refs, webhook_events, sync_runs |
-| 3–4 | ad_accounts (resource extension), campaigns, ad_groups, ads, budgets, ad_performance_daily, keywords, audience_targets |
-| 5 | analytics_properties (resource extension), analytics table per decision Q11 |
-| 6 | fx_rates, metric_definitions, financial_daily, store_cost_rules |
-| 7 | funnel_daily |
+| 2A / 2B | **as built (migrations 0007–0011):** stores, products, product_variants (incl. inventory), product_cost_history, orders (incl. hashed customer key), order_items, sales_entries, refunds, refund_items, commerce_sync_state, webhook_events, financial_daily (store components) — see §4A |
+| 3–4 | **as built (migrations 0012–0013):** ad_accounts (resource extension), ad_budgets, ad_campaigns, ad_groups, ads, ad_performance_daily, ad_sync_state — see §4B. Keywords and audience_targets come with the phases that use them |
+| 5 | **as built (migrations 0014, 0015):** analytics_properties (resource extension), analytics_daily (daily aggregates in three views), analytics_sync_state — see §12 (decision Q11, A23) |
+| 6 | **as built (migration 0016, A24):** fx_rates (shared reference data), `store_id` on ad_accounts and analytics_properties — see §13A. The metric registry is code (`analytics-v1`), not a table; unified figures are computed on read (Q-6-13), so financial_daily gains no ad-spend columns; store_cost_rules waits for the cost-entry option (Q-6-7) |
+| 7 | **as built (migration 0017, A25):** funnel figures on analytics_daily (+ the `landing_page` view) and ad_performance_daily, `funnel_reread_at` on analytics_properties and ad_accounts — see §13B. `funnel_daily` is superseded: the funnel is computed on read (Q-7-8) |
 | 8–9 | ai_models, prompt_versions, ai_runs, campaign_strategies, creatives |
 | 10A | actions, approvals, idempotency_keys |
 | 11 | recommendations |
@@ -34,161 +34,248 @@ Use UTC timestamps for stored event timestamps.
 
 Money should use fixed-precision numeric/Decimal semantics, never floating-point arithmetic.
 
-## 2. Core Identity and Organization Tables (Phase 1A)
+## 2. Core Identity and Organization Tables (Phase 1A — implemented)
 
-Global identity tables (`users`, `user_password_credentials`, `sessions`, `user_action_tokens`) are **not tenant-owned** (see §19).
+Implemented by migrations `0001_identity`, `0002_organizations`. All timestamps are `timestamptz` (UTC). Primary keys are application-generated UUIDs. Constraint and index names follow the naming convention in `backend/app/db/base.py`.
+
+Global identity tables (`users`, `user_password_credentials`, `sessions`, `user_action_tokens`) are **not tenant-owned** and have no RLS (§19); they are reachable only through the identity domain.
 
 ### users
-- id
-- email (stored normalized; unique, case-insensitive)
-- display_name
-- status (active, disabled)
-- email_verified_at
-- created_at, updated_at
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| email | varchar(254) NOT NULL | unique (`uq_users_email`); check `email = lower(email)` |
+| display_name | varchar(120) | |
+| status | varchar(16) NOT NULL default `active` | check: active, disabled |
+| email_verified_at | timestamptz | null until verified |
+| created_at, updated_at | timestamptz NOT NULL default now() | |
 
 ### user_password_credentials
-- user_id (PK/FK)
-- password_hash (Argon2id, parameters encoded in hash)
-- password_changed_at
-- created_at, updated_at
+| Column | Type | Notes |
+|---|---|---|
+| user_id | uuid PK, FK → users ON DELETE CASCADE | one password credential per user |
+| password_hash | text NOT NULL | Argon2id; parameters encoded in the hash; upgraded on login |
+| password_changed_at | timestamptz NOT NULL | |
+| created_at, updated_at | timestamptz NOT NULL | |
 
 Credentials are separate from `users` so external identities (`user_identities`) and MFA factors/passkeys (`user_mfa_factors`) can be added later without redesign (A8).
 
 ### user_action_tokens
-Single-use tokens for email verification, password reset and invitation acceptance.
-- id
-- purpose (email_verification, password_reset, invitation)
-- token_hash (unique)
-- user_id nullable
-- email nullable
-- invitation_id nullable
-- expires_at, consumed_at, created_at
+Single-use tokens for email verification, password reset and invitation acceptance. Only SHA-256 hashes are stored.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| purpose | varchar(32) NOT NULL | check: email_verification, password_reset, invitation |
+| token_hash | varchar(64) NOT NULL | unique |
+| user_id | uuid FK → users ON DELETE CASCADE | verification/reset tokens |
+| email | varchar(254) | address the token was issued for (must still match on use) |
+| organization_id | uuid FK → organizations ON DELETE CASCADE | invitation tokens (added in 0002) |
+| invitation_id | uuid FK → invitations ON DELETE CASCADE | invitation tokens (added in 0002) |
+| expires_at | timestamptz NOT NULL | from `EMAIL_VERIFICATION_TTL`, `PASSWORD_RESET_TTL`, `INVITATION_TTL` |
+| consumed_at | timestamptz | set atomically on use |
+| invalidated_at | timestamptz | set when a newer token of the same scope is issued |
+| created_at | timestamptz NOT NULL | |
+
+Indexes: `(user_id, purpose)`, `organization_id`, `invitation_id`.
 
 ### organizations
-- id
-- name
-- slug (unique)
-- default_currency
-- default_timezone (reporting time zone)
-- status
-- created_at, updated_at
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| name | varchar(120) NOT NULL | |
+| slug | varchar(63) NOT NULL | unique; check `^[a-z0-9]+(-[a-z0-9]+)*$` |
+| default_currency | varchar(3) NOT NULL | check ISO-4217 shape `^[A-Z]{3}$` |
+| default_timezone | varchar(64) NOT NULL | IANA name, validated by the API (reporting time zone) |
+| status | varchar(16) NOT NULL default `active` | check: active, suspended |
+| created_by_user_id | uuid FK → users ON DELETE SET NULL | indexed |
+| created_at, updated_at | timestamptz NOT NULL | |
 
 ### memberships
-- id
-- organization_id
-- user_id
-- role (owner, admin, manager, analyst, viewer)
-- status (active, suspended, removed)
-- created_at, updated_at
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| organization_id | uuid NOT NULL FK → organizations ON DELETE CASCADE | |
+| user_id | uuid NOT NULL FK → users ON DELETE CASCADE | |
+| role | varchar(16) NOT NULL | check: owner, admin, manager, analyst, viewer |
+| status | varchar(16) NOT NULL default `active` | check: active, suspended, removed (removal is soft) |
+| created_at, updated_at | timestamptz NOT NULL | |
 
-Unique: organization_id + user_id. Invariant: every organization has at least one active owner.
+Unique `(organization_id, user_id)`; index `(user_id, status)`. Invariant (service-enforced with row locks): every organization keeps at least one active owner.
 
 ### invitations
-- id
-- organization_id
-- email
-- role
-- invited_by_user_id
-- status (pending, accepted, revoked, expired)
-- expires_at, accepted_at, created_at
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| organization_id | uuid NOT NULL FK → organizations ON DELETE CASCADE | |
+| email | varchar(254) NOT NULL | lower-case check |
+| role | varchar(16) NOT NULL | role check as memberships |
+| invited_by_user_id | uuid FK → users ON DELETE SET NULL | indexed |
+| status | varchar(16) NOT NULL default `pending` | check: pending, accepted, revoked, expired |
+| expires_at | timestamptz NOT NULL | |
+| accepted_at | timestamptz | |
+| accepted_by_user_id | uuid FK → users ON DELETE SET NULL | indexed |
+| created_at, updated_at | timestamptz NOT NULL | |
 
-## 3. Sessions / Security (Phase 1A)
+Indexes: `(organization_id, status)`; partial unique `(organization_id, email) WHERE status = 'pending'`.
+
+## 3. Sessions / Security (Phase 1A — implemented)
 
 ### sessions
-- id
-- user_id
-- token_hash (unique)
-- auth_method (password; later oauth, sso)
-- assurance_level (later: mfa)
-- created_at, last_used_at
-- idle_expires_at, absolute_expires_at
-- revoked_at, revoked_reason
-- ip_hash, user_agent_summary
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| user_id | uuid NOT NULL FK → users ON DELETE CASCADE | indexed; partial index on active sessions |
+| token_hash | varchar(64) NOT NULL | unique; SHA-256 of the 256-bit cookie token |
+| auth_method | varchar(32) NOT NULL default `password` | later: oauth, sso |
+| assurance_level | varchar(32) NOT NULL default `single_factor` | later: mfa (step-up) |
+| created_at, last_used_at | timestamptz NOT NULL | `last_used_at` updated at most every `SESSION_TOUCH_INTERVAL` |
+| idle_expires_at | timestamptz NOT NULL | sliding, from `SESSION_IDLE_TIMEOUT`; never beyond absolute |
+| absolute_expires_at | timestamptz NOT NULL | from `SESSION_ABSOLUTE_TIMEOUT`; check idle ≤ absolute |
+| revoked_at, revoked_reason | timestamptz, varchar(64) | logout, logout_all, rotated, user_revoked, password_changed, password_reset |
+| ip_hash | varchar(64) | keyed hash; raw IPs are never stored |
+| user_agent_summary | varchar(200) | |
 
-### security_events
-- id
-- organization_id nullable
-- user_id nullable
-- event_type (login_succeeded, login_failed, logout, password_reset_requested, password_changed, session_revoked, email_verified, …)
-- ip_hash or safe network metadata
-- user agent summary where appropriate
-- correlation_id
-- created_at
-- metadata JSONB
+### security_events (migration 0003)
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| organization_id | uuid FK → organizations ON DELETE SET NULL | indexed |
+| user_id | uuid FK → users ON DELETE SET NULL | index `(user_id, created_at)` |
+| event_type | varchar(64) NOT NULL | user_registered, registration_existing_email, email_verified, email_verification_resent, login_succeeded, login_failed, logout, logout_all, session_revoked, password_reset_requested, password_reset_completed, password_changed |
+| ip_hash | varchar(64) | keyed hash |
+| user_agent_summary | varchar(200) | |
+| correlation_id | varchar(64) | |
+| metadata | jsonb NOT NULL default `{}` | scrubbed |
+| created_at | timestamptz NOT NULL | index `(event_type, created_at)` |
 
-Do not store unnecessary personal/security data.
+The API role may only insert; reading is a system operation.
 
-### email_outbox
-- id
-- organization_id nullable
-- template (email_verification, password_reset, invitation, security_notice, …)
-- recipient
-- payload JSONB (template variables; no secrets except the single-use link, which is never logged)
-- status (pending, sending, sent, failed)
-- attempts, last_error, next_attempt_at
-- provider_message_id
-- created_at, sent_at
+### email_outbox (migration 0004)
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| organization_id | uuid FK → organizations ON DELETE SET NULL | indexed |
+| template | varchar(64) NOT NULL | email_verification, account_exists, password_reset, password_changed, invitation, security_notice |
+| recipient | varchar(254) NOT NULL | |
+| payload | jsonb NOT NULL | template variables incl. single-use links; **cleared once sent or permanently failed** |
+| status | varchar(16) NOT NULL default `pending` | check: pending, sent, failed (rows are locked during delivery, so no separate "sending" state) |
+| attempts | integer NOT NULL default 0 | |
+| last_error | text | short error class only |
+| next_attempt_at | timestamptz NOT NULL default now() | exponential backoff from `EMAIL_RETRY_BASE_DELAY` |
+| provider_message_id | varchar(255) | |
+| sent_at | timestamptz | |
+| created_at, updated_at | timestamptz NOT NULL | index `(status, next_attempt_at)` |
 
-## 4. External Connections and Resources (Phase 1B — approved model A6)
+The API role may only insert; the worker (`advegax_system`) reads and updates.
 
-User → External Connection → External Resources → Organization Resource Links. Final columns are fixed in the Phase 1B plan.
+## 4. External Connections and Resources (Phase 1B — implemented, migrations 0005–0006)
 
-### external_connections
-- id
+Approved model A6/A16: **Organization owns the connection; a User authorizes it.** Connection → discovered resources → explicit organization links. If the same platform account must serve two organizations, each organization creates its own connection (credentials are never shared across organizations) — **except** for platforms that allow only one live token per account, such as Shopify: there a platform account may be live in only one organization at a time (Q6, `external_account_id`, §4A).
+
+All five tables have RLS **enabled and forced** with tenant policies for `advegax_app` (SELECT/INSERT/UPDATE; **no DELETE**). Child tables reference their parent with a **composite foreign key on `(organization_id, id)`**, so a row can never point at another tenant's parent.
+
+### external_connections (0005; `external_account_id` added in 0007)
+- id (uuid PK), organization_id (FK organizations, cascade)
+- provider (varchar 32), auth_scheme (`oauth2` | `api_key` | `app_key`)
+- authorized_by_user_id (FK users, set null)
+- status (`active` | `expired` | `revoked` | `error`, default active)
+- granted_scopes (text[]), external_account_label
+- last_error_code, last_error_at (code only — never provider messages)
+- revoked_at, created_at, updated_at
+- Unique (organization_id, id); index (organization_id, provider)
+
+### external_connection_credentials (0005)
+- connection_id (PK; composite FK → external_connections(organization_id, id), cascade)
 - organization_id
-- provider
-- auth_scheme (oauth2, api_key, …)
-- authorized_by_user_id
-- status (active, expired, revoked, error)
-- granted_scopes
-- created_at, updated_at, revoked_at
+- ciphertext (bytea), wrapped_data_key (bytea), key_version (int) — **all three null together** (check constraint); nulled on disconnect
+- token_expires_at, refresh_expires_at, last_refreshed_at, created_at, updated_at
 
-### external_connection_credentials
-- connection_id
-- organization_id
-- encrypted secrets (access/refresh token or key/secret)
-- token_expires_at, refresh_expires_at
-- encryption_key_version
-- last_refreshed_at
-- created_at, updated_at
+Envelope encryption (AES-256-GCM, associated data binds organization + connection + provider) — see `SECURITY.md §8`. Credentials are never returned through API responses, logs, audit records, errors, the UI or AI context. `advegax_system` has SELECT/UPDATE only for key rotation (re-wrapping data keys).
 
-Credentials are never returned through API responses, logs or AI context.
-
-### external_resources
+### external_resources (0005)
 Resources discovered through a connection (store, ad account, analytics property, business asset).
-- id
-- organization_id
-- connection_id
-- kind
-- provider
-- external_id (text)
+- id, organization_id, connection_id (composite FK → external_connections, cascade)
+- kind (`store` | `ad_account` | `analytics_property` | `business_asset`), provider, external_id (text)
 - display_name, currency, timezone
-- accessible (still reachable through the connection)
-- discovered_at, last_seen_at
+- accessible (still reachable through the connection), capabilities (jsonb, capability → bool)
+- discovered_at, last_seen_at, last_synced_at
+- Unique (organization_id, id); unique (connection_id, kind, external_id); index (organization_id, kind)
 
-Unique: connection_id + kind + external_id.
-
-### organization_resource_links
+### organization_resource_links (0005)
 Explicit linking; history kept for relinking/reassignment.
-- id
-- organization_id
-- external_resource_id
-- linked_by_user_id, linked_at
-- unlinked_by_user_id, unlinked_at
-- status (active, unlinked)
+- id, organization_id, external_resource_id (composite FK → external_resources, cascade)
+- status (`active` | `unlinked`)
+- linked_by_user_id, linked_at, unlinked_by_user_id, unlinked_at
+- unlink_reason (`user` | `connection_revoked` | `resource_inaccessible`)
+- Partial unique index: at most one `active` link per resource
 
-At most one active link per resource.
+### job_runs (0006)
+Durable record and source of truth for background work.
+- id, organization_id (nullable for system jobs; FK organizations, cascade)
+- job_type, subject_type, subject_id
+- status (`queued` | `running` | `succeeded` | `failed` | `dead`)
+- attempts, max_attempts, next_attempt_at, last_error_code (code only)
+- correlation_id, requested_by_user_id
+- started_at, finished_at, created_at, updated_at
+- Indexes (status, next_attempt_at), (organization_id, created_at)
+- RLS: tenant policies for `advegax_app`; `advegax_system` SELECT/UPDATE across tenants to claim, retry and recover jobs (handlers then run under the job's tenant context).
 
-### job_runs
-- id
-- organization_id nullable (system jobs)
-- job_type
-- status (queued, running, succeeded, failed, dead)
-- attempts, last_error
-- correlation_id
-- created_at, started_at, finished_at
+## 4A. Commerce, webhook intake and daily figures (Phase 2A — migration 0007)
+
+Platform-neutral tables (D4, D19); providers map into them. **Tenant tables** (`stores`, `products`, `product_variants`, `product_cost_history`, `orders`, `order_items`, `sales_entries`, `refunds`, `refund_items`, `commerce_sync_state`, `financial_daily`): RLS enabled and forced; `advegax_app` policies for SELECT/INSERT/UPDATE **and DELETE** (needed for erasure requests and re-imports; still limited to the current organization); composite `(organization_id, parent_id)` foreign keys everywhere. Optional references from financial history (order line → variant, sales entry / refund line → order line) do **not** cascade, so deleting a product never deletes order history. Money is `NUMERIC(20,6)` in the store's currency; missing values are NULL with a source/availability marker, never 0 (A10).
+
+| Table | Key columns and rules |
+|---|---|
+| `stores` | resource extension (`external_resource_id` unique, composite FK); provider, external_store_id, domain, name, currency (3), timezone, status (`importing`/`active`/`disconnected`/`error`), `history_from` (Q9), `first_import_completed_at`; unique (organization, provider, external_store_id) |
+| `products` | store FK; external_product_id (unique per store), title, handle, product_type, vendor, status (`active`/`draft`/`archived`/`deleted`), `external_updated_at` (an older update never overwrites a newer one) |
+| `product_variants` | product + store FKs; external_variant_id (unique per store), external_inventory_item_id, title, sku, price; inventory: `inventory_tracked`, `inventory_available` (summed across locations; NULL = not tracked / not synchronized), `inventory_synced_at`; `deleted` flag (soft delete) |
+| `product_cost_history` | variant FK; `unit_cost` (NULL = no cost from that moment), currency, `effective_from` (unique per variant), source (`platform`/`import_snapshot`), `recorded_at` |
+| `orders` | store FK; external_order_id (unique per store), order_number, currency, `ordered_at`, `cancelled_at`, financial_status; display amounts (gross, discount, shipping, tax, refund, total); **`customer_key`** (one-way, organization-keyed hash — no names, emails, phones or addresses, Q8); `country_code` (2); `external_updated_at` |
+| `order_items` | order FK; variant (optional, non-cascading); external_line_item_id (unique per order), title, sku, quantity, unit_price; `unit_cost` + `cost_source` (`order_time`/`import_time`) — both NULL or both set |
+| `sales_entries` | one sale or reversal with its own `happened_at`; `agreement_reason` (`order`/`order_edit`/`refund`/`return`/`other`, the platform agreement's reason — 0008), `action` (`order`/`return`/`update`/`other`, the sale's action — 0008), `line_type` (`product`/`shipping`/`duty`/`fee`/`additional_fee`/`adjustment`/`tip`/`gift_card`/`other` — 0008), quantity, signed `amount` (sale total after taxes and discounts), `discount_amount` (before taxes), `tax_amount`, currency; external agreement/sale/line-item ids (sale unique per store; the line-item id resolves `order_item_id` after a bulk import); optional order line (non-cascading). Source of §10 figures |
+| `refunds`, `refund_items` | refund with `processed_at`, total, currency; lines with quantity, subtotal, restocked |
+| `commerce_sync_state` | one row per store: import progress (0–100), bulk operation id/kind, last reconciliation times, last error code |
+| `financial_daily` | per store, `day` (store time zone), currency, `definition_version` (unique per store/day/version); additive components: gross_sales, discounts, sales_reversals, net_sales, shipping, taxes, duties, fees, total_sales, orders_count; **`cogs` NULL exactly when `uncosted_lines > 0`** (check constraint), `costed_net_sales` for coverage; `other_currency_orders` (0011: orders in another currency placed or refunded that day — never summed; the day's figures are "not available" while it is above 0, Q-2B-5); `computed_at`. Only counted orders contribute (`orders.excluded_reason` IS NULL). Ratios computed on read (A5). Ad-spend components are added in Phase 6. **Filled from 2A-08** by `app/domains/finance/service.py` (rebuilt for the affected store-local days after every import, reconciliation and order webhook); the definitions are in `app/domains/finance/definitions.py` (`finance-v1`) |
+| `webhook_events` | **system role only** (no app-role grants). Metadata only — provider, `webhook_id` (unique per provider, duplicate deliveries rejected), topic, external_account_id, object id, `object_updated_at`, `triggered_at`, `received_at`, resolved organization (nullable), status, processed_at, error_code. **No body column**: payload personal data is never stored |
+| `external_connections.external_account_id` | platform account id (e.g. shop domain); partial unique index `(provider, external_account_id)` where not NULL and status ≠ `revoked` — one live connection per account across organizations (Q6) |
+
+**0011 (2B-07, Phase 2B)** is additive: `financial_daily.other_currency_orders` (integer, default 0, ≥ 0). Downgrade to 0010 drops it.
+
+**0010 (2B-02, Phase 2B)** is additive. It adds:
+- On `stores`: `site_url` (normalized base URL; WordPress may live in a sub-folder), `platform_version`, `health_code` and `health_checked_at` (plain-language health of a self-hosted store), and `counted_statuses` (the order statuses counted in the figures, Q-2B-2).
+- On `orders`: `excluded_reason` (`status` / `other_currency`: kept but not counted).
+- On `commerce_sync_state`: `import_cursor` (the provider's opaque cursor for the next page of a paged import, ≤ 2048 characters) and `import_counts` (records applied by the running chain, JSONB).
+
+**0009 (2A-07)** adds `commerce_sync_state.sync_mode` (`initial`/`reconcile`/`deep`) and `sync_started_at` (the next reconciliation's starting point).
+
+**0008 (2A-06)** aligns the value lists with Shopify's verified enums: product status gains `unlisted`; the sales-entry lists above; `commerce_sync_state.import_job_id` names the only import step allowed to continue.
+
+System-role grants added in 0007 (narrow, read-only): `SELECT` on `stores` (route a webhook to its store before a tenant context exists) and on `external_connections` (cross-organization live-account check before a token exchange). The system role cannot read orders, products or figures.
+
+## 4B. Advertising (Phase 3 — migrations 0012–0013)
+
+Platform-neutral, designed against Google Ads and Meta (PHASE_03_PLAN §8): Google "ad group" and Meta "ad set" are both `ad_groups`. Every table is tenant-owned with composite `(organization_id, parent_id)` keys, forced row-level security and `advegax_app` policies for SELECT/INSERT/UPDATE/DELETE. Money is `NUMERIC(20,6)` in the **ad account's** currency; days are in the ad account's time zone; a measure the platform did not provide is NULL, never 0 (A10).
+
+| Table | Content |
+|---|---|
+| `ad_accounts` | extension of a linked `ad_account` resource (unique per resource; and per organization, provider and external account id): name, currency, time zone, AdVegaX `status` (`importing`/`active`/`disconnected`/`error`), `platform_status` (`active`/`not_enabled`/`cancelled`/`suspended`/`closed`), `history_from`, `first_import_completed_at`, `health_code` and `health_checked_at` (plain message keys, never raw errors) |
+| `ad_budgets` | per account: external id, name, `level` (`campaign`/`ad_group`), `period` (`daily`/`lifetime`), `amount` (NULL when the platform gives none, never 0), currency, `shared` |
+| `ad_campaigns` | per account: external id, name, `status` (`active`/`paused`/`archived`/`removed`), `platform_type` (shown, never computed on), bidding strategy type, start/end dates, optional budget (non-cascading), `provider_extensions` (display only) |
+| `ad_groups` | per campaign: external id, name, status, platform type, optional budget (Meta ad sets), extensions |
+| `ads` | per ad group: external id, optional name, status, platform type, extensions |
+| `ad_performance_daily` | one row per account, `level` (`account`/`campaign`/`ad_group`/`ad`), `entity_key` (the platform id; `'account'` at the account level; for Google ads `<ad group id>~<ad id>`, since an ad is identified within its ad group) and `day`: impressions, clicks, cost, conversions (decimal), conversion value, currency, `source` (`platform_reported` only in Phase 3), `fetched_at`; optional non-cascading links to the campaign, ad group and ad. Levels are stored as reported and never added into each other |
+| `ad_sync_state` | one row per account: import progress, sync mode (`initial`/`quick`/`nightly`/`weekly`), the job allowed to continue, an opaque cursor, last quick / nightly / weekly runs, last error |
+
+Removed structure is kept (`status = removed`) so history stays readable. A day never read has no row ("not synced yet"); a day read with no activity has real zeros.
+
+**0012** also adds three discovery details to `external_resources` (any provider, never secrets): `unavailable_reason` (why it cannot be linked, e.g. a manager or cancelled account), `group_path` (the groups it sits in, for display) and `access_hint` (an opaque value the provider needs to reach it — Google Ads: the manager account to sign in through). Downgrade to 0011 removes all of the above.
+
+**0013** (3-07) lets the system role list imported ad accounts for the sync scheduler: `SELECT` on **four columns only** of `ad_accounts` (`id`, `organization_id`, `provider`, `first_import_completed_at`), with a system-role read policy. Names, figures and everything else stay readable only under the account's own tenant context. Downgrade to 0012 revokes it.
 
 ## 5. Stores
+
+> Original target model, kept for reference. **As built in Phase 2A: see §4A.**
 
 ### stores
 Commerce-specific extension of an external resource of kind `store`.
@@ -209,6 +296,8 @@ Unique:
 - organization_id + provider + external_store_id
 
 ## 6. Products
+
+> Original target model, kept for reference. **As built in Phase 2A: see §4A.**
 
 ### products
 - id
@@ -251,6 +340,8 @@ Indexes:
 - sku where appropriate
 
 ## 7. Orders
+
+> Original target model, kept for reference. **As built in Phase 2A: see §4A.**
 
 ### orders
 - id
@@ -404,8 +495,30 @@ Unique key should prevent duplicate provider/date/entity records.
 
 ## 12. Analytics
 
+### Analytics as built (Phase 5, migrations 0014 and 0015; decision Q11 settled by A23)
+
+GA4's Data API returns **aggregated reports, not events**, so AdVegaX stores daily aggregates and discovers properties with the GA4 Admin API. Forced Row-Level Security and composite tenant keys on all three tables; the scheduler's system role reads four columns of `analytics_properties` only (id, organization, provider, first import time).
+
+**analytics_properties** (extension of an `analytics_property` resource)
+- id, organization_id, external_resource_id (unique), provider, external_property_id (unique per organization and provider)
+- name, account_name (display only), currency, timezone
+- status (`importing` | `active` | `disconnected` | `error`), platform_status (`active` | `deleted`)
+- history_from, first_import_completed_at, health_code, health_checked_at, created_at, updated_at
+
+**analytics_daily** — one row per property, day, view and value (unique)
+- id, organization_id, property_id, day (property time zone)
+- breakdown (`total` | `channel` | `source`), dimension_key (`total`, the channel group, or `source|medium|campaign`), channel_group, traffic_source, traffic_medium, campaign
+- sessions, engaged_sessions, total_users, new_users, key_events (exact decimal), purchases, purchase_revenue (exact decimal, property currency) — NULL when not provided, never 0
+- every measure is ≥ 0 except **purchase_revenue**, which is purchases minus refunds in GA4 and can be negative on a day with more refunds (migration 0015, task 5-05)
+- quality flags: other_row, thresholded, sampled, truncated (shown, never hidden)
+- currency, source (`platform_reported`), fetched_at
+- **Users are distinct counts per day and are never added across days or views** (Q-5-5).
+- `dimension_key` for the source view escapes `\` and `|` inside values. The source view keeps at most `ANALYTICS_SOURCE_ROWS_PER_DAY` values a day (500); the rest are added into one `(other)|(other)|(other)` row with `other_row` set and users unknown.
+
+**analytics_sync_state** — as `ad_sync_state`, keyed by property_id.
+
 ### analytics_events
-> **Future-phase decision Q11 (Phase 5).** The GA4 Data API is expected to return aggregated reports, not events; the proposed replacement is an aggregated `analytics_daily` table plus GA4 Admin API discovery. Not created before Phase 5.
+> **Superseded by Q11 (A23, 2026-10-19): not created.** The GA4 Data API returns aggregated reports, not events; `analytics_daily` above replaces this table. The outline is kept for reference (event-level data would need BigQuery export, out of scope).
 
 - id
 - organization_id
@@ -421,6 +534,9 @@ Unique key should prevent duplicate provider/date/entity records.
 - metadata JSONB
 
 ### funnel_daily
+
+> **Superseded (Phase 7, Q-7-8):** the funnel is computed on read from the columns in §13B; this table is not created.
+
 - id
 - organization_id
 - store_id
@@ -434,6 +550,8 @@ Unique key should prevent duplicate provider/date/entity records.
 - purchases
 
 ## 13. Financial Aggregates
+
+> Original target model, kept for reference. **As built in Phase 2A: see §4A.**
 
 ### financial_daily
 - id
@@ -454,6 +572,114 @@ Unique key should prevent duplicate provider/date/entity records.
 - order_count
 
 Financial aggregates are derived by deterministic application logic. They store additive, measurable components only; ROAS, CPA, margins, profit margin and budget utilization are calculated on read (A5). Any cached derived value must be reproducible from these components.
+
+## 13A. Unified analytics — as built (Phase 6, migration 0016; A24)
+
+**fx_rates** — published exchange rates, one per source, currency pair and day (unique), exactly as published
+- id, source (`ecb` | `nrb`), base, quote, rate_date, rate (exact decimal, 24.10), unit (the source's quotation unit: Nepal Rastra Bank quotes JPY per 10 and INR per 100), fetched_at
+- meaning: `unit` units of `base` are worth `rate` units of `quote` (ECB: base EUR; NRB: quote NPR, middle of buy and sell)
+- **Not tenant data:** no organization column and no RLS; the app role may only `SELECT`, the system role (the daily job) `SELECT`, `INSERT`, `UPDATE`
+
+**ad_accounts.store_id**, **analytics_properties.store_id** — optional: the store an account's spend or a property's visits belong to when an organization has several stores (Q-6-1); composite tenant key to `stores`, `ON DELETE SET NULL (store_id)`. NULL = the whole organization; with one store, everything counts for it on read.
+
+The reporting currency and time zone are the organization's existing `default_currency` and `default_timezone` (Q-6-2).
+
+## 13B. Funnel — as built (Phase 7, migration 0017; A25)
+
+**analytics_daily** gains `item_view_events`, `add_to_carts`, `checkouts` (non-negative integers: Google Analytics' `view_item`, `add_to_cart` and `begin_checkout` events; NULL = not read yet) and a fourth `breakdown`, **`landing_page`**, whose `dimension_key` and `landing_page` column hold the path a session started on (never a query string; the largest `ANALYTICS_SOURCE_ROWS_PER_DAY` values a day plus "(other)").
+
+**ad_performance_daily** gains `landing_page_views`, `content_views`, `adds_to_cart`, `checkouts_initiated` (non-negative exact decimals, as Meta reports its actions; NULL = not provided — always for Google Ads — or not read yet).
+
+**analytics_properties.funnel_reread_at**, **ad_accounts.funnel_reread_at** — when the source was read with these figures: its first import, or the one-time background re-read (sync mode `reread`, added to both sync-state checks) of a source imported before Phase 7.
+
+## 14A. AI planner — as built (Phase 8, migration 0018; A26)
+
+Supersedes the `ai_models`, `prompt_versions` and `ai_runs` outlines in §14 below (kept for history; `recommendations` there is Phase 9).
+
+**ai_models** (reference data, no RLS; the application may read and add rows, never change or delete them) — `provider`, `model_name`, `created_at`; unique (`provider`, `model_name`). A row is added the first time a model is used.
+
+**prompt_versions** (reference data, no RLS; read and add only) — `name`, `version`, `template_hash` (SHA-256 of the system text and the template, 64 characters), `created_at`; unique (`name`, `version`). The prompt text lives in code (`app/domains/ai/prompts.py`), reviewed like code; a run whose text no longer matches the stored hash for its version is refused.
+
+**ai_runs** (tenant-owned, forced RLS; the application may read and insert only — runs are never changed or deleted) — `organization_id`, `user_id` (SET NULL), `model_id`, `prompt_version_id`, `task` (`campaign_strategy`), `context_snapshot` (JSONB: AdVegaX's own aggregated figures sent to the model — never personal data or secrets), `status` (`succeeded` | `rejected` | `failed` | `timed_out`), `output_json` (the accepted answer, else NULL), `rejection_reasons` (JSONB list of plain message keys, never the model's text), `attempts` (1–5; at most `AI_MAX_RETRIES` + 1), `input_tokens`, `output_tokens`, `estimated_cost` (USD, NULL when no price is configured — never 0), `latency_ms`, `created_at` (the application clock; the daily limit counts rows per UTC day). Unique (`organization_id`, `id`) for composite references; index (`organization_id`, `created_at`).
+
+**campaign_strategies** (tenant-owned, forced RLS; read, insert and update — archived, never deleted) — `organization_id`, `product_id` and `ai_run_id` (composite foreign keys within the organization), `status` (`draft` | `ready` | `archived`), `strategy` (JSONB, the validated answer as edited), `budget_amount` (> 0), `budget_period` (`daily` | `monthly`), `budget_currency` (3 letters), `budget_amounts` (JSONB, the amounts AdVegaX computed from the AI's percentages, per platform), `created_by`, `edited_by`, `edited_at`, timestamps; index (`organization_id`, `status`). Used from 8-05.
+
+## 14B. Creative engine — as built (Phase 9, migration 0019; A27)
+
+Supersedes the `creatives` outline in §9.
+
+**creative_sets** (tenant-owned, forced RLS; read and insert) — `organization_id`, `strategy_id` and `ai_run_id` (composite foreign keys within the organization), `created_by`, `created_at`. One AI drafting of a **ready** strategy.
+
+**creatives** (tenant-owned, forced RLS; read, insert, update — never deleted) — `organization_id`, `set_id`, `concept_id` (shared by every version of one ad concept), `version` (≥ 1; unique with `concept_id`), `replaces_id` (the version it was edited from), `platform` (`google_ads` | `meta_ads`), `format` (`google_rsa` | `meta_single`), `angle`, `status` (`draft` | `approved` | `rejected` | `archived`), `content` (JSONB: the texts — Google: `headlines[]`, `descriptions[]`, `path1`, `path2`; Meta: `primary_texts[]`, `headlines[]`, `descriptions[]`, `call_to_action`), `rationale`, `compliance_notes` (JSONB, the AI's advice), `checks` (JSONB: the fixed checks' results `{code, field, detail, severity}`), `asset_id` (Meta, optional), `decided_by`, `decided_at`, `decision_reason`, `created_by`, timestamps. **At most one approved version per concept** (partial unique index on `concept_id` where `status = 'approved'`).
+
+**creative_assets** (tenant-owned, forced RLS; read, insert, update) — `organization_id`, `storage_key` (random, unique, under `org/<organization>/assets/`), `content_type` (`image/jpeg` | `image/png` | `image/webp`, as re-encoded), `width`, `height`, `bytes`, `sha256`, `original_name` (shown only), `status` (`active` | `archived`), `uploaded_by`, timestamps.
+
+**creative_rules** (tenant-owned, forced RLS; one row per organization) — `prohibited_terms`, `allowed_caps` (JSONB lists), `updated_by`, `updated_at`.
+
+`campaign_strategies` gains unique (`organization_id`, `id`); `ai_runs.task` also allows `creative_copy`.
+
+## 14C. Action Engine — as built (Phase 10A, migration 0020; A28)
+
+Supersedes the `actions` outline in §15.
+
+**actions** (tenant-owned, forced RLS; read, insert, update — never deleted) — `organization_id`, `action_type` (`campaign.pause` | `campaign.resume` | `campaign.set_daily_budget`), `provider`, `ad_account_id` and `campaign_id` (composite foreign keys within the organization), `params` (JSONB, e.g. `{"daily_budget": "60.00"}` in the account currency), `currency`, `previous` (JSONB: the campaign as the platform reported it at the request — status, budget holder, period, daily budget, shared, the budget's platform id), `status` (`pending` | `approved` | `rejected` | `cancelled` | `queued` | `submitting` | `unknown` | `succeeded` | `failed` | `stale`), `idempotency_key` (SHA-256 of campaign, type and values), `checks` (JSONB), `dry_run` (JSONB), `platform_request` / `platform_answer` (JSONB: the method and fields sent, a summary of the answer — never a token), `observed` (JSONB: the campaign read back), `verification` (`verified` | `mismatch` | `not_checked`), `error_code`, `source` (`user`; `recommendation` reserved for Phase 11), `undo_of` (composite self reference), `requested_by`, `decided_by`, `decided_at`, `decision_reason`, `submitted_at`, `finished_at`, `reconcile_attempts`, timestamps. **At most one open change per campaign** (partial unique index on `campaign_id` where `status` is `pending`, `approved`, `queued`, `submitting` or `unknown`). The system role may read `id, organization_id, status, updated_at` (the sweep).
+
+**action_events** (tenant-owned, forced RLS; read and insert only) — `organization_id`, `action_id` (composite), `seq` (1, 2, … unique per action), `from_status`, `status`, `actor_type` (`user` | `worker`), `actor_user_id`, `detail` (JSONB), `created_at`.
+
+**action_settings** (tenant-owned, forced RLS; one row per organization) — `paused`, `require_second_person`, `max_daily_budget` + `max_daily_budget_currency` (both or neither), `updated_by`, `updated_at`.
+
+`external_connections` gains `write_access_granted_at`, `write_access_granted_by` ("Allow changes").
+
+## 14D. Campaign builder — as built (Phase 10B, migration 0021; A29)
+
+**campaign_drafts** (tenant-owned, forced RLS; read, insert, update — never deleted) — `organization_id`, `strategy_id`, `creative_id`, `ad_account_id` (composite foreign keys within the organization), `platform`, `name`, `daily_budget` + `currency`, `locations` (JSONB country codes), `age_min`, `age_max`, `keywords` (JSONB `[{text, match}]`), `landing_url`, `meta_page_id`, `meta_pixel_id`, `declaration_confirmed_by` / `_at`, `reference` (`AVX-XXXXXX`, unique), `version`, `status` (`draft` | `launching` | `created` | `live` | `failed` | `archived`), `created_ids` (JSONB: the platform ids made, e.g. budget, campaign, ad group, ad set, creative, ad), `error_code`, `created_by`, `updated_by`, timestamps.
+
+**actions** gains `draft_id` (composite foreign key to `campaign_drafts`), `campaign_id` becomes nullable; `action_type` adds `campaign.create` | `campaign.go_live` | `campaign.remove_draft_objects`, which carry a `draft_id` (check constraints: a draft action has a draft, any other action has a campaign). **At most one open change per draft** (partial unique index, as for campaigns).
+
+**action_settings** gains `landing_domains` (JSONB list of host names, default `[]`).
+
+## 14E. Optimization engine — as built (Phase 11, migration 0022; A30)
+
+**recommendations** (tenant-owned, forced RLS; read, insert, update — never deleted) — `organization_id`, `kind`, `campaign_id` and `ad_account_id` (composite foreign keys; null for a business-wide funnel drop-off), `signal` (JSONB: the figures as computed and as written, facts such as the loss, the periods, the currency, why no change is proposed), `proposal` (JSONB: change type, values in the account currency, the previous budget — or `{}`), `prechecks` (JSONB: the 10A checks on AdVegaX's copy of the campaign), `campaign_state` (status and budget when made), `explanation`, `confidence`, `assumptions`, `risks`, `rank`, `explained_by` (`ai` | `rules`), `ai_run_id` (composite), `status`, `expires_at`, `fingerprint` (kind + campaign or funnel step; **one open recommendation each**, partial unique index), `closed_reason`, `decided_by`, `decided_at`, `decision_reason`, `decision_note`, timestamps.
+
+**recommendation_outcomes** (tenant-owned, forced RLS; read and insert) — `recommendation_id` (composite), `after_days` (7 | 14, unique per recommendation), `before`, `after` (JSONB: spend, conversions, cost per conversion, conversion value with their availability), `created_at`.
+
+**optimization_settings** (tenant-owned, forced RLS; one row per organization) — `min_spend`, `min_conversions`, `budget_step_percent`, `cost_jump_percent`, `last_run_on`, `refreshes_on`, `refreshes_used`, `last_run_summary` (JSONB), `updated_by`, `updated_at`.
+
+**actions** gains `recommendation_id` (composite foreign key; set exactly when `source = 'recommendation'`, check constraint). **ai_runs.task** also allows `optimization`.
+
+## 14F. Autopilot — as built (Phase 12, migration 0023; A31)
+
+**autopilot_policies** (tenant-owned, forced RLS; one row per organization; read, insert, update) — `enabled`, `enabled_by`, `enabled_at`, `stopped_by`, `stopped_at`, `stopped_reason`, `kinds`, `ad_account_ids`, `excluded_campaign_ids` (JSONB lists), `max_changes_per_day`, `campaign_cooldown_days`, `max_decrease_percent` (1–50), `max_cumulative_decrease_percent` (1–90), `cumulative_window_days` (≥ 7), `min_campaign_age_days`, `updated_by`, `updated_at`.
+
+**autopilot_runs** (tenant-owned, forced RLS; read and insert) — `started_at`, `considered`, `made` (JSONB action ids), `skipped` (JSONB `{recommendation_id, reason}`), `limit_reached`, `stopped_reason`.
+
+**actions**: `source` also `autopilot`; `policy` (JSONB, the policy snapshot; set exactly when `source = 'autopilot'`, check constraint). **audit_logs.actor_type** also `autopilot`.
+
+## 14G. Billing — as built (Phase 13, migration 0024; A32)
+
+**billing_accounts** (tenant-owned, forced RLS; one row per organization, made when it is created while billing is on, or the first time it is used afterwards — its trial starts then; app role read, insert, update; the system role reads only `organization_id`, the Stripe ids, `subscription_status` and `trial_ends_at`) — `stripe_customer_id`, `stripe_subscription_id` (unique), `plan` (`starter` | `growth` | `scale` | null), `interval` (`month` | `year` | null), `subscription_status` (Stripe's: `none` | `trialing` | `active` | `past_due` | `unpaid` | `canceled` | `incomplete` | `incomplete_expired` | `paused`), `trial_ends_at`, `current_period_end`, `cancel_at_period_end`, `first_failed_at`, `trial_reminder_sent_at`, `read_only_notice_sent_at`, `synced_at`, `created_at`, `updated_at`. "Read-only", "complimentary" and the plan in force are worked out from these and the settings, never stored.
+
+**billing_events** (system role only, forced RLS; read, insert, update) — `stripe_event_id` (primary key: each event once), `event_type`, `organization_id`, `received_at`, `processed_at`, `result` (`applied` | `ignored` | `failed`), `error_code`. Never the payload or card details.
+
+**billing_reconciliations** (system role only, forced RLS; read, insert) — `started_at`, `checked`, `fixed`, `details` (JSONB `{organization_id, changed[] | error}`).
+
+## 14H. Agency mode — as built (Phase 14, migration 0025; A33)
+
+**agency_grants** (forced RLS; app role read, insert, update) — `organization_id` (the client), `agency_organization_id`, `role` (`manager` | `analyst` | `viewer`), `status` (`pending` | `active` | `revoked`), `granted_by_user_id`, `accepted_by_user_id`, `revoked_by_user_id`, `created_at`, `accepted_at`, `revoked_at`; at most one open (not revoked) grant per pair (partial unique index). Readable by either organization and by active members of the agency; only the client inserts; either side updates. Revoked grants are kept.
+
+**organizations.agency_code** (unique, nullable). The system role may read `organizations (id, name, status, agency_code)` only: finding an agency by its code and naming the other side of a grant.
+
+
+**Data retention (Phase 15, migration 0026; A34):** the system role may read `organization_resource_links (organization_id, external_resource_id, status, unlinked_at)` and delete `external_resources` (the retention job only; cascades remove the imported data). The app role still cannot delete integration rows.
+
+## 14I. Admin portal — as built (Phase 16, migration 0027; A35)
+
+**platform_admins** (system role only, forced RLS) — `user_id` (primary key), the two-step secret sealed with the installation's key set (`totp_ciphertext`, `totp_wrapped_key`, `totp_key_version`), `totp_enabled_at`, `created_at`.
+
+**platform_settings** (system role only, forced RLS) — `name` (primary key, a registry setting), `ciphertext`, `wrapped_key`, `key_version` (sealed with the installation's key set, bound to the name), `hint` (last four of a secret; a text value's start), `updated_by`, `updated_at`. Read when AdVegaX starts and laid over the settings file.
+
+The system role also gains `SELECT (id, email, display_name, status, created_at)` on `users` and `UPDATE (status)` on `organizations`.
 
 ## 14. AI Tables
 
@@ -505,6 +731,8 @@ Financial aggregates are derived by deterministic application logic. They store 
 
 ## 15. Action / Automation Tables
 
+> **`actions` is superseded by §14C (Phase 10A, as built).** `automation_policies` belongs to Phase 12 (autopilot) and is not built yet. Kept for history (A1).
+
 ### actions
 - id
 - organization_id
@@ -538,8 +766,8 @@ Financial aggregates are derived by deterministic application logic. They store 
 
 ## 16. Audit (Phase 1A)
 
-### audit_logs
-Append-only. The application role may insert and read (within its tenant) but never update or delete.
+### audit_logs (Phase 1A — migration 0003)
+Append-only. The application role may insert and read (within its tenant) but never update or delete; no runtime role holds UPDATE, DELETE or TRUNCATE. Indexes: `(organization_id, created_at)`, `actor_user_id`. `organization_id` uses ON DELETE RESTRICT. The `metadata` column is exposed as `metadata` in the API.
 - id
 - organization_id nullable
 - actor_type (user, system, worker, ai_recommendation)
@@ -621,7 +849,8 @@ Tables use `FORCE ROW LEVEL SECURITY`. No `SECURITY DEFINER` functions without d
 | Membership | memberships | RLS: rows of the current organization, or the current user's own rows (to list/switch organizations) |
 | Organization | organizations | RLS: current organization, or organizations where the current user has an active membership |
 | Global identity | users, user_password_credentials, sessions, user_action_tokens | Not tenant-owned; access only through the identity service; never exposed via organization endpoints except through membership joins |
-| Security/system | security_events, email_outbox, job_runs (system rows) | Insert by the application; read/process only by `advegax_system` or the owning tenant where `organization_id` is set |
+| Security/system | security_events, email_outbox (Phase 1A) | Insert-only for `advegax_app` (with `organization_id` NULL or the current organization); read/process only by `advegax_system` |
+| Jobs | job_runs (Phase 1B) | Tenant-scoped SELECT/INSERT/UPDATE for `advegax_app`; `advegax_system` SELECT/UPDATE to claim, retry and recover; no DELETE |
 
 **Verification.** CI fails if a table with `organization_id` lacks enabled + forced RLS and a policy. Cross-tenant tests cover every tenant-owned table and route.
 

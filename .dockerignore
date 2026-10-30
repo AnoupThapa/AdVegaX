@@ -1,0 +1,19 @@
+# Keep build contexts small and free of local state (dependencies, builds, caches, secrets).
+.git
+**/.env
+**/.env.*
+!.env.example
+**/node_modules
+**/.next
+**/coverage
+**/test-results
+**/playwright-report
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/.coverage
+# Test code (Shopify simulator with a fixed test secret, e2e store helper) never ships (2A-11).
+backend/tests
+backend/demo

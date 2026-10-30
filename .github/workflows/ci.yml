@@ -1,0 +1,208 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint-type:
+    runs-on: ubuntu-24.04
+    defaults: {run: {working-directory: backend}}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with: {python-version: "3.12"}
+      - run: uv sync --frozen
+      - run: uv run ruff check app alembic tests
+      - run: uv run ruff format --check app alembic tests
+      - run: uv run mypy
+
+  test:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:16
+        env: {POSTGRES_USER: postgres, POSTGRES_PASSWORD: postgres}
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-retries 10
+      redis:
+        image: redis:7
+        ports: ["6379:6379"]
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      TEST_PG_SUPERUSER: postgres
+      TEST_PG_SUPERUSER_PASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with: {python-version: "3.12"}
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Create roles and test databases
+        run: scripts/bootstrap_db.sh advegax_test advegax_migration_test
+      - name: Tests (incl. tenant isolation, security, migrations) with coverage gates
+        working-directory: backend
+        run: |
+          uv sync --frozen
+          uv run pytest --cov=app --cov-branch --cov-report=term-missing --cov-fail-under=85
+          uv run coverage report --fail-under=95 \
+            --include="app/core/security/*,app/domains/identity/*,app/domains/organizations/permissions.py,app/domains/organizations/tenancy.py,app/providers/http/*,app/domains/integrations/credentials.py,app/domains/integrations/connect_state.py"
+
+  security:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env: {GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"}
+      - uses: astral-sh/setup-uv@v6
+        with: {python-version: "3.12"}
+      - name: Dependency audit
+        working-directory: backend
+        run: |
+          uv export --frozen --no-dev --format requirements-txt > /tmp/requirements.txt
+          uvx pip-audit --strict --disable-pip -r /tmp/requirements.txt
+      - uses: actions/setup-node@v4
+        with: {node-version: "24"}
+      - name: Web dependency audit (production dependencies, high and critical)
+        working-directory: frontend
+        run: npm audit --omit=dev --audit-level=high
+
+  frontend:
+    runs-on: ubuntu-24.04
+    defaults: {run: {working-directory: frontend}}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: "24", cache: npm, cache-dependency-path: frontend/package-lock.json}
+      - run: npm ci
+      # ESLint, Prettier, strict TypeScript, API-type drift + unit tests with coverage gate, npm audit
+      - run: npm run check
+      - run: npm run build
+
+  e2e:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:16
+        env: {POSTGRES_USER: postgres, POSTGRES_PASSWORD: postgres}
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-retries 10
+      redis:
+        image: redis:7
+        ports: ["6379:6379"]
+      mailpit:
+        image: axllent/mailpit:v1.20
+        ports: ["1025:1025", "8025:8025"]
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      # The suite creates several accounts from one address within minutes; raise the rate
+      # limits for this throwaway CI stack only (defaults stay as approved everywhere else).
+      THROTTLE_REGISTER_PER_IP_PER_HOUR: "100"
+      THROTTLE_LOGIN_PER_IP_PER_MINUTE: "100"
+      THROTTLE_LOGIN_PER_ACCOUNT_IP_PER_MINUTE: "30"
+      THROTTLE_EMAIL_ACTION_PER_IP_PER_HOUR: "100"
+      # Offer WooCommerce on the Connections page so its form can be checked (2B-09). The
+      # browser test never submits a usable address, so no real store is ever called.
+      WOOCOMMERCE_ENABLED: "true"
+      # Offer Google Ads too (3-10). These are placeholders, not credentials: the browser test
+      # connects through the in-process simulator, and nothing ever calls Google.
+      GOOGLE_ADS_ENABLED: "true"
+      GOOGLE_ADS_CLIENT_ID: "ci-not-a-real-client.apps.googleusercontent.com"
+      GOOGLE_ADS_CLIENT_SECRET: "ci-not-a-secret"
+      GOOGLE_ADS_DEVELOPER_TOKEN: "ci-not-a-token"
+      # And Meta (4-08): placeholders again; the browser test connects through the in-process
+      # Meta simulator, and nothing ever calls Meta.
+      META_ADS_ENABLED: "true"
+      META_APP_ID: "1234567890123"
+      META_APP_SECRET: "ci-not-a-secret"
+      META_LOGIN_CONFIG_ID: "9876543210"
+      # And Google Analytics (5-09): it uses the Google Ads OAuth placeholders above; the
+      # browser test connects through the in-process GA4 simulator, and nothing calls Google.
+      GOOGLE_ANALYTICS_ENABLED: "true"
+      # Billing on (13-08) without any Stripe key: the Billing page and the limits are real;
+      # choosing a plan is refused, and the browser test subscribes through the in-process
+      # Stripe simulator. Nothing ever calls Stripe.
+      BILLING_ENABLED: "true"
+      # Agency mode on (14-06): grants between the test's own organizations only.
+      AGENCY_ENABLED: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with: {python-version: "3.12"}
+      - uses: actions/setup-node@v4
+        with: {node-version: "24", cache: npm, cache-dependency-path: frontend/package-lock.json}
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Create roles and database
+        run: scripts/bootstrap_db.sh advegax
+      - name: Migrate; start the API and the worker
+        working-directory: backend
+        run: |
+          uv sync --frozen
+          uv run alembic upgrade head
+          nohup uv run uvicorn app.main:create_app --factory --port 8000 > "$RUNNER_TEMP/api.log" 2>&1 &
+          nohup uv run celery -A app.workers.celery_app:celery_app worker --loglevel=INFO > "$RUNNER_TEMP/worker.log" 2>&1 &
+      - name: Build and start the web app (standalone server, as in the Docker image)
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+          nohup npm run start:standalone > "$RUNNER_TEMP/web.log" 2>&1 &
+      - name: Wait for the stack
+        run: |
+          for url in http://localhost:8000/api/v1/health/ready http://localhost:3000/sign-in http://localhost:8025/api/v1/messages; do
+            for _ in $(seq 1 60); do curl -fsS -o /dev/null "$url" && break; sleep 1; done
+            curl -fsS -o /dev/null "$url"
+          done
+      - name: Install Chromium for Playwright
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+      - name: End-to-end and accessibility tests
+        working-directory: frontend
+        run: npm run e2e
+      - name: Collect logs
+        if: failure()
+        run: mkdir -p frontend/test-results && cp "$RUNNER_TEMP"/*.log frontend/test-results/
+      - name: Upload report and logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: |
+            frontend/playwright-report
+            frontend/test-results
+          retention-days: 7
+
+  docker:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -f infrastructure/docker/api.Dockerfile -t advegax-api:ci .
+      - run: docker build -f infrastructure/docker/web.Dockerfile -t advegax-web:ci .
+      # Phase 15 (15-03): fail on fixable high or critical vulnerabilities in either image.
+      - name: Scan the API image
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: advegax-api:ci
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+      - name: Scan the web image
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: advegax-web:ci
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"

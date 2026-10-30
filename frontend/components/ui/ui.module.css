@@ -1,0 +1,285 @@
+/* Shared UI primitives (PHASE_01C_PLAN §4.6, §8). */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 2.75rem; /* 44px touch target */
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  font: inherit;
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.primary {
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+}
+
+.secondary {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-color: var(--color-control-border);
+}
+
+.link {
+  background: none;
+  color: var(--color-accent);
+  padding: 0;
+  min-height: auto;
+  text-decoration: underline;
+  font-weight: var(--font-weight-regular);
+}
+
+.field {
+  display: grid;
+  gap: var(--space-1);
+  margin-bottom: var(--space-4);
+  /* A grid item will not shrink below its content: stop long <select> options widening the page. */
+  min-width: 0;
+  /* Single-line fields stay a readable width on wide screens. */
+  max-width: 40rem;
+}
+
+.label {
+  font-weight: var(--font-weight-semibold);
+}
+
+.optional {
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-muted);
+}
+
+.hint {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.input {
+  width: 100%;
+  max-width: 100%;
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-sm);
+}
+
+.input[aria-invalid="true"] {
+  border-color: var(--color-danger);
+}
+
+.fieldErrors {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+}
+
+.alert {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid;
+  margin-bottom: var(--space-4);
+}
+
+.error {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+.success {
+  border-color: var(--color-success);
+  color: var(--color-success);
+}
+
+.info {
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+.requestId {
+  margin: var(--space-1) 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.cardPage {
+  max-width: 28rem;
+  margin: 0 auto;
+  padding: var(--space-8) var(--gutter);
+}
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-6);
+}
+
+.cardTitle {
+  font-size: var(--font-size-xl);
+}
+
+.cardTitle:focus {
+  outline: none;
+}
+
+.cardFooter {
+  margin-top: var(--space-4);
+  text-align: center;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.fullWidth {
+  width: 100%;
+}
+
+.danger {
+  background: var(--color-danger);
+  color: var(--color-danger-contrast);
+}
+
+.pageHeading {
+  font-size: var(--font-size-2xl);
+  overflow-wrap: anywhere;
+}
+
+.pageHeading:focus {
+  outline: none;
+}
+
+.dialog {
+  max-width: min(32rem, calc(100vw - 2 * var(--space-4)));
+  padding: var(--space-6);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.dialog::backdrop {
+  background: var(--color-overlay);
+}
+
+.dialogTitle {
+  font-size: var(--font-size-lg);
+}
+
+/* Status badge: colour is never the only signal; the label is always text. */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0 var(--space-2);
+  min-height: 1.5rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
+
+.badgeSuccess {
+  color: var(--status-success-fg);
+  background: var(--status-success-bg);
+}
+
+.badgeWarning {
+  color: var(--status-warning-fg);
+  background: var(--status-warning-bg);
+}
+
+.badgeDanger {
+  color: var(--status-danger-fg);
+  background: var(--status-danger-bg);
+}
+
+.badgeInfo {
+  color: var(--status-info-fg);
+  background: var(--status-info-bg);
+}
+
+.badgeNeutral {
+  color: var(--status-neutral-fg);
+  background: var(--status-neutral-bg);
+}
+
+/* Empty and loading states. */
+.empty {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-2);
+  padding: var(--space-8) var(--space-6);
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.emptyTitle {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+}
+
+.emptyBody {
+  margin: 0;
+  max-width: 40rem;
+  color: var(--color-text-muted);
+}
+
+.skeleton {
+  display: block;
+  height: 1em;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-2),
+    var(--color-border),
+    var(--color-surface-2)
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.skeletonShort {
+  width: 30%;
+}
+
+.skeletonMedium {
+  width: 60%;
+}
+
+.sparkline {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  color: var(--color-accent);
+}

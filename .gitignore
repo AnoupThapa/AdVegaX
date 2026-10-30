@@ -35,3 +35,10 @@ docker-data/
 Thumbs.db
 .idea/
 .vscode/
+
+# Redis local dumps
+*.rdb
+backend/var/
+
+# Phase 16 desktop installation (settings, logs, emails, demo state)
+/var/

@@ -1,0 +1,55 @@
+{
+  "name": "advegax-web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AdVegaX web application (Phase 1C frontend shell)",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "next start --port 3000",
+    "start:standalone": "node scripts/start-standalone.mjs",
+    "lint": "eslint . --max-warnings=0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "check": "npm run lint && npm run format:check && npm run typecheck && npm run test:coverage && npm run audit",
+    "audit": "npm audit --omit=dev --audit-level=high",
+    "api:generate": "openapi-typescript lib/api/openapi.json -o lib/api/schema.d.ts",
+    "e2e": "playwright test"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "5.104.1",
+    "next": "16.4.3",
+    "openapi-fetch": "0.17.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.64.0",
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/jest-dom": "7.0.1",
+    "@testing-library/react": "16.3.3",
+    "@types/node": "24.19.1",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitest/coverage-v8": "5.0.3",
+    "eslint": "10.12.0",
+    "eslint-config-next": "16.4.3",
+    "jsdom": "30.1.2",
+    "openapi-typescript": "7.13.0",
+    "prettier": "3.9.9",
+    "typescript": "6.0.3",
+    "vitest": "5.0.3"
+  },
+  "overrides": {
+    "openapi-typescript": {
+      "typescript": "$typescript"
+    }
+  }
+}

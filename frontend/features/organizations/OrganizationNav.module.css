@@ -1,0 +1,129 @@
+/* Organization navigation: a collapsible menu on phones, a grouped sidebar from 48rem. */
+
+.nav {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--touch-target);
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.toggleText {
+  display: grid;
+  min-width: 0;
+}
+
+.toggleOrg {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toggleCurrent {
+  font-weight: var(--font-weight-semibold);
+}
+
+.title {
+  display: none;
+  margin: 0;
+  padding: var(--space-3) var(--space-4) var(--space-1);
+  font-weight: var(--font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.panel {
+  display: none;
+  padding: 0 var(--space-2) var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.panel[data-open="true"] {
+  display: block;
+}
+
+.group {
+  padding-top: var(--space-3);
+}
+
+.groupTitle {
+  margin: 0 0 var(--space-1);
+  padding: 0 var(--space-3);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.link,
+.current {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--touch-target);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+}
+
+.link {
+  color: var(--color-text);
+}
+
+.link:hover {
+  background: var(--color-surface-2);
+}
+
+.current {
+  color: var(--color-accent-text);
+  background: var(--color-accent-bg);
+  font-weight: var(--font-weight-semibold);
+}
+
+@media (min-width: 48rem) {
+  .nav {
+    position: sticky;
+    top: var(--space-4);
+  }
+
+  .toggle {
+    display: none;
+  }
+
+  .title {
+    display: block;
+  }
+
+  .panel {
+    display: block;
+    border-top: 0;
+    padding-top: 0;
+  }
+
+  .link,
+  .current {
+    min-height: 2.25rem;
+  }
+}
