@@ -60,14 +60,26 @@ def _person(client: ApiClient, email: str, name: str) -> None:
     client.post("/auth/verify-email", {"token": token_from(last_email(email, "Verify"))})
 
 
+class AlreadySeeded(Exception):
+    """The demo organizations are already there: keep them (setup can be run again)."""
+
+
 def _organization(client: ApiClient, name: str) -> str:
     for org in client.get("/organizations").json()["data"]:
         if org["name"] == name and not org.get("via_agency"):
-            raise SystemExit(f"demo data already exists ({name}); run reset-demo first")
+            raise AlreadySeeded(name)
     return str(client.create_org(name)["id"])
 
 
 def main() -> int:
+    try:
+        return _seed()
+    except AlreadySeeded as exc:
+        print(f"Demo data is already loaded ({exc}); keeping it. Use reset-demo to start fresh.")
+        return 0
+
+
+def _seed() -> int:
     # Many simulated sign-ins within a minute, in this process only.
     os.environ.setdefault("THROTTLE_LOGIN_PER_ACCOUNT_IP_PER_MINUTE", "100")
     os.environ.setdefault("THROTTLE_LOGIN_PER_IP_PER_MINUTE", "200")
