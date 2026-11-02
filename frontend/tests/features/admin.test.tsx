@@ -141,12 +141,15 @@ describe("Admin portal", () => {
       }),
     });
     render();
+    click(await screen.findByRole("button", { name: "Change Anthropic API key" }));
     const form = await screen.findByRole("form", { name: "Anthropic API key" });
     fill(within(form).getByLabelText("Anthropic API key"), "sk-ant-1234");
     click(within(form).getByRole("button", { name: "Save" }));
     expect(await screen.findByText(/••••1234/)).toBeVisible();
-    expect(screen.getByText(/saved here/)).toBeVisible();
-    click(await screen.findByRole("button", { name: "Switch on: Agency mode" }));
+    expect(screen.getAllByText(/saved here/)[0]).toBeVisible();
+    const agency = await screen.findByRole("switch", { name: "Agency mode" });
+    expect(agency).toHaveAttribute("aria-checked", "false");
+    click(agency);
     await waitFor(() =>
       expect(api.apiCalls().find((c) => c.path.endsWith("AGENCY_ENABLED"))?.body).toEqual({
         value: "true",
@@ -155,7 +158,7 @@ describe("Admin portal", () => {
     click(screen.getByRole("button", { name: "Suspend Eve Zone" }));
     await waitFor(() => expect(api.apiCalls().some((c) => c.path.endsWith("/status"))).toBe(true));
     expect(screen.getByRole("table", { name: "People" })).toHaveTextContent("demo@advegax.local");
-    expect(screen.getAllByText("OK", { selector: "dd" })).toHaveLength(2);
+    expect(screen.getAllByText("OK")).toHaveLength(2);
   });
 
   it("shows the Admin portal link in the account menu only to administrators", async () => {
@@ -174,5 +177,63 @@ describe("Admin portal", () => {
     click(screen.getByRole("button", { name: /account menu/ }));
     expect(screen.getByRole("link", { name: "Account security" })).toBeVisible();
     await waitFor(() => expect(screen.queryByRole("link", { name: "Admin portal" })).toBeNull());
+  });
+});
+
+describe("Admin portal states", () => {
+  it("shows failing health, a waiting restart, switches that are on, and closes a key form", async () => {
+    const api = mockApi({
+      "GET /api/v1/auth/me": ok(me),
+      [ME]: ok(admin()),
+      ...portal,
+      "GET /api/v1/admin/health": ok({
+        database: false,
+        redis: false,
+        environment: "local",
+        switches: {},
+        restart_needed: true,
+      }),
+      "GET /api/v1/admin/settings": ok([
+        setting({ set: true, hint: "", source: "settings_file" }),
+        setting({
+          name: "AGENCY_ENABLED",
+          label: "Agency mode",
+          group: "Features",
+          kind: "switch",
+          hint: "on",
+          source: "portal",
+        }),
+        setting({
+          name: "META_APP_ID",
+          label: "App ID",
+          group: "Meta",
+          kind: "text",
+          set: true,
+          hint: "1234567",
+          source: "portal",
+        }),
+      ]),
+      "PUT /api/v1/admin/settings/AGENCY_ENABLED": fail(422, "VALIDATION_ERROR"),
+      "DELETE /api/v1/admin/settings/META_APP_ID": ok([setting()]),
+    });
+    render();
+    expect(await screen.findAllByText("Not reachable")).toHaveLength(2);
+    expect(screen.getByText(/a saved change is waiting/)).toBeVisible();
+    expect(screen.getByText("Set")).toBeVisible();
+    const agency = screen.getByRole("switch", { name: "Agency mode" });
+    expect(agency).toHaveAttribute("aria-checked", "true");
+    click(agency);
+    await waitFor(() =>
+      expect(api.apiCalls().find((c) => c.path.endsWith("AGENCY_ENABLED"))?.body).toEqual({
+        value: "false",
+      }),
+    );
+    expect(await screen.findByRole("alert")).toBeVisible();
+    click(screen.getByRole("button", { name: "Change App ID" }));
+    click(screen.getByRole("button", { name: "Close App ID" }));
+    expect(screen.queryByRole("form", { name: "App ID" })).toBeNull();
+    click(screen.getByRole("button", { name: "Change App ID" }));
+    click(await screen.findByRole("button", { name: "Use the settings file instead" }));
+    await waitFor(() => expect(api.apiCalls().some((c) => c.method === "DELETE")).toBe(true));
   });
 });

@@ -178,22 +178,25 @@ describe("Overview", () => {
       [`GET ${ORG_PATH}/analytics/overview`]: ok(golden()),
     });
     renderWithProviders(inShell(<OrganizationOverview />), { session: testUser() });
-    const sales = await screen.findByRole("list", { name: "Sales and profit" });
-    expect(within(sales).getByText("Net sales").nextSibling).toHaveTextContent("A$1,500.50");
-    const ads = screen.getByRole("list", { name: "Advertising" });
-    expect(within(ads).getByText("Blended ROAS").nextSibling).toHaveTextContent("7.34×");
-    expect(within(ads).getByText("Cost per order").nextSibling).toHaveTextContent("A$13.63");
-    expect(within(ads).getByText("Ad spend share of sales").nextSibling).toHaveTextContent("13.6%");
-    expect(within(ads).getByText(/^Before shipping costs and payment fees/)).toBeInTheDocument();
-    const missing = screen.getByRole("list", { name: "Not included yet" });
-    expect(within(missing).getByText("Shipping cost").nextSibling).toHaveTextContent(
+    // The statement: the period's own figures in one sentence.
+    expect(await screen.findByText(/sold/)).toHaveTextContent(/Eve Zone sold A\$1,500\.50/);
+    const row = (group: string, label: string) =>
+      within(screen.getByRole("table", { name: group }))
+        .getAllByRole("row")
+        .find((r) => within(r).queryByText(label, { exact: true })) as HTMLElement;
+    expect(row("Sales and profit", "Net sales")).toHaveTextContent("A$1,500.50");
+    expect(row("Advertising", "Blended ROAS")).toHaveTextContent("7.34×");
+    expect(row("Advertising", "Cost per order")).toHaveTextContent("A$13.63");
+    expect(row("Advertising", "Ad spend share of sales")).toHaveTextContent("13.6%");
+    expect(screen.getByText(/^Before shipping costs and payment fees/)).toBeInTheDocument();
+    expect(row("Not included yet", "Shipping cost")).toHaveTextContent(
       "Not provided by the platform",
     );
-    expect(within(missing).getByText("Contribution profit").nextSibling).toHaveTextContent(
+    expect(row("Not included yet", "Contribution profit")).toHaveTextContent(
       "Shipping costs and fees not entered",
     );
     // Days newest first; a day not read says so, never 0.
-    const rows = within(screen.getByRole("table")).getAllByRole("row");
+    const rows = within(screen.getByRole("table", { name: /^Each day/ })).getAllByRole("row");
     expect(rows[1]).toHaveTextContent(formatDay("2026-10-07"));
     expect(rows[1]).toHaveTextContent("Not synced yet");
     expect(rows[3]).toHaveTextContent("A$1,000.00");
@@ -364,5 +367,55 @@ describe("Settings: stores for ad accounts and properties", () => {
     mockApi({ ...routes(), [`GET ${ORG_PATH}/stores`]: ok([store(STORE_A, "Eve Zone")]) });
     renderWithProviders(inShell(<OrganizationSettings />), { session: testUser() });
     expect(await screen.findByText(/You have one store/)).toBeVisible();
+  });
+});
+
+describe("Overview statement and notes", () => {
+  it("says what cannot be shown yet, once, with where to fix it", async () => {
+    mockApi({
+      [`GET ${ORG_PATH}`]: ok(testOrg()),
+      ...emptyOrganizationData(),
+      [`GET ${ORG_PATH}/analytics/overview`]: ok(
+        golden({
+          totals: {
+            ...TOTALS,
+            net_sales: figure(null, "not_synchronized", "unavailable"),
+            orders: figure(null, "not_synchronized", "unavailable"),
+            ad_spend: figure(null, "no_ad_account", "unavailable"),
+            product_cost: figure(null, "missing_product_costs", "partial"),
+            gross_profit: figure(null, "missing_product_costs", "partial"),
+            profit_after_ad_spend: figure(null, "missing_product_costs", "partial"),
+            sessions: figure(null, "mystery_reason", "unavailable"),
+          },
+        }),
+      ),
+    });
+    renderWithProviders(inShell(<OrganizationOverview />), { session: testUser() });
+    const statement = await screen.findByText(/has no sales figure yet/);
+    expect(statement).toHaveTextContent(
+      "Eve Zone has no sales figure yet, and its ad spend is not in yet. Profit after ad spend can't be worked out yet.",
+    );
+    const notes = screen.getByRole("region", { name: "Why some figures are missing" });
+    expect(
+      within(notes).getByRole("link", { name: "Add product costs in Stores" }),
+    ).toHaveAttribute("href", `/orgs/${ORG_ID}/stores`);
+    expect(within(notes).getByRole("link", { name: "Check Connections" })).toBeVisible();
+    expect(within(notes).getByRole("link", { name: "Connect an ad account" })).toBeVisible();
+    expect(within(notes).getAllByRole("listitem")).toHaveLength(4);
+    expect(screen.getAllByRole("link", { name: "Note 2" }).length).toBeGreaterThan(1);
+  });
+
+  it("states sales, spend and profit when all are known", async () => {
+    mockApi({
+      [`GET ${ORG_PATH}`]: ok(testOrg()),
+      ...emptyOrganizationData(),
+      [`GET ${ORG_PATH}/analytics/overview`]: ok(
+        golden({ totals: { ...TOTALS, orders: figure(null, "not_synchronized", "unavailable") } }),
+      ),
+    });
+    renderWithProviders(inShell(<OrganizationOverview />), { session: testUser() });
+    expect(await screen.findByText(/kept/)).toHaveTextContent(
+      "Eve Zone sold A$1,500.50, and spent A$204.50 on ads. After ad spend, it kept A$695.80.",
+    );
   });
 });

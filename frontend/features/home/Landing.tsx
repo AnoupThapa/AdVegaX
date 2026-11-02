@@ -58,14 +58,13 @@ export function Landing() {
     <div className={styles.landing}>
       <section className={styles.hero} aria-labelledby="hero-title">
         <div className={styles.heroText}>
-          <p className={styles.eyebrow}>For online stores that advertise</p>
           <h1 id="hero-title" className={styles.heroTitle}>
             Know what your advertising really earns, and change it with a record.
           </h1>
           <p className={styles.lead}>
-            AdVegaX brings your store, ad accounts and analytics into one place, shows profit after
-            ad spend, and proposes changes that a person approves before anything reaches an ad
-            platform.
+            For online stores that advertise. AdVegaX brings your store, ad accounts and analytics
+            into one place, shows profit after ad spend, and proposes changes that a person approves
+            before anything reaches an ad platform.
           </p>
           <div className={styles.actions}>
             <Link href="/sign-up" className={styles.primaryAction}>

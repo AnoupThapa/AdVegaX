@@ -160,3 +160,13 @@ Found and fixed while doing this: (1) form-control borders were 1.4:1 to 2.2:1 a
 Adopted so far: `DataTable` in Billing (usage) and Changes; `Toast` for "Settings saved", "No changes to save" and "Invitation sent"; `Container` in the site header. The 18 other hand-built tables and other success messages are listed in DESIGN_SYSTEM §9 for later migration.
 
 Checks: lint, format and types clean; axe 0 violations on 23 routes in light and dark; 132 page loads with no overflow and an h1 on each; small targets 17; the same 2 creatives image tests fail on Node 22.
+
+### 9.5 Visual direction pass (2026-11-02)
+
+- Typeface: Atkinson Hyperlegible Next, bundled (no third-party font request); tabular figures in tables.
+- Overview redesigned as a statement of account: a sentence of real figures, one note explaining missing figures with fixes, then a ledger table per group.
+- Navigation: sentence-case group labels; on desktop the menu is a ruled column with an accent bar on the current page.
+- Home: removed the uppercase eyebrow; the lead says who the product is for.
+- Admin portal: dark operator band, sticky section index, status badges, real on/off switches, inline key forms.
+- Checks: 644 unit tests pass, branch coverage 85.57%; screenshots reviewed at 1440 and 390 px.
+

@@ -1,0 +1,202 @@
+/* The Admin portal (Phase 16, redesigned in Phase 17): the operator's area. An inverted band
+   marks it apart from customer pages; a section index keeps a long page navigable. */
+
+.band {
+  background: var(--color-text);
+  color: var(--color-bg);
+}
+
+.bandInner {
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  padding: var(--space-8) var(--gutter) var(--space-6);
+}
+
+.bandInner h1 {
+  margin-bottom: var(--space-1);
+}
+
+.bandInner p {
+  margin: 0;
+  max-width: var(--measure);
+}
+
+.page {
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  padding: var(--space-8) var(--gutter) var(--space-16);
+}
+
+.layout {
+  display: grid;
+  gap: var(--space-8);
+}
+
+.index ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+}
+
+.index a {
+  display: inline-block;
+  padding-block: var(--space-2);
+  color: var(--color-text);
+}
+
+.content {
+  display: grid;
+  gap: var(--space-12);
+  min-width: 0;
+}
+
+.restart {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid var(--color-accent);
+  background: var(--color-accent-bg);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.section h2 {
+  padding-bottom: var(--space-2);
+  border-bottom: 2px solid var(--color-text);
+}
+
+.muted {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.health {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--space-4);
+  margin: 0;
+}
+
+.health dt {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.health dd {
+  margin: var(--space-1) 0 0;
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Switches: one row each, the control at the end of the row. */
+.switches,
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.switches li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.switchText {
+  display: grid;
+}
+
+.rowLabel {
+  font-weight: var(--font-weight-semibold);
+}
+
+.switch {
+  position: relative;
+  flex: none;
+  width: 4.5rem;
+  min-height: var(--touch-target);
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+}
+
+.switch[aria-checked="true"] {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+}
+
+.switch:disabled {
+  cursor: progress;
+}
+
+.switchState {
+  display: block;
+  text-align: center;
+}
+
+.group {
+  margin-top: var(--space-6);
+}
+
+.group h3 {
+  margin-bottom: var(--space-2);
+}
+
+.row {
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.rowHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+}
+
+.rowHead .rowLabel {
+  flex: 1 1 14rem;
+}
+
+.rowState {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.rowForm {
+  margin-top: var(--space-3);
+  max-width: var(--container-narrow);
+}
+
+.formActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* Wide screens: the section index becomes a sticky column. */
+@media (min-width: 64rem) {
+  .layout {
+    grid-template-columns: 13rem minmax(0, 1fr);
+  }
+
+  .index ul {
+    position: sticky;
+    top: var(--space-4);
+    flex-direction: column;
+    gap: 0;
+    padding-right: var(--space-4);
+    border-right: 1px solid var(--color-border);
+  }
+}

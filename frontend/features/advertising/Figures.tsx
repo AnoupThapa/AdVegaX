@@ -93,7 +93,7 @@ export function DailyTable({
   const t = figureText(currency);
   const cell = (missing: boolean) => `${styles.num} ${missing ? styles.missing : ""}`;
   return (
-    <div className={styles.tableWrap}>
+    <div className={styles.tableWrap} role="region" aria-label="Each day" tabIndex={0}>
       <table className={styles.table}>
         <caption>
           Each day in the ad account&apos;s time zone ({data.timezone}). Days marked “may still

@@ -109,7 +109,7 @@ function DailyTable({ data, money }: { data: DailyMetrics; money: Money }) {
   const cell = (value: string | null | undefined, day: DailyMetrics["days"][number]) =>
     day.availability === "available" ? money(value) : missing(day);
   return (
-    <div className={styles.tableWrap}>
+    <div className={styles.tableWrap} role="region" aria-label="Each day" tabIndex={0}>
       <table className={styles.table}>
         <caption>
           Each day in the store&apos;s time zone ({data.timezone}). Refunds and returns count on the

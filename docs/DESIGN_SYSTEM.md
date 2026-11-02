@@ -75,7 +75,7 @@ Status colours come in foreground/background pairs: `--status-success-*`, `--sta
 
 ### 2.2 Typography
 
-One family (`--font-sans`, the system UI font: no download, no layout shift). Sizes and weights come from tokens only.
+One family: Atkinson Hyperlegible Next (Braille Institute, SIL OFL), bundled through `@fontsource-variable/atkinson-hyperlegible-next` so nothing is fetched from another site. Its letters and figures are drawn to be hard to confuse (1/l/I, 0/O, 5/S, 8/B), which helps every reader and matters for money. System fonts are the fallback. Tables, `.figures` and `[data-figure]` use tabular, lining figures so amounts line up. Sizes and weights come from tokens only.
 
 | Role                       | Token                              | Size  | Weight                       | Used for                                 |
 | -------------------------- | ---------------------------------- | ----- | ---------------------------- | ---------------------------------------- |
@@ -85,7 +85,7 @@ One family (`--font-sans`, the system UI font: no download, no layout shift). Si
 | Subsection (h3), lead text | `--font-size-lg`                   | 18 px | semibold                     | Cards, groups                            |
 | Body                       | `--font-size-md`                   | 16 px | regular                      | Everything else                          |
 | Small                      | `--font-size-sm`                   | 14 px | regular / medium             | Hints, table headers, captions, metadata |
-| Extra small                | `--font-size-xs`                   | 12 px | semibold, uppercase, tracked | Group labels in navigation               |
+| Extra small                | `--font-size-xs`                   | 12 px | semibold, sentence case      | Small labels (navigation groups use sm)  |
 
 Weights: `--font-weight-regular` 400, `-medium` 500, `-semibold` 600, `-bold` 700. Rules:
 
@@ -205,6 +205,14 @@ Each entry: purpose, variants, states, accessibility, tokens. Names describe str
 | `Sparkline`                           | Trend of one figure over the period     | Decorative (`aria-hidden`); the same numbers are in the table; gaps are drawn as gaps                         |
 
 ---
+
+### 3.7 Statement and ledger (Overview)
+
+The Overview opens with one sentence built from the real figures ("Eve Zone sold A$1,500.50 in 12 orders, and spent A$204.50 on ads. After ad spend, it kept A$695.80."). A missing figure is named in the sentence, never shown as zero. Below it, one note headed "Why some figures are missing" lists each distinct reason once, numbered, with a link to the page that fixes it. The figures follow as a ledger: one table per group, the row header carries the name and "How is this calculated?", the amount is right-aligned, and a missing amount shows its reason with a superscript link to its note. Sparklines appear only for sales, orders and ad spend, and are hidden on phones.
+
+### 3.8 Admin portal
+
+The operator area sits under a dark band (`--color-text` background) that says customers never see it, so it cannot be mistaken for an organization page. A sticky side index lists the sections on desktop. Feature switches are `button role="switch"` with `aria-checked` and visible On/Off text. Keys show a status badge (the stored hint, or "Not set") and where the value comes from; changing one opens a small inline form.
 
 ## 4. Content rules
 

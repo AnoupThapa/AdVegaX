@@ -17,7 +17,11 @@
   --color-warning: #8a5a00;
   --color-focus: #1f5fd1;
 
-  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* Atkinson Hyperlegible Next (Braille Institute, OFL), bundled with the app: letters and
+     figures that are hard to confuse (1/l/I, 0/O, 5/S, 8/B) — for every reader, and for money. */
+  --font-sans:
+    "Atkinson Hyperlegible Next Variable", system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
   --font-size-sm: 0.875rem;
   --font-size-md: 1rem;
   --font-size-lg: 1.125rem;
@@ -160,6 +164,7 @@ body {
   min-height: 100vh;
   font-family: var(--font-sans);
   font-size: var(--font-size-md);
+  font-optical-sizing: auto;
   line-height: var(--line-height);
   background: var(--color-bg);
   color: var(--color-text);
@@ -260,4 +265,11 @@ main:focus {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* Figures line up in columns (tabular, lining) wherever amounts are compared. */
+table,
+.figures,
+[data-figure] {
+  font-variant-numeric: tabular-nums lining-nums;
 }

@@ -42,8 +42,8 @@ test("sales, ad spend and profit are shown together, honestly", async ({ newPers
     await page.goto(orgUrl);
     const tile = (group: string, label: string) =>
       page
-        .getByRole("list", { name: group })
-        .getByRole("listitem")
+        .getByRole("table", { name: group })
+        .getByRole("row")
         .filter({ has: page.getByText(label, { exact: true }) });
     await expect(tile("Sales and profit", "Net sales")).toContainText(/\$29\.91/);
     await expect(tile("Sales and profit", "Gross profit")).toContainText(

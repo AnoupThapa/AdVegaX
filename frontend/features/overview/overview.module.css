@@ -45,3 +45,117 @@
   min-height: 100vh;
   min-height: 100svh;
 }
+
+/* The statement: the period's own figures read as one sentence, the page's signature. The
+   figures carry the weight; nothing is coloured by whether a number is "good". */
+.statement {
+  max-width: 42rem;
+  margin: var(--space-6) 0 var(--space-2);
+  font-size: var(--font-size-xl);
+  line-height: var(--line-height-tight);
+  text-wrap: pretty;
+}
+
+.statement strong {
+  font-weight: var(--font-weight-bold);
+}
+
+/* Footnotes: each reason a figure is missing is said once, with where to fix it. */
+.notes {
+  margin: var(--space-4) 0 var(--space-6);
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid var(--status-warning-fg);
+  background: var(--status-warning-bg);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.notesTitle {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-md);
+}
+
+.noteList {
+  margin: 0;
+  padding-left: var(--space-6);
+  display: grid;
+  gap: var(--space-1);
+}
+
+/* The ledger: label on the left, amount aligned on the right, trend beside it. */
+.ledger {
+  display: grid;
+  gap: var(--space-8);
+  margin-bottom: var(--space-8);
+}
+
+.ledger h3 {
+  margin-bottom: var(--space-2);
+  padding-bottom: var(--space-2);
+  border-bottom: 2px solid var(--color-text);
+}
+
+.ledgerTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ledgerTable th,
+.ledgerTable td {
+  padding: var(--space-3) var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: baseline;
+  text-align: left;
+}
+
+.ledgerTable th {
+  font-weight: var(--font-weight-regular);
+}
+
+.figureName {
+  display: block;
+  font-weight: var(--font-weight-semibold);
+}
+
+.figureNote {
+  display: block;
+  max-width: 36rem;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.amount {
+  width: 15rem;
+  text-align: right;
+  white-space: nowrap;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.missing {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--status-warning-fg);
+  white-space: normal;
+}
+
+.noteRef {
+  margin-left: var(--space-1);
+  font-size: var(--font-size-xs);
+  vertical-align: super;
+}
+
+.trend {
+  width: 8rem;
+}
+
+/* Phones: the trend moves under the amount's row so labels and amounts keep their width. */
+@media (max-width: 40rem) {
+  .statement {
+    font-size: var(--font-size-lg);
+  }
+
+  .trend {
+    display: none;
+  }
+}

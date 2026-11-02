@@ -29,7 +29,7 @@ export async function signIn(page: Page, email: string, password = PASSWORD): Pr
   await page.goto("/sign-in");
   await submitSignIn(page, email, password);
   await expect(page).toHaveURL("/");
-  await expect(page.getByText("You are signed in as")).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: /^Welcome back/ })).toBeVisible();
 }
 
 /** Signs up, verifies the email address and signs in. Ends on the home page. */

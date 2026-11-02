@@ -7,6 +7,7 @@ import { SkipLink } from "@/components/layout/SkipLink";
 
 import { Providers } from "./providers";
 
+import "@fontsource-variable/atkinson-hyperlegible-next";
 import "./globals.css";
 
 export const metadata: Metadata = {

@@ -115,7 +115,7 @@ export function AnalyticsDailyTable({
   const t = analyticsText(currency);
   const cell = (missing: boolean) => `${styles.num} ${missing ? styles.missing : ""}`;
   return (
-    <div className={styles.tableWrap}>
+    <div className={styles.tableWrap} role="region" aria-label="Each day" tabIndex={0}>
       <table className={styles.table}>
         <caption>
           Each day in the property&apos;s time zone ({data.timezone}). Days marked “still being
@@ -181,7 +181,7 @@ export function BreakdownTable({ data, currency }: { data: AnalyticsMetrics; cur
   const bySource = data.breakdown === "source";
   if (data.items.length === 0) return <p>No visits in this period.</p>;
   return (
-    <div className={styles.tableWrap}>
+    <div className={styles.tableWrap} role="region" aria-label="Breakdown" tabIndex={0}>
       <table className={styles.table}>
         <caption>
           {bySource ? "Sources, mediums and campaigns" : "Channels"} with their own figures for the

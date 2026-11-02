@@ -3,14 +3,15 @@
 import { useState, type FormEvent } from "react";
 
 import { Alert } from "@/components/ui/Alert";
+import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { PageHeading } from "@/components/ui/PageHeading";
 import { TextField } from "@/components/ui/TextField";
-import page from "@/features/account/account.module.css";
 import styles from "@/features/advertising/advertising.module.css";
 import { RequireAuth } from "@/features/auth/RequireAuth";
 import { messageFor } from "@/lib/api/errors";
 
+import own from "./admin.module.css";
 import {
   useAdminHealth,
   useAdminMe,
@@ -30,8 +31,13 @@ import {
 export function AdminPage() {
   return (
     <RequireAuth>
-      <div className={page.page}>
-        <PageHeading id="admin-title">Admin</PageHeading>
+      <div className={own.band}>
+        <div className={own.bandInner}>
+          <PageHeading id="admin-title">Admin</PageHeading>
+          <p>Operator area for this AdVegaX installation. Customers never see this page.</p>
+        </div>
+      </div>
+      <div className={own.page}>
         <Gate />
       </div>
     </RequireAuth>
@@ -133,60 +139,142 @@ function EnterCode() {
   );
 }
 
+const SECTIONS = [
+  { id: "admin-health", label: "System health" },
+  { id: "admin-switches", label: "Feature switches" },
+  { id: "admin-keys", label: "Keys and connections" },
+  { id: "admin-orgs", label: "Organizations" },
+  { id: "admin-people", label: "People" },
+] as const;
+
 function Portal() {
   return (
-    <>
-      <Alert tone="info">
-        Saved keys and switches apply the next time AdVegaX starts (on your computer: stop.ps1, then
-        start.ps1).
-      </Alert>
-      <Health />
-      <Settings />
-      <Organizations />
-      <People />
-    </>
+    <div className={own.layout}>
+      <nav aria-label="Admin sections" className={own.index}>
+        <ul>
+          {SECTIONS.map((s) => (
+            <li key={s.id}>
+              <a href={`#${s.id}`}>{s.label}</a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+      <div className={own.content}>
+        <p className={own.restart}>
+          Saved keys and switches apply the next time AdVegaX starts (on your computer: stop.ps1,
+          then start.ps1).
+        </p>
+        <Health />
+        <Switches />
+        <Keys />
+        <Organizations />
+        <People />
+      </div>
+    </div>
   );
 }
 
 function Health() {
   const health = useAdminHealth(true);
   const h = health.data;
+  const ok = (good: boolean | undefined) =>
+    good ? <Badge tone="success">OK</Badge> : <Badge tone="danger">Not reachable</Badge>;
   return (
-    <section aria-labelledby="admin-health" className={styles.section}>
+    <section aria-labelledby="admin-health" className={own.section}>
       <h2 id="admin-health">System health</h2>
       {health.error ? <Alert tone="error">{messageFor(health.error)}</Alert> : null}
       {h ? (
-        <dl className={styles.facts}>
-          <dt>Database</dt>
-          <dd>{h.database ? "OK" : "Not reachable"}</dd>
-          <dt>Background jobs (Redis)</dt>
-          <dd>{h.redis ? "OK" : "Not reachable"}</dd>
-          <dt>Environment</dt>
-          <dd>{h.environment}</dd>
-          <dt>Restart needed</dt>
-          <dd>{h.restart_needed ? "Yes — a saved change is waiting" : "No"}</dd>
+        <dl className={own.health}>
+          <div>
+            <dt>Database</dt>
+            <dd>{ok(h.database)}</dd>
+          </div>
+          <div>
+            <dt>Background jobs (Redis)</dt>
+            <dd>{ok(h.redis)}</dd>
+          </div>
+          <div>
+            <dt>Environment</dt>
+            <dd>{h.environment}</dd>
+          </div>
+          <div>
+            <dt>Restart needed</dt>
+            <dd>
+              {h.restart_needed ? (
+                <Badge tone="warning">Yes, a saved change is waiting</Badge>
+              ) : (
+                <Badge tone="neutral">No</Badge>
+              )}
+            </dd>
+          </div>
         </dl>
       ) : null}
     </section>
   );
 }
 
-function Settings() {
+function useGroups(kind: "switch" | "values") {
   const settings = useAdminSettings(true);
   const groups = new Map<string, AdminSetting[]>();
-  for (const s of settings.data ?? []) groups.set(s.group, [...(groups.get(s.group) ?? []), s]);
+  for (const s of settings.data ?? []) {
+    if ((s.kind === "switch") !== (kind === "switch")) continue;
+    groups.set(s.group, [...(groups.get(s.group) ?? []), s]);
+  }
+  return { error: settings.error, groups, all: settings.data ?? [] };
+}
+
+function Switches() {
+  const { error, all } = useGroups("switch");
+  const save = useSaveSetting();
+  const switches = all.filter((s) => s.kind === "switch");
   return (
-    <section aria-labelledby="admin-settings" className={styles.section}>
-      <h2 id="admin-settings">Keys, connections and switches</h2>
-      <p className={styles.muted}>
-        Keys are stored encrypted and never shown again — only whether they are set and their last
-        four characters. Leave a platform off until its keys are entered.
+    <section aria-labelledby="admin-switches" className={own.section}>
+      <h2 id="admin-switches">Feature switches</h2>
+      <p className={own.muted}>Leave a platform off until its keys are entered below.</p>
+      {error ? <Alert tone="error">{messageFor(error)}</Alert> : null}
+      <ul className={own.switches} aria-label="Feature switches">
+        {switches.map((s) => {
+          const on = s.hint === "on";
+          return (
+            <li key={s.name}>
+              <span className={own.switchText}>
+                <span className={own.rowLabel}>{s.label}</span>
+                <span className={own.muted}>{SOURCE[s.source] ?? s.source}</span>
+              </span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={on}
+                aria-label={s.label}
+                className={own.switch}
+                disabled={save.isPending}
+                onClick={() => save.mutate({ name: s.name, value: on ? "false" : "true" })}
+              >
+                <span className={own.switchState}>{on ? "On" : "Off"}</span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      {save.error ? <Alert tone="error">{messageFor(save.error)}</Alert> : null}
+    </section>
+  );
+}
+
+function Keys() {
+  const { error, groups } = useGroups("values");
+  return (
+    <section aria-labelledby="admin-keys" className={own.section}>
+      <h2 id="admin-keys">Keys and connections</h2>
+      <p className={own.muted}>
+        Keys are stored encrypted and never shown again, only whether they are set and their last
+        four characters.
       </p>
-      {settings.error ? <Alert tone="error">{messageFor(settings.error)}</Alert> : null}
+      {error ? <Alert tone="error">{messageFor(error)}</Alert> : null}
       {[...groups.entries()].map(([group, entries]) => (
-        <div key={group} className={styles.panel}>
+        <div key={group} className={own.group}>
           <h3>{group}</h3>
-          <ul className={styles.list} aria-label={group}>
+          <ul className={own.rows} aria-label={group}>
             {entries.map((s) => (
               <SettingRow key={s.name} setting={s} />
             ))}
@@ -207,29 +295,42 @@ function SettingRow({ setting }: { setting: AdminSetting }) {
   const save = useSaveSetting();
   const clear = useClearSetting();
   const [value, setValue] = useState("");
-  const state = setting.set ? (setting.hint ?? "set") : "not set";
+  const [open, setOpen] = useState(false);
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    save.mutate({ name: setting.name, value }, { onSuccess: () => setValue("") });
+    save.mutate(
+      { name: setting.name, value },
+      {
+        onSuccess: () => {
+          setValue("");
+          setOpen(false);
+        },
+      },
+    );
   };
   return (
-    <li className={styles.card}>
-      <p>
-        <strong>{setting.label}</strong> — {state}{" "}
-        <span className={styles.muted}>({SOURCE[setting.source] ?? setting.source})</span>
-      </p>
-      {setting.kind === "switch" ? (
+    <li className={own.row}>
+      <div className={own.rowHead}>
+        <span className={own.rowLabel}>{setting.label}</span>
+        <span className={own.rowState}>
+          {setting.set ? (
+            <Badge tone="success">{setting.hint || "Set"}</Badge>
+          ) : (
+            <Badge tone="neutral">Not set</Badge>
+          )}
+          <span className={own.muted}>{SOURCE[setting.source] ?? setting.source}</span>
+        </span>
         <Button
           variant="secondary"
-          busy={save.isPending}
-          onClick={() =>
-            save.mutate({ name: setting.name, value: setting.hint === "on" ? "false" : "true" })
-          }
+          aria-expanded={open}
+          aria-label={`${open ? "Close" : "Change"} ${setting.label}`}
+          onClick={() => setOpen(!open)}
         >
-          {setting.hint === "on" ? `Switch off: ${setting.label}` : `Switch on: ${setting.label}`}
+          {open ? "Close" : setting.set ? "Change" : "Add"}
         </Button>
-      ) : (
-        <form aria-label={setting.label} onSubmit={submit}>
+      </div>
+      {open ? (
+        <form aria-label={setting.label} onSubmit={submit} className={own.rowForm}>
           <TextField
             label={setting.set ? `New ${setting.label}` : setting.label}
             type={setting.kind === "secret" ? "password" : "text"}
@@ -238,15 +339,21 @@ function SettingRow({ setting }: { setting: AdminSetting }) {
             onChange={(e) => setValue(e.target.value)}
             required
           />
-          <Button type="submit" busy={save.isPending}>
-            Save
-          </Button>
+          <div className={own.formActions}>
+            <Button type="submit" busy={save.isPending}>
+              Save
+            </Button>
+            {setting.source === "portal" ? (
+              <Button
+                variant="link"
+                busy={clear.isPending}
+                onClick={() => clear.mutate(setting.name)}
+              >
+                Use the settings file instead
+              </Button>
+            ) : null}
+          </div>
         </form>
-      )}
-      {setting.source === "portal" ? (
-        <Button variant="link" busy={clear.isPending} onClick={() => clear.mutate(setting.name)}>
-          Use the settings file instead
-        </Button>
       ) : null}
       {save.error ? <Alert tone="error">{messageFor(save.error)}</Alert> : null}
     </li>
@@ -257,7 +364,7 @@ function Organizations() {
   const orgs = useAdminOrganizations(true);
   const change = useSetOrganizationStatus();
   return (
-    <section aria-labelledby="admin-orgs" className={styles.section}>
+    <section aria-labelledby="admin-orgs" className={own.section}>
       <h2 id="admin-orgs">Organizations</h2>
       {orgs.error ? <Alert tone="error">{messageFor(orgs.error)}</Alert> : null}
       <div className={styles.tableWrap}>
@@ -301,7 +408,7 @@ function Organizations() {
 function People() {
   const users = useAdminUsers(true);
   return (
-    <section aria-labelledby="admin-people" className={styles.section}>
+    <section aria-labelledby="admin-people" className={own.section}>
       <h2 id="admin-people">People</h2>
       {users.error ? <Alert tone="error">{messageFor(users.error)}</Alert> : null}
       <div className={styles.tableWrap}>

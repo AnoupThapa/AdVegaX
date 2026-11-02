@@ -16,15 +16,6 @@
   padding-top: var(--space-10);
 }
 
-.eyebrow {
-  margin: 0 0 var(--space-3);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--color-accent-text);
-}
-
 .heroTitle {
   font-size: var(--font-size-3xl);
   line-height: 1.1;
