@@ -1,0 +1,133 @@
+/* DataTable. Colours, type and spacing come from tokens only (see docs/DESIGN_SYSTEM.md). */
+
+.wrap {
+  position: relative; /* contains visually-hidden cells so they cannot widen the page */
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.caption {
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  font-weight: var(--font-weight-semibold);
+}
+
+.table th,
+.table td {
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.table thead th {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-muted);
+  background: var(--color-surface-2);
+  white-space: nowrap;
+}
+
+.table tbody th {
+  font-weight: var(--font-weight-semibold);
+}
+
+.table tbody tr:hover {
+  background: var(--color-surface-2);
+}
+
+.table th.numeric,
+.table td.numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.sort {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--touch-target);
+  margin-block: calc(-1 * var(--space-3));
+  padding: 0 var(--space-1);
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.sort:hover {
+  color: var(--color-accent-text);
+}
+
+.arrow {
+  font-size: var(--font-size-xs);
+}
+
+/* The "Sort by" menu replaces the header buttons of a stacked table; phones only. */
+.stackSort {
+  display: none;
+}
+
+/* Stacked layout: each row becomes a card with its column title beside each value. */
+@media (max-width: 40rem) {
+  .stackSort {
+    display: block;
+  }
+
+  /* No invisible controls: a sortable stacked table drops its header row on phones entirely. */
+  .stackSortable .table thead {
+    display: none;
+  }
+
+  .stackWrap .table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+  }
+
+  .stackWrap .table tbody tr {
+    display: block;
+    padding: var(--space-2) 0;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .stackWrap .table tbody th,
+  .stackWrap .table tbody td {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1) var(--space-3);
+    padding: var(--space-1) var(--space-4);
+    border-top: 0;
+    text-align: left;
+  }
+
+  /* Numbers sit left beside their label once stacked (more specific than the rule above). */
+  .stackWrap .table tbody th.numeric,
+  .stackWrap .table tbody td.numeric {
+    text-align: left;
+  }
+
+  .stackWrap .table td[data-label]::before,
+  .stackWrap .table tbody th[data-label]::before {
+    content: attr(data-label);
+    min-width: 6rem;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-muted);
+  }
+
+  .stackWrap .table td:empty {
+    display: none;
+  }
+}

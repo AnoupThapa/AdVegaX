@@ -1,0 +1,136 @@
+/* The client dashboard (Overview): the work waiting for the reader beside what changed lately.
+   Panels are open columns under a rule, not boxes, so they read as part of the page. */
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.head h1 {
+  margin-bottom: 0;
+}
+
+.head p {
+  margin: 0;
+}
+
+.work {
+  display: grid;
+  gap: var(--space-8);
+  margin: var(--space-10) 0;
+}
+
+.panel {
+  min-width: 0;
+  border-top: 2px solid var(--color-text);
+  padding-top: var(--space-3);
+}
+
+.panelTitle {
+  font-size: var(--font-size-lg);
+  margin-bottom: var(--space-1);
+}
+
+.panelLead {
+  margin: 0 0 var(--space-3);
+  color: var(--color-text-muted);
+}
+
+.panelFoot {
+  margin: var(--space-3) 0 0;
+  font-size: var(--font-size-sm);
+}
+
+.items,
+.feed {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.item,
+.feedItem {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0 var(--space-3);
+  align-items: baseline;
+  padding: var(--space-3) var(--space-2);
+  margin-inline: calc(-1 * var(--space-2));
+  border-bottom: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  transition: background-color var(--duration-fast) var(--ease-out);
+  animation: itemIn var(--duration-base) var(--ease-out) both;
+}
+
+.item:hover,
+.feedItem:hover,
+.item:focus-within,
+.feedItem:focus-within {
+  background: var(--color-surface-2);
+}
+
+.item:nth-child(2),
+.feedItem:nth-child(2) {
+  animation-delay: 40ms;
+}
+
+.item:nth-child(3),
+.feedItem:nth-child(3) {
+  animation-delay: 80ms;
+}
+
+.item:nth-child(n + 4),
+.feedItem:nth-child(n + 4) {
+  animation-delay: 120ms;
+}
+
+@keyframes itemIn {
+  from {
+    opacity: 0;
+    transform: translateX(-0.25rem);
+  }
+}
+
+.itemTitle {
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+}
+
+.itemTitle:hover {
+  text-decoration: underline;
+}
+
+.itemMeta {
+  grid-column: 1;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.itemSide {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  text-align: right;
+}
+
+.team {
+  margin-top: var(--space-10);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.team h2 {
+  font-size: var(--font-size-lg);
+}
+
+@media (min-width: 64rem) {
+  .work {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    gap: var(--space-10);
+  }
+}

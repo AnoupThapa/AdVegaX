@@ -1,0 +1,265 @@
+# Phase 6 — Progress (unified analytics and financial engine)
+
+Plan: `PHASE_06_PLAN.md` (approved 2026-10-20, A24, all recommendations; completes Q7). One task at a time, a report after each.
+
+| Task | Status |
+|---|---|
+| 6-01 Step 0: live ECB and NRB feeds | ⏸ Waiting for network access to `data-api.ecb.europa.eu` and `www.nrb.org.np` |
+| 6-02 Migration 0016, reporting settings, store assignment | ✅ Done — awaiting review |
+| 6-03 Exchange rates: clients, daily job, conversion rules | ✅ Done — awaiting review |
+| 6-04 Metric registry `analytics-v1` and its inputs | ✅ Done — awaiting review |
+| 6-05 Overview and channels API | ✅ Done — awaiting review |
+| 6-06 Campaigns (with GA4 match) and products API | ✅ Done — awaiting review |
+| 6-07 Web app: Overview, settings | ✅ Done — awaiting review |
+| 6-08 Web app: channels, campaigns, products, "how is this calculated?" | ✅ Done — awaiting review |
+| 6-09 Golden datasets, performance check, browser test, `PHASE_06_REPORT.md` | ✅ Done — awaiting review |
+
+## 6-01 — Step 0 (2026-10-20)
+
+**Blocked:** the ECB and Nepal Rastra Bank addresses are not allowed from this environment (the network refuses the connection). Phase 6 is built against recorded copies of their answers; Step 0 checks the live feeds (plan §4.2) once both addresses are allowed in Claude's network settings.
+
+## 6-02 — Migration 0016, reporting settings, store assignment (2026-10-20)
+
+**Completed**
+- **Migration 0016** (additive):
+  - **`fx_rates`**: published exchange rates, one per source (ECB or Nepal Rastra Bank), currency pair and day, exactly as published, with the source's own unit (NRB quotes JPY per 10 and INR per 100). It is shared reference data, not any organization's: the application can only read it; only the system role (the daily job in 6-03) can write it, and nobody but the migrator can delete from it.
+  - **`store_id` on ad accounts and analytics properties** (Q-6-1): which store an account's spend or a property's visits belong to when an organization has several stores. The store must be the organization's own (a composite key enforces it in the database too); removing a store only clears the reference.
+- **Store assignment** for owners and admins: `PUT …/ad-accounts/{id}/store` and `PUT …/analytics-properties/{id}/store` with a store or `null` (the whole organization). Recorded in the audit log only when it changes. Managers, analysts and viewers can read the assignment but not change it. Every ad account and property answer now includes `store_id`.
+- **Reporting currency and time zone** (Q-6-2) are the organization's existing currency and time zone settings, which owners and admins can already change.
+
+**Files changed** (19)
+- New (5): `alembic/versions/0016_unified_analytics.py`, `app/domains/fx/{__init__,models}.py`, `app/domains/metrics/{__init__,assignment}.py`, `tests/api/test_store_assignment.py` (21 tests).
+- Modified (14): `app/db/models.py`, `app/domains/advertising/{models,schemas,read_service,router}.py`, `app/domains/analytics/{models,schemas,read_service,router}.py`, `tests/helpers.py` (`put`), `tests/security/test_tenant_isolation.py` (the two new routes are swept), `frontend/lib/api/{openapi.json,schema.d.ts}` (generated), docs `DATABASE_SCHEMA.md` (§13A), `API_SPECIFICATION.md` (§19D), this report, `PROJECT_STATUS.md`.
+- Deleted: none.
+
+**Tests**
+- **21 new**; the tenant-isolation sweep covers the two new routes.
+- **Backend `make check`: 1,509 passed**, coverage 97 %. **Frontend `npm run check`: 387 passed** (types regenerated).
+
+**Security**
+- Exchange rates hold no tenant data; the application role cannot write them (tested), the system role cannot delete them (tested).
+- Assignments: owners and admins only (tested for manager, analyst, viewer); another organization's store is refused by the API (422) and by the database (tested).
+
+**Migration:** `0016_unified_analytics` — new table `fx_rates`, two nullable columns with foreign keys. Downgrade removes them.
+
+**Deviations**
+1. **No `organization_reporting` table** (plan §7): the organization already has a currency and a time zone, chosen when it is created and editable in Settings, so those are the reporting settings. The plan's "defaults to the first store's" becomes "the currency and time zone chosen when the organization was created" — a store in another currency is converted (6-03). Changing it is one setting.
+
+**Blocked:** Step 0 (6-01) — network access to the two rate feeds.
+
+**Next task:** 6-03 — exchange rates: the ECB and Nepal Rastra Bank clients (recorded answers in tests), the daily job, and the one conversion function (each day's rate, the last published rate on weekends and holidays, cross rates through EUR, "not available" without a rate).
+
+## 6-03 — Exchange rates: reading, storing, converting (2026-10-20)
+
+**Completed**
+- **Reading the two sources** (built against their documented formats; Step 0 confirms them live):
+  - **European Central Bank:** every currency against the euro for a period, as a table read by its column names (so a change in column order does not matter). A period without rates (a weekend, a holiday) is simply empty.
+  - **Nepal Rastra Bank:** NPR buy and sell rates per day, page by page. AdVegaX keeps the middle of the two with NRB's unit (it quotes the yen per 10 and the Indian rupee per 100).
+  - Rows that cannot be read are skipped and counted; an answer in another format stops only that source; a temporary error is tried again at the next run.
+- **A scheduled task every 6 hours** (once switched on with `FX_ENABLED`): the first run reads 400 days (13 months of figures plus margin) in 92-day pieces; later runs read again from 10 days before the newest stored day, so a corrected rate replaces the old one. One bank failing never stops the other.
+- **One conversion function** for the whole product:
+  - each figure uses **its own day's rate**; on a weekend or holiday the **last published** rate (Friday's for Saturday and Sunday), at most 7 days old;
+  - currencies the ECB publishes convert **through the euro** on the same ECB day (AUD → USD = USD rate ÷ AUD rate);
+  - **NPR** converts with Nepal Rastra Bank's rate, or **through the US dollar** when NRB does not quote the other currency (e.g. NPR → NZD);
+  - a currency without any rate is "not available", never guessed;
+  - exact decimals (34 significant digits); rounding only for display, as everywhere.
+- **Read-only, one gate:** the code has exactly one request, a GET, after a check that the address is one of the two banks' (static test). No credentials, no redirects followed.
+
+**Files changed** (11)
+- New (4): `app/domains/fx/{sources,service}.py`, `tests/fx_sim.py` (recorded-format answers for both banks), `tests/api/test_fx_rates.py` (24 tests).
+- Modified (7): `app/core/settings.py` (`FX_*`, `SCHEDULE_FX_INTERVAL`), `app/workers/{job_tasks,celery_app}.py` (the scheduled task), `tests/conftest.py` (rates cleared between tests), `tests/security/test_static_rules.py` (1 rule), `.env.example`, docs `INTEGRATION_GUIDES.md`, `SECURITY.md`, this report, `PROJECT_STATUS.md`.
+- Deleted: none. No migration.
+
+**Tests**
+- **25 new.**
+- **Backend `make check`: 1,534 passed**, coverage 96 % (exchange rates 92–100 %).
+- Frontend: no changes.
+
+**Security**
+- Two fixed public addresses, GET only, nothing sent that identifies an organization; written by the system role only.
+
+**Deviations**
+1. **Off by default** (`FX_ENABLED=false`), like the platforms: the deployment switches it on once the two addresses are allowed. Until then conversions say "not available — no exchange rate".
+2. **The ECB is read through its Data Portal as CSV** (plan §4.1 named the SDMX series); the daily XML files are an alternative if Step 0 finds the CSV unsuitable.
+
+**Blocked:** Step 0 (6-01) — network access to the two rate feeds.
+
+**Next task:** 6-04 — the metric registry `analytics-v1`: every unified figure defined once (inputs, formula, unit, availability rules, sources), reading store, advertising and Google Analytics daily figures and converting them to the reporting currency.
+
+## 6-04 — The metric registry `analytics-v1` and its inputs (2026-10-20)
+
+**Completed**
+- **One registry** (`app/domains/metrics/registry.py`) defines every unified figure once, with its label, unit, formula in plain words and the sources it needs. The API (6-05) and the "How is this calculated?" text (6-08) come from it; no page has its own formula. 18 figures:
+  - from the stores: net sales, orders, product cost, gross profit, gross margin;
+  - from the ad platforms: ad spend (Google Ads and Meta together);
+  - combined: profit after ad spend (named "before shipping costs and payment fees"), blended ROAS, cost per order, ad spend share of sales;
+  - from Google Analytics: sessions, purchases and purchase revenue (never added to store figures), and the store conversion rate (store orders ÷ sessions, only when every store has a property);
+  - not provided yet, and saying so: shipping cost, payment fees, contribution profit, customer acquisition cost.
+- **The calculation** (`engine.py`) reads what the earlier phases store — the stores' daily finance-v1 figures, each ad account's daily account-level spend, each property's daily total — converts every source's day with that day's exchange rate (6-03), then applies the formulas for a day or a period. Computed on read, so a late refund, a platform correction or a cost edit shows at once.
+- **Honest gaps, never 0:** a day a source has not read yet makes the period "not synchronized"; an uncosted product makes product cost and every profit "not available — some products have no cost" (never a partial profit); orders in another currency, a missing exchange rate, or nothing connected of a kind ("no ad account", "no Google Analytics property") each say so; a zero divisor names itself ("no orders", "no ad spend").
+- **Scope (Q-6-1):** the whole organization, or one store. With one store, every ad account and property counts for it; with several, only what is assigned to that store, and unassigned ones count for the whole organization.
+
+**Golden dataset** (worked out by hand, in the test file's header): an AUD store, Google Ads in AUD and Meta in USD (ECB rates 1.6 and 1.5 AUD per USD, the second also used for the next day as on a holiday), and a Google Analytics property — net sales A$1,500.50, product cost A$600.20, gross profit A$900.30, ad spend A$204.50, profit after ad spend A$695.80, blended ROAS 7.337408, cost per order A$13.633333, store conversion rate 0.025. Reproduced to the cent, and in USD as the reporting currency.
+
+**Files changed** (5)
+- New (3): `app/domains/metrics/{registry,engine}.py`, `tests/api/test_metrics_engine.py` (15 tests).
+- Modified (2): docs (this report, `PROJECT_STATUS.md`).
+- Deleted: none. No migration. Frontend: no changes.
+
+**Tests**
+- **15 new**, including another organization's figures never being included.
+- **Backend `make check`: 1,549 passed**, coverage 96 % (metrics 97–100 %).
+
+**Security:** reads only, under the organization's own row-level security; exchange rates are shared read-only data.
+
+**Deviations:** none. (Budget use, Q-6-11, is a per-campaign figure and comes with the campaigns answer in 6-06.)
+
+**Blocked:** Step 0 (6-01) — network access to the two rate feeds.
+
+**Next task:** 6-05 — the overview and channels API: `GET /analytics/overview` (every registry figure for a period, by day and in total, with definition version, reporting currency, sources and their freshness, conversions used) and `GET /analytics/channels` (per ad platform with its own reported figures, and per Google Analytics channel).
+
+## 6-05 — Overview and channels API (2026-10-20)
+
+**Completed**
+- **`GET /analytics/overview`** — for a period (30 days by default, in your reporting time zone), for the whole organization or one store: every figure of the registry, **for the period and day by day**, in the reporting currency. With it:
+  - **where the numbers come from:** each store, ad account and property used, with its currency, time zone, the first day it has figures for, and when it was last brought up to date;
+  - **which currencies were converted**, with which bank's rates and their dates (a weekend shows Friday's date), and how many days had no rate;
+  - a note when the sources' **time zones differ** from the reporting one;
+  - the **definitions** themselves (label, formula, what is not included), straight from the registry, for "How is this calculated?".
+- **`GET /analytics/channels`** — each **ad platform's own reported figures** (spend, clicks, impressions, conversions, conversion value, the platform's ROAS, cost per click, cost per conversion, labelled "platform reported"), added up only within each platform; the only figure added across platforms is total ad spend. And **Google Analytics' channels** (Organic Search, Paid Search, …) with sessions, engagement rate, key events, purchases and revenue, most sessions first — or the reason there are none ("no property", "not synced yet").
+- Every member can read; another organization's data or store is "not found"; invalid periods are refused.
+- Golden values through the API: net sales A$1,500.50, ad spend A$204.50, profit after ad spend A$695.80, blended ROAS 7.337408, cost per order A$13.633333; in USD after changing the reporting currency.
+
+**Files changed** (11)
+- New (5): `app/domains/metrics/{channels,schemas,read_service,router}.py`, `tests/api/test_unified_analytics_api.py` (15 tests).
+- Modified (6): `app/domains/metrics/engine.py` (sources carry when they were last updated), `app/api/router.py`, `frontend/lib/api/{openapi.json,schema.d.ts}` (generated), docs `API_SPECIFICATION.md` (§19E), this report, `PROJECT_STATUS.md`.
+- Deleted: none. No migration.
+
+**Tests**
+- **15 new**; the tenant-isolation sweep covers the two new routes.
+- **Backend `make check`: 1,564 passed**, coverage 97 %. **Frontend `npm run check`: 387 passed** (types regenerated).
+
+**Security:** reads only; membership on the server; row-level security plus explicit organization filters; a foreign `store_id` is a 404.
+
+**Deviations:** none.
+
+**Blocked:** Step 0 (6-01) — network access to the two rate feeds.
+
+**Next task:** 6-06 — campaigns and products API: every ad campaign with its platform-reported figures, the matching Google Analytics campaign figures (exact name match, Q-6-9) and budget use against today's budget (Q-6-11); every product with net sales, units, product cost, gross profit and margin (Q-6-10).
+
+## 6-06 — Campaigns and products API (2026-10-20)
+
+**Completed**
+- **`GET /analytics/campaigns`** — every Google Ads and Meta campaign, by name, with the platform's own reported figures for the period (spend, clicks, impressions, conversions, conversion value, the platform's ROAS, cost per click, cost per conversion — labelled "platform reported"), spend converted to the reporting currency with each day's rate. With it:
+  - **budget use** = spend ÷ (today's daily budget × days in the period); a lifetime budget is "not a daily budget", a shared budget and no budget are named, never 0;
+  - **Google Analytics' figures for the campaign of exactly the same name** (sessions, purchases, purchase revenue): Google campaigns match google / cpc traffic, Meta campaigns facebook or instagram / paid or cpc; "no match" when Google Analytics has none, "no property" or "not synced yet" otherwise;
+  - a campaign that was read but had no activity shows a real 0 spend; a period not read says "not synced yet".
+- **`GET /analytics/products`** — every product sold in the period, most net sales first: units, net sales, product cost, gross profit and gross margin (finance-v1, per product); product cost is "not available" when a sold line has no cost; lines in another currency are counted and left out, never summed. No ad spend per product (Q-6-10).
+- Every member can read; another organization's data or store is "not found".
+
+**Files changed** (11)
+- New (2): `app/domains/metrics/campaigns.py`, `tests/api/test_campaigns_products_api.py` (7 tests).
+- Modified (9): `app/domains/metrics/{schemas,read_service,router}.py`, `frontend/lib/api/{openapi.json,schema.d.ts}` (generated), docs `API_SPECIFICATION.md` (§19F), this report, `PROJECT_STATUS.md`.
+- Deleted: none. No migration.
+
+**Tests**
+- **7 new**; the tenant-isolation sweep covers the two new routes.
+- **Backend `make check`: 1,571 passed**, coverage 97 %. **Frontend `npm run check`: 387 passed** (types regenerated).
+
+**Security:** reads only; membership on the server; row-level security plus explicit organization filters; a foreign `store_id` is a 404.
+
+**Deviations:** the products' answer type is named `ProductFiguresOut` because the store catalogue already has a `ProductOut`.
+
+**Blocked:** Step 0 (6-01) — network access to the two rate feeds.
+
+**Next task:** 6-07 — web app: the Analytics Overview (headline figures, day-by-day chart, sources and freshness, currencies converted) and the settings for reporting currency, time zone and which store each ad account and property belongs to.
+
+## 6-07 — Web app: Overview and settings (2026-10-20)
+
+**Completed**
+- **The Overview is now the organization's home page.** For the last 7, 30 or 90 days (in your reporting time zone), and for all stores or one store (the store choice appears with more than one store):
+  - **tiles** grouped as *Sales and profit* (net sales, orders, product cost, gross profit, gross margin), *Advertising* (ad spend, profit after ad spend, blended ROAS, cost per order, ad spend share of sales), *Visits (Google Analytics)* (sessions, purchases and revenue as Google Analytics reports them, store conversion rate) and *Not included yet* (shipping cost, payment fees, contribution profit, customer acquisition cost — each with why);
+  - a **day-by-day table**, newest first; a day not read says "Not synced yet", never 0;
+  - **where the numbers come from:** every store, ad account and property used, with its platform, currency, time zone, first day and last update;
+  - **currencies converted**, with which bank's rates and their dates, and how many days had no rate; a **note when time zones differ**; and the definitions version.
+  - Every label and note comes from the registry through the API; the page only formats values. A new static check fails the build if an Overview page does arithmetic on a figure.
+  - With nothing connected: "Nothing connected yet" with a link to Connections.
+- **Settings:** a new section *Stores for ad accounts and properties*. With more than one store, owners and admins choose the store for each ad account and Google Analytics property (or "All stores"); saved straight away with a confirmation. Other roles see the assignments read-only; with one store it says there is nothing to set. The reporting-currency hint now says other currencies are converted with each day's published rate.
+- New plain-words reasons: no store / ad account / property connected, no exchange rate, not every store has Google Analytics, no ad spend, no orders, costs not entered, and (for 6-08) no matching campaign, no / shared / not-a-daily budget.
+
+**Files changed** (11)
+- New (6): `frontend/features/overview/{api.ts,labels.ts,OverviewFigures.tsx,StoreAssignments.tsx,overview.module.css}`, `frontend/tests/features/overview.test.tsx` (8 tests).
+- Modified (5 + docs): `features/organizations/{OrganizationOverview,OrganizationSettings,OrganizationFields}.tsx`, `lib/format/money.ts`, tests `support/organizations.ts`, `features/organizations.test.tsx`, `static/source-rules.test.ts`; this report, `PROJECT_STATUS.md`.
+- Deleted: none. No backend change, no migration.
+
+**Tests**
+- **Frontend `npm run check`: 399 passed** (12 new: 8 page tests, 4 static checks), coverage 96 %.
+- **Browser tests: 14 passed** with accessibility checks (the journey checks the Overview).
+- Backend unchanged since 6-06 (1,571 passed).
+
+**Security:** the page reads only through the API; store assignment uses the existing owner/admin route with CSRF; no data kept in the browser.
+
+**Deviations:** a day-by-day **table** rather than a chart (the plan names a table; a chart can follow in 6-08 if you want one).
+
+**Blocked:** Step 0 (6-01) — network access to the two rate feeds.
+
+**Next task:** 6-08 — web app: Channels, Campaigns (with the Google Analytics match column and budget use) and Products tables, and "How is this calculated?" next to every figure, from the registry.
+
+## 6-08 — Web app: channels, campaigns, products, "How is this calculated?" (2026-10-21)
+
+**Completed**
+- **A new Reports page** (in the menu after Overview, and linked from the Overview), with the same period and store choice. Choose **Channels**, **Campaigns** or **Products**; only the chosen report is read.
+  - **Channels:** total ad spend (the only figure added across platforms); a table of **each ad platform's own figures** — spend, clicks, impressions, conversions, conversion value, platform ROAS, cost per click, cost per conversion — labelled "platform reported" with its number of ad accounts, saying conversions are never added across platforms; and **Google Analytics' channels** (sessions, engaged sessions, engagement rate, key events, purchases, revenue), most sessions first. When there are none, it says why ("No ad account connected", "No Google Analytics property").
+  - **Campaigns:** every Google Ads and Meta campaign with its platform, status, platform figures and **budget use**, plus **Google Analytics' sessions, purchases and revenue for the campaign of exactly the same name**; "No matching Google Analytics campaign", "Not a daily budget" or "No Google Analytics property" when they don't apply; the matching rule is written under the table.
+  - **Products:** every product sold, most net sales first — units sold, net sales, product cost, gross profit, gross margin, with the store when there are several; "Some products have no cost" where a cost is missing; sold items in another currency are counted and left out, never added; ad spend is not split by product.
+  - "Where the numbers come from" (sources, currencies converted, notes, definitions version) on every report, as on the Overview.
+- **"How is this calculated?"** next to every figure: on each Overview tile, and under every report table for its columns. The text comes from the registry through the API — never written on a page.
+- **Backend:** the registry now also defines the reports' column figures (`TABLES`: channels, campaigns, products), and every unified-analytics answer carries the definitions of the figures it contains (`definitions[]` moved to the common part of the answer). Tests check each answer's definitions match its figures exactly.
+
+**Files changed** (17)
+- New (4): `frontend/features/overview/{Shared,ReportsPage}.tsx`, `frontend/app/orgs/[organizationId]/reports/page.tsx`, `frontend/tests/features/reports.test.tsx` (5 tests).
+- Modified (13): backend `app/domains/metrics/{registry,schemas,read_service}.py`, tests `test_campaigns_products_api.py`, `test_unified_analytics_api.py`; frontend `features/overview/{api.ts,OverviewFigures.tsx,overview.module.css}`, `features/organizations/OrganizationShell.tsx` (menu), `lib/api/{openapi.json,schema.d.ts}` (generated), tests `overview.test.tsx`, `e2e/journey.spec.ts` (Reports page with accessibility check); docs `API_SPECIFICATION.md` §19E, this report, `PROJECT_STATUS.md`.
+- Deleted: none. No migration.
+
+**Tests**
+- **Backend `make check`: 1,571 passed**, coverage 97 %.
+- **Frontend `npm run check`: 404 passed** (5 new report tests; the Overview test now checks "How is this calculated?" on every tile).
+- **Browser tests: 14 passed**; the journey now also opens Reports with an accessibility check.
+
+**Security:** read-only pages over the existing API; no data kept in the browser; tenant sweeps cover the routes (6-05/6-06).
+
+**Deviations:** "How is this calculated?" for table columns is one expandable list under each table, rather than one per cell, so the tables stay readable.
+
+**Blocked:** Step 0 (6-01) — network access to the two rate feeds.
+
+**Next task:** 6-09 — golden datasets (the NPR store with ads in USD, weekends and an ECB holiday, a refund day, an uncosted product, a period starting before history), property-based checks, a performance check on a large organization, one browser test of the Overview and Reports with real data and accessibility checks, and `PHASE_06_REPORT.md`.
+
+## 6-09 — Golden datasets, performance check, browser test, report (2026-10-21)
+
+**Completed**
+- **Golden dataset "Nepal"**, worked out by hand to the paisa: an organization reporting in NPR with an NPR store, Meta in USD and Google Ads in EUR (through USD, as Nepal Rastra Bank has no EUR here), over Christmas, a weekend and a refund day. Ad spend 7,023.52, net sales 12,500.00, gross profit 5,000.00 and profit after ad spend **-2,023.52** — a loss, shown as such.
+- **Holidays and weekends** use the last published rate (24 December for 25–28 December); a rate **8 days old is not used** ("No exchange rate"); an AUD business over Christmas converts USD with the right day's rate.
+- **A refund day** shows negative sales and profit, never hidden.
+- **Property checks** over seeded random data: totals equal the sum of their days for every sub-period; converting and converting back stays within one minor unit (2,000 cases, four currency pairs).
+- **Computed on read:** a late refund, a cost edit and a Google correction show in the very next answer (acceptance criterion 3).
+- **Performance:** a 390-day Overview for 5 stores, 10 ad accounts and 5 properties answers in about **0.5 s** — no summary table is needed (Q-6-13).
+- **Browser test** `unified-analytics.spec.ts`: a Shopify store, Google Ads (an AUD and an NZD account), Meta and Google Analytics through their simulators, with recorded exchange rates stored by the real daily rate task (`tests/e2e_fx_rates.py`). It checks the Overview (net sales, missing costs said in words, ad spend, sessions, "How is this calculated?", the NZD conversion and the time-zone note) and the three reports, each with an accessibility check, and that no platform token reaches a page.
+- It found and fixed two things: report tables that scroll sideways are now **focusable, labelled regions** (keyboard users can scroll them), and **campaign rows name their ad account** (two accounts can have campaigns of the same name).
+- **`PHASE_06_REPORT.md`** written.
+
+**Files changed** (12)
+- New (5): `backend/tests/api/test_metrics_golden.py` (9 tests), `backend/tests/e2e_fx_rates.py`, `frontend/e2e/unified-analytics.spec.ts`, `frontend/e2e/support/fx.ts`, `docs/phases/PHASE_06_REPORT.md`.
+- Modified (7): `frontend/features/overview/{Shared,ReportsPage,OverviewFigures}.tsx`, `frontend/tests/features/reports.test.tsx`; this report, `PROJECT_STATUS.md`.
+- Deleted: none. No migration.
+
+**Tests**
+- **Backend `make check`: 1,580 passed**, coverage 97 % (the full run had 1,579; the correction test was added during the run and passes on its own with the rest of its file).
+- **Frontend `npm run check`: 404 passed.** **Browser tests: 15 passed.**
+
+**Security:** the new helper refuses to run in a deployed environment and is not in the Docker image (`backend/tests` is excluded); rates come from recorded answers, so CI never calls a bank.
+
+**Deviations:** property checks use seeded random data in plain tests rather than a property-testing library (no new package).
+
+**Blocked:** Step 0 (6-01) — network access to the two rate feeds.
+
+**Next:** your review of Phase 6 (`PHASE_06_REPORT.md`); then Step 0 when access allows; then the Phase 7 plan (funnel intelligence).

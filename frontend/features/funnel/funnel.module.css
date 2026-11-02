@@ -1,0 +1,55 @@
+.stages {
+  list-style: none;
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+
+.stage {
+  border-left: 3px solid var(--color-accent);
+  padding-left: var(--space-3);
+}
+
+.stageLine {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: baseline;
+}
+
+.stageLabel {
+  font-weight: var(--font-weight-semibold);
+}
+
+.count {
+  font-variant-numeric: tabular-nums;
+}
+
+.bar {
+  display: block;
+  width: 100%;
+  max-width: 32rem;
+  height: 0.75rem;
+  margin: var(--space-1) 0;
+}
+
+.steps {
+  margin: 0 0 var(--space-4);
+  padding-left: var(--space-5);
+  display: grid;
+  gap: var(--space-1);
+}
+
+.findings {
+  margin: 0;
+  padding-left: var(--space-5);
+  display: grid;
+  gap: var(--space-2);
+}
+
+.path {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  word-break: break-all;
+}

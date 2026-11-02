@@ -1,0 +1,25 @@
+# AdVegaX web app on Fly.io, Sydney (Phase 15, task 15-02; A34).
+#   fly deploy --config infrastructure/fly/web.fly.toml \
+#     --build-arg NEXT_PUBLIC_API_BASE_URL=https://api-staging.advegax.com
+app = "advegax-web-staging"          # production: advegax-web
+primary_region = "syd"
+
+[build]
+  dockerfile = "../docker/web.Dockerfile"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = "off"
+  min_machines_running = 2
+
+  [[http_service.checks]]
+    method = "GET"
+    path = "/"
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "20s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

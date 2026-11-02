@@ -1,0 +1,26 @@
+.header {
+  position: relative; /* anchors the account menu on narrow screens */
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.inner {
+  /* width, centring and side padding come from <Container> */
+  padding-block: var(--space-3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+}
+
+.brand {
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-lg);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.brand:hover {
+  color: var(--color-accent);
+}
