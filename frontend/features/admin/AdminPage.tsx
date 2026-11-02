@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useId, useState, type FormEvent, type ReactNode } from "react";
 
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { DataTable, type Column } from "@/components/ui/DataTable";
 import { PageHeading } from "@/components/ui/PageHeading";
+import { SelectField } from "@/components/ui/SelectField";
 import { TextField } from "@/components/ui/TextField";
-import styles from "@/features/advertising/advertising.module.css";
+import ui from "@/components/ui/ui.module.css";
 import { RequireAuth } from "@/features/auth/RequireAuth";
 import { messageFor } from "@/lib/api/errors";
 
@@ -26,6 +28,9 @@ import {
   useTwoStepVerify,
   type AdminSetting,
 } from "./api";
+
+type AdminOrganization = NonNullable<ReturnType<typeof useAdminOrganizations>["data"]>[number];
+type AdminUser = NonNullable<ReturnType<typeof useAdminUsers>["data"]>[number];
 
 /** The Admin portal (Phase 16): for the people who run this AdVegaX installation. */
 export function AdminPage() {
@@ -73,7 +78,7 @@ function CodeForm({
     onCode(code);
   };
   return (
-    <form aria-label={label} onSubmit={submit} className={styles.panel}>
+    <form aria-label={label} onSubmit={submit} className={own.codeForm}>
       <TextField
         label="Code from your authenticator app"
         inputMode="numeric"
@@ -100,7 +105,7 @@ function SetUpTwoStep() {
   return (
     <section aria-labelledby="two-step">
       <h2 id="two-step">Set up two-step sign-in</h2>
-      <p className={styles.muted}>
+      <p className={own.muted}>
         The Admin portal needs a code from an authenticator app (Google Authenticator, Microsoft
         Authenticator, 1Password…) each time you sign in.
       </p>
@@ -113,7 +118,7 @@ function SetUpTwoStep() {
           <p>
             In your app, add an account and type this key: <strong>{setup.data.secret}</strong>
           </p>
-          <p className={styles.muted}>Or open this link on your phone: {setup.data.uri}</p>
+          <p className={own.muted}>Or open this link on your phone: {setup.data.uri}</p>
           <CodeForm
             label="Switch two-step sign-in on"
             busy={enable.isPending}
@@ -174,41 +179,84 @@ function Portal() {
   );
 }
 
+function Metric({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className={own.metric}>
+      <dt>{label}</dt>
+      <dd>{children}</dd>
+    </div>
+  );
+}
+
+/** System health and the installation at a glance: what is reachable, and how much is in use. */
 function Health() {
   const health = useAdminHealth(true);
+  const orgs = useAdminOrganizations(true);
+  const users = useAdminUsers(true);
+  const settings = useAdminSettings(true);
   const h = health.data;
   const ok = (good: boolean | undefined) =>
     good ? <Badge tone="success">OK</Badge> : <Badge tone="danger">Not reachable</Badge>;
+  const active = orgs.data?.filter((o) => o.status === "active").length ?? 0;
+  const admins = users.data?.filter((u) => u.is_admin).length ?? 0;
+  const switches = settings.data?.filter((x) => x.kind === "switch") ?? [];
+  const values = settings.data?.filter((x) => x.kind !== "switch") ?? [];
   return (
     <section aria-labelledby="admin-health" className={own.section}>
       <h2 id="admin-health">System health</h2>
       {health.error ? <Alert tone="error">{messageFor(health.error)}</Alert> : null}
-      {h ? (
-        <dl className={own.health}>
-          <div>
-            <dt>Database</dt>
-            <dd>{ok(h.database)}</dd>
-          </div>
-          <div>
-            <dt>Background jobs (Redis)</dt>
-            <dd>{ok(h.redis)}</dd>
-          </div>
-          <div>
-            <dt>Environment</dt>
-            <dd>{h.environment}</dd>
-          </div>
-          <div>
-            <dt>Restart needed</dt>
-            <dd>
+      <dl className={own.metrics}>
+        {h ? (
+          <>
+            <Metric label="Database">{ok(h.database)}</Metric>
+            <Metric label="Background jobs (Redis)">{ok(h.redis)}</Metric>
+            <Metric label="Restart needed">
               {h.restart_needed ? (
                 <Badge tone="warning">Yes, a saved change is waiting</Badge>
               ) : (
                 <Badge tone="neutral">No</Badge>
               )}
-            </dd>
-          </div>
-        </dl>
-      ) : null}
+            </Metric>
+            <Metric label="Environment">
+              <span className={own.metricText}>{h.environment}</span>
+            </Metric>
+          </>
+        ) : null}
+        {orgs.data ? (
+          <Metric label="Organizations">
+            <span className={own.metricValue} data-figure>
+              {orgs.data.length}
+            </span>
+            <span className={own.metricNote}>{active} active</span>
+          </Metric>
+        ) : null}
+        {users.data ? (
+          <Metric label="People">
+            <span className={own.metricValue} data-figure>
+              {users.data.length}
+            </span>
+            <span className={own.metricNote}>
+              {admins} {admins === 1 ? "administrator" : "administrators"}
+            </span>
+          </Metric>
+        ) : null}
+        {settings.data ? (
+          <>
+            <Metric label="Feature switches on">
+              <span className={own.metricValue} data-figure>
+                {switches.filter((x) => x.hint === "on").length}
+              </span>
+              <span className={own.metricNote}>of {switches.length}</span>
+            </Metric>
+            <Metric label="Keys entered">
+              <span className={own.metricValue} data-figure>
+                {values.filter((x) => x.set).length}
+              </span>
+              <span className={own.metricNote}>of {values.length}</span>
+            </Metric>
+          </>
+        ) : null}
+      </dl>
     </section>
   );
 }
@@ -360,80 +408,178 @@ function SettingRow({ setting }: { setting: AdminSetting }) {
   );
 }
 
+const STATUS_FILTERS = [
+  { value: "", label: "All" },
+  { value: "active", label: "Active" },
+  { value: "suspended", label: "Suspended" },
+];
+
+/** A search box for a table: filters the rows shown, and says how many match. */
+function Search({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const id = useId();
+  return (
+    <div className={ui.field}>
+      <label htmlFor={id} className={ui.label}>
+        {label}
+      </label>
+      <input
+        id={id}
+        type="search"
+        className={ui.input}
+        value={value}
+        autoComplete="off"
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </div>
+  );
+}
+
+const matches = (query: string, ...texts: (string | null | undefined)[]) =>
+  !query.trim() || texts.some((t) => (t ?? "").toLowerCase().includes(query.trim().toLowerCase()));
+
+function Showing({ shown, total }: { shown: number; total: number }) {
+  return (
+    <p className={own.muted} role="status">
+      {shown === total ? `${total} in all` : `Showing ${shown} of ${total}`}
+    </p>
+  );
+}
+
 function Organizations() {
   const orgs = useAdminOrganizations(true);
   const change = useSetOrganizationStatus();
+  const [query, setQuery] = useState("");
+  const [status, setStatus] = useState("");
+  const all = orgs.data ?? [];
+  const rows = all.filter((o) => matches(query, o.name) && (!status || o.status === status));
+  const columns: Column<AdminOrganization>[] = [
+    { key: "name", header: "Name", rowHeader: true, cell: (o) => o.name, sortValue: (o) => o.name },
+    {
+      key: "status",
+      header: "Status",
+      cell: (o) =>
+        o.status === "active" ? (
+          <Badge tone="success">Active</Badge>
+        ) : (
+          <Badge tone="warning">Suspended</Badge>
+        ),
+      sortValue: (o) => o.status,
+    },
+    {
+      key: "action",
+      header: "Action",
+      cell: (o) => (
+        <Button
+          variant="secondary"
+          busy={change.isPending && change.variables?.id === o.id}
+          onClick={() =>
+            change.mutate({ id: o.id, status: o.status === "active" ? "suspended" : "active" })
+          }
+        >
+          {o.status === "active" ? `Suspend ${o.name}` : `Reactivate ${o.name}`}
+        </Button>
+      ),
+    },
+  ];
   return (
     <section aria-labelledby="admin-orgs" className={own.section}>
       <h2 id="admin-orgs">Organizations</h2>
       {orgs.error ? <Alert tone="error">{messageFor(orgs.error)}</Alert> : null}
-      <div className={styles.tableWrap}>
-        <table className={styles.table}>
-          <caption>Organizations</caption>
-          <thead>
-            <tr>
-              <th scope="col">Name</th>
-              <th scope="col">Status</th>
-              <th scope="col">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {orgs.data?.map((o) => (
-              <tr key={o.id}>
-                <th scope="row">{o.name}</th>
-                <td>{o.status === "active" ? "Active" : "Suspended"}</td>
-                <td>
-                  <Button
-                    variant="secondary"
-                    busy={change.isPending}
-                    onClick={() =>
-                      change.mutate({
-                        id: o.id,
-                        status: o.status === "active" ? "suspended" : "active",
-                      })
-                    }
-                  >
-                    {o.status === "active" ? `Suspend ${o.name}` : `Reactivate ${o.name}`}
-                  </Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className={own.filters}>
+        <Search label="Find an organization" value={query} onChange={setQuery} />
+        <SelectField
+          label="Status"
+          options={STATUS_FILTERS}
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+        />
       </div>
+      {orgs.data ? <Showing shown={rows.length} total={all.length} /> : null}
+      <DataTable
+        caption="Organizations"
+        captionHidden
+        columns={columns}
+        rows={rows}
+        getRowKey={(o) => o.id}
+        layout="stack"
+        defaultSort={{ key: "name", direction: "ascending" }}
+        empty={<p>No organization matches.</p>}
+      />
     </section>
   );
 }
 
+const joined = (value: string) =>
+  new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(value));
+
 function People() {
   const users = useAdminUsers(true);
+  const [query, setQuery] = useState("");
+  const all = users.data ?? [];
+  const rows = all.filter((u) => matches(query, u.email, u.display_name));
+  const columns: Column<AdminUser>[] = [
+    {
+      key: "email",
+      header: "Email",
+      rowHeader: true,
+      cell: (u) => u.email,
+      sortValue: (u) => u.email,
+    },
+    {
+      key: "name",
+      header: "Name",
+      cell: (u) => u.display_name ?? "—",
+      sortValue: (u) => u.display_name,
+    },
+    {
+      key: "status",
+      header: "Status",
+      cell: (u) => (
+        <Badge tone={u.status === "active" ? "success" : "neutral"}>
+          {u.status.charAt(0).toUpperCase() + u.status.slice(1).replaceAll("_", " ")}
+        </Badge>
+      ),
+      sortValue: (u) => u.status,
+    },
+    {
+      key: "admin",
+      header: "Administrator",
+      cell: (u) => (u.is_admin ? <Badge tone="info">Yes</Badge> : "No"),
+      sortValue: (u) => (u.is_admin ? 0 : 1),
+    },
+    {
+      key: "joined",
+      header: "Joined",
+      cell: (u) => joined(u.created_at),
+      sortValue: (u) => u.created_at,
+    },
+  ];
   return (
     <section aria-labelledby="admin-people" className={own.section}>
       <h2 id="admin-people">People</h2>
       {users.error ? <Alert tone="error">{messageFor(users.error)}</Alert> : null}
-      <div className={styles.tableWrap}>
-        <table className={styles.table}>
-          <caption>People</caption>
-          <thead>
-            <tr>
-              <th scope="col">Email</th>
-              <th scope="col">Name</th>
-              <th scope="col">Status</th>
-              <th scope="col">Administrator</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.data?.map((u) => (
-              <tr key={u.id}>
-                <th scope="row">{u.email}</th>
-                <td>{u.display_name ?? "—"}</td>
-                <td>{u.status}</td>
-                <td>{u.is_admin ? "Yes" : "No"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className={own.filters}>
+        <Search label="Find a person by email or name" value={query} onChange={setQuery} />
       </div>
+      {users.data ? <Showing shown={rows.length} total={all.length} /> : null}
+      <DataTable
+        caption="People"
+        captionHidden
+        columns={columns}
+        rows={rows}
+        getRowKey={(u) => u.id}
+        layout="stack"
+        defaultSort={{ key: "joined", direction: "descending" }}
+        empty={<p>No one matches.</p>}
+      />
     </section>
   );
 }

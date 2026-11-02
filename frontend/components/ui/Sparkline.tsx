@@ -53,6 +53,7 @@ export function Sparkline({ values }: SparklineProps) {
           strokeWidth={1.75}
           strokeLinejoin="round"
           strokeLinecap="round"
+          pathLength={1}
         />
       ))}
     </svg>

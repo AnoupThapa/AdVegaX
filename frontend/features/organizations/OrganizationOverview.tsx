@@ -4,6 +4,8 @@ import Link from "next/link";
 
 import { PageHeading } from "@/components/ui/PageHeading";
 import { OverviewAutopilot } from "@/features/autopilot/AutopilotSettings";
+import { RecentChanges } from "@/features/changes/RecentChanges";
+import dash from "@/features/overview/dashboard.module.css";
 import { OverviewFigures } from "@/features/overview/OverviewFigures";
 import { OverviewRecommendations } from "@/features/recommendations/RecommendationsPages";
 
@@ -15,14 +17,20 @@ export function OrganizationOverview() {
   const org = useCurrentOrganization();
   return (
     <section aria-labelledby="org-title">
-      <PageHeading id="org-title">{org.name}</PageHeading>
-      <p className={styles.muted}>
-        Your role: <span className={styles.badge}>{roleLabel(org.role)}</span>
-      </p>
+      <div className={dash.head}>
+        <PageHeading id="org-title">{org.name}</PageHeading>
+        <p className={styles.muted}>
+          Your role: <span className={styles.badge}>{roleLabel(org.role)}</span>
+        </p>
+      </div>
       <OverviewAutopilot org={org} />
-      <OverviewFigures org={org} />
-      <OverviewRecommendations org={org} />
-      <div className={styles.panel}>
+      <OverviewFigures org={org}>
+        <div className={dash.work}>
+          <OverviewRecommendations org={org} />
+          <RecentChanges org={org} />
+        </div>
+      </OverviewFigures>
+      <div className={dash.team}>
         <h2>Your team</h2>
         <p>
           {canManageMembers(org.role)

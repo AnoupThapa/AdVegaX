@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 import { Alert } from "@/components/ui/Alert";
 import { Sparkline } from "@/components/ui/Sparkline";
 import styles from "@/features/advertising/advertising.module.css";
 import type { Organization } from "@/features/organizations/api";
-import { formatDay } from "@/features/stores/dates";
+import { addDays, formatDay } from "@/features/stores/dates";
 import { messageFor } from "@/lib/api/errors";
 import { figureReason, type Figure } from "@/lib/format/money";
 
@@ -39,6 +40,88 @@ function trend(data: Overview, key: string): (number | null)[] {
       ? Number(figure.value)
       : null;
   });
+}
+
+/** The four figures most people check first, each against the period just before. */
+const KPI_KEYS = ["net_sales", "ad_spend", "profit_after_ad_spend", "orders"] as const;
+/** Ad spend going up is neither good nor bad on its own; the others are better higher. */
+const NEUTRAL_KEYS = new Set(["ad_spend"]);
+
+function valueOf(data: Overview | undefined, key: string): number | null {
+  const figure = data?.totals[key] as Figure | undefined;
+  return !figure || missingOf(figure) ? null : Number(figure.value);
+}
+
+function Change({
+  key_,
+  now,
+  before,
+  days,
+}: {
+  key_: string;
+  now: number | null;
+  before: number | null;
+  days: number;
+}) {
+  const span = days === 1 ? "the day before" : `the previous ${days} days`;
+  if (now === null || before === null || before === 0) {
+    return <span className={own.changeNone}>No figure for {span} to compare</span>;
+  }
+  const ratio = (now - before) / Math.abs(before);
+  const percent = Math.round(Math.abs(ratio) * 100);
+  if (percent === 0) return <span className={own.changeFlat}>Level with {span}</span>;
+  const up = ratio > 0;
+  const tone = NEUTRAL_KEYS.has(key_) ? own.changeFlat : up ? own.changeGood : own.changeBad;
+  return (
+    <span className={tone}>
+      <span aria-hidden="true">{up ? "▲" : "▼"} </span>
+      {up ? "Up" : "Down"} {percent}% on {span}
+    </span>
+  );
+}
+
+function Kpis({
+  data,
+  previous,
+  currency,
+  days,
+}: {
+  data: Overview;
+  previous: Overview | undefined;
+  currency: ReportingCurrency;
+  days: number;
+}) {
+  const define = definitionsByKey(data.definitions);
+  return (
+    <ul className={own.kpis} aria-label="Key figures">
+      {KPI_KEYS.map((key) => {
+        const d = define(key);
+        const figure = data.totals[key] as Figure | undefined;
+        const missing = missingOf(figure);
+        return (
+          <li key={key} className={own.kpi}>
+            <span className={own.kpiLabel}>{d.label}</span>
+            <span className={missing ? own.kpiMissing : own.kpiValue} data-figure>
+              {formatFigure(figure, d.unit, currency)}
+            </span>
+            {missing ? null : (
+              <Change
+                key_={key}
+                now={valueOf(data, key)}
+                before={valueOf(previous, key)}
+                days={days}
+              />
+            )}
+            {missing ? null : (
+              <span className={own.kpiTrend}>
+                <Sparkline values={trend(data, key)} />
+              </span>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
 }
 
 /** Why figures are missing, each reason once, with where to fix it (a statement's footnotes). */
@@ -284,10 +367,24 @@ function Empty({ orgId }: { orgId: string }) {
   );
 }
 
-/** The Overview's figures (PLAN §9): tiles, days, sources, conversions and notes. */
-export function OverviewFigures({ org }: { org: Organization }) {
+function daysBetween(from: string, to: string): number {
+  return Math.round((Date.parse(to) - Date.parse(from)) / 86_400_000) + 1;
+}
+
+/**
+ * The Overview's figures (PLAN §9): the statement, key figures against the previous period,
+ * `children` (the work waiting for the reader), then notes, the ledger, days and sources.
+ */
+export function OverviewFigures({ org, children }: { org: Organization; children?: ReactNode }) {
   const controls = useReportControls(org);
   const overview = useOverview(org.id, controls.from, controls.to, controls.storeId);
+  const days = daysBetween(controls.from, controls.to);
+  const previous = useOverview(
+    org.id,
+    addDays(controls.from, -days),
+    addDays(controls.from, -1),
+    controls.storeId,
+  );
 
   if (overview.error) return <Alert tone="error">{messageFor(overview.error)}</Alert>;
   if (!overview.data) {
@@ -298,7 +395,14 @@ export function OverviewFigures({ org }: { org: Organization }) {
     );
   }
   const data = overview.data;
-  if (data.sources.length === 0 && controls.allStores) return <Empty orgId={org.id} />;
+  if (data.sources.length === 0 && controls.allStores) {
+    return (
+      <>
+        <Empty orgId={org.id} />
+        {children}
+      </>
+    );
+  }
   const currency = reportingCurrency(data);
   const notes = notesFor(data);
 
@@ -314,6 +418,11 @@ export function OverviewFigures({ org }: { org: Organization }) {
           Your stores&apos; sales, what Google Ads and Meta report as spent, and Google
           Analytics&apos; visits, put together by AdVegaX.
         </PeriodLine>
+        <Kpis data={data} previous={previous.data} currency={currency} days={days} />
+      </section>
+      {children}
+      <section aria-labelledby="overview-ledger" className={styles.section}>
+        <h2 id="overview-ledger">All figures</h2>
         <Notes orgId={org.id} notes={notes} />
         <Ledger data={data} currency={currency} notes={notes} />
         <h3>By day</h3>

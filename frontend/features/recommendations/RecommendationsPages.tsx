@@ -12,6 +12,7 @@ import ui from "@/components/ui/ui.module.css";
 import styles from "@/features/advertising/advertising.module.css";
 import { CheckList, Status as ChangeStatus } from "@/features/changes/ChangesPages";
 import own from "@/features/changes/changes.module.css";
+import dash from "@/features/overview/dashboard.module.css";
 import { reasonText } from "@/features/changes/labels";
 import type { Organization } from "@/features/organizations/api";
 import { useCurrentOrganization } from "@/features/organizations/OrganizationShell";
@@ -481,19 +482,35 @@ export function OverviewRecommendations({ org }: { org: Organization }) {
   const list = useRecommendations(org.id, "open");
   if (!list.data) return null;
   const count = list.data.summary.open;
+  const first = list.data.items.slice(0, 4);
   return (
-    <div className={styles.panel}>
-      <h2>Recommendations</h2>
-      <p>
+    <section aria-labelledby="overview-waiting" className={dash.panel}>
+      <h2 id="overview-waiting" className={dash.panelTitle}>
+        Waiting for you
+      </h2>
+      <p className={dash.panelLead}>
         {count === 0
           ? "Nothing needs your attention right now."
           : count === 1
             ? "1 piece of advice waits for your decision."
             : `${count} pieces of advice wait for your decision.`}
       </p>
-      <p>
+      {first.length ? (
+        <ul className={dash.items} aria-label="Waiting for your decision">
+          {first.map((r) => (
+            <li key={r.id} className={dash.item}>
+              <Link href={`/orgs/${org.id}/recommendations/${r.id}`} className={dash.itemTitle}>
+                {kindLabel(r.kind)}
+              </Link>
+              <span className={dash.itemMeta}>{subjectOf(r)}</span>
+              <span className={dash.itemSide}>{CONFIDENCE_LABELS[r.confidence]}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <p className={dash.panelFoot}>
         <Link href={`/orgs/${org.id}/recommendations`}>Open recommendations</Link>
       </p>
-    </div>
+    </section>
   );
 }

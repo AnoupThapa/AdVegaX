@@ -237,3 +237,58 @@ describe("Admin portal states", () => {
     await waitFor(() => expect(api.apiCalls().some((c) => c.method === "DELETE")).toBe(true));
   });
 });
+
+describe("Admin portal tables and figures", () => {
+  it("counts what is in use and filters organizations and people", async () => {
+    mockApi({
+      "GET /api/v1/auth/me": ok(me),
+      [ME]: ok(admin()),
+      ...portal,
+      "GET /api/v1/admin/organizations": ok([
+        { id: "0b6f3f0e-1f2a-4c1e-9a55-3f1f0d1f2a3b", name: "Eve Zone", status: "active" },
+        { id: "1b6f3f0e-1f2a-4c1e-9a55-3f1f0d1f2a3b", name: "Mediflex", status: "suspended" },
+      ]),
+      "GET /api/v1/admin/users": ok([
+        {
+          id: "11111111-1f2a-4c1e-9a55-3f1f0d1f2a3b",
+          email: "demo@advegax.local",
+          display_name: "Demo",
+          status: "active",
+          created_at: "2026-10-28T00:00:00Z",
+          is_admin: true,
+        },
+        {
+          id: "22222222-1f2a-4c1e-9a55-3f1f0d1f2a3b",
+          email: "sam@example.com",
+          display_name: null,
+          status: "pending_verification",
+          created_at: "2026-10-29T00:00:00Z",
+          is_admin: false,
+        },
+      ]),
+    });
+    render();
+    const orgs = await screen.findByRole("table", { name: "Organizations" });
+    expect(within(orgs).getByText("Suspended")).toBeVisible();
+    expect(screen.getByText("1 active")).toBeVisible();
+    expect(screen.getByText("1 administrator")).toBeVisible();
+    expect(screen.getAllByText("of 1", { selector: "span" })).toHaveLength(2);
+
+    fill(screen.getByLabelText("Find an organization"), "medi");
+    expect(within(orgs).queryByText("Eve Zone")).not.toBeInTheDocument();
+    expect(screen.getByText("Showing 1 of 2")).toBeVisible();
+    fill(screen.getByLabelText("Find an organization"), "");
+    fill(screen.getByLabelText("Status"), "active");
+    expect(within(orgs).queryByText("Mediflex")).not.toBeInTheDocument();
+    fill(screen.getByLabelText("Status"), "suspended");
+    fill(screen.getByLabelText("Find an organization"), "eve");
+    expect(screen.getByText("No organization matches.")).toBeVisible();
+
+    const people = screen.getByRole("table", { name: "People" });
+    expect(within(people).getByText("Pending verification")).toBeVisible();
+    fill(screen.getByLabelText("Find a person by email or name"), "demo");
+    expect(within(people).queryByText("sam@example.com")).not.toBeInTheDocument();
+    fill(screen.getByLabelText("Find a person by email or name"), "nobody");
+    expect(screen.getByText("No one matches.")).toBeVisible();
+  });
+});

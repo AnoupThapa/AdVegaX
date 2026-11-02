@@ -23,6 +23,8 @@ The aim is one look across the whole product: a small palette, one type scale, o
 
 ### 2.1 Colour (restricted palette)
 
+A deep slate base with three functional accents, each with one job: **cobalt** (`color-accent`: actions, links, focus, chart lines), **terracotta** (`color-terracotta`, `status-warning-*`: warnings, figures going the wrong way) and **sage** (`color-sage`, `status-success-*`: good results). Accents never decorate, and there are no gradients. The **slate block** (`color-slate`, `color-slate-2`, `color-on-slate*`) is a solid, always-dark surface used for the landing hero, the landing's closing block and the admin band. Every text pair meets 4.5:1 in both schemes (checked with a script, not by eye).
+
 Three tiers: **reference** values live only in `globals.css`; **semantic** tokens (below) are what the rest of the code uses; **component** styles combine semantic tokens.
 
 | Token                 | Light     | Dark      |
@@ -75,17 +77,17 @@ Status colours come in foreground/background pairs: `--status-success-*`, `--sta
 
 ### 2.2 Typography
 
-One family: Atkinson Hyperlegible Next (Braille Institute, SIL OFL), bundled through `@fontsource-variable/atkinson-hyperlegible-next` so nothing is fetched from another site. Its letters and figures are drawn to be hard to confuse (1/l/I, 0/O, 5/S, 8/B), which helps every reader and matters for money. System fonts are the fallback. Tables, `.figures` and `[data-figure]` use tabular, lining figures so amounts line up. Sizes and weights come from tokens only.
+Two families, both SIL OFL and bundled with the app (`@fontsource-variable/sora`, `@fontsource-variable/ibm-plex-sans`), so nothing is fetched from another site. **Sora** (`--font-display`) sets headings and the few large numbers (key figures, admin counts): its open, geometric-humanist shapes give the product its voice. **IBM Plex Sans** (`--font-sans`) sets everything else: plain, very legible at small sizes, with clear figures. System fonts are the fallback. Tables, `.figures` and `[data-figure]` use tabular, lining figures so amounts line up. Sizes and weights come from tokens only.
 
-| Role                       | Token                              | Size  | Weight                       | Used for                                 |
-| -------------------------- | ---------------------------------- | ----- | ---------------------------- | ---------------------------------------- |
-| Display                    | `--font-size-3xl` (fluid 32–52 px) | fluid | bold                         | Public home page headline only           |
-| Page title (h1)            | `--font-size-2xl`                  | 32 px | semibold–bold                | One per page                             |
-| Section (h2)               | `--font-size-xl`                   | 24 px | semibold                     | Page sections                            |
-| Subsection (h3), lead text | `--font-size-lg`                   | 18 px | semibold                     | Cards, groups                            |
-| Body                       | `--font-size-md`                   | 16 px | regular                      | Everything else                          |
-| Small                      | `--font-size-sm`                   | 14 px | regular / medium             | Hints, table headers, captions, metadata |
-| Extra small                | `--font-size-xs`                   | 12 px | semibold, sentence case      | Small labels (navigation groups use sm)  |
+| Role                       | Token                              | Size  | Weight                  | Used for                                 |
+| -------------------------- | ---------------------------------- | ----- | ----------------------- | ---------------------------------------- |
+| Display                    | `--font-size-3xl` (fluid 32–52 px) | fluid | bold                    | Public home page headline only           |
+| Page title (h1)            | `--font-size-2xl`                  | 32 px | semibold–bold           | One per page                             |
+| Section (h2)               | `--font-size-xl`                   | 24 px | semibold                | Page sections                            |
+| Subsection (h3), lead text | `--font-size-lg`                   | 18 px | semibold                | Cards, groups                            |
+| Body                       | `--font-size-md`                   | 16 px | regular                 | Everything else                          |
+| Small                      | `--font-size-sm`                   | 14 px | regular / medium        | Hints, table headers, captions, metadata |
+| Extra small                | `--font-size-xs`                   | 12 px | semibold, sentence case | Small labels (navigation groups use sm)  |
 
 Weights: `--font-weight-regular` 400, `-medium` 500, `-semibold` 600, `-bold` 700. Rules:
 
@@ -138,7 +140,7 @@ Robustness rules: grids use `minmax(0, 1fr)` so long content cannot widen the pa
 
 ### 2.6 Motion and icons
 
-- Motion is short (about 150 ms), used only to explain change (a toast sliding in, a loading shimmer), and disabled when the person prefers reduced motion (global rule).
+- Motion uses the tokens `--duration-fast` (140 ms, hovers), `--duration-base` (240 ms, lists and state changes) and `--duration-slow` (600 ms, the one entrance per page), with `--ease-out` (a soft settle) or `--ease-spring`. It explains change or guides the eye once: the landing hero's lines rise in order, the Overview's key figures and lists arrive staggered by 40–50 ms, sparklines draw in once. No scroll-triggered effects, no motion on idle content, and everything is disabled when the person prefers reduced motion (global rule).
 - Icons come from one set (`components/ui/Icon.tsx`: inline SVG, 24 px grid, 1.75 px stroke, `currentColor`). They are decorative (`aria-hidden`) unless they are the only content of a control, in which case the control has an accessible name. No emoji as icons.
 
 ---
@@ -206,13 +208,22 @@ Each entry: purpose, variants, states, accessibility, tokens. Names describe str
 
 ---
 
-### 3.7 Statement and ledger (Overview)
+### 3.7 Client dashboard (Overview)
 
-The Overview opens with one sentence built from the real figures ("Eve Zone sold A$1,500.50 in 12 orders, and spent A$204.50 on ads. After ad spend, it kept A$695.80."). A missing figure is named in the sentence, never shown as zero. Below it, one note headed "Why some figures are missing" lists each distinct reason once, numbered, with a link to the page that fixes it. The figures follow as a ledger: one table per group, the row header carries the name and "How is this calculated?", the amount is right-aligned, and a missing amount shows its reason with a superscript link to its note. Sparklines appear only for sales, orders and ad spend, and are hidden on phones.
+Top to bottom, in order of what a person needs first:
+
+1. **Statement**: one sentence built from the real figures ("Eve Zone sold A$1,500.50 in 12 orders, and spent A$204.50 on ads. After ad spend, it kept A$695.80."). A missing figure is named, never shown as zero.
+2. **Key figures**: net sales, ad spend, profit after ad spend and orders in one ruled strip (not cards), each compared in words with the period just before ("Up 12% on the previous 30 days"), with a sparkline. Sage marks a good rise, terracotta a bad fall; ad spend is never coloured, since more spend is neither good nor bad on its own. Missing figures say why.
+3. **Work**: "Waiting for you" (open advice, linking straight to each decision) beside "Recent changes" (the latest changes with their state). Open columns under a rule; rows highlight on hover and focus.
+4. **All figures**: the note "Why some figures are missing" (each reason once, numbered, with a link that fixes it), then the ledger (one table per group, amounts right-aligned, missing amounts link to their note), the day table and the sources.
 
 ### 3.8 Admin portal
 
-The operator area sits under a dark band (`--color-text` background) that says customers never see it, so it cannot be mistaken for an organization page. A sticky side index lists the sections on desktop. Feature switches are `button role="switch"` with `aria-checked` and visible On/Off text. Keys show a status badge (the stored hint, or "Not set") and where the value comes from; changing one opens a small inline form.
+The operator area sits under the slate band that says customers never see it, so it cannot be mistaken for an organization page. A sticky side index lists the sections on desktop. Feature switches are `button role="switch"` with `aria-checked` and visible On/Off text. Keys show a status badge (the stored hint, or "Not set") and where the value comes from; changing one opens a small inline form. "System health" is a dense ruled grid: database, background jobs, restart needed and environment, then counts (organizations and how many are active, people and administrators, switches on, keys entered). Organizations and People are sortable tables with a search box (and a status filter for organizations) and a live "Showing X of Y" line; on phones each row becomes a labelled card.
+
+### 3.9 Public landing page
+
+A full-width slate block opens the page: the headline (Sora, large, short measure), who it is for, two actions, three plain facts, and a real screenshot of the demo Overview labelled as simulated data. The rest of the page sits on the page background: "How it works" is a numbered sequence joined by a rule on wide screens (it really is a sequence), "Built so you stay in control" is a ruled two-column list, then the platforms and a slate closing block with the same two actions. No invented customers, testimonials or statistics.
 
 ## 4. Content rules
 

@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { OrganizationOverview } from "@/features/organizations/OrganizationOverview";
 import { OrganizationSettings } from "@/features/organizations/OrganizationSettings";
 import { OrganizationShell } from "@/features/organizations/OrganizationShell";
-import { addDays, formatDay } from "@/features/stores/dates";
+import { addDays, formatDay, todayIn } from "@/features/stores/dates";
 import { clearCsrfToken } from "@/lib/api/csrf";
 
 import { fill } from "../support/forms";
@@ -417,5 +417,63 @@ describe("Overview statement and notes", () => {
     expect(await screen.findByText(/kept/)).toHaveTextContent(
       "Eve Zone sold A$1,500.50, and spent A$204.50 on ads. After ad spend, it kept A$695.80.",
     );
+  });
+});
+
+describe("Overview key figures", () => {
+  it("compares each key figure with the period before, in words", async () => {
+    const today = todayIn(testOrg().default_timezone);
+    mockApi({
+      [`GET ${ORG_PATH}`]: ok(testOrg()),
+      ...emptyOrganizationData(),
+      [`GET ${ORG_PATH}/analytics/overview`]: (call) =>
+        ok(
+          call.query.get("to") === today
+            ? golden()
+            : golden({
+                totals: {
+                  ...TOTALS,
+                  net_sales: figure("1000.00"),
+                  ad_spend: figure("200.00"),
+                  profit_after_ad_spend: figure("695.80"),
+                  orders: figure("30"),
+                },
+              }),
+        ),
+    });
+    renderWithProviders(inShell(<OrganizationOverview />), { session: testUser() });
+    const kpis = await screen.findByRole("list", { name: "Key figures" });
+    const item = (label: string) =>
+      within(kpis)
+        .getAllByRole("listitem")
+        .find((li) => li.textContent?.startsWith(label))!;
+    await waitFor(() =>
+      expect(item("Net sales")).toHaveTextContent("Up 50% on the previous 30 days"),
+    );
+    expect(item("Ad spend")).toHaveTextContent("Up 2% on the previous 30 days");
+    expect(item("Profit after ad spend")).toHaveTextContent("Level with the previous 30 days");
+    expect(item("Orders")).toHaveTextContent("Down 50% on the previous 30 days");
+  });
+
+  it("says when a figure is level, or when there is nothing to compare", async () => {
+    const today = todayIn(testOrg().default_timezone);
+    mockApi({
+      [`GET ${ORG_PATH}`]: ok(testOrg()),
+      ...emptyOrganizationData(),
+      [`GET ${ORG_PATH}/analytics/overview`]: (call) =>
+        call.query.get("to") === today
+          ? ok(
+              golden({
+                totals: { ...TOTALS, ad_spend: figure(null, "no_ad_account", "unavailable") },
+              }),
+            )
+          : fail(500, "internal_error"),
+    });
+    renderWithProviders(inShell(<OrganizationOverview />), { session: testUser() });
+    const kpis = await screen.findByRole("list", { name: "Key figures" });
+    await waitFor(() =>
+      expect(kpis).toHaveTextContent("No figure for the previous 30 days to compare"),
+    );
+    expect(kpis).toHaveTextContent("No ad account");
   });
 });

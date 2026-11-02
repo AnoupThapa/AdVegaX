@@ -4,24 +4,27 @@
 :root {
   color-scheme: light dark;
 
-  --color-bg: #f7f8fa;
+  /* Slate base with three functional accents: cobalt (actions, focus), terracotta (warnings,
+     money going out) and sage (good results). Accents never decorate. */
+  --color-bg: #f4f5f7;
   --color-surface: #ffffff;
-  --color-text: #14171f;
-  --color-text-muted: #4a5160;
-  --color-border: #d5d9e0;
-  --color-accent: #1f5fd1;
+  --color-text: #141b2b;
+  --color-text-muted: #4b5468;
+  --color-border: #d6dae2;
+  --color-accent: #2550d4;
   --color-accent-contrast: #ffffff;
   --color-danger: #b42318;
   --color-danger-contrast: #ffffff;
-  --color-success: #1e7a3c;
-  --color-warning: #8a5a00;
-  --color-focus: #1f5fd1;
+  --color-success: #3f7a53;
+  --color-warning: #94401f;
+  --color-focus: #2550d4;
 
-  /* Atkinson Hyperlegible Next (Braille Institute, OFL), bundled with the app: letters and
-     figures that are hard to confuse (1/l/I, 0/O, 5/S, 8/B) — for every reader, and for money. */
+  /* Two bundled families (SIL OFL, served from this app): IBM Plex Sans for reading and figures,
+     Sora for headings and the few large numbers. */
   --font-sans:
-    "Atkinson Hyperlegible Next Variable", system-ui, -apple-system, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
+    "IBM Plex Sans Variable", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    sans-serif;
+  --font-display: "Sora Variable", var(--font-sans);
   --font-size-sm: 0.875rem;
   --font-size-md: 1rem;
   --font-size-lg: 1.125rem;
@@ -47,19 +50,31 @@
   --color-border-strong: #aab1bd;
   /* Borders that mark a control (input, select, secondary button): at least 3:1 (WCAG 1.4.11). */
   --color-control-border: #7a8394;
-  --color-accent-bg: #e8f0fd;
-  --color-accent-text: #1a4fb0;
-  --color-info: #1a4fb0;
+  --color-accent-bg: #e8eefc;
+  --color-accent-text: #1d3fae;
+  --color-info: #1d3fae;
+
+  /* The slate block (landing hero, admin band): always dark, in both schemes. */
+  --color-slate: #141b2b;
+  --color-slate-2: #1e2738;
+  --color-on-slate: #f2f4f8;
+  --color-on-slate-muted: #b9c1d0;
+  --color-on-slate-accent: #8eaaff;
+  --color-on-slate-border: #344056;
+
+  /* Chart and trend marks (also used for "up/down" tags). */
+  --color-terracotta: #b04a24;
+  --color-sage: #3f7a53;
 
   /* Status pairs: text on its own background, each at least 4.5:1 (checked, not eyeballed). */
-  --status-success-fg: #14632f;
-  --status-success-bg: #e6f4ea;
-  --status-warning-fg: #7a4f00;
-  --status-warning-bg: #fdf1d8;
+  --status-success-fg: #2f6142;
+  --status-success-bg: #e4efe6;
+  --status-warning-fg: #94401f;
+  --status-warning-bg: #f8e8e0;
   --status-danger-fg: #a3190f;
   --status-danger-bg: #fdeceb;
-  --status-info-fg: #1a4fb0;
-  --status-info-bg: #e8f0fd;
+  --status-info-fg: #1d3fae;
+  --status-info-bg: #e8eefc;
   --status-neutral-fg: #3d4452;
   --status-neutral-bg: #eceef2;
 
@@ -96,6 +111,13 @@
   --line-height-tight: 1.2;
   --color-overlay: rgb(0 0 0 / 0.5);
   --radius-pill: 999px;
+
+  /* Motion: short, with a soft settle; used only where something changed or was asked for. */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --duration-fast: 140ms;
+  --duration-base: 240ms;
+  --duration-slow: 600ms;
 }
 
 /* Side padding grows with the screen: 16px on phones, 24px on tablets, 32px on desktops. */
@@ -113,33 +135,37 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-bg: #0f1116;
-    --color-surface: #171a21;
-    --color-text: #eef0f4;
-    --color-text-muted: #b4bac6;
-    --color-border: #2f3542;
-    --color-accent: #7aa7ff;
-    --color-accent-contrast: #0f1116;
+    --color-bg: #0e131d;
+    --color-surface: #161d2a;
+    --color-text: #e9edf3;
+    --color-text-muted: #aab3c3;
+    --color-border: #2c3546;
+    --color-accent: #86a5ff;
+    --color-accent-contrast: #0e131d;
     --color-danger: #ff8a80;
     --color-danger-contrast: #0f1116;
-    --color-success: #6fd18f;
-    --color-warning: #f2c14e;
-    --color-focus: #7aa7ff;
+    --color-success: #8fd0a3;
+    --color-warning: #f3a885;
+    --color-focus: #86a5ff;
 
-    --color-surface-2: #1d212a;
+    --color-surface-2: #1c2433;
+    --color-slate: #0a0f18;
+    --color-slate-2: #121a27;
+    --color-terracotta: #f0a283;
+    --color-sage: #8fd0a3;
     --color-border-strong: #4a5263;
     --color-control-border: #6b7385;
-    --color-accent-bg: #14284f;
-    --color-accent-text: #9bbcff;
-    --color-info: #9bbcff;
-    --status-success-fg: #7fdc9d;
-    --status-success-bg: #12301d;
-    --status-warning-fg: #f5cb6a;
-    --status-warning-bg: #38290a;
+    --color-accent-bg: #1a2a52;
+    --color-accent-text: #a9c0ff;
+    --color-info: #a9c0ff;
+    --status-success-fg: #8fd0a3;
+    --status-success-bg: #15301f;
+    --status-warning-fg: #f3a885;
+    --status-warning-bg: #3a1f14;
     --status-danger-fg: #ff9d94;
     --status-danger-bg: #3b1512;
-    --status-info-fg: #9bbcff;
-    --status-info-bg: #14284f;
+    --status-info-fg: #a9c0ff;
+    --status-info-bg: #1a2a52;
     --status-neutral-fg: #c8cdd8;
     --status-neutral-bg: #262b36;
     --shadow-sm: none;
@@ -164,7 +190,6 @@ body {
   min-height: 100vh;
   font-family: var(--font-sans);
   font-size: var(--font-size-md);
-  font-optical-sizing: auto;
   line-height: var(--line-height);
   background: var(--color-bg);
   color: var(--color-text);
@@ -173,9 +198,11 @@ body {
 h1,
 h2,
 h3 {
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-semibold);
   line-height: var(--line-height-tight);
   margin: 0 0 var(--space-4);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
   text-wrap: balance;
 }
 

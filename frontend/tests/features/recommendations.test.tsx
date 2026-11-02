@@ -429,6 +429,10 @@ describe("Elsewhere", () => {
       </>,
     );
     expect(await screen.findByText("2 pieces of advice wait for your decision.")).toBeVisible();
+    const waiting = screen.getByRole("list", { name: "Waiting for your decision" });
+    expect(
+      within(waiting).getAllByRole("link", { name: "Spend without results" })[0],
+    ).toHaveAttribute("href", expect.stringContaining("/recommendations/"));
     expect(
       await screen.findByRole("list", { name: "Open recommendations for this campaign" }),
     ).toHaveTextContent("Spend without results — Pause the campaign");

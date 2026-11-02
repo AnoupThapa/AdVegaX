@@ -159,3 +159,139 @@
     display: none;
   }
 }
+
+/* Key figures: one ruled strip, not four boxes. Each figure is compared with the period just
+   before; only rises and falls that are good or bad get colour (sage or terracotta), and the
+   words always say which way it went. */
+.kpis {
+  list-style: none;
+  margin: var(--space-6) 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 2px solid var(--color-text);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.kpi {
+  display: grid;
+  align-content: start;
+  gap: var(--space-1);
+  padding: var(--space-4) var(--space-4) var(--space-4) 0;
+  animation: kpiIn var(--duration-base) var(--ease-out) both;
+}
+
+.kpi:nth-child(2) {
+  animation-delay: 50ms;
+}
+
+.kpi:nth-child(3) {
+  animation-delay: 100ms;
+}
+
+.kpi:nth-child(4) {
+  animation-delay: 150ms;
+}
+
+@keyframes kpiIn {
+  from {
+    opacity: 0;
+    transform: translateY(0.375rem);
+  }
+}
+
+.kpi:nth-child(even) {
+  padding-left: var(--space-4);
+  border-left: 1px solid var(--color-border);
+}
+
+.kpi:nth-child(-n + 2) {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.kpiLabel {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.kpiValue {
+  font-family: var(--font-display);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: -0.02em;
+  line-height: var(--line-height-tight);
+}
+
+.kpiMissing {
+  font-size: var(--font-size-sm);
+  color: var(--status-warning-fg);
+}
+
+.changeGood,
+.changeBad,
+.changeFlat,
+.changeNone {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.changeGood {
+  color: var(--status-success-fg);
+}
+
+.changeBad {
+  color: var(--status-warning-fg);
+}
+
+.changeFlat {
+  color: var(--color-text-muted);
+}
+
+.changeNone {
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-regular);
+}
+
+.kpiTrend {
+  color: var(--color-accent);
+  margin-top: var(--space-1);
+}
+
+.kpiTrend polyline {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: draw var(--duration-slow) var(--ease-out) 200ms forwards;
+}
+
+@keyframes draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.statement strong {
+  font-family: var(--font-display);
+}
+
+@media (min-width: 64rem) {
+  .kpis {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .kpi {
+    padding: var(--space-5) var(--space-5) var(--space-5) 0;
+  }
+
+  .kpi + .kpi {
+    padding-left: var(--space-5);
+    border-left: 1px solid var(--color-border);
+  }
+
+  .kpi:nth-child(-n + 2) {
+    border-bottom: 0;
+  }
+
+  .kpiValue {
+    font-size: var(--font-size-2xl);
+  }
+}

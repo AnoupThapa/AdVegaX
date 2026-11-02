@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CampaignPage } from "@/features/advertising/CampaignPage";
 import { ChangeDetailPage, ChangesPage } from "@/features/changes/ChangesPages";
 import { reasonText, statusLabel } from "@/features/changes/labels";
+import { RecentChanges } from "@/features/changes/RecentChanges";
 import { ConnectionDetailPage } from "@/features/connections/ConnectionDetailPage";
 import { OrganizationSettings } from "@/features/organizations/OrganizationSettings";
 import { OrganizationShell } from "@/features/organizations/OrganizationShell";
@@ -786,5 +787,28 @@ describe("Change descriptions", () => {
       "Pause the campaign",
     );
     expect(statusLabel("something_new")).toEqual({ label: "something_new", tone: "warn" });
+  });
+});
+
+describe("Recent changes on the Overview", () => {
+  it("lists the latest changes with their state, and links to all of them", async () => {
+    base("viewer", {
+      [`GET ${ORG_PATH}/actions`]: ok([action(), action({ id: "a2", campaign: null })]),
+    });
+    render(<RecentChanges org={testOrg()} />, `/orgs/${ORG_ID}`);
+    const list = await screen.findByRole("list", { name: "Recent changes" });
+    expect(within(list).getAllByRole("listitem")).toHaveLength(2);
+    expect(list).toHaveTextContent("Daily budget from A$50.00 to A$60.00");
+    expect(list).toHaveTextContent("Gloves - Search");
+    expect(screen.getByRole("link", { name: "See all changes" })).toHaveAttribute(
+      "href",
+      `/orgs/${ORG_ID}/changes`,
+    );
+  });
+
+  it("says where changes will appear when there are none", async () => {
+    base("viewer");
+    render(<RecentChanges org={testOrg()} />, `/orgs/${ORG_ID}`);
+    expect(await screen.findByText(/No changes yet/)).toBeVisible();
   });
 });

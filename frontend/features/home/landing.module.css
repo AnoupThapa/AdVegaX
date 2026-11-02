@@ -1,32 +1,69 @@
-/* Public home page. Layout varies by section on purpose: hero, steps, split, grid, list. */
+/* Public home page. One slate block opens the page (the product on its own ground); the rest
+   sits on the page itself, separated by space and rules rather than boxes. */
 
 .landing {
-  max-width: var(--content-max-width);
-  margin: 0 auto;
-  padding: 0 var(--gutter);
   display: grid;
   gap: var(--space-16);
   padding-bottom: var(--space-16);
 }
 
 .hero {
+  background: var(--color-slate);
+  color: var(--color-on-slate);
+}
+
+.heroInner,
+.body,
+.closingInner {
+  width: 100%;
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  padding-inline: var(--gutter);
+}
+
+.heroInner {
   display: grid;
   gap: var(--space-10);
   align-items: center;
-  padding-top: var(--space-10);
+  padding-block: var(--space-12) var(--space-16);
+}
+
+.heroText > * {
+  animation: rise var(--duration-slow) var(--ease-out) both;
+}
+
+.heroText > :nth-child(2) {
+  animation-delay: 80ms;
+}
+
+.heroText > :nth-child(3) {
+  animation-delay: 160ms;
+}
+
+.heroText > :nth-child(4) {
+  animation-delay: 240ms;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
 }
 
 .heroTitle {
   font-size: var(--font-size-3xl);
-  line-height: 1.1;
-  margin-bottom: var(--space-4);
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+  margin-bottom: var(--space-5);
+  max-width: 18ch;
 }
 
 .lead {
-  max-width: 38rem;
-  margin: 0 0 var(--space-6);
+  max-width: 36rem;
+  margin: 0 0 var(--space-8);
   font-size: var(--font-size-lg);
-  color: var(--color-text-muted);
+  color: var(--color-on-slate-muted);
 }
 
 .actions {
@@ -36,16 +73,19 @@
 }
 
 .primaryAction,
-.secondaryAction {
+.heroSecondary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-height: var(--touch-target);
-  padding: 0 var(--space-5);
+  padding: 0 var(--space-6);
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   font-weight: var(--font-weight-semibold);
   text-decoration: none;
+  transition:
+    transform var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out);
 }
 
 .primaryAction {
@@ -53,37 +93,91 @@
   color: var(--color-accent-contrast);
 }
 
-.secondaryAction {
-  background: var(--color-surface);
-  color: var(--color-text);
-  border-color: var(--color-control-border);
+.heroSecondary {
+  color: var(--color-on-slate);
+  border-color: var(--color-on-slate-border);
 }
 
+.primaryAction:hover,
+.heroSecondary:hover {
+  transform: translateY(-1px);
+}
+
+.heroSecondary:hover {
+  background: var(--color-slate-2);
+}
+
+.hero :focus-visible {
+  outline-color: var(--color-on-slate-accent);
+}
+
+.heroFacts {
+  list-style: none;
+  margin: var(--space-8) 0 0;
+  padding: var(--space-4) 0 0;
+  border-top: 1px solid var(--color-on-slate-border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-6);
+  font-size: var(--font-size-sm);
+  color: var(--color-on-slate-muted);
+}
+
+.heroFacts li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.heroFacts li::before {
+  content: "";
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--color-on-slate-accent);
+}
+
+.heroShot,
 .shot {
   margin: 0;
   min-width: 0;
 }
 
+.heroShot img,
 .shot img {
   display: block;
   width: 100%;
   height: auto;
-  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
+}
+
+.heroShot img {
+  border: 1px solid var(--color-on-slate-border);
+  box-shadow: var(--shadow-lg);
+}
+
+.shot img {
+  border: 1px solid var(--color-border);
   box-shadow: var(--shadow-md);
 }
 
+.heroShot figcaption,
 .shot figcaption {
   margin-top: var(--space-2);
   font-size: var(--font-size-sm);
   color: var(--color-text-muted);
 }
 
-.band {
-  padding-top: var(--space-10);
-  border-top: 1px solid var(--color-border);
+.heroShot figcaption {
+  color: var(--color-on-slate-muted);
 }
 
+.body {
+  display: grid;
+  gap: var(--space-16);
+}
+
+/* How it works: a real sequence, so it is numbered, and a rule joins the steps on wide screens. */
 .steps {
   list-style: none;
   margin: var(--space-6) 0 0;
@@ -95,7 +189,7 @@
 
 .steps li {
   position: relative;
-  padding-left: var(--space-10);
+  padding-left: var(--space-12);
   counter-increment: step;
 }
 
@@ -106,12 +200,14 @@
   top: 0;
   display: grid;
   place-items: center;
-  width: 2rem;
-  height: 2rem;
+  width: 2.25rem;
+  height: 2.25rem;
   border-radius: 50%;
-  background: var(--color-accent-bg);
+  border: 2px solid var(--color-accent);
+  background: var(--color-bg);
   color: var(--color-accent-text);
-  font-weight: var(--font-weight-bold);
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-semibold);
 }
 
 .steps h3 {
@@ -129,7 +225,7 @@
   align-items: center;
 }
 
-.split p {
+.splitText p {
   color: var(--color-text-muted);
   max-width: 36rem;
 }
@@ -139,13 +235,15 @@
   margin: var(--space-6) 0 0;
   padding: 0;
   display: grid;
-  gap: var(--space-6);
+  border-top: 1px solid var(--color-border);
 }
 
 .controls li {
   display: flex;
   gap: var(--space-4);
   align-items: flex-start;
+  padding: var(--space-6) 0;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .controls svg {
@@ -163,19 +261,15 @@
   color: var(--color-text-muted);
 }
 
-.platforms {
-  padding-top: var(--space-10);
-  border-top: 1px solid var(--color-border);
-}
-
 .platformList {
   list-style: none;
   margin: var(--space-4) 0;
   padding: 0;
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2) var(--space-6);
-  font-size: var(--font-size-lg);
+  gap: var(--space-2) var(--space-8);
+  font-family: var(--font-display);
+  font-size: var(--font-size-xl);
   font-weight: var(--font-weight-semibold);
 }
 
@@ -185,14 +279,33 @@
 }
 
 .closing {
-  padding: var(--space-10) var(--space-6);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: var(--color-slate);
+  color: var(--color-on-slate);
+}
+
+.closingInner {
+  display: grid;
+  gap: var(--space-6);
+  align-items: center;
+  padding-block: var(--space-12);
+}
+
+.closing h2 {
+  margin-bottom: var(--space-2);
 }
 
 .closing p {
-  color: var(--color-text-muted);
+  margin: 0;
+  color: var(--color-on-slate-muted);
+}
+
+.closing :focus-visible {
+  outline-color: var(--color-on-slate-accent);
+}
+
+/* The closing block ends the page: no gap below it. */
+.landing:has(.closing) {
+  padding-bottom: 0;
 }
 
 @media (min-width: 48rem) {
@@ -203,14 +316,19 @@
 
   .controls {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--space-8);
+    column-gap: var(--space-10);
+  }
+
+  .closingInner {
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 }
 
 @media (min-width: 64rem) {
-  .hero {
+  .heroInner {
     grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
     gap: var(--space-12);
+    padding-block: var(--space-16) var(--space-24);
   }
 
   .split {
@@ -220,9 +338,30 @@
 
   .steps {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--space-6);
+  }
+
+  /* Steps read left to right along one rule, number above text. */
+  .steps li {
+    padding: var(--space-12) 0 0;
+  }
+
+  .steps li::after {
+    content: "";
+    position: absolute;
+    top: 1.125rem;
+    left: 2.75rem;
+    right: calc(-1 * var(--space-6) + var(--space-2));
+    border-top: 2px solid var(--color-border);
+  }
+
+  .steps li:last-child::after {
+    display: none;
   }
 }
 
 .signedIn {
-  padding-top: var(--space-8);
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  padding: var(--space-8) var(--gutter);
 }
