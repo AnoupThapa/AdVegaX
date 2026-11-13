@@ -9,9 +9,11 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import select, text
+from sqlalchemy import ColumnElement, func, or_, select, text
 
 from app.core.errors import Conflict, Forbidden, NotFound, ValidationFailed
+from app.core.request_meta import RequestMeta
+from app.core.security.throttle import Limit
 from app.core.settings import Settings
 from app.domains.audit.service import Actor, record_audit
 from app.domains.identity.models import User
@@ -32,6 +34,9 @@ from app.runtime import Runtime
 
 PENDING = "admin-totp-pending:{user}"
 VERIFIED = "admin-verified:{session}"
+# A code's time step once accepted, so the same code cannot be used again (QA-013).
+USED = "admin-totp-used:{user}:{step}"
+FIFTEEN_MINUTES = 15 * 60
 
 
 class AdminRequired(Forbidden):
@@ -100,12 +105,38 @@ class AdminService:
         )
         return TotpSetupOut(secret=secret, uri=totp.uri(secret, principal.email))
 
-    def enable(self, principal: Principal, code: str) -> AdminMeOut:
+    def _check_code(
+        self, principal: Principal, meta: RequestMeta, secret: str | None, code: str
+    ) -> None:
+        """Count the attempt (per person and per address), refuse a wrong or reused code and
+        record failures in the audit log (QA-003, QA-013)."""
+        s = self.rt.settings
+        self.rt.throttler.hit(
+            Limit("admin_code_user", s.THROTTLE_ADMIN_CODE_PER_USER_PER_15_MIN, FIFTEEN_MINUTES),
+            str(principal.user_id),
+        )
+        self.rt.throttler.hit(
+            Limit("admin_code_ip", s.THROTTLE_ADMIN_CODE_PER_IP_PER_15_MIN, FIFTEEN_MINUTES),
+            meta.ip,
+        )
+        step = totp.match(secret, code, self.rt.clock.now()) if secret else None
+        fresh = step is not None and bool(
+            self.rt.redis.set(
+                USED.format(user=principal.user_id, step=step),
+                "1",
+                nx=True,
+                ex=totp.STEP * (2 * totp.WINDOW + 2),
+            )
+        )
+        if not fresh:
+            self._audit(principal, "platform.code_failed", reused=step is not None)
+            raise ValidationFailed(details=[{"field": "code", "reason": "wrong_code"}])
+
+    def enable(self, principal: Principal, code: str, meta: RequestMeta) -> AdminMeOut:
         self._admin(principal)
         pending = self.rt.redis.get(PENDING.format(user=principal.user_id))
         secret = pending.decode() if isinstance(pending, bytes) else pending
-        if not secret or not totp.verify(str(secret), code, self.rt.clock.now()):
-            raise ValidationFailed(details=[{"field": "code", "reason": "wrong_code"}])
+        self._check_code(principal, meta, str(secret) if secret else None, code)
         with self.rt.db.transaction(system=True) as session:
             admin = session.get(PlatformAdmin, principal.user_id, with_for_update=True)
             assert admin is not None
@@ -116,11 +147,10 @@ class AdminService:
         self._audit(principal, "platform.two_step_on")
         return self.me(principal)
 
-    def verify(self, principal: Principal, code: str) -> AdminMeOut:
+    def verify(self, principal: Principal, code: str, meta: RequestMeta) -> AdminMeOut:
         admin = self._admin(principal)
         secret = store.open_totp(self.rt.cipher, admin)
-        if secret is None or not totp.verify(secret, code, self.rt.clock.now()):
-            raise ValidationFailed(details=[{"field": "code", "reason": "wrong_code"}])
+        self._check_code(principal, meta, secret, code)
         self._mark(principal)
         self._audit(principal, "platform.signed_in")
         return self.me(principal)
@@ -200,15 +230,34 @@ class AdminService:
         return self.settings(principal)
 
     # ------------------------------------------------------------------ organizations, people
-    def organizations(self, principal: Principal) -> list[AdminOrganizationOut]:
+    def organizations(
+        self,
+        principal: Principal,
+        *,
+        query: str = "",
+        status: str | None = None,
+        page: int = 1,
+        page_size: int = 50,
+    ) -> tuple[list[AdminOrganizationOut], int]:
+        """One page of organizations by name, searched and filtered in the database (QA-011)."""
         self.require(principal)
+        where: list[ColumnElement[bool]] = []
+        if query.strip():
+            where.append(Organization.name.ilike(f"%{_like(query.strip())}%", escape="\\"))
+        if status:
+            where.append(Organization.status == status)
         with self.rt.db.transaction(system=True) as session:
+            total = session.execute(
+                select(func.count()).select_from(Organization).where(*where)
+            ).scalar_one()
             rows = session.execute(
-                select(Organization.id, Organization.name, Organization.status).order_by(
-                    Organization.name
-                )
+                select(Organization.id, Organization.name, Organization.status)
+                .where(*where)
+                .order_by(Organization.name, Organization.id)
+                .offset((page - 1) * page_size)
+                .limit(page_size)
             ).all()
-        return [AdminOrganizationOut(id=r.id, name=r.name, status=r.status) for r in rows]
+        return [AdminOrganizationOut(id=r.id, name=r.name, status=r.status) for r in rows], total
 
     def set_status(
         self, principal: Principal, org_id: uuid.UUID, status: str
@@ -234,16 +283,40 @@ class AdminService:
         )
         return AdminOrganizationOut(id=row.id, name=row.name, status=row.status)
 
-    def users(self, principal: Principal) -> list[AdminUserOut]:
+    def users(
+        self,
+        principal: Principal,
+        *,
+        query: str = "",
+        sort: str = "newest",
+        page: int = 1,
+        page_size: int = 50,
+    ) -> tuple[list[AdminUserOut], int]:
+        """One page of people, searched by email or name in the database (QA-011)."""
         self.require(principal)
+        where: list[ColumnElement[bool]] = []
+        if query.strip():
+            pattern = f"%{_like(query.strip())}%"
+            where.append(
+                or_(
+                    User.email.ilike(pattern, escape="\\"),
+                    User.display_name.ilike(pattern, escape="\\"),
+                )
+            )
+        order = (User.email, User.id) if sort == "email" else (User.created_at.desc(), User.id)
         with self.rt.db.transaction(system=True) as session:
             admins = set(session.execute(select(PlatformAdmin.user_id)).scalars())
+            total = session.execute(
+                select(func.count()).select_from(User).where(*where)
+            ).scalar_one()
             rows = session.execute(
                 select(User.id, User.email, User.display_name, User.status, User.created_at)
-                .order_by(User.created_at.desc())
-                .limit(500)
+                .where(*where)
+                .order_by(*order)
+                .offset((page - 1) * page_size)
+                .limit(page_size)
             ).all()
-        return [
+        people = [
             AdminUserOut(
                 id=r.id,
                 email=r.email,
@@ -254,6 +327,7 @@ class AdminService:
             )
             for r in rows
         ]
+        return people, total
 
     def health(self, principal: Principal) -> HealthOut:
         self.require(principal)
@@ -271,13 +345,38 @@ class AdminService:
         switches = {
             e.name: bool(getattr(self.rt.settings, e.name)) for e in ENTRIES if e.kind == "switch"
         }
+        counts = {}
+        if database:
+            with self.rt.db.transaction(system=True) as session:
+                counts = {
+                    "organizations_total": session.execute(
+                        select(func.count()).select_from(Organization)
+                    ).scalar_one(),
+                    "organizations_active": session.execute(
+                        select(func.count())
+                        .select_from(Organization)
+                        .where(Organization.status == "active")
+                    ).scalar_one(),
+                    "people_total": session.execute(
+                        select(func.count()).select_from(User)
+                    ).scalar_one(),
+                    "administrators": session.execute(
+                        select(func.count()).select_from(PlatformAdmin)
+                    ).scalar_one(),
+                }
         return HealthOut(
+            **counts,
             database=database,
             redis=redis_ok,
             environment=str(self.rt.settings.ENVIRONMENT),
             switches=switches,
             restart_needed=bool(self.rt.redis.exists("platform-settings:changed")),
         )
+
+
+def _like(text_: str) -> str:
+    """Escape LIKE wildcards so a search for "50%" finds "50%" and nothing else."""
+    return text_.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
 def _hint(kind: str, value: object) -> str | None:

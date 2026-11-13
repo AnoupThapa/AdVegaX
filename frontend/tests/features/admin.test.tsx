@@ -7,6 +7,15 @@ import { clearCsrfToken } from "@/lib/api/csrf";
 
 import { click, fill } from "../support/forms";
 import { fail, mockApi, ok } from "../support/mock-api";
+
+const okList = (items: unknown[], total = items.length) =>
+  new Response(
+    JSON.stringify({
+      data: items,
+      meta: { request_id: "req-test", page: 1, page_size: 50, total },
+    }),
+    { status: 200, headers: { "content-type": "application/json" } },
+  );
 import { resetNavigation } from "../support/navigation";
 import { renderWithProviders, testUser } from "../support/render";
 
@@ -42,10 +51,10 @@ const portal = {
       hint: "off",
     }),
   ]),
-  "GET /api/v1/admin/organizations": ok([
+  "GET /api/v1/admin/organizations": okList([
     { id: "0b6f3f0e-1f2a-4c1e-9a55-3f1f0d1f2a3b", name: "Eve Zone", status: "active" },
   ]),
-  "GET /api/v1/admin/users": ok([
+  "GET /api/v1/admin/users": okList([
     {
       id: "11111111-1f2a-4c1e-9a55-3f1f0d1f2a3b",
       email: "demo@advegax.local",
@@ -61,6 +70,10 @@ const portal = {
     environment: "local",
     switches: { AGENCY_ENABLED: false },
     restart_needed: false,
+    organizations_total: 1,
+    organizations_active: 1,
+    people_total: 1,
+    administrators: 1,
   }),
 };
 
@@ -156,6 +169,10 @@ describe("Admin portal", () => {
       }),
     );
     click(screen.getByRole("button", { name: "Suspend Eve Zone" }));
+    // QA-018: suspending asks first; nothing is sent until it is confirmed.
+    const confirm = await screen.findByRole("dialog", { name: "Suspend Eve Zone?" });
+    expect(api.apiCalls().some((c) => c.path.endsWith("/status"))).toBe(false);
+    click(within(confirm).getByRole("button", { name: "Suspend" }));
     await waitFor(() => expect(api.apiCalls().some((c) => c.path.endsWith("/status"))).toBe(true));
     expect(screen.getByRole("table", { name: "People" })).toHaveTextContent("demo@advegax.local");
     expect(screen.getAllByText("OK")).toHaveLength(2);
@@ -239,56 +256,113 @@ describe("Admin portal states", () => {
 });
 
 describe("Admin portal tables and figures", () => {
-  it("counts what is in use and filters organizations and people", async () => {
-    mockApi({
+  const ORGS = [
+    { id: "0b6f3f0e-1f2a-4c1e-9a55-3f1f0d1f2a3b", name: "Eve Zone", status: "active" },
+    { id: "1b6f3f0e-1f2a-4c1e-9a55-3f1f0d1f2a3b", name: "Mediflex", status: "suspended" },
+  ];
+  const PEOPLE = [
+    {
+      id: "11111111-1f2a-4c1e-9a55-3f1f0d1f2a3b",
+      email: "demo@advegax.local",
+      display_name: "Demo",
+      status: "active",
+      created_at: "2026-10-28T00:00:00Z",
+      is_admin: true,
+    },
+    {
+      id: "22222222-1f2a-4c1e-9a55-3f1f0d1f2a3b",
+      email: "sam@example.com",
+      display_name: null,
+      status: "pending_verification",
+      created_at: "2026-10-29T00:00:00Z",
+      is_admin: false,
+    },
+  ];
+
+  it("shows the counts, and searches, filters, sorts and pages on the server", async () => {
+    const api = mockApi({
       "GET /api/v1/auth/me": ok(me),
       [ME]: ok(admin()),
       ...portal,
-      "GET /api/v1/admin/organizations": ok([
-        { id: "0b6f3f0e-1f2a-4c1e-9a55-3f1f0d1f2a3b", name: "Eve Zone", status: "active" },
-        { id: "1b6f3f0e-1f2a-4c1e-9a55-3f1f0d1f2a3b", name: "Mediflex", status: "suspended" },
-      ]),
-      "GET /api/v1/admin/users": ok([
-        {
-          id: "11111111-1f2a-4c1e-9a55-3f1f0d1f2a3b",
-          email: "demo@advegax.local",
-          display_name: "Demo",
-          status: "active",
-          created_at: "2026-10-28T00:00:00Z",
-          is_admin: true,
-        },
-        {
-          id: "22222222-1f2a-4c1e-9a55-3f1f0d1f2a3b",
-          email: "sam@example.com",
-          display_name: null,
-          status: "pending_verification",
-          created_at: "2026-10-29T00:00:00Z",
-          is_admin: false,
-        },
-      ]),
+      "GET /api/v1/admin/health": ok({
+        database: true,
+        redis: true,
+        environment: "local",
+        switches: {},
+        restart_needed: false,
+        organizations_total: 120,
+        organizations_active: 119,
+        people_total: 2,
+        administrators: 1,
+      }),
+      "GET /api/v1/admin/organizations": ({ query }) => {
+        const q = (query.get("q") ?? "").toLowerCase();
+        const status = query.get("status");
+        const items = ORGS.filter(
+          (o) => o.name.toLowerCase().includes(q) && (!status || o.status === status),
+        );
+        return okList(items, q || status ? items.length : 120);
+      },
+      "GET /api/v1/admin/users": ({ query }) => {
+        const q = (query.get("q") ?? "").toLowerCase();
+        return okList(PEOPLE.filter((u) => u.email.includes(q)));
+      },
     });
     render();
-    const orgs = await screen.findByRole("table", { name: "Organizations" });
+    const orgs = await screen.findByRole("table", { name: "Organizations, by name" });
     expect(within(orgs).getByText("Suspended")).toBeVisible();
-    expect(screen.getByText("1 active")).toBeVisible();
+    expect(screen.getByText("119 active")).toBeVisible();
     expect(screen.getByText("1 administrator")).toBeVisible();
     expect(screen.getAllByText("of 1", { selector: "span" })).toHaveLength(2);
+    expect(screen.getByText("Showing 1–2 of 120")).toBeVisible();
+
+    const pages = screen.getByRole("navigation", { name: "Organizations pages" });
+    expect(within(pages).getByRole("button", { name: "Previous" })).toBeDisabled();
+    click(within(pages).getByRole("button", { name: "Next" }));
+    await waitFor(() => expect(api.apiCalls().some((c) => c.query.get("page") === "2")).toBe(true));
 
     fill(screen.getByLabelText("Find an organization"), "medi");
-    expect(within(orgs).queryByText("Eve Zone")).not.toBeInTheDocument();
-    expect(screen.getByText("Showing 1 of 2")).toBeVisible();
+    await waitFor(() => expect(within(orgs).queryByText("Eve Zone")).not.toBeInTheDocument());
+    expect(api.apiCalls().some((c) => c.query.get("q") === "medi")).toBe(true);
     fill(screen.getByLabelText("Find an organization"), "");
-    fill(screen.getByLabelText("Status"), "active");
-    expect(within(orgs).queryByText("Mediflex")).not.toBeInTheDocument();
     fill(screen.getByLabelText("Status"), "suspended");
+    await waitFor(() =>
+      expect(api.apiCalls().some((c) => c.query.get("status") === "suspended")).toBe(true),
+    );
     fill(screen.getByLabelText("Find an organization"), "eve");
-    expect(screen.getByText("No organization matches.")).toBeVisible();
+    expect(await screen.findByText("No organization matches.")).toBeVisible();
 
     const people = screen.getByRole("table", { name: "People" });
     expect(within(people).getByText("Pending verification")).toBeVisible();
-    fill(screen.getByLabelText("Find a person by email or name"), "demo");
-    expect(within(people).queryByText("sam@example.com")).not.toBeInTheDocument();
+    fill(screen.getByLabelText("Order"), "email");
+    await waitFor(() =>
+      expect(api.apiCalls().some((c) => c.query.get("sort") === "email")).toBe(true),
+    );
     fill(screen.getByLabelText("Find a person by email or name"), "nobody");
-    expect(screen.getByText("No one matches.")).toBeVisible();
+    expect(await screen.findByText("No one matches.")).toBeVisible();
+  });
+
+  it("reactivates without asking, and cancelling a suspension sends nothing", async () => {
+    const api = mockApi({
+      "GET /api/v1/auth/me": ok(me),
+      [ME]: ok(admin()),
+      ...portal,
+      "GET /api/v1/admin/organizations": okList(ORGS),
+      "PUT /api/v1/admin/organizations/1b6f3f0e-1f2a-4c1e-9a55-3f1f0d1f2a3b/status": ok({
+        ...ORGS[1],
+        status: "active",
+      }),
+    });
+    render();
+    click(await screen.findByRole("button", { name: "Suspend Eve Zone" }));
+    const confirm = await screen.findByRole("dialog", { name: "Suspend Eve Zone?" });
+    click(within(confirm).getByRole("button", { name: "Cancel" }));
+    click(screen.getByRole("button", { name: "Reactivate Mediflex" }));
+    await waitFor(() =>
+      expect(api.apiCalls().find((c) => c.path.endsWith("/status"))?.body).toEqual({
+        status: "active",
+      }),
+    );
+    expect(api.apiCalls().filter((c) => c.path.endsWith("/status"))).toHaveLength(1);
   });
 });

@@ -57,6 +57,22 @@ def _origin_of(url: str | None) -> str | None:
     return f"{parts.scheme}://{parts.netloc}"
 
 
+async def _read_at_most(request: Request, limit: int) -> bytes | None:
+    """The body, read chunk by chunk and abandoned as soon as it passes ``limit`` — a body
+    sent without a Content-Length (chunked) is never held in memory whole (QA-012). The
+    bytes read are kept on the request, so the endpoint receives them as usual."""
+    chunks: list[bytes] = []
+    size = 0
+    async for chunk in request.stream():
+        size += len(chunk)
+        if size > limit:
+            return None
+        chunks.append(chunk)
+    body = b"".join(chunks)
+    request._body = body  # what Starlette's request.body() caches and replays downstream
+    return body
+
+
 class RequestGuardMiddleware(BaseHTTPMiddleware):
     """Rejects oversized and non-JSON bodies and enforces Origin + CSRF on unsafe methods."""
 
@@ -78,8 +94,8 @@ class RequestGuardMiddleware(BaseHTTPMiddleware):
         length = request.headers.get("content-length")
         if length is not None and (not length.isdigit() or int(length) > limit):
             return error_response(PayloadTooLarge())
-        body = await request.body()
-        if len(body) > limit:
+        body = await _read_at_most(request, limit)
+        if body is None:
             return error_response(PayloadTooLarge())
         if body:
             content_type = request.headers.get("content-type", "").split(";")[0].strip().lower()

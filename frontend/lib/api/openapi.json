@@ -7075,46 +7075,6 @@
         "title": "Envelope[list[AdAccountOut]]",
         "type": "object"
       },
-      "Envelope_list_AdminOrganizationOut__": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/AdminOrganizationOut"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "meta": {
-            "$ref": "#/components/schemas/Meta"
-          }
-        },
-        "required": [
-          "data",
-          "meta"
-        ],
-        "title": "Envelope[list[AdminOrganizationOut]]",
-        "type": "object"
-      },
-      "Envelope_list_AdminUserOut__": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/AdminUserOut"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "meta": {
-            "$ref": "#/components/schemas/Meta"
-          }
-        },
-        "required": [
-          "data",
-          "meta"
-        ],
-        "title": "Envelope[list[AdminUserOut]]",
-        "type": "object"
-      },
       "Envelope_list_AnalyticsPropertyOut__": {
         "properties": {
           "data": {
@@ -8391,6 +8351,46 @@
           "meta"
         ],
         "title": "ListEnvelope[ActionOut]",
+        "type": "object"
+      },
+      "ListEnvelope_AdminOrganizationOut_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/AdminOrganizationOut"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ListMeta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "ListEnvelope[AdminOrganizationOut]",
+        "type": "object"
+      },
+      "ListEnvelope_AdminUserOut_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/AdminUserOut"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ListMeta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "ListEnvelope[AdminUserOut]",
         "type": "object"
       },
       "ListEnvelope_AuditLogOut_": {
@@ -11784,6 +11784,11 @@
       },
       "app__domains__platform__schemas__HealthOut": {
         "properties": {
+          "administrators": {
+            "default": 0,
+            "title": "Administrators",
+            "type": "integer"
+          },
           "database": {
             "title": "Database",
             "type": "boolean"
@@ -11791,6 +11796,21 @@
           "environment": {
             "title": "Environment",
             "type": "string"
+          },
+          "organizations_active": {
+            "default": 0,
+            "title": "Organizations Active",
+            "type": "integer"
+          },
+          "organizations_total": {
+            "default": 0,
+            "title": "Organizations Total",
+            "type": "integer"
+          },
+          "people_total": {
+            "default": 0,
+            "title": "People Total",
+            "type": "integer"
           },
           "redis": {
             "title": "Redis",
@@ -11872,16 +11892,83 @@
     "/api/v1/admin/organizations": {
       "get": {
         "operationId": "list_organizations_api_v1_admin_organizations_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 120,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "active",
+                    "suspended"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "maximum": 10000,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Envelope_list_AdminOrganizationOut__"
+                  "$ref": "#/components/schemas/ListEnvelope_AdminOrganizationOut_"
                 }
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "List Organizations",
@@ -12164,16 +12251,77 @@
     "/api/v1/admin/users": {
       "get": {
         "operationId": "list_users_api_v1_admin_users_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 254,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "default": "newest",
+              "enum": [
+                "newest",
+                "email"
+              ],
+              "title": "Sort",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "maximum": 10000,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Envelope_list_AdminUserOut__"
+                  "$ref": "#/components/schemas/ListEnvelope_AdminUserOut_"
                 }
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "List Users",

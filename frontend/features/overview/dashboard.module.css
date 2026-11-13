@@ -89,7 +89,6 @@
 
 @keyframes itemIn {
   from {
-    opacity: 0;
     transform: translateX(-0.25rem);
   }
 }

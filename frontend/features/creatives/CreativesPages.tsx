@@ -77,6 +77,7 @@ function ImageLibrary({ org }: { org: Organization }) {
           <label htmlFor="image-upload">Add an image</label>
           <input
             id="image-upload"
+            className={own.fileInput}
             ref={input}
             type="file"
             accept="image/jpeg,image/png,image/webp"

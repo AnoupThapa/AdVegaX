@@ -256,3 +256,17 @@
     border-right: 1px solid var(--color-border);
   }
 }
+
+/* "Showing 1–50 of 240" with Previous and Next (QA-011). */
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+}
+
+.pagerButtons {
+  display: flex;
+  gap: var(--space-2);
+}

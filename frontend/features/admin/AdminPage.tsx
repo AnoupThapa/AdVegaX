@@ -1,10 +1,11 @@
 "use client";
 
-import { useId, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
 
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { DataTable, type Column } from "@/components/ui/DataTable";
 import { PageHeading } from "@/components/ui/PageHeading";
 import { SelectField } from "@/components/ui/SelectField";
@@ -26,11 +27,16 @@ import {
   useTwoStepEnable,
   useTwoStepSetup,
   useTwoStepVerify,
+  ADMIN_PAGE_SIZE,
   type AdminSetting,
+  type OrganizationQuery,
+  type UserQuery,
 } from "./api";
 
-type AdminOrganization = NonNullable<ReturnType<typeof useAdminOrganizations>["data"]>[number];
-type AdminUser = NonNullable<ReturnType<typeof useAdminUsers>["data"]>[number];
+type AdminOrganization = NonNullable<
+  ReturnType<typeof useAdminOrganizations>["data"]
+>["items"][number];
+type AdminUser = NonNullable<ReturnType<typeof useAdminUsers>["data"]>["items"][number];
 
 /** The Admin portal (Phase 16): for the people who run this AdVegaX installation. */
 export function AdminPage() {
@@ -191,14 +197,10 @@ function Metric({ label, children }: { label: string; children: ReactNode }) {
 /** System health and the installation at a glance: what is reachable, and how much is in use. */
 function Health() {
   const health = useAdminHealth(true);
-  const orgs = useAdminOrganizations(true);
-  const users = useAdminUsers(true);
   const settings = useAdminSettings(true);
   const h = health.data;
   const ok = (good: boolean | undefined) =>
     good ? <Badge tone="success">OK</Badge> : <Badge tone="danger">Not reachable</Badge>;
-  const active = orgs.data?.filter((o) => o.status === "active").length ?? 0;
-  const admins = users.data?.filter((u) => u.is_admin).length ?? 0;
   const switches = settings.data?.filter((x) => x.kind === "switch") ?? [];
   const values = settings.data?.filter((x) => x.kind !== "switch") ?? [];
   return (
@@ -222,23 +224,23 @@ function Health() {
             </Metric>
           </>
         ) : null}
-        {orgs.data ? (
-          <Metric label="Organizations">
-            <span className={own.metricValue} data-figure>
-              {orgs.data.length}
-            </span>
-            <span className={own.metricNote}>{active} active</span>
-          </Metric>
-        ) : null}
-        {users.data ? (
-          <Metric label="People">
-            <span className={own.metricValue} data-figure>
-              {users.data.length}
-            </span>
-            <span className={own.metricNote}>
-              {admins} {admins === 1 ? "administrator" : "administrators"}
-            </span>
-          </Metric>
+        {h ? (
+          <>
+            <Metric label="Organizations">
+              <span className={own.metricValue} data-figure>
+                {h.organizations_total}
+              </span>
+              <span className={own.metricNote}>{h.organizations_active} active</span>
+            </Metric>
+            <Metric label="People">
+              <span className={own.metricValue} data-figure>
+                {h.people_total}
+              </span>
+              <span className={own.metricNote}>
+                {h.administrators} {h.administrators === 1 ? "administrator" : "administrators"}
+              </span>
+            </Metric>
+          </>
         ) : null}
         {settings.data ? (
           <>
@@ -414,7 +416,12 @@ const STATUS_FILTERS = [
   { value: "suspended", label: "Suspended" },
 ];
 
-/** A search box for a table: filters the rows shown, and says how many match. */
+const SORTS = [
+  { value: "newest", label: "Newest first" },
+  { value: "email", label: "Email, A to Z" },
+];
+
+/** A search box for a list: what is typed is sent to the server a moment after typing stops. */
 function Search({
   label,
   value,
@@ -442,26 +449,66 @@ function Search({
   );
 }
 
-const matches = (query: string, ...texts: (string | null | undefined)[]) =>
-  !query.trim() || texts.some((t) => (t ?? "").toLowerCase().includes(query.trim().toLowerCase()));
+function useDebounced(value: string, ms = 300): string {
+  const [settled, setSettled] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setSettled(value), ms);
+    return () => clearTimeout(timer);
+  }, [value, ms]);
+  return settled;
+}
 
-function Showing({ shown, total }: { shown: number; total: number }) {
+/** "Showing 51–100 of 240", with Previous and Next when there is more than one page. */
+function Pager({
+  page,
+  shown,
+  total,
+  onPage,
+  label,
+}: {
+  page: number;
+  shown: number;
+  total: number;
+  onPage: (page: number) => void;
+  label: string;
+}) {
+  const first = total === 0 ? 0 : (page - 1) * ADMIN_PAGE_SIZE + 1;
+  const last = (page - 1) * ADMIN_PAGE_SIZE + shown;
+  const pages = Math.max(1, Math.ceil(total / ADMIN_PAGE_SIZE));
   return (
-    <p className={own.muted} role="status">
-      {shown === total ? `${total} in all` : `Showing ${shown} of ${total}`}
-    </p>
+    <div className={own.pager}>
+      <p className={own.muted} role="status">
+        {total <= ADMIN_PAGE_SIZE && page === 1
+          ? `${total} in all`
+          : `Showing ${first}–${last} of ${total}`}
+      </p>
+      {pages > 1 ? (
+        <nav aria-label={`${label} pages`} className={own.pagerButtons}>
+          <Button variant="secondary" disabled={page <= 1} onClick={() => onPage(page - 1)}>
+            Previous
+          </Button>
+          <Button variant="secondary" disabled={page >= pages} onClick={() => onPage(page + 1)}>
+            Next
+          </Button>
+        </nav>
+      ) : null}
+    </div>
   );
 }
 
 function Organizations() {
-  const orgs = useAdminOrganizations(true);
+  const [text, setText] = useState("");
+  const [status, setStatus] = useState<OrganizationQuery["status"]>("");
+  const [pageNumber, setPage] = useState(1);
+  const q = useDebounced(text);
+  const orgs = useAdminOrganizations(true, { q, status, page: pageNumber });
   const change = useSetOrganizationStatus();
-  const [query, setQuery] = useState("");
-  const [status, setStatus] = useState("");
-  const all = orgs.data ?? [];
-  const rows = all.filter((o) => matches(query, o.name) && (!status || o.status === status));
+  const [suspending, setSuspending] = useState<AdminOrganization | null>(null);
+  const rows = orgs.data?.items ?? [];
+  const setStatusTo = (o: AdminOrganization, next: "active" | "suspended") =>
+    change.mutate({ id: o.id, status: next }, { onSettled: () => setSuspending(null) });
   const columns: Column<AdminOrganization>[] = [
-    { key: "name", header: "Name", rowHeader: true, cell: (o) => o.name, sortValue: (o) => o.name },
+    { key: "name", header: "Name", rowHeader: true, cell: (o) => o.name },
     {
       key: "status",
       header: "Status",
@@ -471,48 +518,81 @@ function Organizations() {
         ) : (
           <Badge tone="warning">Suspended</Badge>
         ),
-      sortValue: (o) => o.status,
     },
     {
       key: "action",
       header: "Action",
-      cell: (o) => (
-        <Button
-          variant="secondary"
-          busy={change.isPending && change.variables?.id === o.id}
-          onClick={() =>
-            change.mutate({ id: o.id, status: o.status === "active" ? "suspended" : "active" })
-          }
-        >
-          {o.status === "active" ? `Suspend ${o.name}` : `Reactivate ${o.name}`}
-        </Button>
-      ),
+      cell: (o) =>
+        o.status === "active" ? (
+          <Button variant="secondary" onClick={() => setSuspending(o)}>
+            {`Suspend ${o.name}`}
+          </Button>
+        ) : (
+          <Button
+            variant="secondary"
+            busy={change.isPending && change.variables?.id === o.id}
+            onClick={() => setStatusTo(o, "active")}
+          >
+            {`Reactivate ${o.name}`}
+          </Button>
+        ),
     },
   ];
   return (
     <section aria-labelledby="admin-orgs" className={own.section}>
       <h2 id="admin-orgs">Organizations</h2>
       {orgs.error ? <Alert tone="error">{messageFor(orgs.error)}</Alert> : null}
+      {change.error ? <Alert tone="error">{messageFor(change.error)}</Alert> : null}
       <div className={own.filters}>
-        <Search label="Find an organization" value={query} onChange={setQuery} />
+        <Search
+          label="Find an organization"
+          value={text}
+          onChange={(value) => {
+            setText(value);
+            setPage(1);
+          }}
+        />
         <SelectField
           label="Status"
           options={STATUS_FILTERS}
           value={status}
-          onChange={(e) => setStatus(e.target.value)}
+          onChange={(e) => {
+            setStatus(e.target.value as OrganizationQuery["status"]);
+            setPage(1);
+          }}
         />
       </div>
-      {orgs.data ? <Showing shown={rows.length} total={all.length} /> : null}
+      {orgs.data ? (
+        <Pager
+          label="Organizations"
+          page={pageNumber}
+          shown={rows.length}
+          total={orgs.data.total}
+          onPage={setPage}
+        />
+      ) : null}
       <DataTable
-        caption="Organizations"
+        caption="Organizations, by name"
         captionHidden
         columns={columns}
         rows={rows}
         getRowKey={(o) => o.id}
         layout="stack"
-        defaultSort={{ key: "name", direction: "ascending" }}
         empty={<p>No organization matches.</p>}
       />
+      <ConfirmDialog
+        open={suspending !== null}
+        title={`Suspend ${suspending?.name ?? ""}?`}
+        confirmLabel="Suspend"
+        busy={change.isPending}
+        onConfirm={() => suspending && setStatusTo(suspending, "suspended")}
+        onCancel={() => setSuspending(null)}
+      >
+        <p>
+          Everyone in this organization loses access straight away, and its scheduled work stops.
+          Nothing is deleted: you can reactivate it here at any time.
+        </p>
+      </ConfirmDialog>
     </section>
   );
 }
@@ -521,24 +601,15 @@ const joined = (value: string) =>
   new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(value));
 
 function People() {
-  const users = useAdminUsers(true);
-  const [query, setQuery] = useState("");
-  const all = users.data ?? [];
-  const rows = all.filter((u) => matches(query, u.email, u.display_name));
+  const [text, setText] = useState("");
+  const [sort, setSort] = useState<UserQuery["sort"]>("newest");
+  const [pageNumber, setPage] = useState(1);
+  const q = useDebounced(text);
+  const users = useAdminUsers(true, { q, sort, page: pageNumber });
+  const rows = users.data?.items ?? [];
   const columns: Column<AdminUser>[] = [
-    {
-      key: "email",
-      header: "Email",
-      rowHeader: true,
-      cell: (u) => u.email,
-      sortValue: (u) => u.email,
-    },
-    {
-      key: "name",
-      header: "Name",
-      cell: (u) => u.display_name ?? "—",
-      sortValue: (u) => u.display_name,
-    },
+    { key: "email", header: "Email", rowHeader: true, cell: (u) => u.email },
+    { key: "name", header: "Name", cell: (u) => u.display_name ?? "—" },
     {
       key: "status",
       header: "Status",
@@ -547,29 +618,46 @@ function People() {
           {u.status.charAt(0).toUpperCase() + u.status.slice(1).replaceAll("_", " ")}
         </Badge>
       ),
-      sortValue: (u) => u.status,
     },
     {
       key: "admin",
       header: "Administrator",
       cell: (u) => (u.is_admin ? <Badge tone="info">Yes</Badge> : "No"),
-      sortValue: (u) => (u.is_admin ? 0 : 1),
     },
-    {
-      key: "joined",
-      header: "Joined",
-      cell: (u) => joined(u.created_at),
-      sortValue: (u) => u.created_at,
-    },
+    { key: "joined", header: "Joined", cell: (u) => joined(u.created_at) },
   ];
   return (
     <section aria-labelledby="admin-people" className={own.section}>
       <h2 id="admin-people">People</h2>
       {users.error ? <Alert tone="error">{messageFor(users.error)}</Alert> : null}
       <div className={own.filters}>
-        <Search label="Find a person by email or name" value={query} onChange={setQuery} />
+        <Search
+          label="Find a person by email or name"
+          value={text}
+          onChange={(value) => {
+            setText(value);
+            setPage(1);
+          }}
+        />
+        <SelectField
+          label="Order"
+          options={SORTS}
+          value={sort}
+          onChange={(e) => {
+            setSort(e.target.value as UserQuery["sort"]);
+            setPage(1);
+          }}
+        />
       </div>
-      {users.data ? <Showing shown={rows.length} total={all.length} /> : null}
+      {users.data ? (
+        <Pager
+          label="People"
+          page={pageNumber}
+          shown={rows.length}
+          total={users.data.total}
+          onPage={setPage}
+        />
+      ) : null}
       <DataTable
         caption="People"
         captionHidden
@@ -577,7 +665,6 @@ function People() {
         rows={rows}
         getRowKey={(u) => u.id}
         layout="stack"
-        defaultSort={{ key: "joined", direction: "descending" }}
         empty={<p>No one matches.</p>}
       />
     </section>

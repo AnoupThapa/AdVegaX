@@ -284,6 +284,8 @@ class SalesEntry(UUIDPrimaryKey, Base):
 
     __tablename__ = "sales_entries"
     __table_args__ = (
+        # QA-017: the foreign key's own columns, so cascades and lookups use an index.
+        Index("ix_sales_entries_organization_id_order_id", "organization_id", "order_id"),
         _tenant_fk(["order_id"], "orders", "fk_sales_entries_order"),
         _tenant_fk(["order_item_id"], "order_items", "fk_sales_entries_order_item", cascade=False),
         _tenant_fk(["store_id"], "stores", "fk_sales_entries_store"),

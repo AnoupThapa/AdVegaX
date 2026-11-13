@@ -108,6 +108,8 @@ class AiRun(UUIDPrimaryKey, Base):
 class CampaignStrategy(UUIDPrimaryKey, Timestamps, Base):
     __tablename__ = "campaign_strategies"
     __table_args__ = (
+        # QA-017: the foreign key's own columns, so cascades and lookups use an index.
+        Index("ix_campaign_strategies_organization_id_product_id", "organization_id", "product_id"),
         ForeignKeyConstraint(
             ["organization_id", "product_id"],
             ["products.organization_id", "products.id"],

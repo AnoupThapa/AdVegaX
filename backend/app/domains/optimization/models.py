@@ -59,6 +59,10 @@ def _user() -> Any:
 class Recommendation(UUIDPrimaryKey, Timestamps, Base):
     __tablename__ = "recommendations"
     __table_args__ = (
+        # QA-017: the foreign key's own columns, so cascades and lookups use an index.
+        Index(
+            "ix_recommendations_organization_id_ad_account_id", "organization_id", "ad_account_id"
+        ),
         UniqueConstraint("organization_id", "id", name="uq_recommendations_organization_id_id"),
         ForeignKeyConstraint(
             ["organization_id", "campaign_id"],
@@ -134,6 +138,12 @@ class Recommendation(UUIDPrimaryKey, Timestamps, Base):
 class RecommendationOutcome(UUIDPrimaryKey, Base):
     __tablename__ = "recommendation_outcomes"
     __table_args__ = (
+        # QA-017: the foreign key's own columns, so cascades and lookups use an index.
+        Index(
+            "ix_recommendation_outcomes_organization_id_recommendation_id",
+            "organization_id",
+            "recommendation_id",
+        ),
         ForeignKeyConstraint(
             ["organization_id", "recommendation_id"],
             ["recommendations.organization_id", "recommendations.id"],

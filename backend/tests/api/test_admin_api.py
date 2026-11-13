@@ -4,9 +4,11 @@ encrypted keys never shown again, switches, organizations and people, health, au
 from __future__ import annotations
 
 import uuid
+from datetime import timedelta
 
 from app.domains.platform import store, totp
 from app.domains.platform.make_admin import make
+from sqlalchemy import text
 
 from tests.api.test_actions_api import rows
 
@@ -65,9 +67,36 @@ def test_two_step_sign_in(make_client, clock):
     assert c.login(ADMIN).status_code == 200
     assert c.get("/admin/settings").json()["error"]["code"] == "ADMIN_CODE_REQUIRED"
     assert c.post("/admin/two-step/verify", {"code": "123456"}).status_code == 422
+    # The code just used to switch two-step on cannot be used again (QA-013) …
+    reused = c.post("/admin/two-step/verify", {"code": code_for(setup["secret"], clock)})
+    assert reused.status_code == 422
+    # … the next one can.
+    clock.advance(timedelta(seconds=totp.STEP * 3))
     ok = c.post("/admin/two-step/verify", {"code": code_for(setup["secret"], clock)})
     assert ok.json()["data"]["verified"] is True
     assert c.get("/admin/settings").status_code == 200
+
+
+def test_two_step_codes_cannot_be_guessed_or_reused(make_client, clock, admin_engine):
+    """QA-003 / QA-013: attempts are limited per person and failures are audited."""
+    c = signed_in_admin(make_client, clock)
+    assert c.login(ADMIN).status_code == 200
+    for _ in range(4):  # the enable call above was the first of five attempts
+        assert c.post("/admin/two-step/verify", {"code": "000000"}).status_code == 422
+    limited = c.post("/admin/two-step/verify", {"code": "000000"})
+    assert limited.status_code == 429
+    # Even the right code is refused while limited …
+    clock.advance(timedelta(seconds=totp.STEP * 3))
+    assert c.post("/admin/two-step/verify", {"code": code_for(c.secret, clock)}).status_code == 429
+    # … and accepted once the window has passed.
+    clock.advance(timedelta(minutes=15))
+    ok = c.post("/admin/two-step/verify", {"code": code_for(c.secret, clock)})
+    assert ok.status_code == 200, ok.text
+    with admin_engine.connect() as conn:
+        failed = conn.execute(
+            text("SELECT count(*) FROM audit_logs WHERE action = 'platform.code_failed'")
+        ).scalar_one()
+    assert failed == 4
 
 
 def test_keys_are_sealed_and_never_shown(make_client, clock, settings, admin_engine):
@@ -123,6 +152,34 @@ def test_organizations_people_and_health(make_client, clock):
     health = c.get("/admin/health").json()["data"]
     assert health["database"] is True and health["redis"] is True
     assert "AGENCY_ENABLED" in health["switches"]
+    assert health["organizations_total"] >= 1 and health["organizations_active"] >= 1
+    assert health["people_total"] >= 2 and health["administrators"] == 1
+
+
+def test_admin_lists_are_paged_and_searched_in_the_database(make_client, clock):
+    """QA-011: no silent cap; search, filter, sort and pages come from the server."""
+    c = signed_in_admin(make_client, clock)
+    owner = make_client()
+    owner.signup("paging@example.com")
+    for name in ("Alpha 50% Off", "Beta Co", "Gamma Co"):
+        owner.create_org(name)
+    first = c.get("/admin/organizations", params={"page_size": 2}).json()
+    assert len(first["data"]) == 2 and first["meta"]["total"] >= 3
+    second = c.get("/admin/organizations", params={"page_size": 2, "page": 2}).json()
+    assert {o["name"] for o in first["data"]}.isdisjoint({o["name"] for o in second["data"]})
+    found = c.get("/admin/organizations", params={"q": "50%"}).json()
+    assert [o["name"] for o in found["data"]] == ["Alpha 50% Off"]
+    assert c.get("/admin/organizations", params={"q": "_"}).json()["meta"]["total"] == 0
+    beta = c.get("/admin/organizations", params={"q": "beta"}).json()["data"][0]
+    c.put(f"/admin/organizations/{beta['id']}/status", {"status": "suspended"})
+    suspended = c.get("/admin/organizations", params={"status": "suspended"}).json()
+    assert [o["name"] for o in suspended["data"]] == ["Beta Co"]
+    assert c.get("/admin/organizations", params={"status": "gone"}).status_code == 422
+    by_email = c.get("/admin/users", params={"sort": "email"}).json()["data"]
+    assert [u["email"] for u in by_email] == sorted(u["email"] for u in by_email)
+    paging = c.get("/admin/users", params={"q": "PAGING"}).json()
+    assert [u["email"] for u in paging["data"]] == ["paging@example.com"]
+    assert c.get("/admin/users", params={"page_size": 500}).status_code == 422
 
 
 def test_totp_codes():
@@ -137,3 +194,5 @@ def test_totp_codes():
     assert totp.verify(secret, f" {good[:3]} {good[3:]} ", now)
     assert not totp.verify(secret, "abcdef", now)
     assert not totp.verify(secret, "12345", now)
+    assert totp.match(secret, good, now) == int(now.timestamp()) // 30
+    assert totp.match(secret, "abcdef", now) is None

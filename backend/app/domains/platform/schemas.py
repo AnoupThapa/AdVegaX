@@ -64,3 +64,8 @@ class HealthOut(BaseModel):
     environment: str
     switches: dict[str, bool]
     restart_needed: bool  # a value saved since AdVegaX started
+    # Counts for the portal's summary (QA-011: the lists themselves are paged).
+    organizations_total: int = 0
+    organizations_active: int = 0
+    people_total: int = 0
+    administrators: int = 0

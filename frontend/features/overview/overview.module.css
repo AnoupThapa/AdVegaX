@@ -17,6 +17,8 @@
 }
 
 .how summary {
+  /* At least 24 px tall: a target, not just a line of small text (WCAG 2.5.8; QA-014). */
+  padding-block: var(--space-1);
   cursor: pointer;
   color: var(--color-text-muted);
   font-size: var(--font-size-xs);
@@ -195,7 +197,6 @@
 
 @keyframes kpiIn {
   from {
-    opacity: 0;
     transform: translateY(0.375rem);
   }
 }

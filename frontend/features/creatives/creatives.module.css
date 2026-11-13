@@ -104,3 +104,8 @@
   object-fit: cover;
   background: var(--color-border);
 }
+
+/* The file picker is a full-size target, like the app's buttons (WCAG 2.5.8; QA-014). */
+.fileInput {
+  min-height: var(--touch-target);
+}

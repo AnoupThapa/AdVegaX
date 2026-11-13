@@ -4760,18 +4760,6 @@ export interface components {
             data: components["schemas"]["AdAccountOut"][];
             meta: components["schemas"]["Meta"];
         };
-        /** Envelope[list[AdminOrganizationOut]] */
-        Envelope_list_AdminOrganizationOut__: {
-            /** Data */
-            data: components["schemas"]["AdminOrganizationOut"][];
-            meta: components["schemas"]["Meta"];
-        };
-        /** Envelope[list[AdminUserOut]] */
-        Envelope_list_AdminUserOut__: {
-            /** Data */
-            data: components["schemas"]["AdminUserOut"][];
-            meta: components["schemas"]["Meta"];
-        };
         /** Envelope[list[AnalyticsPropertyOut]] */
         Envelope_list_AnalyticsPropertyOut__: {
             /** Data */
@@ -5203,6 +5191,18 @@ export interface components {
         ListEnvelope_ActionOut_: {
             /** Data */
             data: components["schemas"]["ActionOut"][];
+            meta: components["schemas"]["ListMeta"];
+        };
+        /** ListEnvelope[AdminOrganizationOut] */
+        ListEnvelope_AdminOrganizationOut_: {
+            /** Data */
+            data: components["schemas"]["AdminOrganizationOut"][];
+            meta: components["schemas"]["ListMeta"];
+        };
+        /** ListEnvelope[AdminUserOut] */
+        ListEnvelope_AdminUserOut_: {
+            /** Data */
+            data: components["schemas"]["AdminUserOut"][];
             meta: components["schemas"]["ListMeta"];
         };
         /** ListEnvelope[AuditLogOut] */
@@ -6352,10 +6352,30 @@ export interface components {
         };
         /** HealthOut */
         app__domains__platform__schemas__HealthOut: {
+            /**
+             * Administrators
+             * @default 0
+             */
+            administrators: number;
             /** Database */
             database: boolean;
             /** Environment */
             environment: string;
+            /**
+             * Organizations Active
+             * @default 0
+             */
+            organizations_active: number;
+            /**
+             * Organizations Total
+             * @default 0
+             */
+            organizations_total: number;
+            /**
+             * People Total
+             * @default 0
+             */
+            people_total: number;
             /** Redis */
             redis: boolean;
             /** Restart Needed */
@@ -6416,7 +6436,12 @@ export interface operations {
     };
     list_organizations_api_v1_admin_organizations_get: {
         parameters: {
-            query?: never;
+            query?: {
+                q?: string;
+                status?: ("active" | "suspended") | null;
+                page?: number;
+                page_size?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -6429,7 +6454,16 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Envelope_list_AdminOrganizationOut__"];
+                    "application/json": components["schemas"]["ListEnvelope_AdminOrganizationOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -6643,7 +6677,12 @@ export interface operations {
     };
     list_users_api_v1_admin_users_get: {
         parameters: {
-            query?: never;
+            query?: {
+                q?: string;
+                sort?: "newest" | "email";
+                page?: number;
+                page_size?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -6656,7 +6695,16 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Envelope_list_AdminUserOut__"];
+                    "application/json": components["schemas"]["ListEnvelope_AdminUserOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

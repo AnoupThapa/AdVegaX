@@ -29,14 +29,21 @@ def code_at(secret: str, counter: int) -> str:
     return str(value % 10**DIGITS).zfill(DIGITS)
 
 
-def verify(secret: str, code: str, now: datetime) -> bool:
+def match(secret: str, code: str, now: datetime) -> int | None:
+    """The time step ``code`` belongs to (within the drift window), or None if it is wrong."""
     code = code.strip().replace(" ", "")
     if not (code.isdigit() and len(code) == DIGITS):
-        return False
+        return None
     counter = int(now.timestamp()) // STEP
-    return any(
-        hmac.compare_digest(code_at(secret, counter + d), code) for d in range(-WINDOW, WINDOW + 1)
-    )
+    found = None
+    for d in range(-WINDOW, WINDOW + 1):  # compare every step: no early exit on a match
+        if hmac.compare_digest(code_at(secret, counter + d), code):
+            found = counter + d
+    return found
+
+
+def verify(secret: str, code: str, now: datetime) -> bool:
+    return match(secret, code, now) is not None
 
 
 def uri(secret: str, email: str) -> str:

@@ -10,6 +10,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field
 
+from app.core.currencies import ISO_4217
 from app.domains.identity.schemas import Email
 
 RoleName = Literal["owner", "admin", "manager", "analyst", "viewer"]
@@ -18,7 +19,7 @@ _SLUG = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 
 def _currency(value: str) -> str:
     value = value.strip().upper()
-    if not re.fullmatch(r"[A-Z]{3}", value):
+    if not re.fullmatch(r"[A-Z]{3}", value) or value not in ISO_4217:
         raise ValueError("Use a three-letter ISO 4217 currency code.")
     return value
 

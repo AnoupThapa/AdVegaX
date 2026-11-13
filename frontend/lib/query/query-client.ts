@@ -5,12 +5,20 @@ import { QueryClient } from "@tanstack/react-query";
 import { ApiError, NETWORK_ERROR } from "@/lib/api/errors";
 
 const MAX_QUERY_RETRIES = 2;
+// Unreachable is usually not a blip: say so after one quick retry instead of waiting through
+// several (QA-015). Pages read again on their own when the window regains focus or reconnects.
+const MAX_NETWORK_RETRIES = 1;
 
 /** Retry reads only for network failures and server errors (5xx) — never for 4xx answers. */
 export function shouldRetryQuery(failureCount: number, error: unknown): boolean {
-  if (failureCount >= MAX_QUERY_RETRIES) return false;
   if (!(error instanceof ApiError)) return false;
-  return error.code === NETWORK_ERROR || error.status >= 500;
+  if (error.code === NETWORK_ERROR) return failureCount < MAX_NETWORK_RETRIES;
+  return failureCount < MAX_QUERY_RETRIES && error.status >= 500;
+}
+
+/** Short waits between retries: 0.5 s, then 1 s (at most 2 s). */
+export function queryRetryDelay(attempt: number): number {
+  return Math.min(500 * 2 ** attempt, 2_000);
 }
 
 export function createQueryClient(): QueryClient {
@@ -19,6 +27,7 @@ export function createQueryClient(): QueryClient {
       queries: {
         staleTime: 30_000,
         retry: shouldRetryQuery,
+        retryDelay: queryRetryDelay,
         refetchOnWindowFocus: true,
       },
       mutations: {

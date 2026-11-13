@@ -90,6 +90,9 @@ class Settings(BaseSettings):
     THROTTLE_EMAIL_ACTION_PER_EMAIL_PER_HOUR: int = Field(default=3, ge=1)
     THROTTLE_EMAIL_ACTION_PER_IP_PER_HOUR: int = Field(default=10, ge=1)
     THROTTLE_FAIL_OPEN: bool = False
+    # Admin portal two-step codes (QA-003): wrong or right, each attempt counts.
+    THROTTLE_ADMIN_CODE_PER_USER_PER_15_MIN: int = Field(default=5, ge=1)
+    THROTTLE_ADMIN_CODE_PER_IP_PER_15_MIN: int = Field(default=20, ge=1)
     # Platform webhooks (2A-05): per source IP. Shopify delivers from many addresses, so this
     # only bounds abuse; unsigned requests are rejected before any database work.
     THROTTLE_WEBHOOK_PER_IP_PER_MINUTE: int = Field(default=600, ge=1)

@@ -8,6 +8,7 @@ from typing import Any
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import IntegrityError, OperationalError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.correlation import get_correlation_id
@@ -362,6 +363,9 @@ _HTTP_CODES = {
 }
 
 
+UNIQUE_VIOLATION = "23505"
+
+
 def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def _app_error(_: Request, exc: AppError) -> JSONResponse:
@@ -388,11 +392,32 @@ def install_error_handlers(app: FastAPI) -> None:
             headers={"Cache-Control": "no-store"},
         )
 
+    @app.exception_handler(IntegrityError)
+    async def _integrity(_: Request, exc: IntegrityError) -> JSONResponse:
+        """Two identical requests at once (QA-005): the database's unique rule kept the data
+        right; the loser gets a plain 409 instead of a server error."""
+        if getattr(exc.orig, "sqlstate", None) != UNIQUE_VIOLATION:
+            return unhandled_response(exc)  # any other broken rule is a bug, not a race
+        constraint = getattr(getattr(exc.orig, "diag", None), "constraint_name", None)
+        logger.warning("integrity_conflict", extra={"constraint": constraint})
+        return error_response(Conflict())
+
+    @app.exception_handler(OperationalError)
+    async def _database_down(_: Request, exc: OperationalError) -> JSONResponse:
+        """The database cannot be reached (QA-008): say so, so clients may retry."""
+        logger.error("database_unavailable", extra={"error_type": type(exc).__name__})
+        return error_response(ServiceUnavailable())
+
     @app.exception_handler(Exception)
     async def _unhandled(_: Request, exc: Exception) -> JSONResponse:
-        logger.exception("unhandled_error", extra={"error_type": type(exc).__name__})
-        return JSONResponse(
-            status_code=500,
-            content=error_body("INTERNAL_ERROR", "An unexpected error occurred."),
-            headers={"Cache-Control": "no-store"},
-        )
+        return unhandled_response(exc)
+
+
+def unhandled_response(exc: BaseException) -> JSONResponse:
+    """A 500 for anything unexpected, logged with the request's correlation id (QA-007)."""
+    logger.exception("unhandled_error", extra={"error_type": type(exc).__name__}, exc_info=exc)
+    return JSONResponse(
+        status_code=500,
+        content=error_body("INTERNAL_ERROR", "An unexpected error occurred."),
+        headers={"Cache-Control": "no-store"},
+    )

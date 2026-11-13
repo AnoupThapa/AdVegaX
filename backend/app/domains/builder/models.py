@@ -48,6 +48,10 @@ def _user() -> Any:
 class CampaignDraft(UUIDPrimaryKey, Base):
     __tablename__ = "campaign_drafts"
     __table_args__ = (
+        # QA-017: the foreign key's own columns, so cascades and lookups use an index.
+        Index(
+            "ix_campaign_drafts_organization_id_ad_account_id", "organization_id", "ad_account_id"
+        ),
         UniqueConstraint("organization_id", "id", name="uq_campaign_drafts_organization_id_id"),
         UniqueConstraint("reference", name="uq_campaign_drafts_reference"),
         ForeignKeyConstraint(

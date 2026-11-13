@@ -23,6 +23,8 @@ WEBHOOK_STATUSES = ("received", "processed", "ignored", "failed")
 class WebhookEvent(UUIDPrimaryKey, Base):
     __tablename__ = "webhook_events"
     __table_args__ = (
+        # QA-017: the foreign key's own columns, so cascades and lookups use an index.
+        Index("ix_webhook_events_organization_id", "organization_id"),
         UniqueConstraint("provider", "webhook_id", name="uq_webhook_events_provider_webhook_id"),
         CheckConstraint("status IN ('received', 'processed', 'ignored', 'failed')", name="status"),
         Index("ix_webhook_events_status_received_at", "status", "received_at"),

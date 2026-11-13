@@ -44,8 +44,12 @@ class CorrelationIdMiddleware:
         request_id = sanitize_request_id(incoming)
         token = _correlation_id.set(request_id)
 
+        started = False
+
         async def send_wrapper(message: Message) -> None:
+            nonlocal started
             if message["type"] == "http.response.start":
+                started = True
                 headers = list(message.get("headers", []))
                 headers.append((REQUEST_ID_HEADER.encode(), request_id.encode()))
                 message["headers"] = headers
@@ -53,5 +57,14 @@ class CorrelationIdMiddleware:
 
         try:
             await self.app(scope, receive, send_wrapper)
+        except Exception as exc:
+            # Answer here, while the request id is still set, rather than in Starlette's
+            # outer error handler where it is already gone (QA-007).
+            if started:
+                raise
+            from app.core.errors import unhandled_response
+
+            response = unhandled_response(exc)
+            await response(scope, receive, send_wrapper)
         finally:
             _correlation_id.reset(token)

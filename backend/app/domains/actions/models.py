@@ -189,6 +189,8 @@ class Action(UUIDPrimaryKey, Timestamps, Base):
 class ActionEvent(UUIDPrimaryKey, Base):
     __tablename__ = "action_events"
     __table_args__ = (
+        # QA-017: the foreign key's own columns, so cascades and lookups use an index.
+        Index("ix_action_events_organization_id", "organization_id"),
         ForeignKeyConstraint(
             ["organization_id", "action_id"],
             ["actions.organization_id", "actions.id"],

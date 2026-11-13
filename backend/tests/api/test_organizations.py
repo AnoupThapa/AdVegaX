@@ -58,6 +58,7 @@ def test_organization_validation(client):
     for body in (
         {"name": "A", "default_currency": "AU", "default_timezone": "UTC"},
         {"name": "A", "default_currency": "A1D", "default_timezone": "UTC"},
+        {"name": "A", "default_currency": "ZZZ", "default_timezone": "UTC"},  # QA-009
         {"name": "A", "default_currency": "AUD", "default_timezone": "Mars/Base"},
         {"name": "A", "default_currency": "AUD", "default_timezone": "UTC", "slug": "Bad Slug"},
         {"name": "", "default_currency": "AUD", "default_timezone": "UTC"},

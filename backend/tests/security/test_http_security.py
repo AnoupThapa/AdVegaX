@@ -126,6 +126,21 @@ def test_body_size_and_content_type(client, settings):
     )
     assert form.status_code == 415
 
+    # QA-012: a body sent without a Content-Length (chunked) is cut off at the limit.
+    def chunks():
+        yield b'{"email": "'
+        for _ in range(settings.MAX_REQUEST_BYTES // 65_536 + 2):
+            yield b"a" * 65_536
+        yield b'"}'
+
+    chunked = client.http.post(
+        "/api/v1/auth/register",
+        content=chunks(),
+        headers={**headers, "Content-Type": "application/json"},
+    )
+    assert "content-length" not in {k.lower() for k in chunked.request.headers}
+    assert chunked.status_code == 413
+
 
 def test_errors_never_leak_internals(client):
     not_found = client.get("/does-not-exist")
@@ -161,6 +176,45 @@ def test_unhandled_exception_returns_generic_500(app, client, monkeypatch):
         "details": [],
     }
     assert "hunter2" not in login.text
+    # QA-007: the answer and the log carry the request's id, so a report can be traced.
+    assert login.json()["meta"]["request_id"] == login.headers["x-request-id"]
+
+
+def _database_error(kind):
+    from psycopg import errors as pg
+    from sqlalchemy.exc import IntegrityError, OperationalError
+
+    if kind == "integrity":
+        return IntegrityError("INSERT", {}, pg.UniqueViolation("duplicate key"))
+    if kind == "foreign_key":
+        return IntegrityError("INSERT", {}, pg.ForeignKeyViolation("missing parent"))
+    return OperationalError("SELECT 1", {}, pg.OperationalError("connection refused"))
+
+
+def test_database_errors_become_conflict_or_unavailable(app, client, monkeypatch):
+    """QA-005: a lost race on a unique rule is a 409; QA-008: no database is a 503."""
+    from app.domains.identity.service import IdentityService
+
+    client.register("db@example.com")
+    for kind, status, code in (
+        ("integrity", 409, "CONFLICT"),
+        ("operational", 503, "SERVICE_UNAVAILABLE"),
+        ("foreign_key", 500, "INTERNAL_ERROR"),  # a bug, not a race: stays a 500
+    ):
+
+        def fail(self, principal, kind=kind):
+            raise _database_error(kind)
+
+        monkeypatch.setattr(IdentityService, "me", fail)
+        with TestClient(app, raise_server_exceptions=False) as raw:
+            answer = raw.post(
+                "/api/v1/auth/login",
+                json={"email": "db@example.com", "password": PASSWORD},
+                headers={"Origin": ORIGIN, "X-CSRF-Token": _anon_token(raw)},
+            )
+        assert answer.status_code == status
+        assert answer.json()["error"]["code"] == code
+        assert answer.json()["meta"]["request_id"] == answer.headers["x-request-id"]
 
 
 def _anon_token(raw):

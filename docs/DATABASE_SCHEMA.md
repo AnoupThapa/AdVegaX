@@ -6,23 +6,22 @@ This document is the **target data model**. Tables are created only in the phase
 
 ## 0. Table introduction by phase
 
-| Phase | Tables |
-|---|---|
-| 1A | users, user_password_credentials, sessions, user_action_tokens, organizations, memberships, invitations, audit_logs, security_events, email_outbox |
-| 1B | external_connections, external_connection_credentials, external_resources, organization_resource_links, job_runs |
-| 2A / 2B | **as built (migrations 0007–0011):** stores, products, product_variants (incl. inventory), product_cost_history, orders (incl. hashed customer key), order_items, sales_entries, refunds, refund_items, commerce_sync_state, webhook_events, financial_daily (store components) — see §4A |
-| 3–4 | **as built (migrations 0012–0013):** ad_accounts (resource extension), ad_budgets, ad_campaigns, ad_groups, ads, ad_performance_daily, ad_sync_state — see §4B. Keywords and audience_targets come with the phases that use them |
-| 5 | **as built (migrations 0014, 0015):** analytics_properties (resource extension), analytics_daily (daily aggregates in three views), analytics_sync_state — see §12 (decision Q11, A23) |
-| 6 | **as built (migration 0016, A24):** fx_rates (shared reference data), `store_id` on ad_accounts and analytics_properties — see §13A. The metric registry is code (`analytics-v1`), not a table; unified figures are computed on read (Q-6-13), so financial_daily gains no ad-spend columns; store_cost_rules waits for the cost-entry option (Q-6-7) |
-| 7 | **as built (migration 0017, A25):** funnel figures on analytics_daily (+ the `landing_page` view) and ad_performance_daily, `funnel_reread_at` on analytics_properties and ad_accounts — see §13B. `funnel_daily` is superseded: the funnel is computed on read (Q-7-8) |
-| 8–9 | ai_models, prompt_versions, ai_runs, campaign_strategies, creatives |
-| 10A | actions, approvals, idempotency_keys |
-| 11 | recommendations |
-| 12 | automation_policies |
-| 13 | plans, entitlements, usage_records, billing_customers, subscriptions, invoices |
-| 14 | agency grants |
-| later | notifications (in-app), user_identities (external IdPs), user_mfa_factors (MFA/passkeys) |
-
+| Phase   | Tables                                                                                                                                                                                                                                                                                                                                                |
+| ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1A      | users, user_password_credentials, sessions, user_action_tokens, organizations, memberships, invitations, audit_logs, security_events, email_outbox                                                                                                                                                                                                    |
+| 1B      | external_connections, external_connection_credentials, external_resources, organization_resource_links, job_runs                                                                                                                                                                                                                                      |
+| 2A / 2B | **as built (migrations 0007–0011):** stores, products, product_variants (incl. inventory), product_cost_history, orders (incl. hashed customer key), order_items, sales_entries, refunds, refund_items, commerce_sync_state, webhook_events, financial_daily (store components) — see §4A                                                             |
+| 3–4     | **as built (migrations 0012–0013):** ad_accounts (resource extension), ad_budgets, ad_campaigns, ad_groups, ads, ad_performance_daily, ad_sync_state — see §4B. Keywords and audience_targets come with the phases that use them                                                                                                                      |
+| 5       | **as built (migrations 0014, 0015):** analytics_properties (resource extension), analytics_daily (daily aggregates in three views), analytics_sync_state — see §12 (decision Q11, A23)                                                                                                                                                                |
+| 6       | **as built (migration 0016, A24):** fx_rates (shared reference data), `store_id` on ad_accounts and analytics_properties — see §13A. The metric registry is code (`analytics-v1`), not a table; unified figures are computed on read (Q-6-13), so financial_daily gains no ad-spend columns; store_cost_rules waits for the cost-entry option (Q-6-7) |
+| 7       | **as built (migration 0017, A25):** funnel figures on analytics_daily (+ the `landing_page` view) and ad_performance_daily, `funnel_reread_at` on analytics_properties and ad_accounts — see §13B. `funnel_daily` is superseded: the funnel is computed on read (Q-7-8)                                                                               |
+| 8–9     | ai_models, prompt_versions, ai_runs, campaign_strategies, creatives                                                                                                                                                                                                                                                                                   |
+| 10A     | actions, approvals, idempotency_keys                                                                                                                                                                                                                                                                                                                  |
+| 11      | recommendations                                                                                                                                                                                                                                                                                                                                       |
+| 12      | automation_policies                                                                                                                                                                                                                                                                                                                                   |
+| 13      | plans, entitlements, usage_records, billing_customers, subscriptions, invoices                                                                                                                                                                                                                                                                        |
+| 14      | agency grants                                                                                                                                                                                                                                                                                                                                         |
+| later   | notifications (in-app), user_identities (external IdPs), user_mfa_factors (MFA/passkeys)                                                                                                                                                                                                                                                              |
 
 ## 1. Database
 
@@ -41,131 +40,140 @@ Implemented by migrations `0001_identity`, `0002_organizations`. All timestamps 
 Global identity tables (`users`, `user_password_credentials`, `sessions`, `user_action_tokens`) are **not tenant-owned** and have no RLS (§19); they are reachable only through the identity domain.
 
 ### users
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid PK | |
-| email | varchar(254) NOT NULL | unique (`uq_users_email`); check `email = lower(email)` |
-| display_name | varchar(120) | |
-| status | varchar(16) NOT NULL default `active` | check: active, disabled |
-| email_verified_at | timestamptz | null until verified |
-| created_at, updated_at | timestamptz NOT NULL default now() | |
+
+| Column                 | Type                                  | Notes                                                   |
+| ---------------------- | ------------------------------------- | ------------------------------------------------------- |
+| id                     | uuid PK                               |                                                         |
+| email                  | varchar(254) NOT NULL                 | unique (`uq_users_email`); check `email = lower(email)` |
+| display_name           | varchar(120)                          |                                                         |
+| status                 | varchar(16) NOT NULL default `active` | check: active, disabled                                 |
+| email_verified_at      | timestamptz                           | null until verified                                     |
+| created_at, updated_at | timestamptz NOT NULL default now()    |                                                         |
 
 ### user_password_credentials
-| Column | Type | Notes |
-|---|---|---|
-| user_id | uuid PK, FK → users ON DELETE CASCADE | one password credential per user |
-| password_hash | text NOT NULL | Argon2id; parameters encoded in the hash; upgraded on login |
-| password_changed_at | timestamptz NOT NULL | |
-| created_at, updated_at | timestamptz NOT NULL | |
+
+| Column                 | Type                                  | Notes                                                       |
+| ---------------------- | ------------------------------------- | ----------------------------------------------------------- |
+| user_id                | uuid PK, FK → users ON DELETE CASCADE | one password credential per user                            |
+| password_hash          | text NOT NULL                         | Argon2id; parameters encoded in the hash; upgraded on login |
+| password_changed_at    | timestamptz NOT NULL                  |                                                             |
+| created_at, updated_at | timestamptz NOT NULL                  |                                                             |
 
 Credentials are separate from `users` so external identities (`user_identities`) and MFA factors/passkeys (`user_mfa_factors`) can be added later without redesign (A8).
 
 ### user_action_tokens
+
 Single-use tokens for email verification, password reset and invitation acceptance. Only SHA-256 hashes are stored.
 
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid PK | |
-| purpose | varchar(32) NOT NULL | check: email_verification, password_reset, invitation |
-| token_hash | varchar(64) NOT NULL | unique |
-| user_id | uuid FK → users ON DELETE CASCADE | verification/reset tokens |
-| email | varchar(254) | address the token was issued for (must still match on use) |
-| organization_id | uuid FK → organizations ON DELETE CASCADE | invitation tokens (added in 0002) |
-| invitation_id | uuid FK → invitations ON DELETE CASCADE | invitation tokens (added in 0002) |
-| expires_at | timestamptz NOT NULL | from `EMAIL_VERIFICATION_TTL`, `PASSWORD_RESET_TTL`, `INVITATION_TTL` |
-| consumed_at | timestamptz | set atomically on use |
-| invalidated_at | timestamptz | set when a newer token of the same scope is issued |
-| created_at | timestamptz NOT NULL | |
+| Column          | Type                                      | Notes                                                                 |
+| --------------- | ----------------------------------------- | --------------------------------------------------------------------- |
+| id              | uuid PK                                   |                                                                       |
+| purpose         | varchar(32) NOT NULL                      | check: email_verification, password_reset, invitation                 |
+| token_hash      | varchar(64) NOT NULL                      | unique                                                                |
+| user_id         | uuid FK → users ON DELETE CASCADE         | verification/reset tokens                                             |
+| email           | varchar(254)                              | address the token was issued for (must still match on use)            |
+| organization_id | uuid FK → organizations ON DELETE CASCADE | invitation tokens (added in 0002)                                     |
+| invitation_id   | uuid FK → invitations ON DELETE CASCADE   | invitation tokens (added in 0002)                                     |
+| expires_at      | timestamptz NOT NULL                      | from `EMAIL_VERIFICATION_TTL`, `PASSWORD_RESET_TTL`, `INVITATION_TTL` |
+| consumed_at     | timestamptz                               | set atomically on use                                                 |
+| invalidated_at  | timestamptz                               | set when a newer token of the same scope is issued                    |
+| created_at      | timestamptz NOT NULL                      |                                                                       |
 
 Indexes: `(user_id, purpose)`, `organization_id`, `invitation_id`.
 
 ### organizations
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid PK | |
-| name | varchar(120) NOT NULL | |
-| slug | varchar(63) NOT NULL | unique; check `^[a-z0-9]+(-[a-z0-9]+)*$` |
-| default_currency | varchar(3) NOT NULL | check ISO-4217 shape `^[A-Z]{3}$` |
-| default_timezone | varchar(64) NOT NULL | IANA name, validated by the API (reporting time zone) |
-| status | varchar(16) NOT NULL default `active` | check: active, suspended |
-| created_by_user_id | uuid FK → users ON DELETE SET NULL | indexed |
-| created_at, updated_at | timestamptz NOT NULL | |
+
+| Column                 | Type                                  | Notes                                                 |
+| ---------------------- | ------------------------------------- | ----------------------------------------------------- |
+| id                     | uuid PK                               |                                                       |
+| name                   | varchar(120) NOT NULL                 |                                                       |
+| slug                   | varchar(63) NOT NULL                  | unique; check `^[a-z0-9]+(-[a-z0-9]+)*$`              |
+| default_currency       | varchar(3) NOT NULL                   | check ISO-4217 shape `^[A-Z]{3}$`                     |
+| default_timezone       | varchar(64) NOT NULL                  | IANA name, validated by the API (reporting time zone) |
+| status                 | varchar(16) NOT NULL default `active` | check: active, suspended                              |
+| created_by_user_id     | uuid FK → users ON DELETE SET NULL    | indexed                                               |
+| created_at, updated_at | timestamptz NOT NULL                  |                                                       |
 
 ### memberships
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid PK | |
-| organization_id | uuid NOT NULL FK → organizations ON DELETE CASCADE | |
-| user_id | uuid NOT NULL FK → users ON DELETE CASCADE | |
-| role | varchar(16) NOT NULL | check: owner, admin, manager, analyst, viewer |
-| status | varchar(16) NOT NULL default `active` | check: active, suspended, removed (removal is soft) |
-| created_at, updated_at | timestamptz NOT NULL | |
+
+| Column                 | Type                                               | Notes                                               |
+| ---------------------- | -------------------------------------------------- | --------------------------------------------------- |
+| id                     | uuid PK                                            |                                                     |
+| organization_id        | uuid NOT NULL FK → organizations ON DELETE CASCADE |                                                     |
+| user_id                | uuid NOT NULL FK → users ON DELETE CASCADE         |                                                     |
+| role                   | varchar(16) NOT NULL                               | check: owner, admin, manager, analyst, viewer       |
+| status                 | varchar(16) NOT NULL default `active`              | check: active, suspended, removed (removal is soft) |
+| created_at, updated_at | timestamptz NOT NULL                               |                                                     |
 
 Unique `(organization_id, user_id)`; index `(user_id, status)`. Invariant (service-enforced with row locks): every organization keeps at least one active owner.
 
 ### invitations
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid PK | |
-| organization_id | uuid NOT NULL FK → organizations ON DELETE CASCADE | |
-| email | varchar(254) NOT NULL | lower-case check |
-| role | varchar(16) NOT NULL | role check as memberships |
-| invited_by_user_id | uuid FK → users ON DELETE SET NULL | indexed |
-| status | varchar(16) NOT NULL default `pending` | check: pending, accepted, revoked, expired |
-| expires_at | timestamptz NOT NULL | |
-| accepted_at | timestamptz | |
-| accepted_by_user_id | uuid FK → users ON DELETE SET NULL | indexed |
-| created_at, updated_at | timestamptz NOT NULL | |
+
+| Column                 | Type                                               | Notes                                      |
+| ---------------------- | -------------------------------------------------- | ------------------------------------------ |
+| id                     | uuid PK                                            |                                            |
+| organization_id        | uuid NOT NULL FK → organizations ON DELETE CASCADE |                                            |
+| email                  | varchar(254) NOT NULL                              | lower-case check                           |
+| role                   | varchar(16) NOT NULL                               | role check as memberships                  |
+| invited_by_user_id     | uuid FK → users ON DELETE SET NULL                 | indexed                                    |
+| status                 | varchar(16) NOT NULL default `pending`             | check: pending, accepted, revoked, expired |
+| expires_at             | timestamptz NOT NULL                               |                                            |
+| accepted_at            | timestamptz                                        |                                            |
+| accepted_by_user_id    | uuid FK → users ON DELETE SET NULL                 | indexed                                    |
+| created_at, updated_at | timestamptz NOT NULL                               |                                            |
 
 Indexes: `(organization_id, status)`; partial unique `(organization_id, email) WHERE status = 'pending'`.
 
 ## 3. Sessions / Security (Phase 1A — implemented)
 
 ### sessions
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid PK | |
-| user_id | uuid NOT NULL FK → users ON DELETE CASCADE | indexed; partial index on active sessions |
-| token_hash | varchar(64) NOT NULL | unique; SHA-256 of the 256-bit cookie token |
-| auth_method | varchar(32) NOT NULL default `password` | later: oauth, sso |
-| assurance_level | varchar(32) NOT NULL default `single_factor` | later: mfa (step-up) |
-| created_at, last_used_at | timestamptz NOT NULL | `last_used_at` updated at most every `SESSION_TOUCH_INTERVAL` |
-| idle_expires_at | timestamptz NOT NULL | sliding, from `SESSION_IDLE_TIMEOUT`; never beyond absolute |
-| absolute_expires_at | timestamptz NOT NULL | from `SESSION_ABSOLUTE_TIMEOUT`; check idle ≤ absolute |
-| revoked_at, revoked_reason | timestamptz, varchar(64) | logout, logout_all, rotated, user_revoked, password_changed, password_reset |
-| ip_hash | varchar(64) | keyed hash; raw IPs are never stored |
-| user_agent_summary | varchar(200) | |
+
+| Column                     | Type                                         | Notes                                                                       |
+| -------------------------- | -------------------------------------------- | --------------------------------------------------------------------------- |
+| id                         | uuid PK                                      |                                                                             |
+| user_id                    | uuid NOT NULL FK → users ON DELETE CASCADE   | indexed; partial index on active sessions                                   |
+| token_hash                 | varchar(64) NOT NULL                         | unique; SHA-256 of the 256-bit cookie token                                 |
+| auth_method                | varchar(32) NOT NULL default `password`      | later: oauth, sso                                                           |
+| assurance_level            | varchar(32) NOT NULL default `single_factor` | later: mfa (step-up)                                                        |
+| created_at, last_used_at   | timestamptz NOT NULL                         | `last_used_at` updated at most every `SESSION_TOUCH_INTERVAL`               |
+| idle_expires_at            | timestamptz NOT NULL                         | sliding, from `SESSION_IDLE_TIMEOUT`; never beyond absolute                 |
+| absolute_expires_at        | timestamptz NOT NULL                         | from `SESSION_ABSOLUTE_TIMEOUT`; check idle ≤ absolute                      |
+| revoked_at, revoked_reason | timestamptz, varchar(64)                     | logout, logout_all, rotated, user_revoked, password_changed, password_reset |
+| ip_hash                    | varchar(64)                                  | keyed hash; raw IPs are never stored                                        |
+| user_agent_summary         | varchar(200)                                 |                                                                             |
 
 ### security_events (migration 0003)
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid PK | |
-| organization_id | uuid FK → organizations ON DELETE SET NULL | indexed |
-| user_id | uuid FK → users ON DELETE SET NULL | index `(user_id, created_at)` |
-| event_type | varchar(64) NOT NULL | user_registered, registration_existing_email, email_verified, email_verification_resent, login_succeeded, login_failed, logout, logout_all, session_revoked, password_reset_requested, password_reset_completed, password_changed |
-| ip_hash | varchar(64) | keyed hash |
-| user_agent_summary | varchar(200) | |
-| correlation_id | varchar(64) | |
-| metadata | jsonb NOT NULL default `{}` | scrubbed |
-| created_at | timestamptz NOT NULL | index `(event_type, created_at)` |
+
+| Column             | Type                                       | Notes                                                                                                                                                                                                                             |
+| ------------------ | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| id                 | uuid PK                                    |                                                                                                                                                                                                                                   |
+| organization_id    | uuid FK → organizations ON DELETE SET NULL | indexed                                                                                                                                                                                                                           |
+| user_id            | uuid FK → users ON DELETE SET NULL         | index `(user_id, created_at)`                                                                                                                                                                                                     |
+| event_type         | varchar(64) NOT NULL                       | user_registered, registration_existing_email, email_verified, email_verification_resent, login_succeeded, login_failed, logout, logout_all, session_revoked, password_reset_requested, password_reset_completed, password_changed |
+| ip_hash            | varchar(64)                                | keyed hash                                                                                                                                                                                                                        |
+| user_agent_summary | varchar(200)                               |                                                                                                                                                                                                                                   |
+| correlation_id     | varchar(64)                                |                                                                                                                                                                                                                                   |
+| metadata           | jsonb NOT NULL default `{}`                | scrubbed                                                                                                                                                                                                                          |
+| created_at         | timestamptz NOT NULL                       | index `(event_type, created_at)`                                                                                                                                                                                                  |
 
 The API role may only insert; reading is a system operation.
 
 ### email_outbox (migration 0004)
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid PK | |
-| organization_id | uuid FK → organizations ON DELETE SET NULL | indexed |
-| template | varchar(64) NOT NULL | email_verification, account_exists, password_reset, password_changed, invitation, security_notice |
-| recipient | varchar(254) NOT NULL | |
-| payload | jsonb NOT NULL | template variables incl. single-use links; **cleared once sent or permanently failed** |
-| status | varchar(16) NOT NULL default `pending` | check: pending, sent, failed (rows are locked during delivery, so no separate "sending" state) |
-| attempts | integer NOT NULL default 0 | |
-| last_error | text | short error class only |
-| next_attempt_at | timestamptz NOT NULL default now() | exponential backoff from `EMAIL_RETRY_BASE_DELAY` |
-| provider_message_id | varchar(255) | |
-| sent_at | timestamptz | |
-| created_at, updated_at | timestamptz NOT NULL | index `(status, next_attempt_at)` |
+
+| Column                 | Type                                       | Notes                                                                                             |
+| ---------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------- |
+| id                     | uuid PK                                    |                                                                                                   |
+| organization_id        | uuid FK → organizations ON DELETE SET NULL | indexed                                                                                           |
+| template               | varchar(64) NOT NULL                       | email_verification, account_exists, password_reset, password_changed, invitation, security_notice |
+| recipient              | varchar(254) NOT NULL                      |                                                                                                   |
+| payload                | jsonb NOT NULL                             | template variables incl. single-use links; **cleared once sent or permanently failed**            |
+| status                 | varchar(16) NOT NULL default `pending`     | check: pending, sent, failed (rows are locked during delivery, so no separate "sending" state)    |
+| attempts               | integer NOT NULL default 0                 |                                                                                                   |
+| last_error             | text                                       | short error class only                                                                            |
+| next_attempt_at        | timestamptz NOT NULL default now()         | exponential backoff from `EMAIL_RETRY_BASE_DELAY`                                                 |
+| provider_message_id    | varchar(255)                               |                                                                                                   |
+| sent_at                | timestamptz                                |                                                                                                   |
+| created_at, updated_at | timestamptz NOT NULL                       | index `(status, next_attempt_at)`                                                                 |
 
 The API role may only insert; the worker (`advegax_system`) reads and updates.
 
@@ -176,6 +184,7 @@ Approved model A6/A16: **Organization owns the connection; a User authorizes it.
 All five tables have RLS **enabled and forced** with tenant policies for `advegax_app` (SELECT/INSERT/UPDATE; **no DELETE**). Child tables reference their parent with a **composite foreign key on `(organization_id, id)`**, so a row can never point at another tenant's parent.
 
 ### external_connections (0005; `external_account_id` added in 0007)
+
 - id (uuid PK), organization_id (FK organizations, cascade)
 - provider (varchar 32), auth_scheme (`oauth2` | `api_key` | `app_key`)
 - authorized_by_user_id (FK users, set null)
@@ -186,6 +195,7 @@ All five tables have RLS **enabled and forced** with tenant policies for `advega
 - Unique (organization_id, id); index (organization_id, provider)
 
 ### external_connection_credentials (0005)
+
 - connection_id (PK; composite FK → external_connections(organization_id, id), cascade)
 - organization_id
 - ciphertext (bytea), wrapped_data_key (bytea), key_version (int) — **all three null together** (check constraint); nulled on disconnect
@@ -194,7 +204,9 @@ All five tables have RLS **enabled and forced** with tenant policies for `advega
 Envelope encryption (AES-256-GCM, associated data binds organization + connection + provider) — see `SECURITY.md §8`. Credentials are never returned through API responses, logs, audit records, errors, the UI or AI context. `advegax_system` has SELECT/UPDATE only for key rotation (re-wrapping data keys).
 
 ### external_resources (0005)
+
 Resources discovered through a connection (store, ad account, analytics property, business asset).
+
 - id, organization_id, connection_id (composite FK → external_connections, cascade)
 - kind (`store` | `ad_account` | `analytics_property` | `business_asset`), provider, external_id (text)
 - display_name, currency, timezone
@@ -203,7 +215,9 @@ Resources discovered through a connection (store, ad account, analytics property
 - Unique (organization_id, id); unique (connection_id, kind, external_id); index (organization_id, kind)
 
 ### organization_resource_links (0005)
+
 Explicit linking; history kept for relinking/reassignment.
+
 - id, organization_id, external_resource_id (composite FK → external_resources, cascade)
 - status (`active` | `unlinked`)
 - linked_by_user_id, linked_at, unlinked_by_user_id, unlinked_at
@@ -211,7 +225,9 @@ Explicit linking; history kept for relinking/reassignment.
 - Partial unique index: at most one `active` link per resource
 
 ### job_runs (0006)
+
 Durable record and source of truth for background work.
+
 - id, organization_id (nullable for system jobs; FK organizations, cascade)
 - job_type, subject_type, subject_id
 - status (`queued` | `running` | `succeeded` | `failed` | `dead`)
@@ -225,24 +241,25 @@ Durable record and source of truth for background work.
 
 Platform-neutral tables (D4, D19); providers map into them. **Tenant tables** (`stores`, `products`, `product_variants`, `product_cost_history`, `orders`, `order_items`, `sales_entries`, `refunds`, `refund_items`, `commerce_sync_state`, `financial_daily`): RLS enabled and forced; `advegax_app` policies for SELECT/INSERT/UPDATE **and DELETE** (needed for erasure requests and re-imports; still limited to the current organization); composite `(organization_id, parent_id)` foreign keys everywhere. Optional references from financial history (order line → variant, sales entry / refund line → order line) do **not** cascade, so deleting a product never deletes order history. Money is `NUMERIC(20,6)` in the store's currency; missing values are NULL with a source/availability marker, never 0 (A10).
 
-| Table | Key columns and rules |
-|---|---|
-| `stores` | resource extension (`external_resource_id` unique, composite FK); provider, external_store_id, domain, name, currency (3), timezone, status (`importing`/`active`/`disconnected`/`error`), `history_from` (Q9), `first_import_completed_at`; unique (organization, provider, external_store_id) |
-| `products` | store FK; external_product_id (unique per store), title, handle, product_type, vendor, status (`active`/`draft`/`archived`/`deleted`), `external_updated_at` (an older update never overwrites a newer one) |
-| `product_variants` | product + store FKs; external_variant_id (unique per store), external_inventory_item_id, title, sku, price; inventory: `inventory_tracked`, `inventory_available` (summed across locations; NULL = not tracked / not synchronized), `inventory_synced_at`; `deleted` flag (soft delete) |
-| `product_cost_history` | variant FK; `unit_cost` (NULL = no cost from that moment), currency, `effective_from` (unique per variant), source (`platform`/`import_snapshot`), `recorded_at` |
-| `orders` | store FK; external_order_id (unique per store), order_number, currency, `ordered_at`, `cancelled_at`, financial_status; display amounts (gross, discount, shipping, tax, refund, total); **`customer_key`** (one-way, organization-keyed hash — no names, emails, phones or addresses, Q8); `country_code` (2); `external_updated_at` |
-| `order_items` | order FK; variant (optional, non-cascading); external_line_item_id (unique per order), title, sku, quantity, unit_price; `unit_cost` + `cost_source` (`order_time`/`import_time`) — both NULL or both set |
-| `sales_entries` | one sale or reversal with its own `happened_at`; `agreement_reason` (`order`/`order_edit`/`refund`/`return`/`other`, the platform agreement's reason — 0008), `action` (`order`/`return`/`update`/`other`, the sale's action — 0008), `line_type` (`product`/`shipping`/`duty`/`fee`/`additional_fee`/`adjustment`/`tip`/`gift_card`/`other` — 0008), quantity, signed `amount` (sale total after taxes and discounts), `discount_amount` (before taxes), `tax_amount`, currency; external agreement/sale/line-item ids (sale unique per store; the line-item id resolves `order_item_id` after a bulk import); optional order line (non-cascading). Source of §10 figures |
-| `refunds`, `refund_items` | refund with `processed_at`, total, currency; lines with quantity, subtotal, restocked |
-| `commerce_sync_state` | one row per store: import progress (0–100), bulk operation id/kind, last reconciliation times, last error code |
-| `financial_daily` | per store, `day` (store time zone), currency, `definition_version` (unique per store/day/version); additive components: gross_sales, discounts, sales_reversals, net_sales, shipping, taxes, duties, fees, total_sales, orders_count; **`cogs` NULL exactly when `uncosted_lines > 0`** (check constraint), `costed_net_sales` for coverage; `other_currency_orders` (0011: orders in another currency placed or refunded that day — never summed; the day's figures are "not available" while it is above 0, Q-2B-5); `computed_at`. Only counted orders contribute (`orders.excluded_reason` IS NULL). Ratios computed on read (A5). Ad-spend components are added in Phase 6. **Filled from 2A-08** by `app/domains/finance/service.py` (rebuilt for the affected store-local days after every import, reconciliation and order webhook); the definitions are in `app/domains/finance/definitions.py` (`finance-v1`) |
-| `webhook_events` | **system role only** (no app-role grants). Metadata only — provider, `webhook_id` (unique per provider, duplicate deliveries rejected), topic, external_account_id, object id, `object_updated_at`, `triggered_at`, `received_at`, resolved organization (nullable), status, processed_at, error_code. **No body column**: payload personal data is never stored |
-| `external_connections.external_account_id` | platform account id (e.g. shop domain); partial unique index `(provider, external_account_id)` where not NULL and status ≠ `revoked` — one live connection per account across organizations (Q6) |
+| Table                                      | Key columns and rules                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `stores`                                   | resource extension (`external_resource_id` unique, composite FK); provider, external_store_id, domain, name, currency (3), timezone, status (`importing`/`active`/`disconnected`/`error`), `history_from` (Q9), `first_import_completed_at`; unique (organization, provider, external_store_id)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `products`                                 | store FK; external_product_id (unique per store), title, handle, product_type, vendor, status (`active`/`draft`/`archived`/`deleted`), `external_updated_at` (an older update never overwrites a newer one)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `product_variants`                         | product + store FKs; external_variant_id (unique per store), external_inventory_item_id, title, sku, price; inventory: `inventory_tracked`, `inventory_available` (summed across locations; NULL = not tracked / not synchronized), `inventory_synced_at`; `deleted` flag (soft delete)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `product_cost_history`                     | variant FK; `unit_cost` (NULL = no cost from that moment), currency, `effective_from` (unique per variant), source (`platform`/`import_snapshot`), `recorded_at`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `orders`                                   | store FK; external_order_id (unique per store), order_number, currency, `ordered_at`, `cancelled_at`, financial_status; display amounts (gross, discount, shipping, tax, refund, total); **`customer_key`** (one-way, organization-keyed hash — no names, emails, phones or addresses, Q8); `country_code` (2); `external_updated_at`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `order_items`                              | order FK; variant (optional, non-cascading); external_line_item_id (unique per order), title, sku, quantity, unit_price; `unit_cost` + `cost_source` (`order_time`/`import_time`) — both NULL or both set                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `sales_entries`                            | one sale or reversal with its own `happened_at`; `agreement_reason` (`order`/`order_edit`/`refund`/`return`/`other`, the platform agreement's reason — 0008), `action` (`order`/`return`/`update`/`other`, the sale's action — 0008), `line_type` (`product`/`shipping`/`duty`/`fee`/`additional_fee`/`adjustment`/`tip`/`gift_card`/`other` — 0008), quantity, signed `amount` (sale total after taxes and discounts), `discount_amount` (before taxes), `tax_amount`, currency; external agreement/sale/line-item ids (sale unique per store; the line-item id resolves `order_item_id` after a bulk import); optional order line (non-cascading). Source of §10 figures                                                                                                                                                                                                                                              |
+| `refunds`, `refund_items`                  | refund with `processed_at`, total, currency; lines with quantity, subtotal, restocked                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `commerce_sync_state`                      | one row per store: import progress (0–100), bulk operation id/kind, last reconciliation times, last error code                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `financial_daily`                          | per store, `day` (store time zone), currency, `definition_version` (unique per store/day/version); additive components: gross_sales, discounts, sales_reversals, net_sales, shipping, taxes, duties, fees, total_sales, orders_count; **`cogs` NULL exactly when `uncosted_lines > 0`** (check constraint), `costed_net_sales` for coverage; `other_currency_orders` (0011: orders in another currency placed or refunded that day — never summed; the day's figures are "not available" while it is above 0, Q-2B-5); `computed_at`. Only counted orders contribute (`orders.excluded_reason` IS NULL). Ratios computed on read (A5). Ad-spend components are added in Phase 6. **Filled from 2A-08** by `app/domains/finance/service.py` (rebuilt for the affected store-local days after every import, reconciliation and order webhook); the definitions are in `app/domains/finance/definitions.py` (`finance-v1`) |
+| `webhook_events`                           | **system role only** (no app-role grants). Metadata only — provider, `webhook_id` (unique per provider, duplicate deliveries rejected), topic, external_account_id, object id, `object_updated_at`, `triggered_at`, `received_at`, resolved organization (nullable), status, processed_at, error_code. **No body column**: payload personal data is never stored                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `external_connections.external_account_id` | platform account id (e.g. shop domain); partial unique index `(provider, external_account_id)` where not NULL and status ≠ `revoked` — one live connection per account across organizations (Q6)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 
 **0011 (2B-07, Phase 2B)** is additive: `financial_daily.other_currency_orders` (integer, default 0, ≥ 0). Downgrade to 0010 drops it.
 
 **0010 (2B-02, Phase 2B)** is additive. It adds:
+
 - On `stores`: `site_url` (normalized base URL; WordPress may live in a sub-folder), `platform_version`, `health_code` and `health_checked_at` (plain-language health of a self-hosted store), and `counted_statuses` (the order statuses counted in the figures, Q-2B-2).
 - On `orders`: `excluded_reason` (`status` / `other_currency`: kept but not counted).
 - On `commerce_sync_state`: `import_cursor` (the provider's opaque cursor for the next page of a paged import, ≤ 2048 characters) and `import_counts` (records applied by the running chain, JSONB).
@@ -257,15 +274,15 @@ System-role grants added in 0007 (narrow, read-only): `SELECT` on `stores` (rout
 
 Platform-neutral, designed against Google Ads and Meta (PHASE_03_PLAN §8): Google "ad group" and Meta "ad set" are both `ad_groups`. Every table is tenant-owned with composite `(organization_id, parent_id)` keys, forced row-level security and `advegax_app` policies for SELECT/INSERT/UPDATE/DELETE. Money is `NUMERIC(20,6)` in the **ad account's** currency; days are in the ad account's time zone; a measure the platform did not provide is NULL, never 0 (A10).
 
-| Table | Content |
-|---|---|
-| `ad_accounts` | extension of a linked `ad_account` resource (unique per resource; and per organization, provider and external account id): name, currency, time zone, AdVegaX `status` (`importing`/`active`/`disconnected`/`error`), `platform_status` (`active`/`not_enabled`/`cancelled`/`suspended`/`closed`), `history_from`, `first_import_completed_at`, `health_code` and `health_checked_at` (plain message keys, never raw errors) |
-| `ad_budgets` | per account: external id, name, `level` (`campaign`/`ad_group`), `period` (`daily`/`lifetime`), `amount` (NULL when the platform gives none, never 0), currency, `shared` |
-| `ad_campaigns` | per account: external id, name, `status` (`active`/`paused`/`archived`/`removed`), `platform_type` (shown, never computed on), bidding strategy type, start/end dates, optional budget (non-cascading), `provider_extensions` (display only) |
-| `ad_groups` | per campaign: external id, name, status, platform type, optional budget (Meta ad sets), extensions |
-| `ads` | per ad group: external id, optional name, status, platform type, extensions |
+| Table                  | Content                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ad_accounts`          | extension of a linked `ad_account` resource (unique per resource; and per organization, provider and external account id): name, currency, time zone, AdVegaX `status` (`importing`/`active`/`disconnected`/`error`), `platform_status` (`active`/`not_enabled`/`cancelled`/`suspended`/`closed`), `history_from`, `first_import_completed_at`, `health_code` and `health_checked_at` (plain message keys, never raw errors)                                                                                     |
+| `ad_budgets`           | per account: external id, name, `level` (`campaign`/`ad_group`), `period` (`daily`/`lifetime`), `amount` (NULL when the platform gives none, never 0), currency, `shared`                                                                                                                                                                                                                                                                                                                                        |
+| `ad_campaigns`         | per account: external id, name, `status` (`active`/`paused`/`archived`/`removed`), `platform_type` (shown, never computed on), bidding strategy type, start/end dates, optional budget (non-cascading), `provider_extensions` (display only)                                                                                                                                                                                                                                                                     |
+| `ad_groups`            | per campaign: external id, name, status, platform type, optional budget (Meta ad sets), extensions                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `ads`                  | per ad group: external id, optional name, status, platform type, extensions                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `ad_performance_daily` | one row per account, `level` (`account`/`campaign`/`ad_group`/`ad`), `entity_key` (the platform id; `'account'` at the account level; for Google ads `<ad group id>~<ad id>`, since an ad is identified within its ad group) and `day`: impressions, clicks, cost, conversions (decimal), conversion value, currency, `source` (`platform_reported` only in Phase 3), `fetched_at`; optional non-cascading links to the campaign, ad group and ad. Levels are stored as reported and never added into each other |
-| `ad_sync_state` | one row per account: import progress, sync mode (`initial`/`quick`/`nightly`/`weekly`), the job allowed to continue, an opaque cursor, last quick / nightly / weekly runs, last error |
+| `ad_sync_state`        | one row per account: import progress, sync mode (`initial`/`quick`/`nightly`/`weekly`), the job allowed to continue, an opaque cursor, last quick / nightly / weekly runs, last error                                                                                                                                                                                                                                                                                                                            |
 
 Removed structure is kept (`status = removed`) so history stays readable. A day never read has no row ("not synced yet"); a day read with no activity has real zeros.
 
@@ -278,7 +295,9 @@ Removed structure is kept (`status = removed`) so history stays readable. A day 
 > Original target model, kept for reference. **As built in Phase 2A: see §4A.**
 
 ### stores
+
 Commerce-specific extension of an external resource of kind `store`.
+
 - id
 - organization_id
 - external_resource_id
@@ -293,6 +312,7 @@ Commerce-specific extension of an external resource of kind `store`.
 - updated_at
 
 Unique:
+
 - organization_id + provider + external_store_id
 
 ## 6. Products
@@ -300,6 +320,7 @@ Unique:
 > Original target model, kept for reference. **As built in Phase 2A: see §4A.**
 
 ### products
+
 - id
 - organization_id
 - store_id
@@ -319,6 +340,7 @@ Unique:
 - updated_at
 
 ### product_variants
+
 - id
 - organization_id
 - product_id
@@ -334,6 +356,7 @@ Unique:
 - updated_at
 
 Indexes:
+
 - organization_id
 - product_id
 - external identifiers
@@ -344,6 +367,7 @@ Indexes:
 > Original target model, kept for reference. **As built in Phase 2A: see §4A.**
 
 ### orders
+
 - id
 - organization_id
 - store_id
@@ -362,6 +386,7 @@ Indexes:
 - raw_reference/metadata
 
 ### order_items
+
 - id
 - organization_id
 - order_id
@@ -377,7 +402,9 @@ Indexes:
 ## 8. Advertising Accounts
 
 ### ad_accounts
+
 Advertising-specific extension of an external resource of kind `ad_account`.
+
 - id
 - organization_id
 - external_resource_id
@@ -391,11 +418,13 @@ Advertising-specific extension of an external resource of kind `ad_account`.
 - updated_at
 
 Unique:
+
 - organization_id + provider + external_account_id
 
 ## 9. Campaign Structure
 
 ### campaigns
+
 - id
 - organization_id
 - ad_account_id
@@ -412,6 +441,7 @@ Unique:
 - updated_at
 
 ### ad_groups
+
 - id
 - organization_id
 - campaign_id
@@ -423,6 +453,7 @@ Unique:
 - updated_at
 
 ### ads
+
 - id
 - organization_id
 - ad_group_id
@@ -434,6 +465,7 @@ Unique:
 - updated_at
 
 ### creatives
+
 - id
 - organization_id
 - product_id nullable
@@ -452,6 +484,7 @@ Unique:
 ## 10. Keywords / Targeting
 
 ### keywords
+
 - id
 - organization_id
 - ad_group_id
@@ -463,6 +496,7 @@ Unique:
 - updated_at
 
 ### audience_targets
+
 - id
 - organization_id
 - ad_group_id/campaign_id
@@ -476,6 +510,7 @@ Unique:
 ## 11. Performance Data
 
 ### ad_performance_daily
+
 - id
 - organization_id
 - ad_account_id
@@ -500,12 +535,14 @@ Unique key should prevent duplicate provider/date/entity records.
 GA4's Data API returns **aggregated reports, not events**, so AdVegaX stores daily aggregates and discovers properties with the GA4 Admin API. Forced Row-Level Security and composite tenant keys on all three tables; the scheduler's system role reads four columns of `analytics_properties` only (id, organization, provider, first import time).
 
 **analytics_properties** (extension of an `analytics_property` resource)
+
 - id, organization_id, external_resource_id (unique), provider, external_property_id (unique per organization and provider)
 - name, account_name (display only), currency, timezone
 - status (`importing` | `active` | `disconnected` | `error`), platform_status (`active` | `deleted`)
 - history_from, first_import_completed_at, health_code, health_checked_at, created_at, updated_at
 
 **analytics_daily** — one row per property, day, view and value (unique)
+
 - id, organization_id, property_id, day (property time zone)
 - breakdown (`total` | `channel` | `source`), dimension_key (`total`, the channel group, or `source|medium|campaign`), channel_group, traffic_source, traffic_medium, campaign
 - sessions, engaged_sessions, total_users, new_users, key_events (exact decimal), purchases, purchase_revenue (exact decimal, property currency) — NULL when not provided, never 0
@@ -518,6 +555,7 @@ GA4's Data API returns **aggregated reports, not events**, so AdVegaX stores dai
 **analytics_sync_state** — as `ad_sync_state`, keyed by property_id.
 
 ### analytics_events
+
 > **Superseded by Q11 (A23, 2026-10-19): not created.** The GA4 Data API returns aggregated reports, not events; `analytics_daily` above replaces this table. The outline is kept for reference (event-level data would need BigQuery export, out of scope).
 
 - id
@@ -554,6 +592,7 @@ GA4's Data API returns **aggregated reports, not events**, so AdVegaX stores dai
 > Original target model, kept for reference. **As built in Phase 2A: see §4A.**
 
 ### financial_daily
+
 - id
 - organization_id
 - store_id
@@ -576,6 +615,7 @@ Financial aggregates are derived by deterministic application logic. They store 
 ## 13A. Unified analytics — as built (Phase 6, migration 0016; A24)
 
 **fx_rates** — published exchange rates, one per source, currency pair and day (unique), exactly as published
+
 - id, source (`ecb` | `nrb`), base, quote, rate_date, rate (exact decimal, 24.10), unit (the source's quotation unit: Nepal Rastra Bank quotes JPY per 10 and INR per 100), fetched_at
 - meaning: `unit` units of `base` are worth `rate` units of `quote` (ECB: base EUR; NRB: quote NPR, middle of buy and sell)
 - **Not tenant data:** no organization column and no RLS; the app role may only `SELECT`, the system role (the daily job) `SELECT`, `INSERT`, `UPDATE`
@@ -670,7 +710,6 @@ Supersedes the `actions` outline in §15.
 
 **organizations.agency_code** (unique, nullable). The system role may read `organizations (id, name, status, agency_code)` only: finding an agency by its code and naming the other side of a grant.
 
-
 **Data retention (Phase 15, migration 0026; A34):** the system role may read `organization_resource_links (organization_id, external_resource_id, status, unlinked_at)` and delete `external_resources` (the retention job only; cascades remove the imported data). The app role still cannot delete integration rows.
 
 ## 14I. Admin portal — as built (Phase 16, migration 0027; A35)
@@ -684,6 +723,7 @@ The system role also gains `SELECT (id, email, display_name, status, created_at)
 ## 14. AI Tables
 
 ### ai_models
+
 - id
 - provider
 - model_name
@@ -692,6 +732,7 @@ The system role also gains `SELECT (id, email, display_name, status, created_at)
 - created_at
 
 ### prompt_versions
+
 - id
 - name
 - version
@@ -700,6 +741,7 @@ The system role also gains `SELECT (id, email, display_name, status, created_at)
 - created_at
 
 ### ai_runs
+
 - id
 - organization_id
 - user_id nullable
@@ -716,6 +758,7 @@ The system role also gains `SELECT (id, email, display_name, status, created_at)
 - created_at
 
 ### recommendations
+
 - id
 - organization_id
 - ai_run_id
@@ -734,6 +777,7 @@ The system role also gains `SELECT (id, email, display_name, status, created_at)
 > **`actions` is superseded by §14C (Phase 10A, as built).** `automation_policies` belongs to Phase 12 (autopilot) and is not built yet. Kept for history (A1).
 
 ### actions
+
 - id
 - organization_id
 - recommendation_id nullable
@@ -751,6 +795,7 @@ The system role also gains `SELECT (id, email, display_name, status, created_at)
 - executed_at
 
 ### automation_policies
+
 - id
 - organization_id
 - mode
@@ -767,7 +812,9 @@ The system role also gains `SELECT (id, email, display_name, status, created_at)
 ## 16. Audit (Phase 1A)
 
 ### audit_logs (Phase 1A — migration 0003)
+
 Append-only. The application role may insert and read (within its tenant) but never update or delete; no runtime role holds UPDATE, DELETE or TRUNCATE. Indexes: `(organization_id, created_at)`, `actor_user_id`. `organization_id` uses ON DELETE RESTRICT. The `metadata` column is exposed as `metadata` in the API.
+
 - id
 - organization_id nullable
 - actor_type (user, system, worker, ai_recommendation)
@@ -785,6 +832,7 @@ Never store secrets in audit payloads.
 ## 17. Billing
 
 ### billing_customers
+
 - id
 - organization_id
 - provider_customer_id
@@ -792,6 +840,7 @@ Never store secrets in audit payloads.
 - created_at
 
 ### subscriptions
+
 - id
 - organization_id
 - provider_subscription_id
@@ -804,6 +853,7 @@ Never store secrets in audit payloads.
 - updated_at
 
 ### invoices
+
 - id
 - organization_id
 - provider_invoice_id
@@ -817,6 +867,7 @@ Never store secrets in audit payloads.
 ## 18. Notifications
 
 ### notifications
+
 - id
 - organization_id
 - user_id
@@ -834,25 +885,26 @@ All tenant-owned tables have `organization_id` directly (denormalized where need
 Every service query enforces organization scope. PostgreSQL Row-Level Security is **required** on every tenant-owned table as defence in depth (Decision D12). It does not replace application authorization.
 
 **Roles**
+
 - `advegax_migrator`: owns the schema; used only by migrations.
 - `advegax_app`: runtime role; not superuser, not owner, no BYPASSRLS.
 - `advegax_system`: narrow, audited operations only (e.g. enumerating due jobs, email outbox delivery, retention).
-Tables use `FORCE ROW LEVEL SECURITY`. No `SECURITY DEFINER` functions without documented review.
+  Tables use `FORCE ROW LEVEL SECURITY`. No `SECURITY DEFINER` functions without documented review.
 
 **Context.** Each transaction sets `app.current_org_id` and `app.current_user_id` with transaction-local scope. Policies read them with `current_setting(..., true)` and fail closed (no rows) when unset.
 
 **Table classes**
 
-| Class | Tables (Phase 1) | Protection |
-|---|---|---|
-| Tenant-owned | invitations, audit_logs (org rows), and every future business table | RLS: `organization_id = app.current_org_id` |
-| Membership | memberships | RLS: rows of the current organization, or the current user's own rows (to list/switch organizations) |
-| Organization | organizations | RLS: current organization, or organizations where the current user has an active membership |
-| Global identity | users, user_password_credentials, sessions, user_action_tokens | Not tenant-owned; access only through the identity service; never exposed via organization endpoints except through membership joins |
-| Security/system | security_events, email_outbox (Phase 1A) | Insert-only for `advegax_app` (with `organization_id` NULL or the current organization); read/process only by `advegax_system` |
-| Jobs | job_runs (Phase 1B) | Tenant-scoped SELECT/INSERT/UPDATE for `advegax_app`; `advegax_system` SELECT/UPDATE to claim, retry and recover; no DELETE |
+| Class           | Tables (Phase 1)                                                    | Protection                                                                                                                           |
+| --------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Tenant-owned    | invitations, audit_logs (org rows), and every future business table | RLS: `organization_id = app.current_org_id`                                                                                          |
+| Membership      | memberships                                                         | RLS: rows of the current organization, or the current user's own rows (to list/switch organizations)                                 |
+| Organization    | organizations                                                       | RLS: current organization, or organizations where the current user has an active membership                                          |
+| Global identity | users, user_password_credentials, sessions, user_action_tokens      | Not tenant-owned; access only through the identity service; never exposed via organization endpoints except through membership joins |
+| Security/system | security_events, email_outbox (Phase 1A)                            | Insert-only for `advegax_app` (with `organization_id` NULL or the current organization); read/process only by `advegax_system`       |
+| Jobs            | job_runs (Phase 1B)                                                 | Tenant-scoped SELECT/INSERT/UPDATE for `advegax_app`; `advegax_system` SELECT/UPDATE to claim, retry and recover; no DELETE          |
 
-**Verification.** CI fails if a table with `organization_id` lacks enabled + forced RLS and a policy. Cross-tenant tests cover every tenant-owned table and route.
+**Verification.** CI fails if a table with `organization_id` lacks enabled + forced RLS and a policy — except `user_action_tokens`, a global identity table (§ above) whose `organization_id` only records which organization an invitation token is for; it is used only by the identity domain and the invitation flow in `organizations/service.py`, both of which look tokens up by their hash (QA audit QA-016). Cross-tenant tests cover every tenant-owned table and route.
 
 ## 19A. Data Availability (A10)
 
@@ -861,6 +913,7 @@ Values that a provider may not supply carry availability (`available`, `unavaila
 ## 20. Index Strategy
 
 Index:
+
 - foreign keys,
 - tenant + frequently filtered fields,
 - external IDs,
@@ -873,6 +926,7 @@ Avoid unnecessary indexes on high-write tables.
 ## 21. Retention
 
 Define retention policies separately for:
+
 - raw provider payloads,
 - analytics events,
 - audit logs,

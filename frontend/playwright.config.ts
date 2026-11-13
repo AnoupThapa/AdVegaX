@@ -19,6 +19,9 @@ export default defineConfig({
   use: {
     ...devices["Desktop Chrome"],
     baseURL: process.env.E2E_WEB_URL ?? "http://localhost:3000",
+    // Entrance animations off, as for people who ask for less motion: axe then measures the
+    // settled page, not a frame mid-animation (QA-010).
+    contextOptions: { reducedMotion: "reduce" },
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     launchOptions: executablePath ? { executablePath } : {},

@@ -5,16 +5,19 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { Providers } from "@/app/providers";
 import { ApiError, NETWORK_ERROR } from "@/lib/api/errors";
 import * as apiModule from "@/lib/api";
-import { createQueryClient, shouldRetryQuery } from "@/lib/query/query-client";
+import { createQueryClient, queryRetryDelay, shouldRetryQuery } from "@/lib/query/query-client";
 
 describe("query retry policy", () => {
-  it("retries network and server failures at most twice, never 4xx", () => {
+  it("retries server failures at most twice, an unreachable API once, never 4xx", () => {
     expect(shouldRetryQuery(0, new ApiError(0, NETWORK_ERROR))).toBe(true);
+    expect(shouldRetryQuery(1, new ApiError(0, NETWORK_ERROR))).toBe(false);
+    expect(shouldRetryQuery(0, new ApiError(503, "SERVICE_UNAVAILABLE"))).toBe(true);
     expect(shouldRetryQuery(1, new ApiError(503, "SERVICE_UNAVAILABLE"))).toBe(true);
     expect(shouldRetryQuery(2, new ApiError(503, "SERVICE_UNAVAILABLE"))).toBe(false);
     expect(shouldRetryQuery(0, new ApiError(401, "UNAUTHENTICATED"))).toBe(false);
     expect(shouldRetryQuery(0, new ApiError(404, "NOT_FOUND"))).toBe(false);
     expect(shouldRetryQuery(0, new Error("boom"))).toBe(false);
+    expect([0, 1, 2, 5].map(queryRetryDelay)).toEqual([500, 1000, 2000, 2000]);
   });
 
   it("never retries mutations", () => {
