@@ -214,8 +214,18 @@ Top to bottom, in order of what a person needs first:
 
 1. **Statement**: one sentence built from the real figures ("Eve Zone sold A$1,500.50 in 12 orders, and spent A$204.50 on ads. After ad spend, it kept A$695.80."). A missing figure is named, never shown as zero.
 2. **Key figures**: net sales, ad spend, profit after ad spend and orders in one ruled strip (not cards), each compared in words with the period just before ("Up 12% on the previous 30 days"), with a sparkline. Sage marks a good rise, terracotta a bad fall; ad spend is never coloured, since more spend is neither good nor bad on its own. Missing figures say why.
-3. **Work**: "Waiting for you" (open advice, linking straight to each decision) beside "Recent changes" (the latest changes with their state). Open columns under a rule; rows highlight on hover and focus.
-4. **All figures**: the note "Why some figures are missing" (each reason once, numbered, with a link that fixes it), then the ledger (one table per group, amounts right-aligned, missing amounts link to their note), the day table and the sources.
+3. **Dashboard** (Phase 19, `features/overview/Dashboard.tsx`): open cards with one 3 px rule on top (no shadow, rounded only at the bottom).
+   - **Sales, ad spend and profit by day** spans the width: cobalt net-sales line, sage profit line, terracotta ad-spend bars, a "round" y-axis (never "-A$0"), and a readout strip above the plot for the chosen day (pointer, or arrow keys / Home / End on the focusable chart). Missing days break the line; they are never drawn as zero.
+   - **Where the money went**: ad spend by platform (terracotta bars, largest first) and visits by Google Analytics channel (cobalt bars). Bar lengths are drawing only, relative to the largest row; every number shown comes from the API.
+   - **From first view to purchase**: the funnel stages in the API's order, a square-root bar scale (impressions and purchases differ a thousandfold), the API's step rate, and "Below usual" only where the API reports a finding.
+   - **Campaigns that spent most**: the five with the most spend, linking to each campaign; on screens under 64rem each row becomes a labelled card.
+   - SVG `rect` bars, not inline widths, because the CSP forbids inline styles. On wide screens the money and funnel cards sit side by side (7fr / 5fr).
+4. **Work**: "Waiting for you" (open advice, linking straight to each decision) beside "Recent changes" (the latest changes with their state). Open columns under a rule; rows highlight on hover and focus.
+5. **All figures**: the note "Why some figures are missing" (each reason once, numbered, with a link that fixes it), then the ledger (one table per group, amounts right-aligned, missing amounts link to their note), the day table and the sources.
+
+### 3.7a Organization pages (Phase 19)
+
+Every organization page uses the same parts as the Overview: the page title, then one muted line saying what the page is for (kept to the reading measure); panels with the 3 px top rule; table headings small and muted over a stronger rule; rows that light up under the pointer. Small repeated cards (accounts, connections, stores) stay light, with a hover border, so a list of them does not look heavy. Advertising account cards sit side by side on wide screens.
 
 ### 3.8 Admin portal
 
@@ -223,7 +233,7 @@ The operator area sits under the slate band that says customers never see it, so
 
 ### 3.9 Public landing page
 
-A full-width slate block opens the page: the headline (Sora, large, short measure), who it is for, two actions, three plain facts, and a real screenshot of the demo Overview labelled as simulated data. The rest of the page sits on the page background: "How it works" is a numbered sequence joined by a rule on wide screens (it really is a sequence), "Built so you stay in control" is a ruled two-column list, then the platforms and a slate closing block with the same two actions. No invented customers, testimonials or statistics.
+A full-width slate block opens the page: the headline (Sora, large, short measure), who it is for, two actions and three plain facts, beside **"Data flowing in"** (`features/home/HeroFlow.tsx`, Phase 19). The four sources (your store, Google Ads, Meta, Google Analytics) draw their lines into one white "Profit after ad spend" panel, whose bars grow and profit line draws. It is the page's one orchestrated moment: about two seconds, played once, static for reduced motion, and an illustration only: no figures. On phones the sources sit in a 2 × 2 grid above the panel, without lines. The real screenshot of the demo Overview (labelled as simulated data) follows in "The whole picture, every morning". The rest of the page sits on the page background: "How it works" is a numbered sequence joined by a rule on wide screens (it really is a sequence), "Built so you stay in control" is a ruled two-column list, then the platforms and a slate closing block with the same two actions. No invented customers, testimonials or statistics.
 
 ## 4. Content rules
 

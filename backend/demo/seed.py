@@ -72,6 +72,8 @@ def _organization(client: ApiClient, name: str) -> str:
 
 
 def main() -> int:
+    # Sixty days of steady simulated activity for the charts (demo/rich.py; demo only).
+    os.environ.setdefault("ADVEGAX_DEMO_DAYS", "60")
     try:
         return _seed()
     except AlreadySeeded as exc:

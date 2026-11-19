@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { Icon, type IconName } from "@/components/ui/Icon";
 
+import { HeroFlow } from "./HeroFlow";
 import styles from "./landing.module.css";
 
 const STEPS: readonly { readonly title: string; readonly body: string }[] = [
@@ -81,7 +82,22 @@ export function Landing() {
               <li>Every change logged</li>
             </ul>
           </div>
-          <figure className={styles.heroShot}>
+          <HeroFlow />
+        </div>
+      </section>
+
+      <div className={styles.body}>
+        <section className={styles.split} aria-labelledby="overview-title">
+          <div className={styles.splitText}>
+            <h2 id="overview-title">The whole picture, every morning</h2>
+            <p>
+              The Overview opens with one sentence: what you sold, what you spent on ads and what
+              you kept. Below it, the period by day, where the money went, the funnel from first
+              view to purchase and the campaigns that spent most.
+            </p>
+            <p>Where a figure is missing, it says why and links to the fix: no guessed numbers.</p>
+          </div>
+          <figure className={styles.shot}>
             {/* eslint-disable-next-line @next/next/no-img-element -- a fixed local screenshot */}
             <img
               src="/product/overview-800.webp"
@@ -90,14 +106,13 @@ export function Landing() {
               width={1200}
               height={820}
               alt="The Overview page of a demo organization: a sentence of the period's sales, ad spend and profit, the key figures against the period before, and the advice and changes waiting."
-              fetchPriority="high"
+              loading="lazy"
+              decoding="async"
             />
             <figcaption>Overview page of the demo organization (simulated data).</figcaption>
           </figure>
-        </div>
-      </section>
+        </section>
 
-      <div className={styles.body}>
         <section className={styles.how} aria-labelledby="how-title">
           <h2 id="how-title">How it works</h2>
           <ol className={styles.steps}>

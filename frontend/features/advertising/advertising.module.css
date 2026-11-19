@@ -2,12 +2,19 @@
   margin-bottom: var(--space-8);
 }
 
+/* Phase 19: the same open card as the Overview dashboard — one strong rule on top. */
 .panel {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: var(--space-4);
-  margin-bottom: var(--space-4);
+  border-top: 3px solid var(--color-text);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  padding: var(--space-5);
+  margin-bottom: var(--space-5);
+}
+
+.section > h2 {
+  font-size: var(--font-size-lg);
+  margin-bottom: var(--space-3);
 }
 
 .list {
@@ -161,9 +168,26 @@
 .table th,
 .table td {
   text-align: left;
-  padding: var(--space-2);
+  padding: var(--space-2) var(--space-3);
   border-bottom: 1px solid var(--color-border);
   vertical-align: top;
+}
+
+/* Column headings: small and quiet, over a stronger rule; rows light up under the pointer. */
+.table thead th {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-muted);
+  border-bottom: 1px solid var(--color-border-strong);
+  vertical-align: bottom;
+}
+
+.table tbody tr {
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.table tbody tr:hover {
+  background: var(--color-surface-2);
 }
 
 .num {
@@ -230,6 +254,13 @@
 
 .cards > li {
   margin: 0;
+}
+
+/* Wide screens: account cards side by side instead of one long column. */
+@media (min-width: 64rem) {
+  .cards {
+    grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
+  }
 }
 
 .cardTitle {

@@ -161,6 +161,8 @@
 
 .pageHeading {
   font-size: var(--font-size-2xl);
+  letter-spacing: -0.02em;
+  margin-bottom: var(--space-2);
   overflow-wrap: anywhere;
 }
 

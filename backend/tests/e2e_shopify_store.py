@@ -72,7 +72,12 @@ def main(argv: list[str] | None = None) -> int:
     runtime = build_runtime(settings)
     shop = f"{args.shop.lower()}.myshopify.com"
     sim = ShopifySim(strict_tokens=True)
-    sim.add_shop(shop, catalogue=sample_catalogue(), orders=recent_orders(runtime.clock.now()))
+    catalogue, orders = sample_catalogue(), recent_orders(runtime.clock.now())
+    from demo.rich import demo_catalogue, demo_days, demo_orders
+
+    if days := demo_days():  # the desktop demo only: a fuller history (demo/rich.py)
+        catalogue, orders = demo_catalogue(catalogue), demo_orders(runtime.clock.now(), days)
+    sim.add_shop(shop, catalogue=catalogue, orders=orders)
     runtime.providers.register(build_provider(sim, runtime.clock))
     set_worker_runtime(runtime)  # jobs run here, with the simulator, not in the worker
     celery_app.conf.task_always_eager = True

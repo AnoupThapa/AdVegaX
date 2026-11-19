@@ -12,6 +12,7 @@ import { messageFor } from "@/lib/api/errors";
 import { figureReason, type Figure } from "@/lib/format/money";
 
 import { useOverview, type Overview } from "./api";
+import { Dashboard } from "./Dashboard";
 import own from "./overview.module.css";
 import {
   DAY_COLUMNS,
@@ -420,6 +421,12 @@ export function OverviewFigures({ org, children }: { org: Organization; children
         </PeriodLine>
         <Kpis data={data} previous={previous.data} currency={currency} days={days} />
       </section>
+      <Dashboard
+        org={org}
+        data={data}
+        currency={currency}
+        controls={{ from: controls.from, to: controls.to, storeId: controls.storeId }}
+      />
       {children}
       <section aria-labelledby="overview-ledger" className={styles.section}>
         <h2 id="overview-ledger">All figures</h2>

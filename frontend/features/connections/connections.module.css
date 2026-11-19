@@ -5,8 +5,9 @@
 .panel {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: var(--space-4);
+  border-top: 3px solid var(--color-text);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  padding: var(--space-5);
   margin-bottom: var(--space-4);
 }
 
@@ -28,6 +29,11 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: var(--space-3) var(--space-4);
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+
+.card:hover {
+  border-color: var(--color-border-strong);
 }
 
 .cardTitle {

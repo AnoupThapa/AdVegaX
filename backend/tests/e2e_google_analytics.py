@@ -89,6 +89,11 @@ def sample(sim: GA4Sim, today: date) -> None:
         ),
     ]
     au.day_users[busy] = 118  # Google's distinct users for the day, not 95 + 28
+    from demo.rich import demo_days, demo_visits
+
+    if days := demo_days():  # the desktop demo only: a fuller history (demo/rich.py)
+        au.traffic = demo_visits(today, days, Visit)
+        au.day_users.clear()
     au.metadata = {"total": {"subjectToThresholding": True}}
 
 

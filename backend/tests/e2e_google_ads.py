@@ -31,6 +31,7 @@ from app.workers.email_tasks import set_worker_runtime
 from tests.google_ads_sim import (
     GoogleAdsSim,
     build_provider,
+    perf_row,
     sample_hierarchy,
     sample_performance,
     sample_structure,
@@ -71,6 +72,10 @@ def main(argv: list[str] | None = None) -> int:
     search_day, pmax_day = recent_days(today)
     for customer in (AU, NZ):
         sample_performance(sample_structure(sim.customers[customer]), search_day, pmax_day)
+    from demo.rich import demo_days, demo_google_performance
+
+    if days := demo_days():  # the desktop demo only: a fuller history (demo/rich.py)
+        demo_google_performance(sim.customers[AU], today, days, perf_row)
     # The simulator replaces the real provider when Google Ads is switched on (as in CI).
     runtime.providers._providers.pop("google_ads", None)
     runtime.providers.register(build_provider(sim))
