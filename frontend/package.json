@@ -4,7 +4,7 @@
   "private": true,
   "description": "AdVegaX web application (Phase 1C frontend shell)",
   "engines": {
-    "node": ">=24 <25"
+    "node": ">=24 <27"
   },
   "scripts": {
     "dev": "next dev --port 3000",

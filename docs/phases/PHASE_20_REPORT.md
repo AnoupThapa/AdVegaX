@@ -36,6 +36,10 @@ Requested by the product owner on 2026-11-20 (A36): use the new logo, its colour
 | Browser end-to-end + axe (no serious or critical violations) | **21 / 21 pass.** Run against a local stack: PostgreSQL 16, Redis, API and worker with the CI settings. Two stand-ins: a small local stand-in for Mailpit, and Chromium 1243 via `PLAYWRIGHT_CHROMIUM_EXECUTABLE`. |
 | Screens checked (demo data) | At 1440 px, light and dark: home, sign-in, Overview, Recommendations, Advertising, Funnel, Settings, Billing, Connections. At 390 px: home and Overview. No sideways scroll. The sidebar collapses to a navy menu button on phones. |
 
+## 3a. Node.js 26 accepted (follow-up, 2026-11-20)
+
+The owner's computer moved to Node.js 26.13.1, and `npm ci` refused it (`EBADENGINE`, the project required `>=24 <25`). The whole web app was checked on Node.js 26.13.1: `npm ci`, `npm run check` (656 tests, branches 85.9%, audit 0), `npm run build` and the browser suite with axe (21 / 21). `engines` is now `>=24 <27` in `package.json` and the lockfile. CI and `.nvmrc` stay on 24, the version the project is built for.
+
 ## 4. Known limitations
 
 - **The logo is a raster cut.** The files come from the PNG master, at 3× header size. A vector (SVG) master would be sharper at every size.

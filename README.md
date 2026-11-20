@@ -49,7 +49,7 @@ API docs (non-deployed environments): http://localhost:8000/api/v1/docs
 
 ## Local development (frontend)
 
-Requirements: Node.js 24 LTS (`frontend/.nvmrc`).
+Requirements: Node.js 24 LTS (`frontend/.nvmrc`); Node.js 26 also works (checked in Phase 20).
 
 ```bash
 cd frontend
