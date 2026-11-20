@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { AccountNav } from "@/features/auth/AccountNav";
 
+import { BrandLogo } from "./BrandLogo";
 import { Container } from "./Layout";
 import styles from "./SiteHeader.module.css";
 
@@ -10,7 +11,7 @@ export function SiteHeader() {
     <header className={styles.header}>
       <Container className={styles.inner}>
         <Link href="/" className={styles.brand}>
-          AdVegaX
+          <BrandLogo />
         </Link>
         <AccountNav />
       </Container>

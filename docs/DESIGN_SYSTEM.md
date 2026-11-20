@@ -1,6 +1,6 @@
 # AdVegaX — Design system
 
-**Status:** living document · first version 2026-10-30 (Phase 17) · owner: product owner; changes follow §9.
+**Status:** living document · first version 2026-10-30 (Phase 17) · **brand identity 2026-11-20 (Phase 20)** · owner: product owner; changes follow §7.
 **Where it lives in code:** tokens in `frontend/app/globals.css`; shared components in `frontend/components/`; rules enforced by `frontend/tests/static/design-tokens.test.ts`.
 
 The aim is one look across the whole product: a small palette, one type scale, one spacing scale, a few layout containers, and a short list of components. Pages are composed from these; they do not invent their own values.
@@ -9,7 +9,7 @@ The aim is one look across the whole product: a small palette, one type scale, o
 
 ## 1. Principles
 
-1. **Restricted palette.** Neutrals, one accent (blue) and four status colours. Nothing else. Colour never carries meaning alone: statuses always have a text label.
+1. **Restricted palette, taken from the logo.** Vega navy, ivory paper, Growth gold (with ledger bronze for text) and four status colours. Nothing else. Colour never carries meaning alone: statuses always have a text label.
 2. **Tokens, not values.** Pages and components reference tokens (`var(--space-4)`), never raw numbers or colours. A test enforces this (§9.3).
 3. **Consistency from the system, not from identical pages.** A table-heavy page and a form page share tokens and components but not a layout.
 4. **Accessible by default.** WCAG 2.2 AA is the floor: contrast, 24 px minimum targets (44 px for primary controls), visible focus, labelled controls, keyboard operation, reduced motion respected.
@@ -23,57 +23,155 @@ The aim is one look across the whole product: a small palette, one type scale, o
 
 ### 2.1 Colour (restricted palette)
 
-A deep slate base with three functional accents, each with one job: **cobalt** (`color-accent`: actions, links, focus, chart lines), **terracotta** (`color-terracotta`, `status-warning-*`: warnings, figures going the wrong way) and **sage** (`color-sage`, `status-success-*`: good results). Accents never decorate, and there are no gradients. The **slate block** (`color-slate`, `color-slate-2`, `color-on-slate*`) is a solid, always-dark surface used for the landing hero, the landing's closing block and the admin band. Every text pair meets 4.5:1 in both schemes (checked with a script, not by eye).
+The palette comes from the AdVegaX logo (Phase 20).
+
+- **Vega navy** (`color-text`, `color-accent`, `color-slate`) carries text, the primary action, the current navigation item and the always-dark bands.
+- **Ivory paper** (`color-bg`, `color-surface`, `color-surface-2`) is the ground.
+- **Growth gold** (`color-gold`) is the one brand accent: hairline rules, the current-item mark in the sidebar, the primary action on navy bands and the sign-in card's top rule. It is never used for text on paper, where it fails contrast.
+- **Ledger bronze** (`color-link`, `color-focus`) is a gold dark enough for links and focus rings on paper.
+- Green and red/terracotta only report results (`color-sage`, `color-terracotta`, the status pairs). No gradients.
+
+The **navy band** (`color-slate`, `color-slate-2`, `color-on-slate*`) is used for the landing hero and closing block, the organization sidebar and the admin band. In the dark scheme the roles swap: navy becomes the ground and gold becomes the action colour. Every text pair below meets 4.5:1 in both schemes (measured with a script, not by eye).
 
 Three tiers: **reference** values live only in `globals.css`; **semantic** tokens (below) are what the rest of the code uses; **component** styles combine semantic tokens.
 
-| Token                 | Light     | Dark      |
-| --------------------- | --------- | --------- |
-| `color-bg`            | `#f7f8fa` | `#0f1116` |
-| `color-surface`       | `#ffffff` | `#171a21` |
-| `color-surface-2`     | `#f1f3f6` | `#1d212a` |
-| `color-text`          | `#14171f` | `#eef0f4` |
-| `color-text-muted`    | `#4a5160` | `#b4bac6` |
-| `color-border`        | `#d5d9e0` | `#2f3542` |
-| `color-border-strong` | `#aab1bd` | `#4a5263` |
-| `color-accent`        | `#1f5fd1` | `#7aa7ff` |
-| `color-accent-text`   | `#1a4fb0` | `#9bbcff` |
-| `color-accent-bg`     | `#e8f0fd` | `#14284f` |
-| `color-danger`        | `#b42318` | `#ff8a80` |
-| `color-success`       | `#1e7a3c` | `#6fd18f` |
-| `color-warning`       | `#8a5a00` | `#f2c14e` |
+| Token                   | Light     | Dark      | Role                                       |
+| ----------------------- | --------- | --------- | ------------------------------------------ |
+| `color-bg`              | `#f7f3ea` | `#04101e` | Page ground (ivory / deep navy)            |
+| `color-surface`         | `#fffdf8` | `#0a1b30` | Cards, panels, inputs                      |
+| `color-surface-2`       | `#f1ebdf` | `#0f233b` | Tinted rows, table heads                   |
+| `color-text`            | `#05182d` | `#f2eee4` | Body text (Vega navy / ivory)              |
+| `color-text-muted`      | `#4d5666` | `#b7bfcb` | Secondary text                             |
+| `color-border`          | `#e2daca` | `#203655` | Dividers, card edges                       |
+| `color-border-strong`   | `#b9b2a3` | `#3a5373` | Stronger dividers                          |
+| `color-control-border`  | `#807868` | `#6f84a2` | Input and secondary-button edges (≥ 3:1)   |
+| `color-accent`          | `#05182d` | `#d9a85c` | Primary action, current item, chart line   |
+| `color-accent-contrast` | `#f7f3ea` | `#05182d` | Label on the primary action                |
+| `color-accent-bg`       | `#f3e7d3` | `#2b2416` | Gold tint                                  |
+| `color-accent-text`     | `#6e4511` | `#ebc583` | Text on the gold tint                      |
+| `color-link`            | `#8a5a1c` | `#e2b05f` | Links (ledger bronze / gold)               |
+| `color-focus`           | `#8a5a1c` | `#e2b05f` | Focus ring                                 |
+| `color-gold`            | `#c9944a` | `#d9a85c` | Brand rules, marks, primary action on navy |
+| `color-on-gold`         | `#05182d` | `#05182d` | Label on gold                              |
+| `color-slate`           | `#05182d` | `#020b16` | Navy band, sidebar                         |
+| `color-slate-2`         | `#0b2340` | `#071a2f` | Raised surface on the navy band            |
+| `color-on-slate`        | `#f7f3ea` | `#f7f3ea` | Text on navy                               |
+| `color-on-slate-muted`  | `#c8cfda` | `#c8cfda` | Secondary text on navy                     |
+| `color-on-slate-accent` | `#e2b05f` | `#e2b05f` | Gold text and focus on navy                |
+| `color-danger`          | `#a3231a` | `#ff8f84` | Errors, destructive actions                |
+| `color-success`         | `#22573b` | `#8fcfa6` | Done, connected                            |
+| `color-warning`         | `#8a3b12` | `#f0ae84` | Needs attention                            |
 
 Status colours come in foreground/background pairs: `--status-success-*`, `--status-warning-*`, `--status-danger-*`, `--status-info-*`, `--status-neutral-*` (each `-fg` and `-bg`).
 
-| Meaning             | Use for                                                                    | Never for                                          |
-| ------------------- | -------------------------------------------------------------------------- | -------------------------------------------------- |
-| **Accent** (blue)   | The one primary action per view, links, the current navigation item, focus | Decoration, status                                 |
-| **Success** (green) | Completed, connected, up to date                                           | "Good" numbers (metrics are not coloured by value) |
-| **Warning** (amber) | Needs attention; **a figure that cannot be shown yet**                     | Errors                                             |
-| **Danger** (red)    | Errors, destructive actions                                                | Emphasis                                           |
-| **Info / neutral**  | Plain information, inactive states                                         | —                                                  |
+| Meaning                      | Use for                                                                 | Never for                                          |
+| ---------------------------- | ----------------------------------------------------------------------- | -------------------------------------------------- |
+| **Accent** (navy; gold dark) | The one primary action per view, the current navigation item, charts    | Decoration, status                                 |
+| **Gold**                     | Hairline rules, the current-item mark, the primary action on navy bands | Text or links on paper (fails contrast)            |
+| **Link / focus** (bronze)    | Links and focus rings on paper                                          | Buttons                                            |
+| **Success** (green)          | Completed, connected, up to date                                        | "Good" numbers (metrics are not coloured by value) |
+| **Warning** (terracotta)     | Needs attention; **a figure that cannot be shown yet**                  | Errors                                             |
+| **Danger** (red)             | Errors, destructive actions                                             | Emphasis                                           |
+| **Info / neutral**           | Plain information, inactive states                                      | —                                                  |
 
-**Contrast, measured** (WCAG AA needs 4.5:1 for text; lowest here is 5.4:1):
+**Contrast, measured** (WCAG AA needs 4.5:1 for text and 3:1 for control edges; the lowest text pair here is 5.3:1):
 
 | Pair                      | Tokens                                     | Light  | Dark   |
 | ------------------------- | ------------------------------------------ | ------ | ------ |
-| Body text                 | `color-text` on `color-bg`                 | 16.9:1 | 16.6:1 |
-| Body text on cards        | `color-text` on `color-surface`            | 17.9:1 | 15.3:1 |
-| Muted text                | `color-text-muted` on `color-bg`           | 7.5:1  | 9.7:1  |
-| Muted text on tinted rows | `color-text-muted` on `color-surface-2`    | 7.2:1  | 8.3:1  |
-| Link / accent text        | `color-accent` on `color-surface`          | 5.8:1  | 7.3:1  |
-| Accent text on its tint   | `color-accent-text` on `color-accent-bg`   | 6.6:1  | 7.6:1  |
-| Primary button label      | `color-accent-contrast` on `color-accent`  | 5.8:1  | 7.9:1  |
-| Danger button label       | `color-danger-contrast` on `color-danger`  | 6.6:1  | 8.3:1  |
-| Success badge             | `status-success-fg` on `status-success-bg` | 6.5:1  | 8.6:1  |
-| Warning badge             | `status-warning-fg` on `status-warning-bg` | 6.4:1  | 9.2:1  |
-| Danger badge              | `status-danger-fg` on `status-danger-bg`   | 6.8:1  | 8.1:1  |
-| Info badge                | `status-info-fg` on `status-info-bg`       | 6.6:1  | 7.6:1  |
-| Neutral badge             | `status-neutral-fg` on `status-neutral-bg` | 8.4:1  | 8.9:1  |
-| Error text                | `color-danger` on `color-surface`          | 6.6:1  | 7.6:1  |
-| Success text              | `color-success` on `color-surface`         | 5.4:1  | 9.3:1  |
+| Body text                 | `color-text` on `color-bg`                 | 16.1:1 | 16.5:1 |
+| Body text on cards        | `color-text` on `color-surface`            | 17.6:1 | 15.0:1 |
+| Muted text                | `color-text-muted` on `color-bg`           | 6.7:1  | 10.3:1 |
+| Muted text on tinted rows | `color-text-muted` on `color-surface-2`    | 6.2:1  | 8.6:1  |
+| Link                      | `color-link` on `color-bg`                 | 5.3:1  | 9.7:1  |
+| Link on cards             | `color-link` on `color-surface`            | 5.8:1  | 8.8:1  |
+| Gold-tint text            | `color-accent-text` on `color-accent-bg`   | 6.8:1  | 9.4:1  |
+| Primary button label      | `color-accent-contrast` on `color-accent`  | 16.1:1 | 8.3:1  |
+| Gold button label         | `color-on-gold` on `color-gold`            | 6.7:1  | 8.3:1  |
+| Danger button label       | `color-danger-contrast` on `color-danger`  | 7.3:1  | 8.1:1  |
+| Text on navy              | `color-on-slate` on `color-slate`          | 16.1:1 | 17.9:1 |
+| Muted text on navy        | `color-on-slate-muted` on `color-slate-2`  | 10.1:1 | 11.2:1 |
+| Gold text on navy         | `color-on-slate-accent` on `color-slate`   | 9.0:1  | 10.0:1 |
+| Success badge             | `status-success-fg` on `status-success-bg` | 7.1:1  | 7.9:1  |
+| Warning badge             | `status-warning-fg` on `status-warning-bg` | 6.3:1  | 7.9:1  |
+| Danger badge              | `status-danger-fg` on `status-danger-bg`   | 6.9:1  | 8.1:1  |
+| Info badge                | `status-info-fg` on `status-info-bg`       | 11.0:1 | 8.0:1  |
+| Neutral badge             | `status-neutral-fg` on `status-neutral-bg` | 7.9:1  | 9.1:1  |
+| Error text                | `color-danger` on `color-surface`          | 7.3:1  | 7.9:1  |
+| Success text              | `color-success` on `color-surface`         | 8.3:1  | 9.6:1  |
+| Control edge              | `color-control-border` on `color-surface`  | 4.3:1  | 4.5:1  |
 
-**Control borders.** Form controls and secondary buttons use `--color-control-border` (about 3.8:1 light, 3.7:1 dark) so their edges are visible (WCAG 1.4.11, 3:1). `--color-border` is for decoration such as card edges and dividers and is deliberately lighter.
+**Control borders.** Form controls and secondary buttons use `--color-control-border` so their edges are visible (WCAG 1.4.11, 3:1). `--color-border` is for decoration such as card edges and dividers and is deliberately lighter.
+
+### 2.2 Typography
+
+Two families, both SIL OFL and bundled with the app (`@fontsource-variable/cormorant-garamond`, `@fontsource-variable/montserrat`), so nothing is fetched from another site. They are matched to the logo (Phase 20). **Cormorant Garamond** (`--font-display`, bold) echoes the high-contrast serif of the "AdVegaX" wordmark. It sets the page title (h1), section headings (h2) and the few large figures (key figures, admin counts), and is reserved for 24 px and up, where its fine strokes read well. **Montserrat** (`--font-sans`) echoes the tagline "Advertise smarter. Grow faster." and sets everything else: body, tables, controls, h3, small panel titles, and the spaced capital labels (navigation groups, the landing eyebrow). System serif and sans fonts are the fallbacks. Headings and tables use lining figures (Cormorant's default figures are old-style); tables, `.figures` and `[data-figure]` also use tabular figures so amounts line up. Sizes and weights come from tokens only.
+
+| Role |
+| ----------------------- | --------- | --------- | ------------------------------------------ |
+| `color-bg` | `#f7f3ea` | `#04101e` | Page ground (ivory / deep navy) |
+| `color-surface` | `#fffdf8` | `#0a1b30` | Cards, panels, inputs |
+| `color-surface-2` | `#f1ebdf` | `#0f233b` | Tinted rows, table heads |
+| `color-text` | `#05182d` | `#f2eee4` | Body text (Vega navy / ivory) |
+| `color-text-muted` | `#4d5666` | `#b7bfcb` | Secondary text |
+| `color-border` | `#e2daca` | `#203655` | Dividers, card edges |
+| `color-border-strong` | `#b9b2a3` | `#3a5373` | Stronger dividers |
+| `color-control-border` | `#807868` | `#6f84a2` | Input and secondary-button edges (≥ 3:1) |
+| `color-accent` | `#05182d` | `#d9a85c` | Primary action, current item, chart line |
+| `color-accent-contrast` | `#f7f3ea` | `#05182d` | Label on the primary action |
+| `color-accent-bg` | `#f3e7d3` | `#2b2416` | Gold tint |
+| `color-accent-text` | `#6e4511` | `#ebc583` | Text on the gold tint |
+| `color-link` | `#8a5a1c` | `#e2b05f` | Links (ledger bronze / gold) |
+| `color-focus` | `#8a5a1c` | `#e2b05f` | Focus ring |
+| `color-gold` | `#c9944a` | `#d9a85c` | Brand rules, marks, primary action on navy |
+| `color-on-gold` | `#05182d` | `#05182d` | Label on gold |
+| `color-slate` | `#05182d` | `#020b16` | Navy band, sidebar |
+| `color-slate-2` | `#0b2340` | `#071a2f` | Raised surface on the navy band |
+| `color-on-slate` | `#f7f3ea` | `#f7f3ea` | Text on navy |
+| `color-on-slate-muted` | `#c8cfda` | `#c8cfda` | Secondary text on navy |
+| `color-on-slate-accent` | `#e2b05f` | `#e2b05f` | Gold text and focus on navy |
+| `color-danger` | `#a3231a` | `#ff8f84` | Errors, destructive actions |
+| `color-success` | `#22573b` | `#8fcfa6` | Done, connected |
+| `color-warning` | `#8a3b12` | `#f0ae84` | Needs attention |
+
+Status colours come in foreground/background pairs: `--status-success-*`, `--status-warning-*`, `--status-danger-*`, `--status-info-*`, `--status-neutral-*` (each `-fg` and `-bg`).
+
+| Meaning                      | Use for                                                                 | Never for                                          |
+| ---------------------------- | ----------------------------------------------------------------------- | -------------------------------------------------- |
+| **Accent** (navy; gold dark) | The one primary action per view, the current navigation item, charts    | Decoration, status                                 |
+| **Gold**                     | Hairline rules, the current-item mark, the primary action on navy bands | Text or links on paper (fails contrast)            |
+| **Link / focus** (bronze)    | Links and focus rings on paper                                          | Buttons                                            |
+| **Success** (green)          | Completed, connected, up to date                                        | "Good" numbers (metrics are not coloured by value) |
+| **Warning** (terracotta)     | Needs attention; **a figure that cannot be shown yet**                  | Errors                                             |
+| **Danger** (red)             | Errors, destructive actions                                             | Emphasis                                           |
+| **Info / neutral**           | Plain information, inactive states                                      | —                                                  |
+
+**Contrast, measured** (WCAG AA needs 4.5:1 for text and 3:1 for control edges; the lowest text pair here is 5.3:1):
+
+| Pair                      | Tokens                                     | Light  | Dark   |
+| ------------------------- | ------------------------------------------ | ------ | ------ |
+| Body text                 | `color-text` on `color-bg`                 | 16.1:1 | 16.5:1 |
+| Body text on cards        | `color-text` on `color-surface`            | 17.6:1 | 15.0:1 |
+| Muted text                | `color-text-muted` on `color-bg`           | 6.7:1  | 10.3:1 |
+| Muted text on tinted rows | `color-text-muted` on `color-surface-2`    | 6.2:1  | 8.6:1  |
+| Link                      | `color-link` on `color-bg`                 | 5.3:1  | 9.7:1  |
+| Link on cards             | `color-link` on `color-surface`            | 5.8:1  | 8.8:1  |
+| Gold-tint text            | `color-accent-text` on `color-accent-bg`   | 6.8:1  | 9.4:1  |
+| Primary button label      | `color-accent-contrast` on `color-accent`  | 16.1:1 | 8.3:1  |
+| Gold button label         | `color-on-gold` on `color-gold`            | 6.7:1  | 8.3:1  |
+| Danger button label       | `color-danger-contrast` on `color-danger`  | 7.3:1  | 8.1:1  |
+| Text on navy              | `color-on-slate` on `color-slate`          | 16.1:1 | 17.9:1 |
+| Muted text on navy        | `color-on-slate-muted` on `color-slate-2`  | 10.1:1 | 11.2:1 |
+| Gold text on navy         | `color-on-slate-accent` on `color-slate`   | 9.0:1  | 10.0:1 |
+| Success badge             | `status-success-fg` on `status-success-bg` | 7.1:1  | 7.9:1  |
+| Warning badge             | `status-warning-fg` on `status-warning-bg` | 6.3:1  | 7.9:1  |
+| Danger badge              | `status-danger-fg` on `status-danger-bg`   | 6.9:1  | 8.1:1  |
+| Info badge                | `status-info-fg` on `status-info-bg`       | 11.0:1 | 8.0:1  |
+| Neutral badge             | `status-neutral-fg` on `status-neutral-bg` | 7.9:1  | 9.1:1  |
+| Error text                | `color-danger` on `color-surface`          | 7.3:1  | 7.9:1  |
+| Success text              | `color-success` on `color-surface`         | 8.3:1  | 9.6:1  |
+| Control edge              | `color-control-border` on `color-surface`  | 4.3:1  | 4.5:1  |
+
+**Control borders.** Form controls and secondary buttons use `--color-control-border` so their edges are visible (WCAG 1.4.11, 3:1). `--color-border` is for decoration such as card edges and dividers and is deliberately lighter.
 
 ### 2.2 Typography
 
@@ -81,10 +179,10 @@ Two families, both SIL OFL and bundled with the app (`@fontsource-variable/sora`
 
 | Role                       | Token                              | Size  | Weight                  | Used for                                 |
 | -------------------------- | ---------------------------------- | ----- | ----------------------- | ---------------------------------------- |
-| Display                    | `--font-size-3xl` (fluid 32–52 px) | fluid | bold                    | Public home page headline only           |
-| Page title (h1)            | `--font-size-2xl`                  | 32 px | semibold–bold           | One per page                             |
-| Section (h2)               | `--font-size-xl`                   | 24 px | semibold                | Page sections                            |
-| Subsection (h3), lead text | `--font-size-lg`                   | 18 px | semibold                | Cards, groups                            |
+| Display                    | `--font-size-3xl` (fluid 40–72 px) | fluid | bold (serif)            | Public home page headline only           |
+| Page title (h1)            | `--font-size-2xl`                  | 40 px | bold (serif)            | One per page                             |
+| Section (h2)               | `--font-size-xl`                   | 28 px | bold (serif)            | Page sections                            |
+| Subsection (h3), lead text | `--font-size-lg`                   | 18 px | semibold (sans)         | Cards, groups, panel titles              |
 | Body                       | `--font-size-md`                   | 16 px | regular                 | Everything else                          |
 | Small                      | `--font-size-sm`                   | 14 px | regular / medium        | Hints, table headers, captions, metadata |
 | Extra small                | `--font-size-xs`                   | 12 px | semibold, sentence case | Small labels (navigation groups use sm)  |
@@ -94,7 +192,8 @@ Weights: `--font-weight-regular` 400, `-medium` 500, `-semibold` 600, `-bold` 70
 - **One h1 per page**, then h2, h3 in order; never skip a level for looks. Headings use `--line-height-tight` (1.2) and balanced wrapping; body text uses `--line-height` (1.5).
 - **Prose is capped at `--measure` (65 characters).** Long paragraphs do not span a wide screen.
 - **Numbers in tables and tiles use tabular figures** (equal-width digits) so columns line up; money, counts and percentages are right-aligned in tables.
-- Body text is never smaller than 14 px; nothing is set in capitals except the extra-small group labels.
+- Body text is never smaller than 14 px; nothing is set in capitals except the extra-small spaced labels (navigation groups, the landing eyebrow), as in the logo's tagline.
+- A heading smaller than `--font-size-xl` (panel and card titles) is set in the sans.
 - Links are underlined and use the accent colour; muted text (`--color-text-muted`) is for secondary information only, never for required instructions.
 
 ### 2.3 Spacing
@@ -105,8 +204,8 @@ Rhythm: 8 px inside compact groups, 16 px between related blocks, 24–32 px bet
 
 ### 2.4 Radius, elevation, layers
 
-- Radius: `--radius-sm` 4 px (inputs, badges), `-md` 8 px (cards, buttons, menus), `-lg` 12 px (large images), `-pill` (rare), `50%` (avatars).
-- Elevation: `--shadow-sm` (cards, optional), `--shadow-md` (floating images), `--shadow-lg` (menus, toasts). In dark mode shadows are stronger or removed because they are barely visible.
+- Radius (Phase 20: near-square, like a ledger): `--radius-sm` 2 px (inputs, badges), `-md` 2 px (cards, buttons, menus), `-lg` 4 px (large images), `-pill` (rare), `50%` (avatars).
+- Elevation: hairline rules instead of shadows. `--shadow-sm` is none; `--shadow-md` is a 1 px hairline under floating images; `--shadow-lg` is kept for things that float over content (menus, toasts).
 - Layers: `--z-dropdown` 10 < `--z-header` 20 < `--z-drawer` 30 < `--z-toast` 40 < `--z-skip` 100. Nothing else sets a z-index.
 
 ### 2.5 Layout
@@ -138,7 +237,29 @@ Robustness rules: grids use `minmax(0, 1fr)` so long content cannot widen the pa
 | Authentication       | Single centred card (`PageCard`), no sidebar                             |
 | Public               | Full-width bands inside `Container`; each band has its own layout        |
 
-### 2.6 Motion and icons
+### 2.6 Brand assets (Phase 20)
+
+The logo files live in `frontend/public/brand/`. They are cut from the product owner's master logo (a raster image).
+
+| File                             | What                                 | Used in                               |
+| -------------------------------- | ------------------------------------ | ------------------------------------- |
+| `mark.webp`                      | The mark, navy and gold, for paper   | `BrandLogo` (header)                  |
+| `mark-dark.webp`                 | The mark, ivory and gold, for navy   | `BrandLogo` (dark scheme, navy bands) |
+| `wordmark.webp`                  | "AdVegaX", navy with a gold X        | `BrandLogo`                           |
+| `wordmark-dark.webp`             | "AdVegaX", ivory with a gold X       | `BrandLogo` (dark scheme, navy bands) |
+| `logo-stacked-dark.webp`         | Mark, wordmark and tagline, for navy | Landing closing block                 |
+| `app/icon.png`, `apple-icon.png` | The mark on a navy square            | Browser tab and home-screen icon      |
+
+`components/layout/BrandLogo.tsx` renders the horizontal lockup (mark and wordmark). With `tone="auto"` it switches to the ivory files when the person's system is in dark mode (a `<picture>` source, no script). With `tone="onDark"` it always uses them. The wordmark image carries the accessible name "AdVegaX"; the mark is decorative.
+
+Rules:
+
+- Never recolour, stretch or redraw the logo.
+- On paper use the navy files; on navy use the ivory files.
+- Keep clear space of at least the mark's width around the stacked logo.
+- Replace these raster cuts with a vector (SVG) master when one is available.
+
+### 2.7 Motion and icons
 
 - Motion uses the tokens `--duration-fast` (140 ms, hovers), `--duration-base` (240 ms, lists and state changes) and `--duration-slow` (600 ms, the one entrance per page), with `--ease-out` (a soft settle) or `--ease-spring`. It explains change or guides the eye once: the landing hero's lines rise in order, the Overview's key figures and lists arrive staggered by 40–50 ms, sparklines draw in once. No scroll-triggered effects, no motion on idle content, and everything is disabled when the person prefers reduced motion (global rule).
 - Icons come from one set (`components/ui/Icon.tsx`: inline SVG, 24 px grid, 1.75 px stroke, `currentColor`). They are decorative (`aria-hidden`) unless they are the only content of a control, in which case the control has an accessible name. No emoji as icons.
@@ -192,12 +313,12 @@ Each entry: purpose, variants, states, accessibility, tokens. Names describe str
 
 ### 3.5 Navigation
 
-| Component              | Purpose                                                                           | Notes                                                                                                                                                               |
-| ---------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SiteHeader`           | Brand, organization switcher, account menu, sign out                              | Built on `Container`                                                                                                                                                |
-| `OrganizationNav`      | Sections of one organization                                                      | Grouped (Performance, Marketing, Data, Organization); a sidebar from 48 rem; a collapsible menu with `aria-expanded` below; current page marked with `aria-current` |
-| `AccountMenu`          | The person's name and email, Account security, Admin portal (administrators only) | Disclosure button; Escape and outside click close it; spans the header on phones                                                                                    |
-| `OrganizationSwitcher` | Switch organization                                                               | Same disclosure pattern                                                                                                                                             |
+| Component              | Purpose                                                                           | Notes                                                                                                                                                                                                                                                            |
+| ---------------------- | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SiteHeader`           | Brand, organization switcher, account menu, sign out                              | Built on `Container`; the brand is `BrandLogo` (mark + wordmark), on the page ground                                                                                                                                                                             |
+| `OrganizationNav`      | Sections of one organization                                                      | A navy panel (Phase 20). Grouped (Performance, Marketing, Data, Organization) under spaced-capital labels; a sidebar from 48 rem; a collapsible menu with `aria-expanded` below; current page marked with `aria-current`, a raised navy row and a gold underline |
+| `AccountMenu`          | The person's name and email, Account security, Admin portal (administrators only) | Disclosure button; Escape and outside click close it; spans the header on phones                                                                                                                                                                                 |
+| `OrganizationSwitcher` | Switch organization                                                               | Same disclosure pattern                                                                                                                                                                                                                                          |
 
 ### 3.6 Data display
 
@@ -215,8 +336,8 @@ Top to bottom, in order of what a person needs first:
 1. **Statement**: one sentence built from the real figures ("Eve Zone sold A$1,500.50 in 12 orders, and spent A$204.50 on ads. After ad spend, it kept A$695.80."). A missing figure is named, never shown as zero.
 2. **Key figures**: net sales, ad spend, profit after ad spend and orders in one ruled strip (not cards), each compared in words with the period just before ("Up 12% on the previous 30 days"), with a sparkline. Sage marks a good rise, terracotta a bad fall; ad spend is never coloured, since more spend is neither good nor bad on its own. Missing figures say why.
 3. **Dashboard** (Phase 19, `features/overview/Dashboard.tsx`): open cards with one 3 px rule on top (no shadow, rounded only at the bottom).
-   - **Sales, ad spend and profit by day** spans the width: cobalt net-sales line, sage profit line, terracotta ad-spend bars, a "round" y-axis (never "-A$0"), and a readout strip above the plot for the chosen day (pointer, or arrow keys / Home / End on the focusable chart). Missing days break the line; they are never drawn as zero.
-   - **Where the money went**: ad spend by platform (terracotta bars, largest first) and visits by Google Analytics channel (cobalt bars). Bar lengths are drawing only, relative to the largest row; every number shown comes from the API.
+   - **Sales, ad spend and profit by day** spans the width: navy net-sales line (gold in dark mode), green profit line, terracotta ad-spend bars, a "round" y-axis (never "-A$0"), and a readout strip above the plot for the chosen day (pointer, or arrow keys / Home / End on the focusable chart). Missing days break the line; they are never drawn as zero.
+   - **Where the money went**: ad spend by platform (terracotta bars, largest first) and visits by Google Analytics channel (navy bars). Bar lengths are drawing only, relative to the largest row; every number shown comes from the API.
    - **From first view to purchase**: the funnel stages in the API's order, a square-root bar scale (impressions and purchases differ a thousandfold), the API's step rate, and "Below usual" only where the API reports a finding.
    - **Campaigns that spent most**: the five with the most spend, linking to each campaign; on screens under 64rem each row becomes a labelled card.
    - SVG `rect` bars, not inline widths, because the CSP forbids inline styles. On wide screens the money and funnel cards sit side by side (7fr / 5fr).
@@ -233,7 +354,7 @@ The operator area sits under the slate band that says customers never see it, so
 
 ### 3.9 Public landing page
 
-A full-width slate block opens the page: the headline (Sora, large, short measure), who it is for, two actions and three plain facts, beside **"Data flowing in"** (`features/home/HeroFlow.tsx`, Phase 19). The four sources (your store, Google Ads, Meta, Google Analytics) draw their lines into one white "Profit after ad spend" panel, whose bars grow and profit line draws. It is the page's one orchestrated moment: about two seconds, played once, static for reduced motion, and an illustration only: no figures. On phones the sources sit in a 2 × 2 grid above the panel, without lines. The real screenshot of the demo Overview (labelled as simulated data) follows in "The whole picture, every morning". The rest of the page sits on the page background: "How it works" is a numbered sequence joined by a rule on wide screens (it really is a sequence), "Built so you stay in control" is a ruled two-column list, then the platforms and a slate closing block with the same two actions. No invented customers, testimonials or statistics.
+A full-width navy block opens the page: the tagline "Advertise smarter. Grow faster." as a spaced-capital eyebrow after a gold rule, the headline (Cormorant Garamond, large, short measure), who it is for, two actions and three plain facts, beside **"Data flowing in"** (`features/home/HeroFlow.tsx`, Phase 19). The four sources (your store, Google Ads, Meta, Google Analytics) draw their lines into one white "Profit after ad spend" panel, whose bars grow and profit line draws. It is the page's one orchestrated moment: about two seconds, played once, static for reduced motion, and an illustration only: no figures. On phones the sources sit in a 2 × 2 grid above the panel, without lines. The real screenshot of the demo Overview (labelled as simulated data) follows in "The whole picture, every morning". The rest of the page sits on the page background: "How it works" is a sequence numbered I.–IV. in bronze serif numerals under one navy rule on wide screens (it really is a sequence), "Built so you stay in control" is a ruled two-column list, then the platforms and a navy closing block with the stacked logo and the same two actions (gold primary action). No invented customers, testimonials or statistics.
 
 ## 4. Content rules
 

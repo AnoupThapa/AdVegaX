@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import HomePage from "@/app/page";
 import NotFound from "@/app/not-found";
+import { BrandLogo } from "@/components/layout/BrandLogo";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { SkipLink } from "@/components/layout/SkipLink";
 
@@ -23,6 +24,25 @@ describe("layout components", () => {
     renderWithProviders(<SiteHeader />, { session: null });
     expect(screen.getByRole("banner")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "AdVegaX" })).toHaveAttribute("href", "/");
+  });
+
+  it("brand logo names AdVegaX once and follows the colour scheme", () => {
+    const { container, unmount } = render(<BrandLogo />);
+    expect(screen.getByRole("img", { name: "AdVegaX" })).toHaveAttribute(
+      "src",
+      "/brand/wordmark.webp",
+    );
+    // The mark is decorative: the wordmark carries the name.
+    expect(container.querySelectorAll('img[alt=""]')).toHaveLength(1);
+    expect(container.querySelectorAll('source[media="(prefers-color-scheme: dark)"]')).toHaveLength(
+      2,
+    );
+    unmount();
+    render(<BrandLogo tone="onDark" />);
+    expect(screen.getByRole("img", { name: "AdVegaX" })).toHaveAttribute(
+      "src",
+      "/brand/wordmark-dark.webp",
+    );
   });
 
   it("home page has a single level-one heading", () => {

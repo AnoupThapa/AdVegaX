@@ -1,7 +1,7 @@
 .header {
   position: relative; /* anchors the account menu on narrow screens */
   border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface);
+  background: var(--color-bg);
 }
 
 .inner {
@@ -15,12 +15,8 @@
 }
 
 .brand {
-  font-weight: var(--font-weight-bold);
-  font-size: var(--font-size-lg);
-  color: var(--color-text);
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch-target);
   text-decoration: none;
-}
-
-.brand:hover {
-  color: var(--color-accent);
 }

@@ -72,6 +72,7 @@
 }
 
 .notesTitle {
+  font-family: var(--font-sans);
   margin: 0 0 var(--space-2);
   font-size: var(--font-size-md);
 }

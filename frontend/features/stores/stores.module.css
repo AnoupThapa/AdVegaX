@@ -37,6 +37,7 @@
 }
 
 .cardTitle {
+  font-family: var(--font-sans);
   margin: 0;
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-bold);
@@ -181,6 +182,7 @@
 }
 
 .health h2 {
+  font-family: var(--font-sans);
   font-size: var(--font-size-lg);
   margin: 0 0 var(--space-2);
 }

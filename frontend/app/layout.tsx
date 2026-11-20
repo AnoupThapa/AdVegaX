@@ -7,13 +7,13 @@ import { SkipLink } from "@/components/layout/SkipLink";
 
 import { Providers } from "./providers";
 
-import "@fontsource-variable/ibm-plex-sans";
-import "@fontsource-variable/sora";
+import "@fontsource-variable/cormorant-garamond";
+import "@fontsource-variable/montserrat";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: { default: "AdVegaX", template: "%s · AdVegaX" },
-  description: "E-commerce advertising and growth platform",
+  description: "Advertise smarter. Grow faster. Profit-first advertising for online stores.",
   robots: { index: false, follow: false },
 };
 

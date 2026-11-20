@@ -30,6 +30,7 @@
 }
 
 .panelTitle {
+  font-family: var(--font-sans);
   font-size: var(--font-size-lg);
   margin-bottom: var(--space-1);
 }
@@ -124,6 +125,7 @@
 }
 
 .team h2 {
+  font-family: var(--font-sans);
   font-size: var(--font-size-lg);
 }
 
@@ -167,6 +169,7 @@
 }
 
 .cardTitle {
+  font-family: var(--font-sans);
   font-size: var(--font-size-lg);
   margin: 0 0 var(--space-3);
 }

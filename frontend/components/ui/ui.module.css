@@ -125,8 +125,9 @@
 .card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
+  border-top: 2px solid var(--color-gold);
   border-radius: var(--radius-md);
-  padding: var(--space-6);
+  padding: var(--space-8);
 }
 
 .cardTitle {
@@ -184,6 +185,7 @@
 }
 
 .dialogTitle {
+  font-family: var(--font-sans);
   font-size: var(--font-size-lg);
 }
 
@@ -237,6 +239,7 @@
 }
 
 .emptyTitle {
+  font-family: var(--font-sans);
   margin: 0;
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);

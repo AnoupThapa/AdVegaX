@@ -60,6 +60,7 @@ export function Landing() {
       <section className={styles.hero} aria-labelledby="hero-title">
         <div className={styles.heroInner}>
           <div className={styles.heroText}>
+            <p className={styles.eyebrow}>Advertise smarter. Grow faster.</p>
             <h1 id="hero-title" className={styles.heroTitle}>
               Know what your advertising really earns, and change it with a record.
             </h1>
@@ -185,6 +186,16 @@ export function Landing() {
       <section className={styles.closing} aria-labelledby="closing-title">
         <div className={styles.closingInner}>
           <div>
+            {/* eslint-disable-next-line @next/next/no-img-element -- a fixed local brand file */}
+            <img
+              className={styles.closingLogo}
+              src="/brand/logo-stacked-dark.webp"
+              width={640}
+              height={318}
+              alt="AdVegaX: Advertise smarter. Grow faster."
+              loading="lazy"
+              decoding="async"
+            />
             <h2 id="closing-title">Start with an account</h2>
             <p>Create an organization, invite your team, and connect your first platform.</p>
           </div>

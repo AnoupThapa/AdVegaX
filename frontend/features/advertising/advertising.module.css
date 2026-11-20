@@ -13,6 +13,7 @@
 }
 
 .section > h2 {
+  font-family: var(--font-sans);
   font-size: var(--font-size-lg);
   margin-bottom: var(--space-3);
 }
@@ -38,6 +39,7 @@
 }
 
 .cardTitle {
+  font-family: var(--font-sans);
   margin: 0;
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-bold);
@@ -175,6 +177,7 @@
 
 /* Column headings: small and quiet, over a stronger rule; rows light up under the pointer. */
 .table thead th {
+  font-family: var(--font-sans);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-muted);
@@ -216,6 +219,7 @@
 }
 
 .health h2 {
+  font-family: var(--font-sans);
   font-size: var(--font-size-lg);
   margin: 0 0 var(--space-2);
 }
@@ -264,6 +268,7 @@
 }
 
 .cardTitle {
+  font-family: var(--font-sans);
   margin-bottom: var(--space-2);
   font-size: var(--font-size-lg);
   overflow-wrap: anywhere;

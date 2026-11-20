@@ -4,32 +4,33 @@
 :root {
   color-scheme: light dark;
 
-  /* Slate base with three functional accents: cobalt (actions, focus), terracotta (warnings,
-     money going out) and sage (good results). Accents never decorate. */
-  --color-bg: #f4f5f7;
-  --color-surface: #ffffff;
-  --color-text: #141b2b;
-  --color-text-muted: #4b5468;
-  --color-border: #d6dae2;
-  --color-accent: #2550d4;
-  --color-accent-contrast: #ffffff;
-  --color-danger: #b42318;
-  --color-danger-contrast: #ffffff;
-  --color-success: #3f7a53;
-  --color-warning: #94401f;
-  --color-focus: #2550d4;
+  /* Brand palette from the logo (Phase 20): Vega navy for text, actions and the dark bands, ivory
+     paper for the ground, Growth gold as the one brand accent (on navy) and ledger bronze for links
+     and focus on paper. Green and red/terracotta only report results; they never decorate. */
+  --color-bg: #f7f3ea;
+  --color-surface: #fffdf8;
+  --color-text: #05182d;
+  --color-text-muted: #4d5666;
+  --color-border: #e2daca;
+  --color-accent: #05182d;
+  --color-accent-contrast: #f7f3ea;
+  --color-danger: #a3231a;
+  --color-danger-contrast: #fffdf8;
+  --color-success: #22573b;
+  --color-warning: #8a3b12;
+  --color-focus: #8a5a1c;
 
-  /* Two bundled families (SIL OFL, served from this app): IBM Plex Sans for reading and figures,
-     Sora for headings and the few large numbers. */
+  /* Two bundled families (SIL OFL, served from this app), taken from the logo (Phase 20):
+     Cormorant Garamond for headings and large figures, Montserrat for reading, controls and labels. */
   --font-sans:
-    "IBM Plex Sans Variable", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    "Montserrat Variable", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
     sans-serif;
-  --font-display: "Sora Variable", var(--font-sans);
+  --font-display: "Cormorant Garamond Variable", Georgia, "Times New Roman", serif;
   --font-size-sm: 0.875rem;
   --font-size-md: 1rem;
   --font-size-lg: 1.125rem;
-  --font-size-xl: 1.5rem;
-  --font-size-2xl: 2rem;
+  --font-size-xl: 1.75rem;
+  --font-size-2xl: 2.5rem;
   --line-height: 1.5;
 
   --space-1: 0.25rem;
@@ -40,46 +41,51 @@
   --space-8: 2rem;
   --space-12: 3rem;
 
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 4px;
   --content-max-width: 72rem;
 
   /* Phase 17 additions. Existing tokens above keep their names and values. */
-  --color-surface-2: #f1f3f6;
-  --color-border-strong: #aab1bd;
+  --color-surface-2: #f1ebdf;
+  --color-border-strong: #b9b2a3;
   /* Borders that mark a control (input, select, secondary button): at least 3:1 (WCAG 1.4.11). */
-  --color-control-border: #7a8394;
-  --color-accent-bg: #e8eefc;
-  --color-accent-text: #1d3fae;
-  --color-info: #1d3fae;
+  --color-control-border: #807868;
+  --color-accent-bg: #f3e7d3;
+  --color-accent-text: #6e4511;
+  --color-info: #15304f;
 
   /* The slate block (landing hero, admin band): always dark, in both schemes. */
-  --color-slate: #141b2b;
-  --color-slate-2: #1e2738;
-  --color-on-slate: #f2f4f8;
-  --color-on-slate-muted: #b9c1d0;
-  --color-on-slate-accent: #8eaaff;
-  --color-on-slate-border: #344056;
+  --color-slate: #05182d;
+  --color-slate-2: #0b2340;
+  --color-on-slate: #f7f3ea;
+  --color-on-slate-muted: #c8cfda;
+  --color-on-slate-accent: #e2b05f;
+  --color-on-slate-border: #24405f;
+
+  /* Growth gold: rules, the current-item mark and the primary action on navy bands. */
+  --color-gold: #c9944a;
+  --color-on-gold: #05182d;
+  --color-link: #8a5a1c;
 
   /* Chart and trend marks (also used for "up/down" tags). */
-  --color-terracotta: #b04a24;
-  --color-sage: #3f7a53;
+  --color-terracotta: #a0452a;
+  --color-sage: #2e6b4a;
 
   /* Status pairs: text on its own background, each at least 4.5:1 (checked, not eyeballed). */
-  --status-success-fg: #2f6142;
-  --status-success-bg: #e4efe6;
-  --status-warning-fg: #94401f;
-  --status-warning-bg: #f8e8e0;
-  --status-danger-fg: #a3190f;
-  --status-danger-bg: #fdeceb;
-  --status-info-fg: #1d3fae;
-  --status-info-bg: #e8eefc;
+  --status-success-fg: #22573b;
+  --status-success-bg: #e4efe7;
+  --status-warning-fg: #8a3b12;
+  --status-warning-bg: #f7e4d6;
+  --status-danger-fg: #9b1c1c;
+  --status-danger-bg: #fbe7e5;
+  --status-info-fg: #15304f;
+  --status-info-bg: #e4e9f0;
   --status-neutral-fg: #3d4452;
-  --status-neutral-bg: #eceef2;
+  --status-neutral-bg: #ece7dc;
 
   --font-size-xs: 0.75rem;
-  --font-size-3xl: clamp(2rem, 1.4rem + 2.6vw, 3.25rem);
+  --font-size-3xl: clamp(2.5rem, 1.6rem + 3.6vw, 4.5rem);
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
@@ -89,9 +95,9 @@
   --space-16: 4rem;
   --space-24: 6rem;
 
-  --shadow-sm: 0 1px 2px rgb(16 24 40 / 0.06);
-  --shadow-md: 0 4px 16px rgb(16 24 40 / 0.1);
-  --shadow-lg: 0 8px 24px rgb(16 24 40 / 0.15);
+  --shadow-sm: none;
+  --shadow-md: 0 1px 0 rgb(5 24 45 / 0.08);
+  --shadow-lg: 0 8px 24px rgb(5 24 45 / 0.16);
 
   --header-height: 3.5rem;
   --touch-target: 2.75rem;
@@ -135,39 +141,41 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-bg: #0e131d;
-    --color-surface: #161d2a;
-    --color-text: #e9edf3;
-    --color-text-muted: #aab3c3;
-    --color-border: #2c3546;
-    --color-accent: #86a5ff;
-    --color-accent-contrast: #0e131d;
-    --color-danger: #ff8a80;
-    --color-danger-contrast: #0f1116;
-    --color-success: #8fd0a3;
-    --color-warning: #f3a885;
-    --color-focus: #86a5ff;
+    --color-bg: #04101e;
+    --color-surface: #0a1b30;
+    --color-text: #f2eee4;
+    --color-text-muted: #b7bfcb;
+    --color-border: #203655;
+    --color-accent: #d9a85c;
+    --color-accent-contrast: #05182d;
+    --color-danger: #ff8f84;
+    --color-danger-contrast: #05182d;
+    --color-success: #8fcfa6;
+    --color-warning: #f0ae84;
+    --color-focus: #e2b05f;
+    --color-gold: #d9a85c;
+    --color-link: #e2b05f;
 
-    --color-surface-2: #1c2433;
-    --color-slate: #0a0f18;
-    --color-slate-2: #121a27;
+    --color-surface-2: #0f233b;
+    --color-slate: #020b16;
+    --color-slate-2: #071a2f;
     --color-terracotta: #f0a283;
-    --color-sage: #8fd0a3;
-    --color-border-strong: #4a5263;
-    --color-control-border: #6b7385;
-    --color-accent-bg: #1a2a52;
-    --color-accent-text: #a9c0ff;
-    --color-info: #a9c0ff;
-    --status-success-fg: #8fd0a3;
-    --status-success-bg: #15301f;
-    --status-warning-fg: #f3a885;
-    --status-warning-bg: #3a1f14;
+    --color-sage: #8fcfa6;
+    --color-border-strong: #3a5373;
+    --color-control-border: #6f84a2;
+    --color-accent-bg: #2b2416;
+    --color-accent-text: #ebc583;
+    --color-info: #a9c2e8;
+    --status-success-fg: #8fcfa6;
+    --status-success-bg: #12301f;
+    --status-warning-fg: #f0ae84;
+    --status-warning-bg: #3a2114;
     --status-danger-fg: #ff9d94;
     --status-danger-bg: #3b1512;
-    --status-info-fg: #a9c0ff;
-    --status-info-bg: #1a2a52;
+    --status-info-fg: #a9c2e8;
+    --status-info-bg: #16294a;
     --status-neutral-fg: #c8cdd8;
-    --status-neutral-bg: #262b36;
+    --status-neutral-bg: #1e2a3b;
     --shadow-sm: none;
     --shadow-md: 0 4px 16px rgb(0 0 0 / 0.5);
     --shadow-lg: 0 8px 24px rgb(0 0 0 / 0.6);
@@ -199,14 +207,17 @@ h1,
 h2,
 h3 {
   font-family: var(--font-display);
-  font-weight: var(--font-weight-semibold);
+  font-weight: var(--font-weight-bold);
   line-height: var(--line-height-tight);
   margin: 0 0 var(--space-4);
-  letter-spacing: -0.015em;
+  font-variant-numeric: lining-nums;
   text-wrap: balance;
 }
 
+/* Small headings read better in the sans: Cormorant is reserved for 24 px and up. */
 h3 {
+  font-family: var(--font-sans);
+  font-weight: var(--font-weight-semibold);
   font-size: var(--font-size-lg);
 }
 
@@ -223,7 +234,7 @@ h2 {
 }
 
 a {
-  color: var(--color-accent);
+  color: var(--color-link);
 }
 
 /* Groups of radio buttons or checkboxes: a quiet legend instead of the browser's boxed fieldset. */
