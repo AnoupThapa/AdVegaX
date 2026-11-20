@@ -1,0 +1,89 @@
+/* Layout primitives. Pages compose these instead of writing their own widths, padding and gaps. */
+
+/* Container: centres content, caps its width, and applies the responsive side padding (--gutter). */
+.container {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--content-max-width);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.narrow {
+  max-width: var(--container-narrow);
+}
+
+/* Stack: children one under another with an even gap; margins of children are reset. */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--stack-gap, var(--space-4));
+}
+
+.stack > * {
+  margin-block: 0;
+}
+
+.gap2 {
+  --stack-gap: var(--space-2);
+}
+
+.gap3 {
+  --stack-gap: var(--space-3);
+}
+
+.gap4 {
+  --stack-gap: var(--space-4);
+}
+
+.gap6 {
+  --stack-gap: var(--space-6);
+}
+
+.gap8 {
+  --stack-gap: var(--space-8);
+}
+
+/* Cluster: items in a row that wraps onto the next line instead of overflowing. */
+.cluster {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: var(--cluster-align, center);
+  justify-content: var(--cluster-justify, flex-start);
+  gap: var(--cluster-gap, var(--space-3));
+}
+
+.clusterGap2 {
+  --cluster-gap: var(--space-2);
+}
+
+.clusterGap4 {
+  --cluster-gap: var(--space-4);
+}
+
+.spread {
+  --cluster-justify: space-between;
+}
+
+.alignStart {
+  --cluster-align: flex-start;
+}
+
+.alignEnd {
+  --cluster-align: flex-end;
+}
+
+/* Grid: equal columns that wrap by available width, never narrower than --grid-min. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(var(--grid-min, 16rem), 100%), 1fr));
+  gap: var(--grid-gap, var(--space-4));
+}
+
+.gridMin12 {
+  --grid-min: 12rem;
+}
+
+.gridMin20 {
+  --grid-min: 20rem;
+}

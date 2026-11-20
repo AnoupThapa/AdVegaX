@@ -1,0 +1,8 @@
+# Gitleaks configuration: default rules plus a narrow allowlist for PUBLIC, LOCAL-ONLY
+# development values. Staging/production refuse these values at startup (settings validation).
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Public local-only development encryption key (refused when deployed)"
+regexes = ['''YWR2ZWdheC1sb2NhbC1kZXYtb25seS1rZXktMzJieSE=''']

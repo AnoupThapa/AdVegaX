@@ -1,0 +1,313 @@
+/* AdVegaX design tokens and base styles (PHASE_01C_PLAN §4.6, §8).
+   Colours meet WCAG 2.2 AA contrast (text ≥ 4.5:1) in light and dark schemes. */
+
+:root {
+  color-scheme: light dark;
+
+  /* Brand palette from the logo (Phase 20): Vega navy for text, actions and the dark bands, ivory
+     paper for the ground, Growth gold as the one brand accent (on navy) and ledger bronze for links
+     and focus on paper. Green and red/terracotta only report results; they never decorate. */
+  --color-bg: #f7f3ea;
+  --color-surface: #fffdf8;
+  --color-text: #05182d;
+  --color-text-muted: #4d5666;
+  --color-border: #e2daca;
+  --color-accent: #05182d;
+  --color-accent-contrast: #f7f3ea;
+  --color-danger: #a3231a;
+  --color-danger-contrast: #fffdf8;
+  --color-success: #22573b;
+  --color-warning: #8a3b12;
+  --color-focus: #8a5a1c;
+
+  /* Two bundled families (SIL OFL, served from this app), taken from the logo (Phase 20):
+     Cormorant Garamond for headings and large figures, Montserrat for reading, controls and labels. */
+  --font-sans:
+    "Montserrat Variable", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    sans-serif;
+  --font-display: "Cormorant Garamond Variable", Georgia, "Times New Roman", serif;
+  --font-size-sm: 0.875rem;
+  --font-size-md: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.75rem;
+  --font-size-2xl: 2.5rem;
+  --line-height: 1.5;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 4px;
+  --content-max-width: 72rem;
+
+  /* Phase 17 additions. Existing tokens above keep their names and values. */
+  --color-surface-2: #f1ebdf;
+  --color-border-strong: #b9b2a3;
+  /* Borders that mark a control (input, select, secondary button): at least 3:1 (WCAG 1.4.11). */
+  --color-control-border: #807868;
+  --color-accent-bg: #f3e7d3;
+  --color-accent-text: #6e4511;
+  --color-info: #15304f;
+
+  /* The slate block (landing hero, admin band): always dark, in both schemes. */
+  --color-slate: #05182d;
+  --color-slate-2: #0b2340;
+  --color-on-slate: #f7f3ea;
+  --color-on-slate-muted: #c8cfda;
+  --color-on-slate-accent: #e2b05f;
+  --color-on-slate-border: #24405f;
+
+  /* Growth gold: rules, the current-item mark and the primary action on navy bands. */
+  --color-gold: #c9944a;
+  --color-on-gold: #05182d;
+  --color-link: #8a5a1c;
+
+  /* Chart and trend marks (also used for "up/down" tags). */
+  --color-terracotta: #a0452a;
+  --color-sage: #2e6b4a;
+
+  /* Status pairs: text on its own background, each at least 4.5:1 (checked, not eyeballed). */
+  --status-success-fg: #22573b;
+  --status-success-bg: #e4efe7;
+  --status-warning-fg: #8a3b12;
+  --status-warning-bg: #f7e4d6;
+  --status-danger-fg: #9b1c1c;
+  --status-danger-bg: #fbe7e5;
+  --status-info-fg: #15304f;
+  --status-info-bg: #e4e9f0;
+  --status-neutral-fg: #3d4452;
+  --status-neutral-bg: #ece7dc;
+
+  --font-size-xs: 0.75rem;
+  --font-size-3xl: clamp(2.5rem, 1.6rem + 3.6vw, 4.5rem);
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --space-5: 1.25rem;
+  --space-10: 2.5rem;
+  --space-16: 4rem;
+  --space-24: 6rem;
+
+  --shadow-sm: none;
+  --shadow-md: 0 1px 0 rgb(5 24 45 / 0.08);
+  --shadow-lg: 0 8px 24px rgb(5 24 45 / 0.16);
+
+  --header-height: 3.5rem;
+  --touch-target: 2.75rem;
+  /* Layers, lowest to highest. Nothing else may pick a z-index. */
+  --z-dropdown: 10;
+  --z-header: 20;
+  --z-drawer: 30;
+  --z-toast: 40;
+  --z-skip: 100;
+
+  /* Layout: one responsive side padding for every page container, and a readable line length. */
+  --gutter: var(--space-4);
+  --measure: 65ch;
+  --container-narrow: 40rem;
+
+  --font-weight-regular: 400;
+  --line-height-tight: 1.2;
+  --color-overlay: rgb(0 0 0 / 0.5);
+  --radius-pill: 999px;
+
+  /* Motion: short, with a soft settle; used only where something changed or was asked for. */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --duration-fast: 140ms;
+  --duration-base: 240ms;
+  --duration-slow: 600ms;
+}
+
+/* Side padding grows with the screen: 16px on phones, 24px on tablets, 32px on desktops. */
+@media (min-width: 40rem) {
+  :root {
+    --gutter: var(--space-6);
+  }
+}
+
+@media (min-width: 64rem) {
+  :root {
+    --gutter: var(--space-8);
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #04101e;
+    --color-surface: #0a1b30;
+    --color-text: #f2eee4;
+    --color-text-muted: #b7bfcb;
+    --color-border: #203655;
+    --color-accent: #d9a85c;
+    --color-accent-contrast: #05182d;
+    --color-danger: #ff8f84;
+    --color-danger-contrast: #05182d;
+    --color-success: #8fcfa6;
+    --color-warning: #f0ae84;
+    --color-focus: #e2b05f;
+    --color-gold: #d9a85c;
+    --color-link: #e2b05f;
+
+    --color-surface-2: #0f233b;
+    --color-slate: #020b16;
+    --color-slate-2: #071a2f;
+    --color-terracotta: #f0a283;
+    --color-sage: #8fcfa6;
+    --color-border-strong: #3a5373;
+    --color-control-border: #6f84a2;
+    --color-accent-bg: #2b2416;
+    --color-accent-text: #ebc583;
+    --color-info: #a9c2e8;
+    --status-success-fg: #8fcfa6;
+    --status-success-bg: #12301f;
+    --status-warning-fg: #f0ae84;
+    --status-warning-bg: #3a2114;
+    --status-danger-fg: #ff9d94;
+    --status-danger-bg: #3b1512;
+    --status-info-fg: #a9c2e8;
+    --status-info-bg: #16294a;
+    --status-neutral-fg: #c8cdd8;
+    --status-neutral-bg: #1e2a3b;
+    --shadow-sm: none;
+    --shadow-md: 0 4px 16px rgb(0 0 0 / 0.5);
+    --shadow-lg: 0 8px 24px rgb(0 0 0 / 0.6);
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-md);
+  line-height: var(--line-height);
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  margin: 0 0 var(--space-4);
+  font-variant-numeric: lining-nums;
+  text-wrap: balance;
+}
+
+/* Small headings read better in the sans: Cormorant is reserved for 24 px and up. */
+h3 {
+  font-family: var(--font-sans);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-lg);
+}
+
+p {
+  text-wrap: pretty;
+}
+
+h1 {
+  font-size: var(--font-size-2xl);
+}
+
+h2 {
+  font-size: var(--font-size-xl);
+}
+
+a {
+  color: var(--color-link);
+}
+
+/* Groups of radio buttons or checkboxes: a quiet legend instead of the browser's boxed fieldset. */
+fieldset {
+  min-width: 0;
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  border: 0;
+}
+
+legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+  font-weight: var(--font-weight-semibold);
+}
+
+caption {
+  text-align: left;
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Checkboxes and radio buttons are touch targets: at least 24px (WCAG 2.2 target size). */
+input[type="checkbox"],
+input[type="radio"] {
+  width: 1.5rem;
+  height: 1.5rem;
+  flex: none;
+  margin: 0 var(--space-1) 0 0;
+  vertical-align: middle;
+  accent-color: var(--color-accent);
+}
+
+/* A link that stands on its own line (not inside a sentence) gets a taller target. */
+p > a:only-child {
+  display: inline-block;
+  padding-block: var(--space-1);
+}
+
+main:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Figures line up in columns (tabular, lining) wherever amounts are compared. */
+table,
+.figures,
+[data-figure] {
+  font-variant-numeric: tabular-nums lining-nums;
+}
