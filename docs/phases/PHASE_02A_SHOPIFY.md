@@ -1,6 +1,6 @@
 # Phase 2A — Commerce: Shopify (read-only) + Finance Core
 
-**Status:** Not started · **Depends on:** Phase 1 · **Milestone:** M2
+**Status:** Plan drafted — `PHASE_02A_PLAN.md` (awaiting approval) · **Depends on:** Phase 1 · **Milestone:** M2
 
 ## Goal
 Connect Shopify stores to an AdVegaX organization and import catalogue, inventory, orders and refunds into normalized models, with the first deterministic store-level financial metrics.

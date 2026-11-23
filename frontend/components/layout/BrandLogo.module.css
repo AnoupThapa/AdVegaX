@@ -1,0 +1,23 @@
+/* Mark and wordmark side by side; the image heights are the only fixed sizes (brand files). */
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.logo picture {
+  display: contents;
+}
+
+.mark {
+  display: block;
+  height: 2rem;
+  width: auto;
+}
+
+.wordmark {
+  display: block;
+  height: 1.25rem;
+  width: auto;
+}

@@ -1,0 +1,188 @@
+/* Organization navigation (Phase 20): a navy panel in every size. A collapsible menu on phones,
+   a grouped sidebar from 48rem. The current page is marked with a gold rule, like a ledger tab. */
+
+.nav {
+  border: 1px solid var(--color-on-slate-border);
+  border-radius: var(--radius-md);
+  background: var(--color-slate);
+  color: var(--color-on-slate);
+}
+
+.nav :focus-visible {
+  outline-color: var(--color-on-slate-accent);
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--touch-target);
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--color-on-slate);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.toggleText {
+  display: grid;
+  min-width: 0;
+}
+
+.toggleOrg {
+  font-size: var(--font-size-xs);
+  color: var(--color-on-slate-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toggleCurrent {
+  font-weight: var(--font-weight-semibold);
+}
+
+.title {
+  display: none;
+  margin: 0;
+  padding: var(--space-5) var(--space-4) var(--space-2);
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-bold);
+  overflow-wrap: anywhere;
+}
+
+.panel {
+  display: none;
+  padding: 0 var(--space-2) var(--space-4);
+  border-top: 1px solid var(--color-on-slate-border);
+}
+
+.panel[data-open="true"] {
+  display: block;
+}
+
+.group {
+  padding-top: var(--space-4);
+}
+
+.groupTitle {
+  font-family: var(--font-sans);
+  margin: 0 0 var(--space-1);
+  padding: 0 var(--space-3);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-on-slate-muted);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.link,
+.current {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--touch-target);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  text-decoration: none;
+}
+
+.link {
+  color: var(--color-on-slate-muted);
+}
+
+.link:hover {
+  color: var(--color-on-slate);
+  background: var(--color-slate-2);
+}
+
+.current {
+  color: var(--color-on-slate);
+  background: var(--color-slate-2);
+  font-weight: var(--font-weight-semibold);
+  box-shadow: inset 0 -2px 0 var(--color-gold);
+}
+
+@media (min-width: 48rem) {
+  .nav {
+    position: sticky;
+    top: var(--space-4);
+  }
+
+  .toggle {
+    display: none;
+  }
+
+  .title {
+    display: block;
+    font-size: var(--font-size-xl);
+  }
+
+  .panel {
+    display: block;
+    border-top: 0;
+    padding-top: 0;
+  }
+
+  .link,
+  .current {
+    min-height: 2.5rem;
+  }
+}
+
+/* Phase 21 (maximal, in the brand): the navy panel sits on a gold hard shadow. Each group has
+   its own tinted tab; the current page is a gold tag. */
+.nav {
+  border: var(--border-ink);
+  border-radius: var(--radius-lg);
+  box-shadow: 4px 4px 0 var(--color-mustard);
+}
+
+.groupTitle {
+  display: inline-block;
+  margin-left: var(--space-2);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  color: var(--color-on-pop);
+  background: var(--color-sky);
+  font-weight: var(--font-weight-bold);
+}
+
+.group:nth-of-type(3) .groupTitle {
+  background: var(--color-pink);
+}
+
+.group:nth-of-type(4) .groupTitle {
+  background: var(--color-mint);
+}
+
+.group:nth-of-type(5) .groupTitle {
+  background: var(--color-mustard);
+}
+
+.link {
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+}
+
+.link:hover {
+  transform: translateX(3px);
+}
+
+.current {
+  color: var(--color-on-pop);
+  background: var(--color-mustard);
+  font-weight: var(--font-weight-bold);
+  box-shadow: 2px 2px 0 var(--color-on-slate);
+}

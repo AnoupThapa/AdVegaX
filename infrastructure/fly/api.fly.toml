@@ -1,0 +1,53 @@
+# AdVegaX API, worker and scheduler on Fly.io, Sydney (Phase 15, task 15-02; A34).
+# Deploy from the repository root:
+#   fly deploy --config infrastructure/fly/api.fly.toml
+# Secrets (never in this file or the repository) are set once with `fly secrets set`; see
+# docs/runbooks/deploy.md for the list. The scheduler must run exactly one machine.
+app = "advegax-api-staging"          # production: advegax-api
+primary_region = "syd"
+
+[build]
+  dockerfile = "../docker/api.Dockerfile"
+
+[env]
+  ENVIRONMENT = "staging"             # production: "production"
+  LOG_LEVEL = "INFO"
+  EMAIL_BACKEND = "smtp"
+  CELERY_TASK_ALWAYS_EAGER = "false"
+  COOKIE_SECURE = "true"
+  SESSION_COOKIE_NAME = "__Host-advegax_session"
+  CSRF_COOKIE_NAME = "__Host-advegax_csrf"
+
+[deploy]
+  # Migrations run once per release, with the migrator role, before new machines start.
+  release_command = "alembic upgrade head"
+  strategy = "rolling"
+
+[processes]
+  app = "uvicorn app.main:create_app --factory --host 0.0.0.0 --port 8000 --proxy-headers"
+  worker = "celery -A app.workers.celery_app:celery_app worker --loglevel=INFO --concurrency=4"
+  scheduler = "celery -A app.workers.celery_app:celery_app beat --loglevel=INFO --schedule /tmp/celerybeat-schedule"
+
+[http_service]
+  processes = ["app"]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = "off"
+  min_machines_running = 2
+
+  [[http_service.checks]]
+    method = "GET"
+    path = "/api/v1/health/ready"
+    interval = "15s"
+    timeout = "5s"
+    grace_period = "20s"
+
+[[vm]]
+  processes = ["app", "worker"]
+  size = "shared-cpu-2x"
+  memory = "1gb"
+
+[[vm]]
+  processes = ["scheduler"]
+  size = "shared-cpu-1x"
+  memory = "512mb"

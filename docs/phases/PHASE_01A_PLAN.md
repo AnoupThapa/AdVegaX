@@ -1,10 +1,10 @@
 # Phase 1A — Platform Core & Identity: Implementation Plan
 
-**Status:** Awaiting product-owner approval · **Date:** 2026-10-08
+**Status:** ✅ Approved by the product owner (2026-10-08) — implementation authorized for Phase 1A only · **Date:** 2026-10-08
 **Depends on:** Phase 0 (closed) · **Followed by:** Phase 1B (integration foundation), Phase 1C (frontend shell)
 **Governing documents:** MASTER_SPECIFICATION §20–§21 (D1–D22, A1–A14), PROJECT_RULES, ARCHITECTURE §3, §5–§8, DATABASE_SCHEMA §0–§3, §16, §19, API_SPECIFICATION §1–§4, §18, §24
 
-> No application code is written until the product owner explicitly approves this plan. Items marked **[Default — confirm]** are proposed defaults the product owner may change in the approval.
+> Approved 2026-10-08 with all §22 defaults. Items marked **[Default — confirm]** below were confirmed as proposed. Clarification: session and token lifetimes are **configurable security settings** (see §22.1), never hard-coded constants. Phase 1B and 1C are not authorized by this approval.
 
 ---
 
@@ -322,7 +322,7 @@ Branch protection on `main` (product owner): PRs only, all checks required. CI r
 - Database roles are created idempotently by the bootstrap script and never dropped by migrations.
 - No external systems are touched (email only to the local catcher in development).
 
-## 22. Decisions requested with approval
+## 22. Decisions (approved 2026-10-08)
 
 | # | Item | Proposed default |
 |---|---|---|
@@ -335,3 +335,19 @@ Branch protection on `main` (product owner): PRs only, all checks required. CI r
 | 7 | Audit-log access | Owner and Admin |
 | 8 | Coverage gate | 85 % overall, 95 % security-critical |
 | 9 | New document | `docs/SECURITY.md` |
+
+All nine items above were approved as proposed. Also confirmed: real-PostgreSQL testing, mandatory RLS, mandatory tenant-isolation testing, and the 1A → 1B → 1C sequence.
+
+### 22.1 Configurable security settings (product-owner clarification)
+
+Session and token lifetimes are centralized settings with the approved production defaults; no literal durations appear elsewhere in the code. Settings are validated at startup (positive values; idle ≤ absolute).
+
+| Setting | Default |
+|---|---|
+| `SESSION_IDLE_TIMEOUT` | 24 hours |
+| `SESSION_ABSOLUTE_TIMEOUT` | 14 days |
+| `EMAIL_VERIFICATION_TTL` | 24 hours |
+| `PASSWORD_RESET_TTL` | 30 minutes |
+| `INVITATION_TTL` | 7 days |
+
+Throttling limits (§9) are also centralized settings.
