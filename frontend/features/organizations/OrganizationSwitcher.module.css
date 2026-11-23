@@ -93,3 +93,22 @@
   padding: var(--space-2) var(--space-3);
   color: var(--color-text-muted);
 }
+
+/* Phase 21 */
+.toggle {
+  border: var(--border-ink);
+  border-radius: var(--radius-pill);
+  font-weight: var(--font-weight-bold);
+  box-shadow: var(--shadow-pop-sm);
+}
+
+.menu {
+  border: var(--border-ink);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-pop);
+}
+
+.current {
+  background: var(--color-mustard);
+  color: var(--color-on-pop);
+}

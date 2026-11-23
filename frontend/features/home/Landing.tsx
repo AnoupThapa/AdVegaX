@@ -53,6 +53,43 @@ const CONTROLS: readonly {
 
 const PLATFORMS = ["Shopify", "WooCommerce", "Google Ads", "Meta Ads", "Google Analytics 4"];
 
+// The ticker strip under the hero: what AdVegaX reads and what it promises. No figures.
+const TICKER = [
+  "Shopify",
+  "Profit after ad spend, every day",
+  "Google Ads",
+  "Every change approved by a person",
+  "Meta Ads",
+  "Missing figures named, never zero",
+  "WooCommerce",
+  "Every change logged",
+  "Google Analytics 4",
+];
+
+/** A strip that slides sideways once the page has loaded; static for anyone who asks for less
+ * motion. The second copy is only there to make the loop seamless, so it is hidden from
+ * assistive technology. */
+function Ticker() {
+  return (
+    <div className={styles.ticker}>
+      <div className={styles.tickerTrack}>
+        {[0, 1].map((copy) => (
+          <ul
+            key={copy}
+            className={styles.tickerList}
+            aria-hidden={copy === 1 ? true : undefined}
+            aria-label={copy === 0 ? "What AdVegaX works with and promises" : undefined}
+          >
+            {TICKER.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /** The public home page for visitors who are not signed in. Only states what the product does. */
 export function Landing() {
   return (
@@ -86,6 +123,7 @@ export function Landing() {
           <HeroFlow />
         </div>
       </section>
+      <Ticker />
 
       <div className={styles.body}>
         <section className={styles.split} aria-labelledby="overview-title">

@@ -20,3 +20,12 @@
   min-height: var(--touch-target);
   text-decoration: none;
 }
+
+/* Phase 21: the header is the shop's awning: a navy-and-gold striped edge on top, an ink rule
+   below. */
+.header {
+  border-top: var(--space-3) solid transparent;
+  border-image: var(--pattern-awning) 1;
+  border-image-width: var(--space-3) 0 0 0;
+  border-bottom: var(--border-ink-thick);
+}

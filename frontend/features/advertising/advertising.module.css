@@ -278,3 +278,59 @@
 .table th[scope="row"] {
   min-width: 10rem;
 }
+
+/* Phase 21: panels are boards: ink outline, hard shadow, white inside. */
+.panel {
+  border: var(--border-ink);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-pop);
+}
+
+.section > h2 {
+  width: fit-content;
+  max-width: 100%;
+  padding: 0 var(--space-1) var(--space-1);
+  /* A mustard bar under the title, below the letters so it never lowers contrast. */
+  background: linear-gradient(transparent 84%, var(--color-mustard) 84%);
+  margin-bottom: var(--space-3);
+}
+
+.tile {
+  border: var(--border-ink);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-pop);
+}
+
+.tile:nth-child(4n + 1) {
+  background: var(--color-surface);
+}
+
+.tileValue {
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-black);
+}
+
+/* List cards (ad accounts, campaigns): ink-outlined tickets that lift under the pointer. */
+.card {
+  border: var(--border-ink);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-pop-sm);
+  transition:
+    transform var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: var(--shadow-pop);
+}
+
+.cardTitle {
+  font-family: var(--font-sans);
+  font-weight: var(--font-weight-black);
+}
+
+/* Figures stay calm: every table sits on plain white. */
+.table {
+  background: var(--color-surface);
+}

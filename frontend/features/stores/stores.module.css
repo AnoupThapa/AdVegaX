@@ -190,3 +190,24 @@
 .health p {
   margin: 0 0 var(--space-2);
 }
+
+/* Phase 21: panels are boards: ink outline, hard shadow, white inside. */
+.panel {
+  border: var(--border-ink);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-pop);
+}
+
+.card {
+  border: var(--border-ink);
+  border-radius: var(--radius-md);
+  transition:
+    transform var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.card:hover {
+  border-color: var(--color-ink);
+  transform: translate(-2px, -2px);
+  box-shadow: var(--shadow-pop);
+}

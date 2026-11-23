@@ -288,3 +288,103 @@
   height: auto;
   color: var(--color-accent);
 }
+
+/* ---------------------------------------------------------------- Phase 21: maximal, in the brand
+   Controls are outlined in ink and sit on a hard shadow; pressing one pushes it into the
+   shadow, so the press is felt. Status badges are price tags. */
+.button {
+  border: var(--border-ink);
+  border-radius: var(--radius-md); /* the brand's near-square corners */
+  font-family: var(--font-sans);
+  font-weight: var(--font-weight-bold);
+  box-shadow: var(--shadow-pop-sm);
+  transition:
+    transform var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out);
+}
+
+.button:not(:disabled):hover {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow-pop);
+}
+
+.button:not(:disabled):active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+
+.secondary {
+  border-color: var(--color-ink);
+}
+
+.secondary:not(:disabled):hover {
+  background: var(--color-mustard);
+  color: var(--color-on-pop);
+}
+
+.link,
+.link:not(:disabled):hover,
+.link:not(:disabled):active {
+  border: 0;
+  box-shadow: none;
+  transform: none;
+  font-family: inherit;
+  border-radius: 0;
+}
+
+.input {
+  border: var(--border-ink);
+  border-radius: var(--radius-md);
+}
+
+.input:hover {
+  box-shadow: var(--shadow-pop-sm);
+}
+
+.card,
+.dialog {
+  border: var(--border-ink);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-pop);
+}
+
+.dialog {
+  box-shadow: var(--shadow-pop-lg);
+}
+
+/* Sign-in and other single-card pages sit on the ticket-dot pattern. */
+.cardPage {
+  max-width: 30rem;
+}
+
+.alert {
+  border-width: 2px;
+  border-left-width: var(--space-2);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.pageHeading {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-black);
+  letter-spacing: -0.015em;
+}
+
+.badge {
+  border: 1.5px solid currentColor;
+  border-radius: var(--radius-pill);
+  padding: 0 var(--space-3);
+  font-weight: var(--font-weight-semibold);
+}
+
+.empty {
+  border: 2px dashed var(--color-ink);
+  border-radius: var(--radius-lg);
+  background: var(--pattern-dots), var(--color-surface);
+}
+
+.emptyTitle {
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-black);
+}

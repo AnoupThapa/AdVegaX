@@ -58,3 +58,10 @@
 .muted {
   color: var(--color-text-muted);
 }
+
+/* Phase 21: panels are boards: ink outline, hard shadow, white inside. */
+.panel {
+  border: var(--border-ink);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-pop);
+}

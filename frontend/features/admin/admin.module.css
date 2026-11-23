@@ -270,3 +270,82 @@
   display: flex;
   gap: var(--space-2);
 }
+
+/* ---------------------------------------------------------------- Phase 21: maximal, in the brand
+   The operator's area is the back office: the navy band with a "staff only" hazard edge.
+   Section titles are mustard tabs; counts are white boards; switches are chunky toggles. */
+.band {
+  background: var(--pattern-dots-on-slate), var(--color-slate);
+  border-bottom: var(--space-3) solid transparent;
+  border-image: var(--pattern-hazard) 1;
+  border-image-width: 0 0 var(--space-3) 0;
+}
+
+.bandInner h1 {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-black);
+  letter-spacing: -0.015em;
+}
+
+.section h2 {
+  display: inline-block;
+  padding: var(--space-1) var(--space-4);
+  color: var(--color-on-pop);
+  background: var(--color-mustard);
+  border: var(--border-ink);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-pop-sm);
+}
+
+.index a {
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+}
+
+.index a:hover {
+  text-decoration: underline;
+}
+
+.metrics {
+  gap: var(--space-3);
+  border: 0;
+}
+
+.metric {
+  background: var(--color-surface);
+  border: var(--border-ink);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-pop-sm);
+}
+
+.metricValue {
+  font-weight: var(--font-weight-black);
+}
+
+.switch {
+  border: var(--border-ink);
+  font-weight: var(--font-weight-bold);
+  box-shadow: var(--shadow-pop-sm);
+}
+
+.switch[aria-checked="true"] {
+  border-color: var(--color-ink);
+  background: var(--color-mint);
+  color: var(--color-on-pop);
+}
+
+.restart {
+  border: var(--border-ink);
+  border-left: var(--space-2) solid var(--color-accent);
+  border-radius: var(--radius-md);
+}
+
+@media (min-width: 64rem) {
+  .index ul {
+    padding: var(--space-3);
+    background: var(--color-surface);
+    border: var(--border-ink);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-pop);
+  }
+}

@@ -139,3 +139,50 @@
     min-height: 2.5rem;
   }
 }
+
+/* Phase 21 (maximal, in the brand): the navy panel sits on a gold hard shadow. Each group has
+   its own tinted tab; the current page is a gold tag. */
+.nav {
+  border: var(--border-ink);
+  border-radius: var(--radius-lg);
+  box-shadow: 4px 4px 0 var(--color-mustard);
+}
+
+.groupTitle {
+  display: inline-block;
+  margin-left: var(--space-2);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  color: var(--color-on-pop);
+  background: var(--color-sky);
+  font-weight: var(--font-weight-bold);
+}
+
+.group:nth-of-type(3) .groupTitle {
+  background: var(--color-pink);
+}
+
+.group:nth-of-type(4) .groupTitle {
+  background: var(--color-mint);
+}
+
+.group:nth-of-type(5) .groupTitle {
+  background: var(--color-mustard);
+}
+
+.link {
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+}
+
+.link:hover {
+  transform: translateX(3px);
+}
+
+.current {
+  color: var(--color-on-pop);
+  background: var(--color-mustard);
+  font-weight: var(--font-weight-bold);
+  box-shadow: 2px 2px 0 var(--color-on-slate);
+}

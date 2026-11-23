@@ -124,6 +124,42 @@
   --duration-fast: 140ms;
   --duration-base: 240ms;
   --duration-slow: 600ms;
+
+  /* Phase 21: maximalism in the brand's colours. Navy ink outlines and hard offset shadows,
+     brand-tinted fills, patterns. Fills carry --color-on-pop (navy) text, terracotta carries
+     --color-on-tomato (ivory). Tables and charts stay on --color-surface. Names describe the
+     role, not the hue: "mustard" is the bright gold, "tomato" the brand terracotta. */
+  --color-ink: #05182d;
+  --color-pop-shadow: #05182d;
+  --color-on-pop: #05182d;
+  --color-on-tomato: #fffdf8;
+  --color-tomato: #a0452a;
+  --color-mustard: #e2b05f;
+  --color-mint: #a8d5b9;
+  --color-plum: #0b2340;
+  --color-sky: #b7cdea;
+  --color-pink: #f0c6b0;
+  --border-ink: 2px solid var(--color-ink);
+  --border-ink-thick: 3px solid var(--color-ink);
+  --shadow-pop-sm: 2px 2px 0 var(--color-pop-shadow);
+  --shadow-pop: 4px 4px 0 var(--color-pop-shadow);
+  --shadow-pop-lg: 8px 8px 0 var(--color-pop-shadow);
+  --font-weight-black: 800;
+  --font-size-4xl: clamp(2.75rem, 1.8rem + 4vw, 5rem);
+  /* Patterns: a navy-and-gold awning stripe, a ledger dot grid, the Admin "staff only" edge. */
+  --pattern-awning: repeating-linear-gradient(
+    90deg,
+    var(--color-plum) 0 2.25rem,
+    var(--color-mustard) 2.25rem 4.5rem
+  );
+  --pattern-hazard: repeating-linear-gradient(
+    -45deg,
+    var(--color-mustard) 0 0.75rem,
+    var(--color-ink) 0.75rem 1.5rem
+  );
+  --pattern-dots: radial-gradient(var(--color-border) 1.2px, transparent 1.6px) 0 0 / 14px 14px;
+  --pattern-dots-on-slate: radial-gradient(var(--color-on-slate-border) 1.2px, transparent 1.8px) 0
+    0 / 16px 16px;
 }
 
 /* Side padding grows with the screen: 16px on phones, 24px on tablets, 32px on desktops. */
@@ -179,6 +215,11 @@
     --shadow-sm: none;
     --shadow-md: 0 4px 16px rgb(0 0 0 / 0.5);
     --shadow-lg: 0 8px 24px rgb(0 0 0 / 0.6);
+    --color-ink: #f2eee4;
+    --color-pop-shadow: #000000;
+    --color-on-tomato: #05182d;
+    --color-tomato: #f0a283;
+    --color-plum: #24405f;
   }
 }
 

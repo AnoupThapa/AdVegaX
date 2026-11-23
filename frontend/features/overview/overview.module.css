@@ -297,3 +297,105 @@
     font-size: var(--font-size-2xl);
   }
 }
+
+/* ---------------------------------------------------------------- Phase 21: maximal, in the brand
+   The statement's figures are marked like prices; the key figures are four price tags in the
+   brand tints, with dark ink text whatever the scheme (the words say up or down). */
+.statement {
+  font-size: var(--font-size-xl);
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: -0.02em;
+}
+
+.statement strong {
+  font-weight: var(--font-weight-black);
+  padding: 0 var(--space-1);
+  color: var(--color-on-pop);
+  background: var(--color-mustard);
+  border-radius: var(--radius-sm);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.kpis {
+  gap: var(--space-4);
+  border: 0;
+}
+
+.kpi,
+.kpi + .kpi,
+.kpi:nth-child(even),
+.kpi:nth-child(-n + 2) {
+  padding: var(--space-4);
+  color: var(--color-on-pop);
+  background: var(--color-sky);
+  border: var(--border-ink);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-pop);
+}
+
+.kpi:nth-child(2) {
+  background: var(--color-pink);
+}
+
+.kpi:nth-child(3) {
+  background: var(--color-mint);
+}
+
+.kpi:nth-child(4) {
+  background: var(--color-mustard);
+}
+
+.kpiLabel,
+.kpiMissing,
+.changeGood,
+.changeBad,
+.changeFlat,
+.changeNone,
+.kpiTrend {
+  color: var(--color-on-pop);
+}
+
+.kpiLabel {
+  font-weight: var(--font-weight-semibold);
+}
+
+.kpiValue {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-black);
+  letter-spacing: -0.015em;
+  overflow-wrap: anywhere; /* only a very large amount on a phone ever breaks */
+}
+
+@media (min-width: 30rem) {
+  .kpiValue {
+    font-size: var(--font-size-xl);
+  }
+}
+
+@media (min-width: 64rem) {
+  .kpi,
+  .kpi + .kpi {
+    padding: var(--space-5);
+  }
+
+  /* Four tags share the row: large amounts must fit (A$1,234,567.89). */
+  .kpiValue {
+    font-size: var(--font-size-xl);
+  }
+
+  .kpi:nth-child(odd) {
+    transform: rotate(-0.6deg);
+  }
+
+  .kpi:nth-child(even) {
+    transform: rotate(0.6deg);
+  }
+}
+
+.notes {
+  border: var(--border-ink);
+  border-left: var(--space-2) solid var(--status-warning-fg);
+  border-radius: var(--radius-md);
+}

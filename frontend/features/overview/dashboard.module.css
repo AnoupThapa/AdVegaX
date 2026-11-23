@@ -546,3 +546,19 @@
     grid-column: 1 / -1;
   }
 }
+
+/* Phase 21: outlined dashboard boards; the plot area inside stays plain white. */
+.card {
+  border: var(--border-ink);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-pop);
+}
+
+.cardTitle {
+  font-weight: var(--font-weight-black);
+}
+
+.readout {
+  border: 1.5px solid var(--color-ink);
+  border-radius: var(--radius-md);
+}

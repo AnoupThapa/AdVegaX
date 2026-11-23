@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { HeroFlow } from "@/features/home/HeroFlow";
+import { Landing } from "@/features/home/Landing";
 import { Dashboard, TrendChart } from "@/features/overview/Dashboard";
 
 import { mockApi, ok } from "../support/mock-api";
@@ -212,5 +213,17 @@ describe("HeroFlow", () => {
     expect(within(sources).getAllByRole("listitem")).toHaveLength(4);
     expect(screen.getByText("Profit after ad spend")).toBeInTheDocument();
     expect(container.textContent).not.toMatch(/\d/);
+  });
+});
+
+describe("Landing ticker", () => {
+  it("is read once: the copy that makes the loop seamless is hidden", () => {
+    const { container } = render(<Landing />);
+    const ticker = screen.getByRole("list", { name: "What AdVegaX works with and promises" });
+    expect(within(ticker).getByText("Every change approved by a person")).toBeInTheDocument();
+    const copies = ticker.parentElement!.querySelectorAll("ul");
+    expect(copies).toHaveLength(2);
+    expect(copies[1]).toHaveAttribute("aria-hidden", "true");
+    expect(container.textContent).not.toMatch(/\d{2,}/);
   });
 });

@@ -245,3 +245,75 @@
     min-height: 14rem;
   }
 }
+
+/* Phase 21: the sources are tinted tickets; the panel sits on a gold shadow. */
+.source {
+  color: var(--color-on-pop);
+  background: var(--color-sky);
+  border: var(--border-ink);
+  border-radius: var(--radius-md);
+  box-shadow: 3px 3px 0 var(--color-mustard);
+}
+
+.source:nth-child(2) {
+  background: var(--color-pink);
+}
+
+.source:nth-child(3) {
+  background: var(--color-mint);
+}
+
+.source:nth-child(4) {
+  background: var(--color-mustard);
+  box-shadow: 3px 3px 0 var(--color-on-slate);
+}
+
+.source svg {
+  color: var(--color-on-pop);
+}
+
+.sourceWhat {
+  color: var(--color-on-pop);
+}
+
+.sourceName {
+  font-family: var(--font-sans);
+  font-weight: var(--font-weight-black);
+}
+
+.wire {
+  stroke: var(--color-on-slate-muted);
+  stroke-width: 2.5;
+}
+
+.pulse {
+  stroke: var(--color-mustard);
+  stroke-width: 4;
+}
+
+.panel {
+  border: var(--border-ink-thick);
+  border-radius: var(--radius-lg);
+  box-shadow: 10px 10px 0 var(--color-mustard);
+  transform: rotate(1.2deg);
+}
+
+@keyframes panelIn {
+  from {
+    transform: rotate(-4deg) scale(0.9);
+  }
+}
+
+.panelTitle {
+  font-weight: var(--font-weight-black);
+  font-size: var(--font-size-xl);
+  letter-spacing: -0.015em;
+}
+
+.spend {
+  opacity: 0.55;
+}
+
+.profit {
+  stroke-width: 4;
+}

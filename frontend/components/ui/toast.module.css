@@ -106,3 +106,11 @@
     transform: translateY(0);
   }
 }
+
+/* Phase 21: a toast is an outlined slip. */
+.toast {
+  border: var(--border-ink);
+  border-left: var(--space-2) solid var(--toast-accent);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-pop);
+}

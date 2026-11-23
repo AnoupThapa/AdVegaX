@@ -5,6 +5,16 @@
 
 The aim is one look across the whole product: a small palette, one type scale, one spacing scale, a few layout containers, and a short list of components. Pages are composed from these; they do not invent their own values.
 
+> **Phase 21 (2026-11-23): maximalism in the brand's colours.** This layers on top of the Phase 20 brand (navy, ivory, gold; Cormorant Garamond and Montserrat). Where this note and the sections below disagree, this note wins.
+>
+> - **Ink and shadows.** Boards, controls, tags, menus and table frames have a navy ink outline (`--border-ink`, `--border-ink-thick`; ivory in dark mode) and a hard offset shadow (`--shadow-pop-sm`, `--shadow-pop`, `--shadow-pop-lg`). On navy bands the shadow is gold. Buttons keep the brand's near-square corners, lift on hover and press into their shadow when clicked. Badges and platform names are outlined tags.
+> - **Fills.** Bright gold (`--color-mustard`), the brand terracotta (`--color-tomato`), and three pale brand tints: sky (navy), pink (bronze) and mint (sage). Fills are never text colours. Text on them is `--color-on-pop` (navy, in both schemes), or `--color-on-tomato` on terracotta. Every pair was measured: the lowest is 6.1:1.
+> - **Patterns.** `--pattern-awning` (navy and gold stripes) runs along the top of the header, the bottom of the hero and the top of the closing block. `--pattern-dots` sits on the public page, `--pattern-dots-on-slate` on navy bands, and `--pattern-hazard` marks the Admin portal's "staff only" edge.
+> - **Type.** The brand fonts stay. Large headings are in Cormorant at bold, with only light tightening (-0.015em). Buttons, tags and small titles are in Montserrat.
+> - **Calm data.** Tables, charts and figure lists sit on plain white inside their frames. The app's page background has no pattern.
+> - **Colour coding.** Each menu group's tab has a tint: Performance sky, Marketing pink, Data mint, Organization gold. The current page is a gold tag. The Overview's four key figures are sky, pink, mint and gold tags, and their words still say up or down. Figures in the summary sentence are marked in gold.
+> - **Motion.** The home page has the hero flow and a gold ticker strip that slides sideways. It stops on hover, and stands still for anyone who asks for less motion. In the app, motion only answers the person: lift on hover, press on click.
+
 ---
 
 ## 1. Principles

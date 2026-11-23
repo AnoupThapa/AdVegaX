@@ -387,3 +387,299 @@
   margin: 0 auto;
   padding: var(--space-8) var(--gutter);
 }
+
+/* ---------------------------------------------------------------- Phase 21: maximal, in the brand
+   The hero is the stall at night: ink ground with a ticket-dot pattern and an awning edge.
+   Then a mustard ticker, coloured boards for the steps and controls, price-tag platforms and
+   a tomato closing block. Body copy always sits on plain ground. */
+.landing {
+  gap: var(--space-16);
+  overflow-x: clip; /* the tilted ticker must not widen the page */
+  background: var(--pattern-dots), var(--color-bg);
+}
+
+.hero {
+  position: relative;
+  background: var(--pattern-dots-on-slate), var(--color-slate);
+  border-bottom: var(--space-3) solid transparent;
+  border-image: var(--pattern-awning) 1;
+  border-image-width: 0 0 var(--space-3) 0;
+}
+
+.heroTitle {
+  font-size: var(--font-size-4xl);
+  font-weight: var(--font-weight-black);
+  line-height: 0.98;
+  letter-spacing: -0.02em;
+  max-width: 16ch;
+}
+
+.primaryAction,
+.heroSecondary {
+  border: var(--border-ink);
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-weight: var(--font-weight-bold);
+  box-shadow: 3px 3px 0 var(--color-mustard);
+  transition:
+    transform var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.primaryAction {
+  border-color: var(--color-mustard);
+}
+
+.heroSecondary {
+  background: var(--color-slate-2);
+  border-color: var(--color-on-slate);
+}
+
+.primaryAction:hover,
+.heroSecondary:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 5px 5px 0 var(--color-mustard);
+}
+
+.primaryAction:active,
+.heroSecondary:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+
+.heroFacts li::before {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-mustard);
+  transform: rotate(45deg);
+}
+
+/* Ticker: one mustard strip, tilted a little, sliding sideways. */
+.ticker {
+  overflow: hidden;
+  margin-top: calc(-1 * var(--space-16) + var(--space-6));
+  color: var(--color-on-pop);
+  background: var(--color-mustard);
+  border-block: var(--border-ink-thick);
+  transform: rotate(-1.2deg);
+}
+
+.tickerTrack {
+  display: flex;
+  width: max-content;
+  animation: tick 38s linear infinite;
+}
+
+.ticker:hover .tickerTrack {
+  animation-play-state: paused;
+}
+
+.tickerList {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-3) 0;
+  display: flex;
+  gap: var(--space-8);
+  padding-right: var(--space-8);
+  font-family: var(--font-display);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-black);
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.tickerList li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.tickerList li::after {
+  content: "";
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  background: var(--color-tomato);
+  border: 2px solid var(--color-ink);
+}
+
+@keyframes tick {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* For people who ask for less motion the strip stands still at its start. */
+@media (prefers-reduced-motion: reduce) {
+  .tickerTrack {
+    animation: none;
+  }
+}
+
+.body h2 {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.015em;
+  line-height: 1;
+}
+
+.shot img {
+  border: var(--border-ink-thick);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-pop-lg);
+  transform: rotate(1deg);
+}
+
+.split:nth-of-type(3) .shot img {
+  transform: rotate(-1deg);
+}
+
+/* How it works: four coloured boards, numbered (it is a real sequence). */
+.steps li {
+  padding: var(--space-12) var(--space-5) var(--space-5);
+  color: var(--color-on-pop);
+  background: var(--color-sky);
+  border: var(--border-ink);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-pop);
+}
+
+.steps li:nth-child(2) {
+  background: var(--color-pink);
+}
+
+.steps li:nth-child(3) {
+  background: var(--color-mint);
+}
+
+.steps li:nth-child(4) {
+  background: var(--color-mustard);
+}
+
+.steps li::before {
+  top: var(--space-4);
+  left: var(--space-5);
+  color: var(--color-on-pop);
+  font-size: var(--font-size-2xl);
+}
+
+.steps h3 {
+  margin-top: var(--space-4);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-black);
+}
+
+.steps p {
+  color: var(--color-on-pop);
+}
+
+/* Built so you stay in control: white boards with an icon stamp. */
+.controls {
+  gap: var(--space-4);
+  border: 0;
+}
+
+.controls li {
+  padding: var(--space-5);
+  background: var(--color-surface);
+  border: var(--border-ink);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-pop);
+  transition:
+    transform var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.controls li:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: var(--shadow-pop-lg);
+}
+
+.controls svg {
+  box-sizing: content-box;
+  margin-top: 0;
+  padding: var(--space-2);
+  color: var(--color-on-pop);
+  background: var(--color-mustard);
+  border: var(--border-ink);
+  border-radius: 50%;
+}
+
+.controls li:nth-child(2) svg {
+  background: var(--color-pink);
+}
+
+.controls li:nth-child(3) svg {
+  background: var(--color-mint);
+}
+
+.controls li:nth-child(4) svg {
+  background: var(--color-sky);
+}
+
+/* Works with: price tags. */
+.platformList {
+  gap: var(--space-3);
+}
+
+.platformList li {
+  padding: var(--space-2) var(--space-5);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: var(--border-ink);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-pop-sm);
+  font-weight: var(--font-weight-black);
+  transition: transform var(--duration-base) var(--ease-spring);
+}
+
+.platformList li:nth-child(odd) {
+  transform: rotate(-2deg);
+}
+
+.platformList li:nth-child(even) {
+  transform: rotate(2deg);
+  color: var(--color-on-pop);
+  background: var(--color-sky);
+}
+
+.platformList li:hover {
+  transform: rotate(0deg) scale(1.05);
+}
+
+/* Closing: the navy block under a navy-and-gold awning edge; its actions are pop buttons. */
+.closing {
+  border-top: var(--space-3) solid transparent;
+  border-image: var(--pattern-awning) 1;
+  border-image-width: var(--space-3) 0 0 0;
+}
+
+.closing h2 {
+  font-size: var(--font-size-3xl);
+  letter-spacing: -0.02em;
+}
+
+.closing .heroSecondary {
+  color: var(--color-on-pop);
+  background: var(--color-sky);
+  border-color: var(--color-on-slate);
+}
+
+.steps {
+  border-top: 0;
+}
+
+@media (min-width: 64rem) {
+  .steps li {
+    padding-top: var(--space-16);
+  }
+
+  .steps li::after {
+    display: none;
+  }
+
+  .steps li:nth-child(even) {
+    transform: translateY(var(--space-6));
+  }
+}
